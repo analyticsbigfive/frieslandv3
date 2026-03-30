@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --fc-blue: #003DA5;
+  --fc-blue-dark: #002B75;
+  --fc-blue-light: #E8F0FE;
+  --fc-red: #C8102E;
+  --fc-red-dark: #9B0D23;
+  --fc-red-light: #FDE8EC;
+  --fc-green: #10B981;
+  --fc-green-light: #ECFDF5;
+  --fc-orange: #F59E0B;
+  --fc-gray: #64748B;
+  --fc-gray-light: #F1F5F9;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+/* Toggle buttons */
+.toggle-btn {
+  @apply px-6 py-3 rounded-lg font-semibold text-sm transition-all duration-200 cursor-pointer select-none;
+}
+.toggle-btn-active-red {
+  @apply bg-red-600 text-white shadow-md;
+}
+.toggle-btn-active-green {
+  @apply bg-emerald-600 text-white shadow-md;
+}
+.toggle-btn-inactive {
+  @apply bg-gray-100 text-gray-600 hover:bg-gray-200;
+}
+
+/* Status badges */
+.badge-disponible {
+  @apply bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+.badge-rupture {
+  @apply bg-red-100 text-red-700 px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+.badge-present {
+  @apply bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+/* Card hover effects */
+.card-hover {
+  @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5;
+}
+
+/* Mobile bottom navigation */
+.bottom-nav-active {
+  @apply text-blue-700 border-t-2 border-blue-700;
+}
+
+/* PWA safe areas */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Leaflet map fixes */
+.leaflet-container {
+  z-index: 1 !important;
+}
