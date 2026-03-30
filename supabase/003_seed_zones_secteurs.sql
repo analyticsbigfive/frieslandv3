@@ -118,7 +118,7 @@ INSERT INTO public.zones_secteurs (zone, secteur, merchandiser, email_merchandis
   ('YOPOUGON 1', 'KOWEIT', 'SOUARE IBRAHIMA', 'abidjannordfcyopougon1@gmail.com', 'SOUARE IBRAHIMA', 'abidjannordfcyopougon1@gmail.com', 'ABIDJAN 2'), -- CSV ID: 97
   ('YOPOUGON 2', 'CAMP MILITAIRE', 'SOUARE IBRAHIMA', 'abidjannordfcyopougon1@gmail.com', 'SOUARE IBRAHIMA', 'abidjannordfcyopougon1@gmail.com', 'ABIDJAN 2'), -- CSV ID: 98
   ('YOPOUGON 2', 'KOUTE', 'SOUARE IBRAHIMA', 'abidjannordfcyopougon1@gmail.com', 'SOUARE IBRAHIMA', 'abidjannordfcyopougon1@gmail.com', 'ABIDJAN 2'), -- CSV ID: 99
-  ('YOPOUGON 2', 'SIDECI', 'SOUARE IBRAHIMA', 'abidjannordfcyopougon1@gmail.com', 'SOUARE IBRAHIMA', 'abidjannordfcyopougon1@gmail.com', 'ABIDJAN 2') -- CSV ID: 100;
+  ('YOPOUGON 2', 'SIDECI', 'SOUARE IBRAHIMA', 'abidjannordfcyopougon1@gmail.com', 'SOUARE IBRAHIMA', 'abidjannordfcyopougon1@gmail.com', 'ABIDJAN 2'); -- CSV ID: 100
 
 -- Batch 2 (lignes 101 à 200)
 INSERT INTO public.zones_secteurs (zone, secteur, merchandiser, email_merchandiser, sales_rep, email_sales_rep, region) VALUES
@@ -221,7 +221,7 @@ INSERT INTO public.zones_secteurs (zone, secteur, merchandiser, email_merchandis
   ('KOUMASSI', 'SICOGI 2', 'N''GUESSAN OPHELIA', 'abidjansudfcmarcory@gmail.com', 'N''GUESSAN OPHELIA', 'abidjansudfcmarcory@gmail.com', 'ABIDJAN 1'), -- CSV ID: 197
   ('KOUMASSI', 'SICOGI 3', 'N''GUESSAN OPHELIA', 'abidjansudfcmarcory@gmail.com', 'N''GUESSAN OPHELIA', 'abidjansudfcmarcory@gmail.com', 'ABIDJAN 1'), -- CSV ID: 198
   ('KOUMASSI', 'ABIA SUD', 'N''GUESSAN OPHELIA', 'abidjansudfcmarcory@gmail.com', 'N''GUESSAN OPHELIA', 'abidjansudfcmarcory@gmail.com', 'ABIDJAN 1'), -- CSV ID: 199
-  ('KOUMASSI', 'SOWETO', 'N''GUESSAN OPHELIA', 'abidjansudfcmarcory@gmail.com', 'N''GUESSAN OPHELIA', 'abidjansudfcmarcory@gmail.com', 'ABIDJAN 1') -- CSV ID: 200;
+  ('KOUMASSI', 'SOWETO', 'N''GUESSAN OPHELIA', 'abidjansudfcmarcory@gmail.com', 'N''GUESSAN OPHELIA', 'abidjansudfcmarcory@gmail.com', 'ABIDJAN 1'); -- CSV ID: 200
 
 -- Batch 3 (lignes 201 à 300)
 INSERT INTO public.zones_secteurs (zone, secteur, merchandiser, email_merchandiser, sales_rep, email_sales_rep, region) VALUES
@@ -324,7 +324,7 @@ INSERT INTO public.zones_secteurs (zone, secteur, merchandiser, email_merchandis
   ('BASSAM 1', 'Mockeyville', 'FIOSSI KENA', 'abidjanfcaboisso@gmail.com', 'AZOUMI KENA', 'abidjanfcaboisso@gmail.com', 'BASSAM'), -- CSV ID: 297
   ('BASSAM 1', 'Université Américaine', 'FIOSSI KENA', 'abidjanfcaboisso@gmail.com', 'AZOUMI KENA', 'abidjanfcaboisso@gmail.com', 'BASSAM'), -- CSV ID: 298
   ('BASSAM 1', 'Edoukou Miezan', 'FIOSSI KENA', 'abidjanfcaboisso@gmail.com', 'AZOUMI KENA', 'abidjanfcaboisso@gmail.com', 'BASSAM'), -- CSV ID: 299
-  ('BASSAM 1', 'Quartier Artisanal', 'FIOSSI KENA', 'abidjanfcaboisso@gmail.com', 'AZOUMI KENA', 'abidjanfcaboisso@gmail.com', 'BASSAM') -- CSV ID: 300;
+  ('BASSAM 1', 'Quartier Artisanal', 'FIOSSI KENA', 'abidjanfcaboisso@gmail.com', 'AZOUMI KENA', 'abidjanfcaboisso@gmail.com', 'BASSAM'); -- CSV ID: 300
 
 -- Batch 4 (lignes 301 à 400)
 INSERT INTO public.zones_secteurs (zone, secteur, merchandiser, email_merchandiser, sales_rep, email_sales_rep, region) VALUES
@@ -427,7 +427,7 @@ INSERT INTO public.zones_secteurs (zone, secteur, merchandiser, email_merchandis
   ('ABENGOUROU', 'KOUN FAO', 'ZANGA OUATTARA', 'cnefcabengourou@gmail.com', 'ZANGA OUATTARA', 'cnefcabengourou@gmail.com', 'CNE'), -- CSV ID: 397
   ('ABENGOUROU', 'TANDA', 'ZANGA OUATTARA', 'cnefcabengourou@gmail.com', 'ZANGA OUATTARA', 'cnefcabengourou@gmail.com', 'CNE'), -- CSV ID: 398
   ('ABENGOUROU', 'BONDOUKOU', 'ZANGA OUATTARA', 'cnefcabengourou@gmail.com', 'ZANGA OUATTARA', 'cnefcabengourou@gmail.com', 'CNE'), -- CSV ID: 399
-  ('ABENGOUROU', 'BOUNA', 'ZANGA OUATTARA', 'cnefcabengourou@gmail.com', 'ZANGA OUATTARA', 'cnefcabengourou@gmail.com', 'CNE') -- CSV ID: 400;
+  ('ABENGOUROU', 'BOUNA', 'ZANGA OUATTARA', 'cnefcabengourou@gmail.com', 'ZANGA OUATTARA', 'cnefcabengourou@gmail.com', 'CNE'); -- CSV ID: 400
 
 -- Batch 5 (lignes 401 à 500)
 INSERT INTO public.zones_secteurs (zone, secteur, merchandiser, email_merchandiser, sales_rep, email_sales_rep, region) VALUES
@@ -530,7 +530,7 @@ INSERT INTO public.zones_secteurs (zone, secteur, merchandiser, email_merchandis
   ('DALOA', 'DALOA/ORLY 1', 'N''DJA KOFFI FLORENT', 'cnofcdaloa@gmail.com', 'N''DJA KOFFI FLORENT', 'cnofcdaloa@gmail.com', 'CNO'), -- CSV ID: 497
   ('DALOA', 'DALOA/ORLY 2', 'N''DJA KOFFI FLORENT', 'cnofcdaloa@gmail.com', 'N''DJA KOFFI FLORENT', 'cnofcdaloa@gmail.com', 'CNO'), -- CSV ID: 498
   ('DALOA', 'DALOA/HUBERSON', 'N''DJA KOFFI FLORENT', 'cnofcdaloa@gmail.com', 'N''DJA KOFFI FLORENT', 'cnofcdaloa@gmail.com', 'CNO'), -- CSV ID: 499
-  ('DALOA', 'DALOA/TEXAS', 'N''DJA KOFFI FLORENT', 'cnofcdaloa@gmail.com', 'N''DJA KOFFI FLORENT', 'cnofcdaloa@gmail.com', 'CNO') -- CSV ID: 500;
+  ('DALOA', 'DALOA/TEXAS', 'N''DJA KOFFI FLORENT', 'cnofcdaloa@gmail.com', 'N''DJA KOFFI FLORENT', 'cnofcdaloa@gmail.com', 'CNO'); -- CSV ID: 500
 
 -- Batch 6 (lignes 501 à 600)
 INSERT INTO public.zones_secteurs (zone, secteur, merchandiser, email_merchandiser, sales_rep, email_sales_rep, region) VALUES
@@ -633,7 +633,7 @@ INSERT INTO public.zones_secteurs (zone, secteur, merchandiser, email_merchandis
   ('ABOBO', '4 ETAGES', 'ISMAEL KOUAKOU', 'kouakouismael.pro@gmail.com', 'AKUNDAH ANNE MARIE', 'annydivine49@gmail.com', 'MODERN TRADE'), -- CSV ID: MT-428
   ('ABOBO', 'ABOBO BAOULE', 'ISMAEL KOUAKOU', 'kouakouismael.pro@gmail.com', 'AKUNDAH ANNE MARIE', 'annydivine49@gmail.com', 'MODERN TRADE'), -- CSV ID: MT-429
   ('ABOBO', 'ABOBO CENTRE', 'ISMAEL KOUAKOU', 'kouakouismael.pro@gmail.com', 'AKUNDAH ANNE MARIE', 'annydivine49@gmail.com', 'MODERN TRADE'), -- CSV ID: MT-430
-  ('ABOBO', 'ABOBOTE', 'ISMAEL KOUAKOU', 'kouakouismael.pro@gmail.com', 'AKUNDAH ANNE MARIE', 'annydivine49@gmail.com', 'MODERN TRADE') -- CSV ID: MT-431;
+  ('ABOBO', 'ABOBOTE', 'ISMAEL KOUAKOU', 'kouakouismael.pro@gmail.com', 'AKUNDAH ANNE MARIE', 'annydivine49@gmail.com', 'MODERN TRADE'); -- CSV ID: MT-431
 
 -- Batch 7 (lignes 601 à 700)
 INSERT INTO public.zones_secteurs (zone, secteur, merchandiser, email_merchandiser, sales_rep, email_sales_rep, region) VALUES
@@ -736,7 +736,7 @@ INSERT INTO public.zones_secteurs (zone, secteur, merchandiser, email_merchandis
   ('MARCORY', 'REMBLAIS', 'SONIA AKON', 'akonsoniasunshine@gmail.com', 'SONIA AKON', 'annydivine49@gmail.com', 'MODERN TRADE'), -- CSV ID: MT-529
   ('MARCORY', 'STE BERNADETTE', 'SONIA AKON', 'akonsoniasunshine@gmail.com', 'SONIA AKON', 'annydivine49@gmail.com', 'MODERN TRADE'), -- CSV ID: MT-530
   ('MARCORY', 'STE THERESE', 'SONIA AKON', 'akonsoniasunshine@gmail.com', 'SONIA AKON', 'annydivine49@gmail.com', 'MODERN TRADE'), -- CSV ID: MT-531
-  ('MARCORY', 'RESIDENTIELLE', 'SONIA AKON', 'akonsoniasunshine@gmail.com', 'SONIA AKON', 'annydivine49@gmail.com', 'MODERN TRADE') -- CSV ID: MT-532;
+  ('MARCORY', 'RESIDENTIELLE', 'SONIA AKON', 'akonsoniasunshine@gmail.com', 'SONIA AKON', 'annydivine49@gmail.com', 'MODERN TRADE'); -- CSV ID: MT-532
 
 -- Batch 8 (lignes 701 à 800)
 INSERT INTO public.zones_secteurs (zone, secteur, merchandiser, email_merchandiser, sales_rep, email_sales_rep, region) VALUES
@@ -839,7 +839,7 @@ INSERT INTO public.zones_secteurs (zone, secteur, merchandiser, email_merchandis
   ('DALOA', 'Bonon', 'N''DJA KOFFI FLORENT', 'cnofcdaloa@gmail.com', 'N''DJA KOFFI FLORENT', 'cnofcdaloa@gmail.com', 'CNO'), -- CSV ID: MISEAJOUR-483
   ('DALOA', 'Seguela', 'N''DJA KOFFI FLORENT', 'cnofcdaloa@gmail.com', 'N''DJA KOFFI FLORENT', 'cnofcdaloa@gmail.com', 'CNO'), -- CSV ID: MISEAJOUR-484
   ('BOUAKE 1', 'Botro', 'Guea Hermann', 'cnefcbouake01@gmail.com', 'Guea Hermann', 'cnefcbouake01@gmail.com', 'CNE'), -- CSV ID: MISEAJOUR-485
-  ('BOUAKE 1', 'Beaufort', 'Guea Hermann', 'cnefcbouake01@gmail.com', 'Guea Hermann', 'cnefcbouake01@gmail.com', 'CNE') -- CSV ID: MISEAJOUR-486;
+  ('BOUAKE 1', 'Beaufort', 'Guea Hermann', 'cnefcbouake01@gmail.com', 'Guea Hermann', 'cnefcbouake01@gmail.com', 'CNE'); -- CSV ID: MISEAJOUR-486
 
 -- Batch 9 (lignes 801 à 831)
 INSERT INTO public.zones_secteurs (zone, secteur, merchandiser, email_merchandiser, sales_rep, email_sales_rep, region) VALUES
@@ -873,7 +873,7 @@ INSERT INTO public.zones_secteurs (zone, secteur, merchandiser, email_merchandis
   ('YAMOUSSOUKRO', 'Akpessekro', 'N''DJA KOFFI FLORENT', 'cnofcdaloa@gmail.com', 'N''DJA KOFFI FLORENT', 'cnofcdaloa@gmail.com', 'CNO'), -- CSV ID: MISEAJOUR-514
   ('YAMOUSSOUKRO', 'Duokro', 'N''DJA KOFFI FLORENT', 'cnofcdaloa@gmail.com', 'N''DJA KOFFI FLORENT', 'cnofcdaloa@gmail.com', 'CNO'), -- CSV ID: MISEAJOUR-515
   ('YAMOUSSOUKRO', 'Kpoussoussou', 'N''DJA KOFFI FLORENT', 'cnofcdaloa@gmail.com', 'N''DJA KOFFI FLORENT', 'cnofcdaloa@gmail.com', 'CNO'), -- CSV ID: MISEAJOUR-516
-  ('YAMOUSSOUKRO', 'Belleville', 'N''DJA KOFFI FLORENT', 'cnofcdaloa@gmail.com', 'N''DJA KOFFI FLORENT', 'cnofcdaloa@gmail.com', 'CNO') -- CSV ID: MISEAJOUR-517;
+  ('YAMOUSSOUKRO', 'Belleville', 'N''DJA KOFFI FLORENT', 'cnofcdaloa@gmail.com', 'N''DJA KOFFI FLORENT', 'cnofcdaloa@gmail.com', 'CNO'); -- CSV ID: MISEAJOUR-517
 
 -- ============================================================
 -- Vérification post-import

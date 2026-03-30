@@ -51,12 +51,27 @@ INSERT INTO public.sales_reps (nom) VALUES
 ON CONFLICT (nom) DO NOTHING;
 
 -- ============================================================
--- 4. SEED: routing_data (combinaisons jour/canal/position/sales_rep/mdm)
+-- 4. SEED: routing_data (combinaisons jour/canal/position_order/sales_rep/mdm)
 -- ============================================================
--- Vider et remplir depuis le CSV "Routing Data"
-TRUNCATE public.routing_data RESTART IDENTITY;
+-- Recréer la table pour s'assurer que le schéma est à jour
+DROP TABLE IF EXISTS public.routing_data CASCADE;
+CREATE TABLE IF NOT EXISTS public.routing_data (
+  id SERIAL PRIMARY KEY,
+  jour_routing TEXT,
+  canal TEXT,
+  position_order INTEGER,
+  sales_rep TEXT,
+  mdm TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-INSERT INTO public.routing_data (jour_routing, canal, position, sales_rep, mdm) VALUES
+-- Réactiver RLS après DROP CASCADE
+ALTER TABLE public.routing_data ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "routing_select" ON public.routing_data FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "routing_manage_admin" ON public.routing_data FOR ALL
+  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+
+INSERT INTO public.routing_data (jour_routing, canal, position_order, sales_rep, mdm) VALUES
   ('Lundi 1', 'GT', 1, 'CINDY KADIA', 'YAO ANNA AGBRE'),
   ('Lundi 2', 'MT', 2, 'ARMANDE', 'AGBETOU EMMANUEL'),
   ('Lundi 3', 'GT et MT', 3, 'SOUARE IBRAHIMA', 'GAI KAMY HERMANN'),

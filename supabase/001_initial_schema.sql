@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS public.routing_data (
   id SERIAL PRIMARY KEY,
   jour_routing TEXT,
   canal TEXT,
-  position INTEGER,
+  position_order INTEGER,
   sales_rep TEXT,
   mdm TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
