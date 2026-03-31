@@ -389,6 +389,11 @@ BEGIN
     v_images := array_append(v_images, p_data->>'image');
   END IF;
 
+  -- Auto-create PDV if it doesn't exist (placeholder with pdv_id)
+  INSERT INTO public.pdv (pdv_id, nom_pdv)
+  VALUES (v_pdv_id, 'PDV ' || v_pdv_id)
+  ON CONFLICT (pdv_id) DO NOTHING;
+
   INSERT INTO public.visites (
     visite_id, pdv_id, date_visite, commercial, email,
     data, image_urls, sync_status

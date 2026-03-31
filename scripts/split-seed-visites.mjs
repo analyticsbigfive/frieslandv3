@@ -58,7 +58,7 @@ for (let i = 0; i < totalParts; i++) {
     partContent.push(``);
   }
 
-  partContent.push(`BEGIN;`);
+  // PAS de BEGIN/COMMIT — pour que les erreurs individuelles ne bloquent pas tout
   partContent.push(``);
 
   // Ajouter les SELECT
@@ -67,11 +67,9 @@ for (let i = 0; i < totalParts; i++) {
   }
 
   partContent.push(``);
-  partContent.push(`COMMIT;`);
 
   // Réactiver le trigger seulement dans le dernier fichier
   if (i === totalParts - 1) {
-    partContent.push(``);
     partContent.push(`-- Réactiver les triggers`);
     partContent.push(`ALTER TABLE public.visites ENABLE TRIGGER set_updated_at_visites;`);
     partContent.push(``);
