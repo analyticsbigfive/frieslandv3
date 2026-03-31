@@ -34,6 +34,16 @@
             value-attribute="value"
             size="lg"
           />
+          <div v-if="canCreatePDV" class="mt-2 flex justify-end">
+            <UButton
+              size="xs"
+              variant="soft"
+              icon="i-heroicons-plus"
+              @click="showCreatePDV = true"
+            >
+              PDV introuvable ? Créer un PDV
+            </UButton>
+          </div>
         </div>
 
         <!-- Date -->
@@ -313,6 +323,11 @@
     </div>
 
     <!-- Geofence Alert -->
+    <PDVQuickCreateModal
+      v-model="showCreatePDV"
+      @created="handlePDVCreated"
+    />
+
     <UModal v-model="showGeofenceAlert">
       <div class="p-6 text-center">
         <div class="w-16 h-16 mx-auto mb-4 bg-red-50 rounded-full flex items-center justify-center">
@@ -338,7 +353,7 @@
 
 <script setup lang="ts">
 import { getDefaultVisiteData } from '~/types'
-import type { VisiteData } from '~/types'
+import type { PDV, VisiteData } from '~/types'
 
 definePageMeta({
   middleware: ['auth'],
@@ -362,6 +377,7 @@ const currentTab = ref(0)
 const saving = ref(false)
 const showGeofenceAlert = ref(false)
 const geofenceDistance = ref(0)
+const showCreatePDV = ref(false)
 
 const tabs = [
   { key: 'general', label: 'Général' },
@@ -383,14 +399,32 @@ const form = reactive({
   images: [] as File[],
 })
 
-// PDV list
+// PDV list (filtered by user's zone/secteurs)
 const pdvList = ref<any[]>([])
+const filteredPdvList = computed(() => {
+  const profile = authStore.profile
+  // Admins and superviseurs see all PDVs
+  if (!profile || profile.role === 'admin' || profile.role === 'superviseur') {
+    return pdvList.value
+  }
+  let list = pdvList.value
+  // Filter by zone_assignee
+  if (profile.zone_assignee) {
+    list = list.filter(p => p.zone === profile.zone_assignee)
+  }
+  // Further filter by secteurs_assignes if set
+  if (profile.secteurs_assignes && profile.secteurs_assignes.length > 0) {
+    list = list.filter(p => profile.secteurs_assignes!.includes(p.secteur))
+  }
+  return list
+})
 const pdvOptions = computed(() =>
-  pdvList.value.map(p => ({
+  filteredPdvList.value.map(p => ({
     label: `${p.nom_pdv} (${p.zone || ''})`,
     value: p.pdv_id,
   }))
 )
+const canCreatePDV = computed(() => authStore.profile?.role === 'merchandiser')
 
 const userEmail = computed(() => user.value?.email || '')
 
@@ -471,6 +505,22 @@ function handleCancel() {
   if (confirm('Annuler la visite en cours ?')) {
     router.push('/mobile')
   }
+}
+
+function handlePDVCreated(pdv: PDV) {
+  if (!pdvList.value.some(item => item.pdv_id === pdv.pdv_id)) {
+    pdvList.value = [...pdvList.value, pdv].sort((a, b) =>
+      (a.nom_pdv || '').localeCompare(b.nom_pdv || '')
+    )
+  }
+
+  form.pdv_id = pdv.pdv_id
+
+  toast.add({
+    title: 'PDV sélectionné',
+    description: `${pdv.nom_pdv} est prêt pour la visite.`,
+    color: 'green',
+  })
 }
 
 async function handleSave() {
@@ -581,6 +631,10 @@ async function submitVisite(
 }
 
 onMounted(async () => {
-  pdvList.value = await pdvStore.fetchAllPDV()
+  if (!authStore.profile) {
+    await authStore.fetchProfile()
+  }
+
+  pdvList.value = await pdvStore.fetchScopedPDV(authStore.profile)
 })
 </script>

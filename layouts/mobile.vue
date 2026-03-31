@@ -16,6 +16,23 @@
       </div>
 
       <div class="flex items-center gap-3">
+        <!-- GPS status -->
+        <button
+          class="relative p-1 rounded-lg hover:bg-white/10"
+          :title="gpsTooltip"
+          @click="refreshGps"
+        >
+          <UIcon
+            name="i-heroicons-map-pin"
+            class="w-4 h-4"
+            :class="gpsIconClass"
+          />
+          <span
+            v-if="isLocating"
+            class="absolute -top-0.5 -right-0.5 w-2 h-2 bg-amber-400 rounded-full animate-ping"
+          />
+        </button>
+
         <!-- Online status -->
         <span
           class="w-2.5 h-2.5 rounded-full"
@@ -45,6 +62,27 @@
 <script setup lang="ts">
 const route = useRoute()
 const { isOnline, pendingCount } = useOfflineSync()
+const { currentPosition, isLocating, positionError, requestPosition } = useUserGeolocation()
+
+const gpsIconClass = computed(() => {
+  if (isLocating.value) return 'text-amber-300 animate-pulse'
+  if (currentPosition.value) return 'text-emerald-300'
+  if (positionError.value) return 'text-red-300'
+  return 'text-white/50'
+})
+
+const gpsTooltip = computed(() => {
+  if (isLocating.value) return 'Recherche GPS en cours...'
+  if (currentPosition.value) {
+    return `GPS actif — Précision: ${currentPosition.value.accuracy}m`
+  }
+  if (positionError.value) return positionError.value
+  return 'Position GPS non disponible'
+})
+
+function refreshGps() {
+  requestPosition()
+}
 
 const canGoBack = computed(() => {
   return route.path !== '/mobile' && route.path !== '/mobile/'
@@ -60,6 +98,8 @@ const pageTitle = computed(() => {
     '/mobile/map': 'Carte',
     '/mobile/contacts': 'Contacts',
   }
-  return titles[route.path] || 'Friesland'
+  if (titles[route.path]) return titles[route.path]
+  if (route.path.startsWith('/mobile/pdv/')) return 'Détail PDV'
+  return 'Friesland'
 })
 </script>

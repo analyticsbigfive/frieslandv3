@@ -1,44 +1,53 @@
-// composables/useOfflineSync.ts
 import type { OfflineQueueItem } from '~/types'
+
+const isOnline = ref(true)
+const isSyncing = ref(false)
+const queue = ref<OfflineQueueItem[]>([])
+
+let offlineSyncInitialized = false
+let processQueueRunner: null | (() => Promise<void>) = null
+
+function saveQueueToStorage() {
+  if (!import.meta.client) {
+    return
+  }
+
+  localStorage.setItem('offline-queue', JSON.stringify(queue.value))
+}
+
+function initializeOfflineQueue() {
+  if (!import.meta.client || offlineSyncInitialized) {
+    return
+  }
+
+  offlineSyncInitialized = true
+  isOnline.value = navigator.onLine
+
+  const savedQueue = localStorage.getItem('offline-queue')
+  if (savedQueue) {
+    try {
+      queue.value = JSON.parse(savedQueue)
+    }
+    catch {
+      queue.value = []
+    }
+  }
+
+  window.addEventListener('online', () => {
+    isOnline.value = true
+    void processQueueRunner?.()
+  })
+
+  window.addEventListener('offline', () => {
+    isOnline.value = false
+  })
+}
 
 export function useOfflineSync() {
   const supabase = useSupabaseClient()
-  const isOnline = ref(true)
-  const isSyncing = ref(false)
-  const queue = ref<OfflineQueueItem[]>([])
 
-  // Monitor online status
-  if (import.meta.client) {
-    isOnline.value = navigator.onLine
+  initializeOfflineQueue()
 
-    window.addEventListener('online', () => {
-      isOnline.value = true
-      processQueue()
-    })
-
-    window.addEventListener('offline', () => {
-      isOnline.value = false
-    })
-
-    // Load queue from localStorage
-    const saved = localStorage.getItem('offline-queue')
-    if (saved) {
-      try {
-        queue.value = JSON.parse(saved)
-      }
-      catch { /* ignore parse errors */ }
-    }
-  }
-
-  function saveQueue() {
-    if (import.meta.client) {
-      localStorage.setItem('offline-queue', JSON.stringify(queue.value))
-    }
-  }
-
-  /**
-   * Add item to offline queue
-   */
   function addToQueue(item: Omit<OfflineQueueItem, 'id' | 'timestamp' | 'retries' | 'status'>) {
     const queueItem: OfflineQueueItem = {
       id: crypto.randomUUID(),
@@ -47,22 +56,23 @@ export function useOfflineSync() {
       status: 'pending',
       ...item,
     }
+
     queue.value.push(queueItem)
-    saveQueue()
+    saveQueueToStorage()
 
     if (isOnline.value) {
-      processQueue()
+      void processQueue()
     }
   }
 
-  /**
-   * Process all pending items in the queue
-   */
   async function processQueue() {
-    if (isSyncing.value || !isOnline.value) return
+    if (isSyncing.value || !isOnline.value) {
+      return
+    }
+
     isSyncing.value = true
 
-    const pendingItems = queue.value.filter(i => i.status === 'pending' || i.status === 'error')
+    const pendingItems = queue.value.filter(item => item.status === 'pending' || item.status === 'error')
 
     for (const item of pendingItems) {
       try {
@@ -73,65 +83,67 @@ export function useOfflineSync() {
             .from('visites')
             .upsert(item.data, { onConflict: 'visite_id' })
 
-          if (error) throw error
+          if (error) {
+            throw error
+          }
         }
         else if (item.type === 'pdv') {
           const { error } = await supabase
             .from('pdv')
             .upsert(item.data, { onConflict: 'pdv_id' })
 
-          if (error) throw error
+          if (error) {
+            throw error
+          }
         }
         else if (item.type === 'image') {
           const { error } = await supabase.storage
             .from('visite-images')
             .upload(item.data.path, item.data.file)
 
-          if (error) throw error
+          if (error) {
+            throw error
+          }
         }
 
-        // Remove successfully processed item
-        queue.value = queue.value.filter(i => i.id !== item.id)
+        queue.value = queue.value.filter(queuedItem => queuedItem.id !== item.id)
       }
       catch (err) {
-        item.retries++
+        item.retries += 1
         item.status = item.retries >= 3 ? 'error' : 'pending'
         console.error(`Erreur sync item ${item.id}:`, err)
       }
     }
 
-    saveQueue()
+    saveQueueToStorage()
     isSyncing.value = false
   }
 
-  /**
-   * Clear all items from queue
-   */
   function clearQueue() {
     queue.value = []
-    saveQueue()
+    saveQueueToStorage()
   }
 
-  /**
-   * Retry failed items
-   */
   function retryFailed() {
     queue.value
-      .filter(i => i.status === 'error')
-      .forEach(i => {
-        i.status = 'pending'
-        i.retries = 0
+      .filter(item => item.status === 'error')
+      .forEach((item) => {
+        item.status = 'pending'
+        item.retries = 0
       })
-    saveQueue()
-    processQueue()
+
+    saveQueueToStorage()
+    void processQueue()
   }
 
+  processQueueRunner = processQueue
+
   const pendingCount = computed(() =>
-    queue.value.filter(i => i.status === 'pending').length
+    queue.value.filter(item => item.status === 'pending').length
   )
 
   const errorCount = computed(() =>
-    queue.value.filter(i => i.status === 'error').length
+    queue.value.filter(item => item.status === 'error').length
   )
 
   return {

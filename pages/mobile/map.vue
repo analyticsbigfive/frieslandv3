@@ -8,6 +8,7 @@
 definePageMeta({ middleware: ['auth'], layout: 'mobile' })
 
 const pdvStore = usePDVStore()
+const authStore = useAuthStore()
 
 let map: any = null
 
@@ -22,7 +23,11 @@ onMounted(async () => {
     maxZoom: 19,
   }).addTo(map)
 
-  const allPDV = await pdvStore.fetchAllPDV()
+  if (!authStore.profile) {
+    await authStore.fetchProfile()
+  }
+
+  const allPDV = await pdvStore.fetchScopedPDV(authStore.profile)
 
   allPDV.forEach((pdv: any) => {
     if (pdv.geolocation_lat && pdv.geolocation_lng) {

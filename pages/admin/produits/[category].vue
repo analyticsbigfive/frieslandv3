@@ -1,68 +1,186 @@
 <template>
-  <div class="p-6 space-y-6">
-    <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-bold text-gray-900">Produits — {{ title }}</h1>
-      <div class="flex gap-3">
-        <UInput v-model="dateFrom" type="date" size="sm" />
-        <UInput v-model="dateTo" type="date" size="sm" />
-        <UButton icon="i-heroicons-funnel" size="sm" @click="fetchData">Filtrer</UButton>
-      </div>
+  <div class="space-y-6">
+    <h1 class="text-2xl font-bold text-gray-900">PRODUITS — {{ title }}</h1>
+
+    <DashboardFilters
+      v-model="dashboard.filters.value"
+      :zone-options="dashboard.availableZones.value"
+      @filter="dashboard.fetchVisites()"
+    />
+
+    <!-- Tabs -->
+    <div class="flex gap-1 bg-gray-100 rounded-lg p-1">
+      <button
+        v-for="t in tabs"
+        :key="t.key"
+        class="flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors"
+        :class="activeTab === t.key ? 'bg-white shadow text-fc-blue' : 'text-gray-500 hover:text-gray-700'"
+        @click="activeTab = t.key"
+      >
+        {{ t.label }}
+      </button>
     </div>
 
-    <!-- KPI Cards -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      <StatsCard
-        v-for="kpi in kpis"
-        :key="kpi.label"
-        :label="kpi.label"
-        :value="kpi.value"
-        :icon="kpi.icon"
-        :color="kpi.color"
-      />
+    <div v-if="dashboard.loading.value" class="flex items-center justify-center py-12">
+      <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-fc-blue" />
     </div>
 
-    <!-- Product detail table -->
-    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-      <div class="p-4 border-b">
-        <h3 class="font-bold text-gray-900">Détail par produit</h3>
-      </div>
-      <table class="w-full">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="text-left text-xs font-medium text-gray-500 px-4 py-3">Produit</th>
-            <th class="text-center text-xs font-medium text-gray-500 px-4 py-3">Présent</th>
-            <th class="text-center text-xs font-medium text-gray-500 px-4 py-3">En rupture</th>
-            <th class="text-center text-xs font-medium text-gray-500 px-4 py-3">% Présence</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-100">
-          <tr v-for="row in productRows" :key="row.name">
-            <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ row.name }}</td>
-            <td class="px-4 py-3 text-center text-sm text-green-600 font-bold">{{ row.present }}</td>
-            <td class="px-4 py-3 text-center text-sm text-red-500 font-bold">{{ row.rupture }}</td>
-            <td class="px-4 py-3 text-center">
-              <div class="flex items-center justify-center gap-2">
-                <div class="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div class="h-full bg-fc-blue rounded-full" :style="{ width: row.pct + '%' }" />
-                </div>
-                <span class="text-xs font-medium text-gray-600">{{ row.pct }}%</span>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Prix respectes -->
-    <div class="bg-white rounded-xl shadow-sm p-6">
-      <h3 class="font-bold text-gray-900 mb-4">Prix respectés</h3>
-      <div class="flex items-center gap-4">
-        <div class="flex-1 h-4 bg-gray-200 rounded-full overflow-hidden">
-          <div class="h-full bg-green-500 rounded-full" :style="{ width: prixPct + '%' }" />
+    <template v-else>
+      <!-- ======= TAB: DISPONIBILITÉS ======= -->
+      <template v-if="activeTab === 'dispo'">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatsCard title="Total visites" :value="String(dashboard.totalVisites.value)" icon="i-heroicons-clipboard-document-list" color="blue" />
+          <StatsCard :title="title + ' présent'" :value="String(catPresentCount)" icon="i-heroicons-check-circle" color="green" />
+          <StatsCard title="% Présence" :value="catPresentPct + '%'" icon="i-heroicons-chart-bar" color="purple" />
+          <StatsCard title="Prix respectés" :value="prixPct + '%'" icon="i-heroicons-currency-euro" color="orange" />
         </div>
-        <span class="text-lg font-bold text-gray-900">{{ prixPct }}%</span>
-      </div>
-    </div>
+
+        <!-- Pie charts par produit: Présent/Absent -->
+        <h2 class="text-lg font-bold text-gray-800">Disponibilité par SKU</h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <ClientOnly>
+            <div v-for="prod in prods" :key="prod.key" class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+              <h4 class="text-xs font-semibold text-gray-500 mb-2 text-center truncate">{{ prod.name }}</h4>
+              <ChartsPieChart
+                :labels="['En rupture', 'Présent']"
+                :values="[prodRupture(prod.key), prodPresent(prod.key)]"
+                :colors="['#EF4444', '#3B82F6']"
+                height="sm"
+                :show-percentages="true"
+              />
+            </div>
+          </ClientOnly>
+        </div>
+
+        <!-- Évolution -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h3 class="text-sm font-semibold text-gray-700 mb-4">Évolution de la disponibilité {{ title }}</h3>
+          <ClientOnly>
+            <ChartsVisitesLineChart
+              v-if="evoData.length"
+              title=""
+              :data="evoData"
+            />
+          </ClientOnly>
+        </div>
+      </template>
+
+      <!-- ======= TAB: PRIX ======= -->
+      <template v-if="activeTab === 'prix'">
+        <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          <StatsCard title="Visites avec produit" :value="String(catPresentCount)" icon="i-heroicons-clipboard-document-list" color="blue" />
+          <StatsCard title="Prix respectés" :value="prixPct + '%'" icon="i-heroicons-check-circle" color="green" />
+          <StatsCard title="Prix non respectés" :value="(100 - prixPct) + '%'" icon="i-heroicons-x-circle" color="red" />
+        </div>
+
+        <!-- Pie chart global prix -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 class="text-sm font-semibold text-gray-700 mb-4">Prix respectés — {{ title }}</h3>
+            <ClientOnly>
+              <ChartsPieChart
+                :labels="['Non respecté', 'Respecté']"
+                :values="[prixNonRespecte, prixRespecte]"
+                :colors="['#EF4444', '#10B981']"
+                height="md"
+                :show-percentages="true"
+              />
+            </ClientOnly>
+          </div>
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 class="text-sm font-semibold text-gray-700 mb-4">Évolution prix respectés</h3>
+            <ClientOnly>
+              <ChartsVisitesLineChart
+                v-if="prixEvoData.length"
+                title=""
+                :data="prixEvoData"
+              />
+            </ClientOnly>
+          </div>
+        </div>
+      </template>
+
+      <!-- ======= TAB: RÉCAPITULATIF ======= -->
+      <template v-if="activeTab === 'recap'">
+        <div class="flex items-center gap-6 text-sm text-gray-500">
+          <span>Total : <strong class="text-gray-900">{{ filteredRecap.length }}</strong> lignes</span>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead class="bg-gray-50 sticky top-0">
+              <tr>
+                <th class="px-3 py-2 text-left font-semibold text-gray-600">Date</th>
+                <th class="px-3 py-2 text-left font-semibold text-gray-600">PDV</th>
+                <th class="px-3 py-2 text-left font-semibold text-gray-600">Canal</th>
+                <th class="px-3 py-2 text-left font-semibold text-gray-600">Région</th>
+                <th class="px-3 py-2 text-left font-semibold text-gray-600">Commercial</th>
+                <th class="px-3 py-2 text-center font-semibold text-gray-600">Cat. présent</th>
+                <th class="px-3 py-2 text-center font-semibold text-gray-600">Prix OK</th>
+                <th v-for="prod in prods" :key="prod.key" class="px-2 py-2 text-center font-semibold text-gray-600 whitespace-nowrap">
+                  {{ prod.name }}
+                </th>
+              </tr>
+              <!-- Column filters -->
+              <tr class="bg-gray-25">
+                <th class="px-3 py-1"><UInput v-model="recapFilters.date" size="2xs" placeholder="..." class="w-20" /></th>
+                <th class="px-3 py-1"><UInput v-model="recapFilters.pdv" size="2xs" placeholder="..." class="w-24" /></th>
+                <th class="px-3 py-1">
+                  <USelectMenu v-model="recapFilters.canal" :options="['', 'General trade', 'Modern trade']" size="2xs" class="w-24" />
+                </th>
+                <th class="px-3 py-1"><UInput v-model="recapFilters.region" size="2xs" placeholder="..." class="w-20" /></th>
+                <th class="px-3 py-1"><UInput v-model="recapFilters.commercial" size="2xs" placeholder="..." class="w-20" /></th>
+                <th class="px-3 py-1">
+                  <USelectMenu v-model="recapFilters.present" :options="['', 'Oui', 'Non']" size="2xs" class="w-16" />
+                </th>
+                <th class="px-3 py-1">
+                  <USelectMenu v-model="recapFilters.prix" :options="['', 'Oui', 'Non']" size="2xs" class="w-16" />
+                </th>
+                <th v-for="prod in prods" :key="prod.key + '_f'" class="px-2 py-1" />
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr v-for="row in paginatedRecap" :key="row.visite_id" class="hover:bg-gray-50">
+                <td class="px-3 py-2 whitespace-nowrap">{{ formatDate(row.date_visite) }}</td>
+                <td class="px-3 py-2 font-medium text-gray-900 max-w-[200px] truncate">{{ row.pdv?.nom_pdv || '—' }}</td>
+                <td class="px-3 py-2">{{ row.pdv?.canal || '—' }}</td>
+                <td class="px-3 py-2">{{ row.pdv?.region || '—' }}</td>
+                <td class="px-3 py-2">{{ row.commercial }}</td>
+                <td class="px-3 py-2 text-center">
+                  <span class="inline-block w-5 h-5 rounded-full text-white text-[10px] font-bold leading-5"
+                    :class="row.data?.produits?.[cat]?.present ? 'bg-green-500' : 'bg-gray-300'">
+                    {{ row.data?.produits?.[cat]?.present ? '✓' : '—' }}
+                  </span>
+                </td>
+                <td class="px-3 py-2 text-center">
+                  <span class="inline-block w-5 h-5 rounded-full text-white text-[10px] font-bold leading-5"
+                    :class="row.data?.produits?.[cat]?.prix_respectes ? 'bg-green-500' : 'bg-gray-300'">
+                    {{ row.data?.produits?.[cat]?.prix_respectes ? '✓' : '—' }}
+                  </span>
+                </td>
+                <td v-for="prod in prods" :key="prod.key + '_v'" class="px-2 py-2 text-center">
+                  <span
+                    class="inline-block w-5 h-5 rounded-full text-white text-[10px] font-bold leading-5"
+                    :class="row.data?.produits?.[cat]?.[prod.key] === 'Présent' ? 'bg-blue-500' : 'bg-gray-300'"
+                  >
+                    {{ row.data?.produits?.[cat]?.[prod.key] === 'Présent' ? '✓' : '—' }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="flex items-center justify-between text-sm text-gray-500">
+          <span>Page {{ recapPage }} / {{ recapTotalPages }}</span>
+          <div class="flex gap-2">
+            <UButton size="xs" variant="outline" :disabled="recapPage <= 1" @click="recapPage--">Précédent</UButton>
+            <UButton size="xs" variant="outline" :disabled="recapPage >= recapTotalPages" @click="recapPage++">Suivant</UButton>
+          </div>
+        </div>
+      </template>
+    </template>
   </div>
 </template>
 
@@ -70,15 +188,18 @@
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const route = useRoute()
-const supabase = useSupabaseClient()
+const dashboard = useDashboardDirection()
 
-const category = computed(() => (route.params.category as string) || 'evap')
-const title = computed(() => category.value.toUpperCase())
+const cat = computed(() => (route.params.category as string) || 'evap')
+const title = computed(() => cat.value.toUpperCase())
 
-const dateFrom = ref(new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().slice(0, 10))
-const dateTo = ref(new Date().toISOString().slice(0, 10))
-
-const visites = ref<any[]>([])
+// Tab management
+const tabs = [
+  { key: 'dispo', label: 'Disponibilités' },
+  { key: 'prix', label: 'Prix' },
+  { key: 'recap', label: 'Récapitulatif' },
+]
+const activeTab = ref((route.query.tab as string) || 'dispo')
 
 const productDefs: Record<string, { key: string; name: string }[]> = {
   evap: [
@@ -117,57 +238,116 @@ const productDefs: Record<string, { key: string; name: string }[]> = {
     { key: 'br_yogoo_nature_mini_90ml', name: 'Yogoo Nature Mini 90ml' },
     { key: 'br_yogoo_nature_maxi_318ml', name: 'Yogoo Nature Maxi 318ml' },
   ],
+  cereales: [
+    { key: 'br_cereales_500g', name: 'Céréales 500g' },
+    { key: 'br_cereales_1kg', name: 'Céréales 1Kg' },
+  ],
 }
 
-const kpis = computed(() => {
-  const total = visites.value.length
-  const present = visites.value.filter(v => v.data?.produits?.[category.value]?.present).length
-  const prixOk = visites.value.filter(v => v.data?.produits?.[category.value]?.prix_respectes).length
+const prods = computed(() => productDefs[cat.value] || [])
 
-  return [
-    { label: 'Total visites', value: String(total), icon: 'i-heroicons-clipboard-document-list', color: 'blue' },
-    { label: `${title.value} Présent`, value: String(present), icon: 'i-heroicons-check-circle', color: 'green' },
-    { label: '% Présence', value: total ? Math.round(present / total * 100) + '%' : '0%', icon: 'i-heroicons-chart-bar', color: 'purple' },
-    { label: 'Prix respectés', value: present ? Math.round(prixOk / present * 100) + '%' : '0%', icon: 'i-heroicons-currency-euro', color: 'orange' },
-  ]
-})
+// --- DISPONIBILITÉS ---
+const catPresentCount = computed(() =>
+  dashboard.countWhere(v => v.data?.produits?.[cat.value]?.present)
+)
+const catPresentPct = computed(() =>
+  dashboard.pctWhere(v => v.data?.produits?.[cat.value]?.present)
+)
 
-const productRows = computed(() => {
-  const prods = productDefs[category.value] || []
-  const cat = category.value
-  const visitesWithCat = visites.value.filter(v => v.data?.produits?.[cat]?.present)
-
-  return prods.map(p => {
-    const total = visitesWithCat.length
-    const present = visitesWithCat.filter(v => v.data?.produits?.[cat]?.[p.key] === 'Présent').length
-    const rupture = total - present
-    return {
-      name: p.name,
-      present,
-      rupture,
-      pct: total > 0 ? Math.round(present / total * 100) : 0,
-    }
-  })
-})
-
-const prixPct = computed(() => {
-  const cat = category.value
-  const withPresent = visites.value.filter(v => v.data?.produits?.[cat]?.present)
-  if (withPresent.length === 0) return 0
-  const prixOk = withPresent.filter(v => v.data?.produits?.[cat]?.prix_respectes).length
-  return Math.round(prixOk / withPresent.length * 100)
-})
-
-async function fetchData() {
-  const { data } = await supabase
-    .from('visites')
-    .select('visite_id, data, date_visite')
-    .gte('date_visite', dateFrom.value + 'T00:00:00')
-    .lte('date_visite', dateTo.value + 'T23:59:59')
-    .order('date_visite', { ascending: false })
-
-  visites.value = data || []
+function prodPresent(prodKey: string) {
+  return dashboard.visites.value.filter(v =>
+    v.data?.produits?.[cat.value]?.present && v.data?.produits?.[cat.value]?.[prodKey] === 'Présent'
+  ).length
+}
+function prodRupture(prodKey: string) {
+  const withCat = dashboard.visites.value.filter(v => v.data?.produits?.[cat.value]?.present)
+  return withCat.length - prodPresent(prodKey)
 }
 
-onMounted(fetchData)
+const evoData = computed(() => {
+  const evo = dashboard.evolutionParSemaine(v => v.data?.produits?.[cat.value]?.present)
+  return evo.labels.map((label, i) => ({ date: label, count: evo.counts[i] }))
+})
+
+// --- PRIX ---
+const prixRespecte = computed(() =>
+  dashboard.visites.value.filter(v =>
+    v.data?.produits?.[cat.value]?.present && v.data?.produits?.[cat.value]?.prix_respectes
+  ).length
+)
+const prixNonRespecte = computed(() => catPresentCount.value - prixRespecte.value)
+const prixPct = computed(() =>
+  catPresentCount.value > 0 ? Math.round(prixRespecte.value / catPresentCount.value * 100) : 0
+)
+
+const prixEvoData = computed(() => {
+  const evo = dashboard.evolutionParSemaine(v =>
+    v.data?.produits?.[cat.value]?.present && v.data?.produits?.[cat.value]?.prix_respectes
+  )
+  return evo.labels.map((label, i) => ({ date: label, count: evo.counts[i] }))
+})
+
+// --- RÉCAPITULATIF ---
+const recapFilters = reactive({
+  date: '',
+  pdv: '',
+  canal: '',
+  region: '',
+  commercial: '',
+  present: '',
+  prix: '',
+})
+const recapPage = ref(1)
+const perPage = 100
+
+function formatDate(d: string) {
+  return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+const filteredRecap = computed(() => {
+  let rows = dashboard.visites.value
+
+  if (recapFilters.date) rows = rows.filter(r => formatDate(r.date_visite).includes(recapFilters.date))
+  if (recapFilters.pdv) rows = rows.filter(r => r.pdv?.nom_pdv?.toLowerCase().includes(recapFilters.pdv.toLowerCase()))
+  if (recapFilters.canal) rows = rows.filter(r => r.pdv?.canal === recapFilters.canal)
+  if (recapFilters.region) rows = rows.filter(r => r.pdv?.region?.toLowerCase().includes(recapFilters.region.toLowerCase()))
+  if (recapFilters.commercial) rows = rows.filter(r => r.commercial?.toLowerCase().includes(recapFilters.commercial.toLowerCase()))
+  if (recapFilters.present) {
+    rows = rows.filter(r => {
+      const p = !!r.data?.produits?.[cat.value]?.present
+      return recapFilters.present === 'Oui' ? p : !p
+    })
+  }
+  if (recapFilters.prix) {
+    rows = rows.filter(r => {
+      const p = !!r.data?.produits?.[cat.value]?.prix_respectes
+      return recapFilters.prix === 'Oui' ? p : !p
+    })
+  }
+
+  return rows
+})
+
+const recapTotalPages = computed(() => Math.max(1, Math.ceil(filteredRecap.value.length / perPage)))
+const paginatedRecap = computed(() => {
+  const start = (recapPage.value - 1) * perPage
+  return filteredRecap.value.slice(start, start + perPage)
+})
+
+watch(filteredRecap, () => { recapPage.value = 1 })
+
+// Watch route changes
+watch(() => route.params.category, () => {
+  activeTab.value = (route.query.tab as string) || 'dispo'
+  dashboard.fetchVisites()
+})
+
+watch(() => route.query.tab, (tab) => {
+  if (tab) activeTab.value = tab as string
+})
+
+onMounted(async () => {
+  await dashboard.fetchZones()
+  await dashboard.fetchVisites()
+})
 </script>

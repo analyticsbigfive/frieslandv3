@@ -1,12 +1,15 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+const isProduction = process.env.NODE_ENV === 'production'
+const devtoolsEnabled = process.env.NUXT_DEVTOOLS === 'true'
+
 export default defineNuxtConfig({
-  devtools: { enabled: true },
+  devtools: { enabled: devtoolsEnabled },
 
   modules: [
     '@nuxt/ui',
     '@nuxtjs/supabase',
     '@pinia/nuxt',
-    '@vite-pwa/nuxt',
+    ...(isProduction ? ['@vite-pwa/nuxt'] : []),
   ],
 
   css: ['~/assets/css/main.css'],
@@ -24,6 +27,17 @@ export default defineNuxtConfig({
       login: '/login',
       callback: '/confirm',
       exclude: ['/login', '/register'],
+    },
+    cookieOptions: {
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    },
+    clientOptions: {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+      },
     },
   },
 
@@ -81,7 +95,7 @@ export default defineNuxtConfig({
       installPrompt: true,
     },
     devOptions: {
-      enabled: true,
+      enabled: false,
       type: 'module',
     },
   },

@@ -112,11 +112,17 @@ const loading = ref(false)
 const errorMessage = ref('')
 
 // Redirect if already logged in
-watch(() => authStore.isAuthenticated, (isAuth) => {
-  if (isAuth) {
-    const redirect = authStore.isAdmin ? '/admin' : '/mobile'
-    router.push(redirect)
+watch(() => authStore.isAuthenticated, async (isAuth) => {
+  if (!isAuth) {
+    return
   }
+
+  if (!authStore.profile) {
+    await authStore.fetchProfile()
+  }
+
+  const redirect = authStore.isAdmin || authStore.isSuperviseur ? '/admin' : '/mobile'
+  router.push(redirect)
 }, { immediate: true })
 
 async function handleLogin() {
@@ -130,6 +136,10 @@ async function handleLogin() {
 
   try {
     await authStore.login(email.value, password.value)
+
+    // Récupérer la géolocalisation de l'utilisateur après connexion
+    const { initialize: initGeo } = useUserGeolocation()
+    initGeo()
 
     // Wait for profile to load
     await nextTick()

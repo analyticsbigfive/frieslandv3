@@ -46,6 +46,8 @@
 definePageMeta({ middleware: ['auth'], layout: 'mobile' })
 
 const supabase = useSupabaseClient()
+const authStore = useAuthStore()
+const { filterContacts } = useUserScope()
 const search = ref('')
 const contacts = ref<any[]>([])
 
@@ -58,12 +60,19 @@ const filteredContacts = computed(() => {
 })
 
 onMounted(async () => {
+  if (!authStore.profile) {
+    await authStore.fetchProfile()
+  }
+
   const { data } = await supabase
     .from('profiles')
-    .select('id, nom, email, role, zone, telephone')
-    .eq('actif', true)
+    .select('id, nom, email, role, zone_assignee, telephone, region, is_active')
+    .eq('is_active', true)
     .order('nom')
 
-  contacts.value = data || []
+  contacts.value = filterContacts(data || []).map((contact: any) => ({
+    ...contact,
+    zone: contact.zone_assignee,
+  }))
 })
 </script>

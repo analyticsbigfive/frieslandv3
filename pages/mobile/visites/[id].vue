@@ -12,6 +12,11 @@
       <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 text-fc-blue animate-spin" />
     </div>
 
+    <div v-else-if="!visite" class="px-4 py-20 text-center text-gray-400">
+      <UIcon name="i-heroicons-clipboard-document-list" class="w-12 h-12 mx-auto mb-3 opacity-50" />
+      <p>Visite introuvable</p>
+    </div>
+
     <div v-else-if="visite" class="px-4 py-4 space-y-4 pb-24">
       <!-- Info card -->
       <div class="bg-white rounded-xl shadow-sm p-4 space-y-3">
@@ -130,6 +135,9 @@ definePageMeta({
 const route = useRoute()
 const router = useRouter()
 const supabase = useSupabaseClient()
+const authStore = useAuthStore()
+const user = useSupabaseUser()
+const { isPrivileged, matchesVisiteScope } = useUserScope()
 
 const visite = ref<any>(null)
 const loading = ref(true)
@@ -167,16 +175,28 @@ function formatDate(d: string) {
 }
 
 onMounted(async () => {
-  const id = route.params.id as string
-  const { data, error } = await supabase
-    .from('visites')
-    .select('*, pdv:pdv_id(nom_pdv)')
-    .eq('visite_id', id)
-    .single()
+  if (!authStore.profile) {
+    await authStore.fetchProfile()
+  }
 
-  if (data) {
+  const id = route.params.id as string
+  let query = supabase
+    .from('visites')
+    .select('visite_id, pdv_id, user_id, commercial, email, date_visite, geofence_validated, data, image_urls, pdv:pdv_id(nom_pdv)')
+    .eq('visite_id', id)
+ 
+  if (!isPrivileged()) {
+    query = query.eq('user_id', user.value?.id)
+  }
+
+  const { data } = await query.single()
+
+  if (data && matchesVisiteScope(data)) {
     visite.value = data
     pdvName.value = data.pdv?.nom_pdv || data.pdv_id
+  }
+  else {
+    visite.value = null
   }
   loading.value = false
 })

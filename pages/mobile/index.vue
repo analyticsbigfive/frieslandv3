@@ -118,6 +118,7 @@ definePageMeta({
 
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
+const authStore = useAuthStore()
 
 const visites = ref<Visite[]>([])
 const loading = ref(false)
@@ -164,10 +165,14 @@ function viewVisite(visite: Visite) {
 async function loadVisites() {
   loading.value = true
   try {
+    if (!authStore.profile) {
+      await authStore.fetchProfile()
+    }
+
     const { data, error } = await supabase
       .from('visites')
-      .select('*, pdv:pdv_id(nom_pdv)')
-      .eq('email', user.value?.email)
+      .select('visite_id, pdv_id, user_id, commercial, email, date_visite, geofence_validated, sync_status, data, pdv:pdv_id(nom_pdv)')
+      .eq('user_id', user.value?.id)
       .order('date_visite', { ascending: false })
       .limit(100)
 

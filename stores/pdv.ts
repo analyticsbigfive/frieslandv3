@@ -1,15 +1,17 @@
 // stores/pdv.ts
 import { defineStore } from 'pinia'
-import type { PDV, ZoneSecteur } from '~/types'
+import type { PDV, Profile, ZoneSecteur } from '~/types'
 
 export const usePDVStore = defineStore('pdv', () => {
   const supabase = useSupabaseClient()
+  const cacheTTL = 5 * 60 * 1000
 
   const pdvList = ref<PDV[]>([])
   const currentPDV = ref<PDV | null>(null)
   const zones = ref<ZoneSecteur[]>([])
   const loading = ref(false)
   const total = ref(0)
+  const scopedCache = ref<Record<string, { data: PDV[]; timestamp: number }>>({})
 
   const filters = ref({
     search: '',
@@ -25,6 +27,57 @@ export const usePDVStore = defineStore('pdv', () => {
   const uniqueZones = computed(() => [...new Set(pdvList.value.map(p => p.zone).filter(Boolean))])
   const uniqueRegions = computed(() => [...new Set(pdvList.value.map(p => p.region).filter(Boolean))])
   const uniqueCanaux = computed(() => [...new Set(pdvList.value.map(p => p.canal).filter(Boolean))])
+
+  function isPrivilegedProfile(profile?: Profile | null) {
+    return profile?.role === 'admin' || profile?.role === 'superviseur'
+  }
+
+  function getScopeKey(profile?: Profile | null) {
+    if (!profile) return 'anonymous'
+
+    if (isPrivilegedProfile(profile)) {
+      return `privileged:${profile.id}`
+    }
+
+    const secteurs = (profile.secteurs_assignes || []).filter(Boolean).sort().join('|')
+    return [
+      profile.id,
+      profile.role,
+      profile.zone_assignee || '',
+      profile.region || '',
+      secteurs,
+    ].join(':')
+  }
+
+  function buildScopedQuery(profile?: Profile | null) {
+    let query = supabase
+      .from('pdv')
+      .select('*')
+      .eq('is_active', true)
+      .order('nom_pdv')
+
+    if (!profile || isPrivilegedProfile(profile)) {
+      return query
+    }
+
+    if (profile.zone_assignee) {
+      query = query.eq('zone', profile.zone_assignee)
+    }
+
+    const secteurs = (profile.secteurs_assignes || []).filter(Boolean)
+    if (secteurs.length === 1) {
+      query = query.eq('secteur', secteurs[0])
+    }
+    else if (secteurs.length > 1) {
+      query = query.in('secteur', secteurs)
+    }
+
+    return query
+  }
+
+  function clearScopedCache() {
+    scopedCache.value = {}
+  }
 
   async function fetchPDV() {
     loading.value = true
@@ -78,6 +131,27 @@ export const usePDVStore = defineStore('pdv', () => {
     return (data || []) as PDV[]
   }
 
+  async function fetchScopedPDV(profile?: Profile | null, force = false): Promise<PDV[]> {
+    const cacheKey = getScopeKey(profile)
+    const cached = scopedCache.value[cacheKey]
+
+    if (!force && cached && Date.now() - cached.timestamp < cacheTTL) {
+      return cached.data
+    }
+
+    const { data, error } = await buildScopedQuery(profile)
+
+    if (error) throw error
+
+    const scopedData = (data || []) as PDV[]
+    scopedCache.value[cacheKey] = {
+      data: scopedData,
+      timestamp: Date.now(),
+    }
+
+    return scopedData
+  }
+
   async function fetchPDVById(pdvId: string) {
     const { data, error } = await supabase
       .from('pdv')
@@ -101,6 +175,7 @@ export const usePDVStore = defineStore('pdv', () => {
       .single()
 
     if (error) throw error
+    clearScopedCache()
     return data
   }
 
@@ -113,6 +188,7 @@ export const usePDVStore = defineStore('pdv', () => {
       .single()
 
     if (error) throw error
+    clearScopedCache()
     return data
   }
 
@@ -124,6 +200,7 @@ export const usePDVStore = defineStore('pdv', () => {
 
     if (error) throw error
     pdvList.value = pdvList.value.filter(p => p.pdv_id !== pdvId)
+    clearScopedCache()
   }
 
   async function fetchZones() {
@@ -181,11 +258,13 @@ export const usePDVStore = defineStore('pdv', () => {
     uniqueCanaux,
     fetchPDV,
     fetchAllPDV,
+    fetchScopedPDV,
     fetchPDVById,
     createPDV,
     updatePDV,
     deletePDV,
     fetchZones,
     importPDVFromCSV,
+    clearScopedCache,
   }
 })

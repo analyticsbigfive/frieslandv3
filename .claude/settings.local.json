@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs ls:*)",
+      "Bash(npx nuxi typecheck:*)",
+      "Bash(npx nuxi build:*)",
+      "Bash(dir:*)",
+      "Bash(ls:*)"
+    ]
+  }
+}
