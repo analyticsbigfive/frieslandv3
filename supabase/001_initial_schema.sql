@@ -2,15 +2,85 @@
 -- Migration Supabase - Friesland Bonnet Rouge
 -- 001_initial_schema.sql
 -- ============================================================
+-- IMPORTANT: Exécuter ce script dans le SQL Editor de Supabase
+-- Si des erreurs surviennent, exécuter chaque section séparément
+-- ============================================================
 
 -- Enable extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA extensions;
 CREATE EXTENSION IF NOT EXISTS "postgis";
+
+-- ============================================================
+-- CLEANUP: Drop existing objects to avoid conflicts
+-- ============================================================
+DROP VIEW IF EXISTS public.v_visites_par_jour CASCADE;
+DROP VIEW IF EXISTS public.v_performance_commerciaux CASCADE;
+DROP VIEW IF EXISTS public.v_stats_visites CASCADE;
+
+DROP TRIGGER IF EXISTS set_updated_at_visites ON public.visites;
+DROP TRIGGER IF EXISTS set_updated_at_pdv ON public.pdv;
+DROP TRIGGER IF EXISTS set_updated_at_profiles ON public.profiles;
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+
+-- Drop policies before dropping tables
+DO $$ BEGIN
+  DROP POLICY IF EXISTS "profiles_select_all" ON public.profiles;
+  DROP POLICY IF EXISTS "profiles_update_own" ON public.profiles;
+  DROP POLICY IF EXISTS "profiles_insert_admin" ON public.profiles;
+  DROP POLICY IF EXISTS "profiles_delete_admin" ON public.profiles;
+EXCEPTION WHEN undefined_table THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  DROP POLICY IF EXISTS "pdv_select_auth" ON public.pdv;
+  DROP POLICY IF EXISTS "pdv_insert_auth" ON public.pdv;
+  DROP POLICY IF EXISTS "pdv_update_admin" ON public.pdv;
+  DROP POLICY IF EXISTS "pdv_delete_admin" ON public.pdv;
+EXCEPTION WHEN undefined_table THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  DROP POLICY IF EXISTS "visites_select" ON public.visites;
+  DROP POLICY IF EXISTS "visites_insert" ON public.visites;
+  DROP POLICY IF EXISTS "visites_update" ON public.visites;
+  DROP POLICY IF EXISTS "visites_delete_admin" ON public.visites;
+EXCEPTION WHEN undefined_table THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  DROP POLICY IF EXISTS "zones_select" ON public.zones_secteurs;
+  DROP POLICY IF EXISTS "zones_manage_admin" ON public.zones_secteurs;
+EXCEPTION WHEN undefined_table THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  DROP POLICY IF EXISTS "routing_select" ON public.routing_data;
+  DROP POLICY IF EXISTS "routing_manage_admin" ON public.routing_data;
+EXCEPTION WHEN undefined_table THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  DROP POLICY IF EXISTS "images_select_public" ON storage.objects;
+  DROP POLICY IF EXISTS "images_insert_auth" ON storage.objects;
+  DROP POLICY IF EXISTS "images_delete_admin" ON storage.objects;
+EXCEPTION WHEN undefined_table THEN NULL;
+END $$;
+
+-- Drop tables in correct dependency order
+DROP TABLE IF EXISTS public.visites CASCADE;
+DROP TABLE IF EXISTS public.routing_data CASCADE;
+DROP TABLE IF EXISTS public.pdv CASCADE;
+DROP TABLE IF EXISTS public.zones_secteurs CASCADE;
+DROP TABLE IF EXISTS public.profiles CASCADE;
+
+-- Drop functions
+DROP FUNCTION IF EXISTS update_updated_at() CASCADE;
+DROP FUNCTION IF EXISTS handle_new_user() CASCADE;
 
 -- ============================================================
 -- TABLE: profiles (linked to auth.users)
 -- ============================================================
-CREATE TABLE IF NOT EXISTS public.profiles (
+CREATE TABLE public.profiles (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
   email TEXT NOT NULL,
   nom TEXT NOT NULL DEFAULT '',
@@ -28,7 +98,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 -- ============================================================
 -- TABLE: zones_secteurs (reference data)
 -- ============================================================
-CREATE TABLE IF NOT EXISTS public.zones_secteurs (
+CREATE TABLE public.zones_secteurs (
   id SERIAL PRIMARY KEY,
   zone TEXT NOT NULL,
   secteur TEXT,
@@ -43,8 +113,8 @@ CREATE TABLE IF NOT EXISTS public.zones_secteurs (
 -- ============================================================
 -- TABLE: pdv (Points de Vente)
 -- ============================================================
-CREATE TABLE IF NOT EXISTS public.pdv (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+CREATE TABLE public.pdv (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   pdv_id TEXT UNIQUE NOT NULL,
   nom_pdv TEXT NOT NULL,
   canal TEXT DEFAULT 'General trade',
@@ -74,8 +144,8 @@ CREATE TABLE IF NOT EXISTS public.pdv (
 -- ============================================================
 -- TABLE: visites
 -- ============================================================
-CREATE TABLE IF NOT EXISTS public.visites (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+CREATE TABLE public.visites (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   visite_id TEXT UNIQUE NOT NULL,
   pdv_id TEXT REFERENCES public.pdv(pdv_id),
   user_id UUID REFERENCES public.profiles(id),
@@ -96,7 +166,7 @@ CREATE TABLE IF NOT EXISTS public.visites (
 -- ============================================================
 -- TABLE: routing_data
 -- ============================================================
-CREATE TABLE IF NOT EXISTS public.routing_data (
+CREATE TABLE public.routing_data (
   id SERIAL PRIMARY KEY,
   jour_routing TEXT,
   canal TEXT,
@@ -138,15 +208,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER set_updated_at_profiles
+CREATE OR REPLACE TRIGGER set_updated_at_profiles
   BEFORE UPDATE ON public.profiles
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
-CREATE TRIGGER set_updated_at_pdv
+CREATE OR REPLACE TRIGGER set_updated_at_pdv
   BEFORE UPDATE ON public.pdv
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
-CREATE TRIGGER set_updated_at_visites
+CREATE OR REPLACE TRIGGER set_updated_at_visites
   BEFORE UPDATE ON public.visites
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
@@ -230,12 +300,23 @@ CREATE POLICY "routing_manage_admin" ON public.routing_data FOR ALL
 INSERT INTO storage.buckets (id, name, public) VALUES ('visite-images', 'visite-images', true)
 ON CONFLICT DO NOTHING;
 
-CREATE POLICY "images_select_public" ON storage.objects FOR SELECT
-  USING (bucket_id = 'visite-images');
-CREATE POLICY "images_insert_auth" ON storage.objects FOR INSERT
-  WITH CHECK (bucket_id = 'visite-images' AND auth.role() = 'authenticated');
-CREATE POLICY "images_delete_admin" ON storage.objects FOR DELETE
-  USING (bucket_id = 'visite-images' AND EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+DO $$ BEGIN
+  CREATE POLICY "images_select_public" ON storage.objects FOR SELECT
+    USING (bucket_id = 'visite-images');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "images_insert_auth" ON storage.objects FOR INSERT
+    WITH CHECK (bucket_id = 'visite-images' AND auth.role() = 'authenticated');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "images_delete_admin" ON storage.objects FOR DELETE
+    USING (bucket_id = 'visite-images' AND EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ============================================================
 -- VIEWS: Statistics helpers

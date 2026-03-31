@@ -152,10 +152,11 @@ TRUNCATE public.zones_secteurs RESTART IDENTITY CASCADE;
     })
 
     sql += values.map((v, idx) => {
-      const separator = idx < values.length - 1 ? ',' : ''
+      const isLast = idx === values.length - 1
+      const separator = isLast ? ';' : ','
       return `${v.line}${separator} -- CSV ID: ${v.secteurId}`
     }).join('\n')
-    sql += ';\n\n'
+    sql += '\n\n'
   }
 
   // Add useful indexes and statistics refresh
@@ -249,175 +250,171 @@ ALTER TABLE public.visites DISABLE TRIGGER set_updated_at_visites;
 
       if (!visiteId) continue
 
-      sql += `SELECT import_visite_from_csv(\n`
-      sql += `  ${sqlEscape(visiteId)},\n`
-      sql += `  ${sqlEscape(pdvId)},\n`
-      sql += `  ${sqlEscape(date)},\n`
-      sql += `  ${sqlEscape(commercial)},\n`
-      sql += `  ${sqlEscape(email)},\n`
+      // Helper: escape a value for JSONB string (double-escape single quotes for SQL, escape backslashes/double quotes for JSON)
+      const jsonStr = (val) => {
+        if (!val || val === '') return 'null'
+        return '"' + val.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"'
+      }
+      const jsonBool = (row, colName) => {
+        const val = get(row, colName)
+        return (val.toUpperCase() === 'TRUE' || val === '1') ? 'true' : 'false'
+      }
+      const jsonProduct = (row, colName) => {
+        const val = get(row, colName)
+        if (!val) return '"En rupture"'
+        return '"' + val.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"'
+      }
+      const jsonText = (val) => {
+        if (!val || val === '') return 'null'
+        return '"' + val.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"'
+      }
 
-      // EVAP
-      sql += `  -- EVAP\n`
-      sql += `  ${getBool(row, 'EVAP Présent?')},\n`
-      sql += `  ${getProduct(row, 'EVAP : BR Gold présent?')},\n`
-      sql += `  ${getProduct(row, 'EVAP : BR 160g présent?')},\n`
-      sql += `  ${getProduct(row, 'EVAP : BRB 160g présent?')},\n`
-      sql += `  ${getProduct(row, 'EVAP : BR 400g présent?')},\n`
-      sql += `  ${getProduct(row, 'EVAP : BRB 400g présent?')},\n`
-      sql += `  ${getProduct(row, 'EVAP : Pearl 400g présent?')},\n`
-      sql += `  ${getBool(row, 'EVAP : Prix respectés?')},\n`
+      // Build the JSONB object matching p_data keys in import_visite_from_csv
+      const jsonObj = `{` +
+        `"visite_id": ${jsonStr(visiteId)}, ` +
+        `"pdv_id": ${jsonStr(pdvId)}, ` +
+        `"date": ${jsonStr(date)}, ` +
+        `"commercial": ${jsonStr(commercial)}, ` +
+        `"email": ${jsonStr(email)}, ` +
+        // EVAP
+        `"evap_present": ${jsonBool(row, 'EVAP Présent?')}, ` +
+        `"evap_br_gold": ${jsonProduct(row, 'EVAP : BR Gold présent?')}, ` +
+        `"evap_br_160g": ${jsonProduct(row, 'EVAP : BR 160g présent?')}, ` +
+        `"evap_brb_160g": ${jsonProduct(row, 'EVAP : BRB 160g présent?')}, ` +
+        `"evap_br_400g": ${jsonProduct(row, 'EVAP : BR 400g présent?')}, ` +
+        `"evap_brb_400g": ${jsonProduct(row, 'EVAP : BRB 400g présent?')}, ` +
+        `"evap_pearl_400g": ${jsonProduct(row, 'EVAP : Pearl 400g présent?')}, ` +
+        `"evap_prix": ${jsonBool(row, 'EVAP : Prix respectés?')}, ` +
+        // IMP
+        `"imp_present": ${jsonBool(row, 'IMP Présent?')}, ` +
+        `"imp_br_400g": ${jsonProduct(row, 'IMP : BR 400g présent?')}, ` +
+        `"imp_br_900g": ${jsonProduct(row, 'IMP : BR 900g présent?')}, ` +
+        `"imp_br_2_5kg": ${jsonProduct(row, 'IMP : BR 2,5 Kg présent?')}, ` +
+        `"imp_br_375g": ${jsonProduct(row, 'IMP : BR 375g présent?')}, ` +
+        `"imp_brb_400g": ${jsonProduct(row, 'IMP : BRB 400g présent?')}, ` +
+        `"imp_br_20g": ${jsonProduct(row, 'IMP : BR 20g présent?')}, ` +
+        `"imp_brb_25g": ${jsonProduct(row, 'IMP : BRB 25g présent?')}, ` +
+        `"imp_brd_15g": ${jsonProduct(row, 'IMP : BRD 15g présent?')}, ` +
+        `"imp_brd_350g": ${jsonProduct(row, 'IMP : BRD 350g présent?')}, ` +
+        `"imp_prix": ${jsonBool(row, 'IMP : Prix respectés?')}, ` +
+        // SCM
+        `"scm_present": ${jsonBool(row, 'SCM Présent?')}, ` +
+        `"scm_br_1kg": ${jsonProduct(row, 'SCM : BR 1Kg présent?')}, ` +
+        `"scm_brb_1kg": ${jsonProduct(row, 'SCM : BRB 1Kg présent?')}, ` +
+        `"scm_brb_397g": ${jsonProduct(row, 'SCM : BRB 397g présent?')}, ` +
+        `"scm_br_397g": ${jsonProduct(row, 'SCM : BR 397g présent?')}, ` +
+        `"scm_pearl_1kg": ${jsonProduct(row, 'SCM : Pearl 1Kg présent?')}, ` +
+        `"scm_prix": ${jsonBool(row, 'SCM : Prix respectés?')}, ` +
+        // UHT
+        `"uht_present": ${jsonBool(row, 'UHT Présent?')}, ` +
+        `"uht_demi_ecreme": ${jsonProduct(row, 'UHT : Demi écrémé présent?')}, ` +
+        `"uht_elopack_500ml": ${jsonProduct(row, 'UHT : Elopack 500 ml')}, ` +
+        `"uht_brique_1l": ${jsonProduct(row, 'UHT : Brique 1L')}, ` +
+        `"uht_prix": ${jsonBool(row, 'UHT prix respectés?')}, ` +
+        // Céréales
+        `"cereales_present": ${jsonBool(row, 'Céréales au lait Présent?')}, ` +
+        `"cereales_brcv": ${jsonProduct(row, 'Céréales au lait : BRCV Présent?')}, ` +
+        `"cereales_brcc": ${jsonProduct(row, 'Céréales au lait : BRCC Présent?')}, ` +
+        `"cereales_prix": ${jsonBool(row, 'Céréales au lait Prix respectés?')}, ` +
+        // Yaourt
+        `"yaourt_present": ${jsonBool(row, 'YAOURT Présent?')}, ` +
+        `"yaourt_nature_mini": ${jsonProduct(row, 'YAOURT : BR Yogoo nature mini 90 ml?')}, ` +
+        `"yaourt_fraise_mini": ${jsonProduct(row, 'YAOURT : BR Yogoo fraise mini 90 ml?')}, ` +
+        `"yaourt_fraise_maxi": ${jsonProduct(row, 'YAOURT : BR Yogoo fraise maxi 318 ml?')}, ` +
+        `"yaourt_nature_maxi": ${jsonProduct(row, 'YAOURT : BR Yogoo nature maxi 318 ml?')}, ` +
+        `"yaourt_prix": ${jsonBool(row, 'YAOURT : Prix respectés?')}, ` +
+        // Concurrence
+        `"conc_presence": ${jsonBool(row, 'Présence de concurrents')}, ` +
+        `"conc_evap_present": ${jsonBool(row, 'Concurrent EVAP présent?')}, ` +
+        `"conc_evap_cowmilk": ${jsonBool(row, 'Concurrent EVAP : Cowmilk présent?')}, ` +
+        `"conc_evap_nido_150g": ${jsonBool(row, 'Concurrent EVAP : NIDO 150g présent?')}, ` +
+        `"conc_evap_autre": ${jsonBool(row, 'Concurrent EVAP : autre')}, ` +
+        `"conc_evap_nom": ${jsonText(get(row, 'Nom du concurrent EVAP'))}, ` +
+        `"conc_imp_present": ${jsonBool(row, 'Concurrent IMP présent?')}, ` +
+        `"conc_imp_nido": ${jsonBool(row, 'Concurrent IMP : Nido présent?')}, ` +
+        `"conc_imp_laity": ${jsonBool(row, 'Concurrent IMP : Laity présent?')}, ` +
+        `"conc_imp_toplait": ${jsonBool(row, 'Concurrent IMP : Top lait présent?')}, ` +
+        `"conc_imp_autre": ${jsonBool(row, 'Concurrent IMP : autre')}, ` +
+        `"conc_imp_nom": ${jsonText(get(row, 'Nom du concurrent IMP'))}, ` +
+        `"conc_scm_present": ${jsonBool(row, 'Concurrent SCM présent?')}, ` +
+        `"conc_scm_topsaho": ${jsonBool(row, 'Concurrent SCM : Top Saho présent?')}, ` +
+        `"conc_scm_autre": ${jsonBool(row, 'Concurrent SCM : autre')}, ` +
+        `"conc_scm_nom": ${jsonText(get(row, 'Nom du concurrent SCM'))}, ` +
+        `"conc_uht_present": ${jsonBool(row, 'Concurrent UHT présent?')}, ` +
+        `"conc_uht_candia": ${jsonBool(row, 'Concurrent UHT : Candia présent?')}, ` +
+        `"conc_uht_autre": ${jsonBool(row, 'Concurrent UHT : autre')}, ` +
+        `"conc_uht_nom": ${jsonText(get(row, 'Nom du concurrent UHT'))}, ` +
+        // Visibilité extérieure
+        `"vis_ext_presence": ${jsonBool(row, 'Présence de visibilité extérieure')}, ` +
+        `"vis_ext_photo": ${jsonText(get(row, 'Photo branding externe'))}, ` +
+        `"vis_ext_full_branding": ${jsonBool(row, 'Full branding extérieur')}, ` +
+        `"vis_ext_etat_branding": ${jsonText(get(row, 'État branding extérieur'))}, ` +
+        `"vis_ext_poster": ${jsonBool(row, 'Poster')}, ` +
+        `"vis_ext_etat_poster": ${jsonText(get(row, 'État poster'))}, ` +
+        `"vis_ext_panneau": ${jsonBool(row, 'Panneau privilège')}, ` +
+        `"vis_ext_etat_panneau": ${jsonText(get(row, 'État panneau privilège'))}, ` +
+        `"vis_ext_signboard": ${jsonBool(row, 'Sign board')}, ` +
+        `"vis_ext_etat_signboard": ${jsonText(get(row, 'État sign board'))}, ` +
+        `"vis_ext_guirlande": ${jsonBool(row, 'Guirlande')}, ` +
+        `"vis_ext_etat_guirlande": ${jsonText(get(row, 'État guirlande'))}, ` +
+        `"vis_ext_autre": ${jsonBool(row, 'Autre branding extérieur')}, ` +
+        `"vis_ext_etat_autre": ${jsonText(get(row, 'État des autres branding externes'))}, ` +
+        // Visibilité intérieure
+        `"vis_int_presence": ${jsonBool(row, 'Présence de visibilité intérieure')}, ` +
+        `"vis_int_photo": ${jsonText(get(row, 'Photo visibilité intérieure'))}, ` +
+        `"vis_int_hanger": ${jsonBool(row, 'Hanger')}, ` +
+        `"vis_int_etat_hanger": ${jsonText(get(row, 'Hanger : état'))}, ` +
+        `"vis_int_tete_gondole": ${jsonBool(row, 'Tête de gondole')}, ` +
+        `"vis_int_etat_tete_gondole": ${jsonText(get(row, 'Tête de gondole : état'))}, ` +
+        `"vis_int_maison_br": ${jsonBool(row, 'Maison bonnet Rouge')}, ` +
+        `"vis_int_etat_maison_br": ${jsonText(get(row, 'Maison bonnet Rouge : état'))}, ` +
+        `"vis_int_reglettes": ${jsonBool(row, 'Réglettes')}, ` +
+        `"vis_int_etat_reglettes": ${jsonText(get(row, 'Réglettes : état'))}, ` +
+        `"vis_int_zone_chaude": ${jsonBool(row, 'Zone chaude')}, ` +
+        `"vis_int_etat_zone_chaude": ${jsonText(get(row, 'Zone chaude : état'))}, ` +
+        `"vis_int_frigo": ${jsonBool(row, 'Produits dans le frigo')}, ` +
+        `"vis_int_etat_frigo": ${jsonText(get(row, 'Produits dans le frigo : état'))}, ` +
+        `"vis_int_presentoirs": ${jsonBool(row, 'Présence de présentoirs')}, ` +
+        `"vis_int_etat_presentoirs": ${jsonText(get(row, 'Présence de présentoirs : état'))}, ` +
+        `"vis_int_bacs": ${jsonBool(row, 'Bacs à pouch')}, ` +
+        `"vis_int_etat_bacs": ${jsonText(get(row, 'Bacs à pouch : état'))}, ` +
+        `"vis_int_autre_gt": ${jsonBool(row, 'Autre visibilité intérieure (GT)')}, ` +
+        `"vis_int_etat_autre_gt": ${jsonText(get(row, 'Autre visibilité intérieure (GT) : état'))}, ` +
+        `"vis_int_habillage": ${jsonBool(row, 'Habillage rayon')}, ` +
+        `"vis_int_etat_habillage": ${jsonText(get(row, 'Habillage rayon : état'))}, ` +
+        `"vis_int_merchandising": ${jsonBool(row, 'Merchandising')}, ` +
+        `"vis_int_etat_merchandising": ${jsonText(get(row, 'Merchandising : état'))}, ` +
+        `"vis_int_autre": ${jsonBool(row, 'Autres visibilité intérieure')}, ` +
+        `"vis_int_etat_autre": ${jsonText(get(row, 'Autres visibilité intérieure : état'))}, ` +
+        // Visibilité concurrence
+        `"vis_conc_presence": ${jsonBool(row, 'Présence de visibilité')}, ` +
+        `"vis_conc_nido_ext": ${jsonBool(row, 'Visibilité extérieure NIDO')}, ` +
+        `"vis_conc_nido_int": ${jsonBool(row, 'Visibilité intérieure NIDO')}, ` +
+        `"vis_conc_laity_ext": ${jsonBool(row, 'Visibilité extérieure LAITY')}, ` +
+        `"vis_conc_laity_int": ${jsonBool(row, 'Visibilité intérieure LAITY')}, ` +
+        `"vis_conc_candia_ext": ${jsonBool(row, 'Visibilité extérieure CANDIA')}, ` +
+        `"vis_conc_candia_int": ${jsonBool(row, 'Visibilité intérieure CANDIA')}, ` +
+        `"vis_conc_autre_ext": ${jsonBool(row, 'Visibilité extérieure AUTRE')}, ` +
+        `"vis_conc_nom_ext": ${jsonText(get(row, 'Nom du concurrent en Visibilité extérieure'))}, ` +
+        `"vis_conc_autre_int": ${jsonBool(row, 'Visibilité intérieure AUTRE')}, ` +
+        `"vis_conc_nom_int": ${jsonText(get(row, 'Nom du concurrent en Visibilité intérieure'))}, ` +
+        // Actions
+        `"act_execution_vis": ${jsonBool(row, 'Exécution visibilité')}, ` +
+        `"act_referencement": ${jsonBool(row, 'Référencement produits')}, ` +
+        `"act_execution_promo": ${jsonBool(row, 'Exécution d\'activités promotionnelles')}, ` +
+        `"act_prospection": ${jsonBool(row, 'Prospection PDV')}, ` +
+        `"act_fifo": ${jsonBool(row, 'Vérification FIFO')}, ` +
+        `"act_rangement": ${jsonBool(row, 'Rangement produits')}, ` +
+        `"act_affiches": ${jsonBool(row, 'Pause d\'affiches')}, ` +
+        `"act_materiel_vis": ${jsonBool(row, 'Pause matériel de visibilité')}, ` +
+        // Image
+        `"image": ${jsonText(get(row, 'Image'))}` +
+        `}`
 
-      // IMP
-      sql += `  -- IMP\n`
-      sql += `  ${getBool(row, 'IMP Présent?')},\n`
-      sql += `  ${getProduct(row, 'IMP : BR 400g présent?')},\n`
-      sql += `  ${getProduct(row, 'IMP : BR 900g présent?')},\n`
-      sql += `  ${getProduct(row, 'IMP : BR 2,5 Kg présent?')},\n`
-      sql += `  ${getProduct(row, 'IMP : BR 375g présent?')},\n`
-      sql += `  ${getProduct(row, 'IMP : BRB 400g présent?')},\n`
-      sql += `  ${getProduct(row, 'IMP : BR 20g présent?')},\n`
-      sql += `  ${getProduct(row, 'IMP : BRB 25g présent?')},\n`
-      sql += `  ${getBool(row, 'IMP : Prix respectés?')},\n`
+      // Escape single quotes in the entire JSON string for SQL
+      const sqlJsonStr = jsonObj.replace(/'/g, "''")
 
-      // SCM
-      sql += `  -- SCM\n`
-      sql += `  ${getBool(row, 'SCM Présent?')},\n`
-      sql += `  ${getProduct(row, 'SCM : BR 1Kg présent?')},\n`
-      sql += `  ${getProduct(row, 'SCM : BRB 1Kg présent?')},\n`
-      sql += `  ${getProduct(row, 'SCM : BRB 397g présent?')},\n`
-      sql += `  ${getProduct(row, 'SCM : BR 397g présent?')},\n`
-      sql += `  ${getProduct(row, 'SCM : Pearl 1Kg présent?')},\n`
-      sql += `  ${getBool(row, 'SCM : Prix respectés?')},\n`
-
-      // UHT
-      sql += `  -- UHT\n`
-      sql += `  ${getBool(row, 'UHT Présent?')},\n`
-      sql += `  ${getProduct(row, 'UHT : Demi écrémé présent?')},\n`
-      sql += `  ${getBool(row, 'UHT prix respectés?')},\n`
-
-      // Céréales
-      sql += `  -- Céréales\n`
-      sql += `  ${getBool(row, 'Céréales au lait Présent?')},\n`
-      sql += `  ${getProduct(row, 'Céréales au lait : BRCV Présent?')},\n`
-      sql += `  ${getProduct(row, 'Céréales au lait : BRCC Présent?')},\n`
-      sql += `  ${getBool(row, 'Céréales au lait Prix respectés?')},\n`
-
-      // Concurrence
-      sql += `  -- Concurrence\n`
-      sql += `  ${getBool(row, 'Présence de concurrents')},\n`
-      sql += `  ${getBool(row, 'Concurrent EVAP présent?')},\n`
-      sql += `  ${getBool(row, 'Concurrent EVAP : Cowmilk présent?')},\n`
-      sql += `  ${getBool(row, 'Concurrent EVAP : autre')},\n`
-      sql += `  ${sqlText(get(row, 'Nom du concurrent EVAP'))},\n`
-      sql += `  ${getBool(row, 'Concurrent IMP présent?')},\n`
-      sql += `  ${getBool(row, 'Concurrent IMP : Nido présent?')},\n`
-      sql += `  ${getBool(row, 'Concurrent IMP : Laity présent?')},\n`
-      sql += `  ${getBool(row, 'Concurrent IMP : Top lait présent?')},\n`
-      sql += `  ${getBool(row, 'Concurrent IMP : autre')},\n`
-      sql += `  ${sqlText(get(row, 'Nom du concurrent IMP'))},\n`
-      sql += `  ${getBool(row, 'Concurrent SCM présent?')},\n`
-      sql += `  ${getBool(row, 'Concurrent SCM : Top Saho présent?')},\n`
-      sql += `  ${getBool(row, 'Concurrent SCM : autre')},\n`
-      sql += `  ${sqlText(get(row, 'Nom du concurrent SCM'))},\n`
-      sql += `  ${getBool(row, 'Concurrent UHT présent?')},\n`
-      sql += `  ${getBool(row, 'Concurrent UHT : Candia présent?')},\n`
-      sql += `  ${getBool(row, 'Concurrent UHT : autre')},\n`
-      sql += `  ${sqlText(get(row, 'Nom du concurrent UHT'))},\n`
-
-      // Visibilité extérieure
-      sql += `  -- Visibilité extérieure\n`
-      sql += `  ${getBool(row, 'Présence de visibilité extérieure')},\n`
-      sql += `  ${sqlText(get(row, 'Photo branding externe'))},\n`
-      sql += `  ${getBool(row, 'Full branding extérieur')},\n`
-      sql += `  ${sqlText(get(row, 'État branding extérieur'))},\n`
-      sql += `  ${getBool(row, 'Poster')},\n`
-      sql += `  ${sqlText(get(row, 'État poster'))},\n`
-      sql += `  ${getBool(row, 'Panneau privilège')},\n`
-      sql += `  ${sqlText(get(row, 'État panneau privilège'))},\n`
-      sql += `  ${getBool(row, 'Sign board')},\n`
-      sql += `  ${sqlText(get(row, 'État sign board'))},\n`
-      sql += `  ${getBool(row, 'Guirlande')},\n`
-      sql += `  ${sqlText(get(row, 'État guirlande'))},\n`
-      sql += `  ${getBool(row, 'Autre branding extérieur')},\n`
-      sql += `  ${sqlText(get(row, 'État des autres branding externes'))},\n`
-
-      // Visibilité intérieure
-      sql += `  -- Visibilité intérieure\n`
-      sql += `  ${getBool(row, 'Présence de visibilité intérieure')},\n`
-      sql += `  ${sqlText(get(row, 'Photo visibilité intérieure'))},\n`
-      sql += `  ${getBool(row, 'Hanger')},\n`
-      sql += `  ${sqlText(get(row, 'Hanger : état'))},\n`
-      sql += `  ${getBool(row, 'Tête de gondole')},\n`
-      sql += `  ${sqlText(get(row, 'Tête de gondole : état'))},\n`
-      sql += `  ${getBool(row, 'Maison bonnet Rouge')},\n`
-      sql += `  ${sqlText(get(row, 'Maison bonnet Rouge : état'))},\n`
-      sql += `  ${getBool(row, 'Réglettes')},\n`
-      sql += `  ${sqlText(get(row, 'Réglettes : état'))},\n`
-      sql += `  ${getBool(row, 'Zone chaude')},\n`
-      sql += `  ${sqlText(get(row, 'Zone chaude : état'))},\n`
-      sql += `  ${getBool(row, 'Produits dans le frigo')},\n`
-      sql += `  ${sqlText(get(row, 'Produits dans le frigo : état'))},\n`
-      sql += `  ${getBool(row, 'Présence de présentoirs')},\n`
-      sql += `  ${sqlText(get(row, 'Présence de présentoirs : état'))},\n`
-      sql += `  ${getBool(row, 'Bacs à pouch')},\n`
-      sql += `  ${sqlText(get(row, 'Bacs à pouch : état'))},\n`
-      sql += `  ${getBool(row, 'Autre visibilité intérieure (GT)')},\n`
-      sql += `  ${sqlText(get(row, 'Autre visibilité intérieure (GT) : état'))},\n`
-      sql += `  ${getBool(row, 'Habillage rayon')},\n`
-      sql += `  ${sqlText(get(row, 'Habillage rayon : état'))},\n`
-      sql += `  ${getBool(row, 'Merchandising')},\n`
-      sql += `  ${sqlText(get(row, 'Merchandising : état'))},\n`
-      sql += `  ${getBool(row, 'Autres visibilité intérieure')},\n`
-      sql += `  ${sqlText(get(row, 'Autres visibilité intérieure : état'))},\n`
-
-      // Visibilité concurrence
-      sql += `  -- Visibilité concurrence\n`
-      sql += `  ${getBool(row, 'Présence de visibilité')},\n`
-      sql += `  ${getBool(row, 'Visibilité extérieure NIDO')},\n`
-      sql += `  ${getBool(row, 'Visibilité intérieure NIDO')},\n`
-      sql += `  ${getBool(row, 'Visibilité extérieure LAITY')},\n`
-      sql += `  ${getBool(row, 'Visibilité intérieure LAITY')},\n`
-      sql += `  ${getBool(row, 'Visibilité extérieure CANDIA')},\n`
-      sql += `  ${getBool(row, 'Visibilité intérieure CANDIA')},\n`
-      sql += `  ${getBool(row, 'Visibilité extérieure AUTRE')},\n`
-      sql += `  ${sqlText(get(row, 'Nom du concurrent en Visibilité extérieure'))},\n`
-      sql += `  ${getBool(row, 'Visibilité intérieure AUTRE')},\n`
-      sql += `  ${sqlText(get(row, 'Nom du concurrent en Visibilité intérieure'))},\n`
-
-      // Actions
-      sql += `  -- Actions\n`
-      sql += `  ${getBool(row, 'Exécution visibilité')},\n`
-      sql += `  ${getBool(row, 'Référencement produits')},\n`
-      sql += `  ${getBool(row, 'Exécution d\'activités promotionnelles')},\n`
-      sql += `  ${getBool(row, 'Prospection PDV')},\n`
-      sql += `  ${getBool(row, 'T st')},\n`
-      sql += `  ${getBool(row, 'Vérification FIFO')},\n`
-      sql += `  ${getBool(row, 'Rangement produits')},\n`
-      sql += `  ${getBool(row, 'Pause d\'affiches')},\n`
-      sql += `  ${getBool(row, 'Pause matériel de visibilité')},\n`
-
-      // Yaourt
-      sql += `  -- Yaourt\n`
-      sql += `  ${getBool(row, 'YAOURT Présent?')},\n`
-      sql += `  ${getProduct(row, 'YAOURT : BR Yogoo nature mini 90 ml?')},\n`
-      sql += `  ${getProduct(row, 'YAOURT : BR Yogoo fraise mini 90 ml?')},\n`
-      sql += `  ${getProduct(row, 'YAOURT : BR Yogoo fraise maxi 318 ml?')},\n`
-      sql += `  ${getProduct(row, 'YAOURT : BR Yogoo nature maxi 318 ml?')},\n`
-      sql += `  ${getBool(row, 'YAOURT : Prix respectés?')},\n`
-
-      // Colonnes supplémentaires ajoutées après
-      sql += `  -- Supplémentaires\n`
-      sql += `  ${getBool(row, 'Concurrent EVAP : NIDO 150g présent?')},\n`
-      sql += `  ${getProduct(row, 'UHT : Elopack 500 ml')},\n`
-      sql += `  ${getProduct(row, 'UHT : Brique 1L')},\n`
-      sql += `  ${getProduct(row, 'IMP : BRD 15g présent?')},\n`
-      sql += `  ${getProduct(row, 'IMP : BRD 350g présent?')},\n`
-
-      // Image
-      sql += `  -- Image\n`
-      sql += `  ${sqlText(get(row, 'Image'))}\n`
-
-      sql += `);\n\n`
+      sql += `SELECT import_visite_from_csv('${sqlJsonStr}'::jsonb);\n`
       totalProcessed++
     }
   }
