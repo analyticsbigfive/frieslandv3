@@ -51,7 +51,7 @@ export default defineNuxtConfig({
       name: 'Friesland Bonnet Rouge',
       short_name: 'Friesland',
       description: 'Application de collecte terrain Friesland Bonnet Rouge',
-      theme_color: '#003DA5',
+      theme_color: '#C8102E',
       background_color: '#ffffff',
       display: 'standalone',
       orientation: 'portrait',
@@ -105,7 +105,7 @@ export default defineNuxtConfig({
       title: 'Friesland Bonnet Rouge',
       meta: [
         { name: 'description', content: 'Application de collecte terrain Friesland Bonnet Rouge' },
-        { name: 'theme-color', content: '#003DA5' },
+        { name: 'theme-color', content: '#C8102E' },
         { name: 'apple-mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
       ],

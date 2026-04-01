@@ -7,15 +7,13 @@ const queue = ref<OfflineQueueItem[]>([])
 let offlineSyncInitialized = false
 let processQueueRunner: null | (() => Promise<void>) = null
 
-function saveQueueToStorage() {
-  if (!import.meta.client) {
-    return
-  }
-
-  localStorage.setItem('offline-queue', JSON.stringify(queue.value))
+async function saveQueueToStorage() {
+  if (!import.meta.client) return
+  const { saveQueue } = useOfflineData()
+  await saveQueue(queue.value)
 }
 
-function initializeOfflineQueue() {
+async function initializeOfflineQueue() {
   if (!import.meta.client || offlineSyncInitialized) {
     return
   }
@@ -23,14 +21,29 @@ function initializeOfflineQueue() {
   offlineSyncInitialized = true
   isOnline.value = navigator.onLine
 
-  const savedQueue = localStorage.getItem('offline-queue')
-  if (savedQueue) {
-    try {
-      queue.value = JSON.parse(savedQueue)
+  // Load from IndexedDB
+  const { loadQueue } = useOfflineData()
+  try {
+    queue.value = await loadQueue()
+  }
+  catch {
+    queue.value = []
+  }
+
+  // One-time migration from localStorage
+  try {
+    const legacyQueue = localStorage.getItem('offline-queue')
+    if (legacyQueue) {
+      const legacyItems: OfflineQueueItem[] = JSON.parse(legacyQueue)
+      if (legacyItems.length > 0 && queue.value.length === 0) {
+        queue.value = legacyItems
+        await saveQueueToStorage()
+      }
+      localStorage.removeItem('offline-queue')
     }
-    catch {
-      queue.value = []
-    }
+  }
+  catch {
+    // Ignore localStorage migration errors
   }
 
   window.addEventListener('online', () => {
@@ -46,7 +59,8 @@ function initializeOfflineQueue() {
 export function useOfflineSync() {
   const supabase = useSupabaseClient()
 
-  initializeOfflineQueue()
+  // initializeOfflineQueue is async but we fire-and-forget on first call
+  void initializeOfflineQueue()
 
   function addToQueue(item: Omit<OfflineQueueItem, 'id' | 'timestamp' | 'retries' | 'status'>) {
     const queueItem: OfflineQueueItem = {
@@ -58,7 +72,7 @@ export function useOfflineSync() {
     }
 
     queue.value.push(queueItem)
-    saveQueueToStorage()
+    void saveQueueToStorage()
 
     if (isOnline.value) {
       void processQueue()
@@ -115,13 +129,13 @@ export function useOfflineSync() {
       }
     }
 
-    saveQueueToStorage()
+    await saveQueueToStorage()
     isSyncing.value = false
   }
 
   function clearQueue() {
     queue.value = []
-    saveQueueToStorage()
+    void saveQueueToStorage()
   }
 
   function retryFailed() {
@@ -132,7 +146,7 @@ export function useOfflineSync() {
         item.retries = 0
       })
 
-    saveQueueToStorage()
+    void saveQueueToStorage()
     void processQueue()
   }
 

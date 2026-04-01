@@ -1,18 +1,18 @@
 <template>
   <div class="min-h-screen flex">
     <!-- Left Panel - Branding -->
-    <div class="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-fc-blue to-fc-blue-700 relative overflow-hidden">
+    <div class="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-fc-red to-fc-red-700 relative overflow-hidden">
       <div class="absolute inset-0 opacity-10">
         <div class="absolute -top-20 -right-20 w-96 h-96 bg-white rounded-full" />
         <div class="absolute -bottom-32 -left-32 w-[500px] h-[500px] bg-white rounded-full" />
       </div>
       <div class="relative z-10 flex flex-col items-center justify-center w-full px-12">
         <div class="w-24 h-24 bg-white rounded-2xl flex items-center justify-center mb-8 shadow-xl">
-          <span class="text-fc-blue text-3xl font-black">FC</span>
+          <span class="text-fc-red text-3xl font-black">FC</span>
         </div>
         <h1 class="text-4xl font-bold text-white mb-3">Friesland</h1>
-        <h2 class="text-xl text-blue-200 mb-6">Bonnet Rouge</h2>
-        <p class="text-blue-100 text-center max-w-sm leading-relaxed">
+        <h2 class="text-xl text-red-200 mb-6">Bonnet Rouge</h2>
+        <p class="text-red-100 text-center max-w-sm leading-relaxed">
           Application de collecte de données terrain et de pilotage pour FrieslandCampina Côte d'Ivoire.
         </p>
       </div>
@@ -23,7 +23,7 @@
       <div class="w-full max-w-md">
         <!-- Mobile logo -->
         <div class="lg:hidden flex flex-col items-center mb-10">
-          <div class="w-16 h-16 bg-fc-blue rounded-xl flex items-center justify-center mb-4">
+          <div class="w-16 h-16 bg-fc-red rounded-xl flex items-center justify-center mb-4">
             <span class="text-white text-2xl font-black">FC</span>
           </div>
           <h1 class="text-2xl font-bold text-gray-900">Friesland</h1>
@@ -83,7 +83,7 @@
                 block
                 size="lg"
                 :loading="loading"
-                class="bg-fc-blue hover:bg-fc-blue-600"
+                class="bg-fc-red hover:bg-fc-red-600"
               >
                 Se connecter
               </UButton>

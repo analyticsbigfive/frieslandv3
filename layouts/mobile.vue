@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-gray-50 flex flex-col safe-area-top safe-area-bottom">
     <!-- Mobile Header -->
-    <header class="sticky top-0 z-40 bg-fc-blue text-white px-4 py-3 flex items-center justify-between shadow-md">
+    <header class="sticky top-0 z-40 bg-fc-red text-white px-4 py-3 flex items-center justify-between shadow-md">
       <div class="flex items-center gap-3">
         <button
           v-if="canGoBack"
@@ -48,6 +48,9 @@
         </span>
       </div>
     </header>
+
+    <!-- Offline Banner -->
+    <OfflineBanner />
 
     <!-- Content -->
     <main class="flex-1 overflow-auto pb-20">

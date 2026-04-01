@@ -83,6 +83,13 @@ export const useAuthStore = defineStore('auth', () => {
       if (err) throw err
 
       await fetchProfile()
+
+      // Pre-cache offline data (non-blocking)
+      if (import.meta.client) {
+        const { preCacheData } = useOfflineData()
+        void preCacheData(profile.value)
+      }
+
       return data
     }
     catch (err: any) {
@@ -125,10 +132,14 @@ export const useAuthStore = defineStore('auth', () => {
     profile.value = null
     profileRequest.value = null
 
-    // Effacer la position géographique
     if (import.meta.client) {
+      // Effacer la position géographique
       const { clearPosition } = useUserGeolocation()
       clearPosition()
+
+      // Nettoyer le cache offline
+      const { clearOfflineData } = useOfflineData()
+      void clearOfflineData()
     }
   }
 
@@ -154,10 +165,22 @@ export const useAuthStore = defineStore('auth', () => {
 
     if (newUser) {
       await fetchProfile({ force: true })
+
+      // Pre-cache offline data (non-blocking)
+      if (import.meta.client) {
+        const { preCacheData } = useOfflineData()
+        void preCacheData(profile.value)
+      }
     }
     else {
       profile.value = null
       profileRequest.value = null
+
+      // Nettoyer le cache offline
+      if (import.meta.client) {
+        const { clearOfflineData } = useOfflineData()
+        void clearOfflineData()
+      }
     }
   }, { immediate: true })
 

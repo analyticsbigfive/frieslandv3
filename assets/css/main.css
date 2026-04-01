@@ -3,9 +3,9 @@
 @tailwind utilities;
 
 :root {
-  --fc-blue: #003DA5;
-  --fc-blue-dark: #002B75;
-  --fc-blue-light: #E8F0FE;
+  --fc-blue: #C8102E;
+  --fc-blue-dark: #9B0D23;
+  --fc-blue-light: #FDE8EC;
   --fc-red: #C8102E;
   --fc-red-dark: #9B0D23;
   --fc-red-light: #FDE8EC;
@@ -50,7 +50,7 @@ body {
   @apply bg-red-100 text-red-700 px-2.5 py-0.5 rounded-full text-xs font-medium;
 }
 .badge-present {
-  @apply bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full text-xs font-medium;
+  @apply bg-red-100 text-red-700 px-2.5 py-0.5 rounded-full text-xs font-medium;
 }
 
 /* Card hover effects */
@@ -60,7 +60,7 @@ body {
 
 /* Mobile bottom navigation */
 .bottom-nav-active {
-  @apply text-blue-700 border-t-2 border-blue-700;
+  @apply text-red-700 border-t-2 border-red-700;
 }
 
 /* PWA safe areas */

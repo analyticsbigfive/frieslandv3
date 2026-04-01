@@ -62,71 +62,43 @@ export function useDashboardDirection() {
   async function fetchVisites() {
     loading.value = true
     try {
-      let query = supabase
-        .from('visites')
-        .select(`
-          visite_id,
-          date_visite,
-          commercial,
-          email,
-          data,
-          pdv:pdv_id (
-            pdv_id,
-            nom_pdv,
-            canal,
-            categorie_pdv,
-            sous_categorie_pdv,
-            region,
-            zone,
-            secteur
-          )
-        `)
-        .order('date_visite', { ascending: false })
-
-      if (filters.value.dateFrom) {
-        query = query.gte('date_visite', filters.value.dateFrom + 'T00:00:00')
-      }
-      if (filters.value.dateTo) {
-        query = query.lte('date_visite', filters.value.dateTo + 'T23:59:59')
-      }
-      if (filters.value.commercial) {
-        query = query.ilike('commercial', `%${filters.value.commercial}%`)
+      const params: Record<string, string | null> = {
+        p_date_from: filters.value.dateFrom ? filters.value.dateFrom + 'T00:00:00' : null,
+        p_date_to: filters.value.dateTo ? filters.value.dateTo + 'T23:59:59' : null,
+        p_commercial: filters.value.commercial || null,
+        p_canal: filters.value.canal || null,
+        p_categorie: filters.value.categorie || null,
+        p_sous_categorie: filters.value.sousCategorie || null,
+        p_region: filters.value.region || null,
+        p_zone: filters.value.zone || null,
+        p_secteur: filters.value.secteur || null,
+        p_nom_pdv: filters.value.nomPdv || null,
       }
 
-      const { data, error } = await query
+      const { data, error } = await supabase.rpc('get_visites_filtered', params)
 
       if (error) throw error
 
-      // Filtrer côté client pour les filtres sur les champs PDV
-      let result = (data || []) as VisiteWithPDV[]
-
-      if (filters.value.canal) {
-        result = result.filter(v => v.pdv?.canal === filters.value.canal)
-      }
-      if (filters.value.categorie) {
-        result = result.filter(v => v.pdv?.categorie_pdv === filters.value.categorie)
-      }
-      if (filters.value.sousCategorie) {
-        result = result.filter(v => v.pdv?.sous_categorie_pdv === filters.value.sousCategorie)
-      }
-      if (filters.value.region) {
-        result = result.filter(v => v.pdv?.region === filters.value.region)
-      }
-      if (filters.value.zone) {
-        result = result.filter(v => v.pdv?.zone === filters.value.zone)
-      }
-      if (filters.value.secteur) {
-        result = result.filter(v =>
-          v.pdv?.secteur?.toLowerCase().includes(filters.value.secteur.toLowerCase())
-        )
-      }
-      if (filters.value.nomPdv) {
-        result = result.filter(v =>
-          v.pdv?.nom_pdv?.toLowerCase().includes(filters.value.nomPdv.toLowerCase())
-        )
-      }
-
-      visites.value = result
+      // Transform flat RPC result to VisiteWithPDV structure
+      visites.value = (data || []).map((row: any) => ({
+        visite_id: row.visite_id,
+        date_visite: row.date_visite,
+        commercial: row.commercial,
+        email: row.email,
+        data: row.data,
+        pdv: row.pdv_id
+          ? {
+              pdv_id: row.pdv_id,
+              nom_pdv: row.nom_pdv,
+              canal: row.canal,
+              categorie_pdv: row.categorie_pdv,
+              sous_categorie_pdv: row.sous_categorie_pdv,
+              region: row.region,
+              zone: row.zone,
+              secteur: row.secteur,
+            }
+          : null,
+      }))
     }
     catch (err) {
       console.error('Erreur chargement visites direction:', err)

@@ -11,6 +11,11 @@ export const useVisitesStore = defineStore('visites', () => {
   const total = ref(0)
   const stats = ref<DashboardStats | null>(null)
 
+  // Stats cache: TTL 5 minutes + deduplication
+  const statsCacheTTL = 5 * 60 * 1000
+  let statsCacheTimestamp = 0
+  let statsPromise: Promise<void> | null = null
+
   // Filters
   const filters = ref({
     dateFrom: '',
@@ -112,77 +117,77 @@ export const useVisitesStore = defineStore('visites', () => {
     visites.value = visites.value.filter(v => v.visite_id !== id)
   }
 
-  async function fetchStats() {
-    try {
-      // Stats overview
-      const { data: statsData } = await supabase
-        .from('v_stats_visites')
-        .select('*')
-        .single()
+  async function fetchStats(options: { force?: boolean } = {}) {
+    // Return cached if still valid
+    if (!options.force && stats.value && Date.now() - statsCacheTimestamp < statsCacheTTL) {
+      return
+    }
 
-      // Performance commerciaux
-      const { data: perfData } = await supabase
-        .from('v_performance_commerciaux')
-        .select('*')
-        .limit(20)
+    // Deduplicate concurrent calls
+    if (statsPromise) {
+      return statsPromise
+    }
 
-      // Visites par jour (30 derniers jours)
-      const { data: jourData } = await supabase
-        .from('v_visites_par_jour')
-        .select('*')
-        .limit(30)
+    statsPromise = (async () => {
+      try {
+        // All 5 queries in parallel
+        const [statsResult, perfResult, jourResult, distResult, countResult] = await Promise.all([
+          supabase.from('v_stats_visites').select('*').single(),
+          supabase.from('v_performance_commerciaux').select('*').limit(20),
+          supabase.from('v_visites_par_jour').select('*').limit(30),
+          supabase.from('v_distribution_pdv').select('*'),
+          supabase.from('pdv').select('*', { count: 'exact', head: true }).eq('is_active', true),
+        ])
 
-      // Distribution PDV
-      const { data: distData } = await supabase
-        .from('pdv')
-        .select('sous_categorie_pdv')
+        const statsData = statsResult.data
+        const perfData = perfResult.data
+        const jourData = jourResult.data
+        const distData = distResult.data
+        const totalPDV = countResult.count
 
-      const distribution: Record<string, number> = {}
-      distData?.forEach((p: any) => {
-        const key = p.sous_categorie_pdv || 'Autre'
-        distribution[key] = (distribution[key] || 0) + 1
-      })
+        stats.value = {
+          total_visites: statsData?.total_visites || 0,
+          total_pdv: totalPDV || 0,
+          total_commerciaux: statsData?.commerciaux_actifs || 0,
+          visites_today: statsData?.visites_today || 0,
+          visites_week: statsData?.visites_week || 0,
+          visites_month: statsData?.visites_month || 0,
+          taux_evap: statsData?.taux_evap || 0,
+          taux_imp: statsData?.taux_imp || 0,
+          taux_scm: statsData?.taux_scm || 0,
+          taux_uht: statsData?.taux_uht || 0,
+          taux_yaourt: statsData?.taux_yaourt || 0,
+          taux_prix_evap: 0,
+          taux_prix_imp: 0,
+          taux_prix_scm: 0,
+          performance_commerciaux: (perfData || []).map((p: any) => ({
+            nom: p.nom,
+            email: p.email,
+            total_visites: p.total_visites,
+            visites_mois: p.visites_mois,
+            taux_completion: 0,
+          })),
+          visites_par_jour: (jourData || []).map((j: any) => ({
+            date: j.date,
+            count: j.count,
+          })),
+          distribution_pdv: (distData || []).map((d: any) => ({
+            type: d.type,
+            count: d.count,
+          })),
+        }
 
-      // Total PDV count
-      const { count: totalPDV } = await supabase
-        .from('pdv')
-        .select('*', { count: 'exact', head: true })
-
-      stats.value = {
-        total_visites: statsData?.total_visites || 0,
-        total_pdv: totalPDV || 0,
-        total_commerciaux: statsData?.commerciaux_actifs || 0,
-        visites_today: statsData?.visites_today || 0,
-        visites_week: statsData?.visites_week || 0,
-        visites_month: statsData?.visites_month || 0,
-        taux_evap: statsData?.taux_evap || 0,
-        taux_imp: statsData?.taux_imp || 0,
-        taux_scm: statsData?.taux_scm || 0,
-        taux_uht: statsData?.taux_uht || 0,
-        taux_yaourt: statsData?.taux_yaourt || 0,
-        taux_prix_evap: 0,
-        taux_prix_imp: 0,
-        taux_prix_scm: 0,
-        performance_commerciaux: (perfData || []).map((p: any) => ({
-          nom: p.nom,
-          email: p.email,
-          total_visites: p.total_visites,
-          visites_mois: p.visites_mois,
-          taux_completion: 0,
-        })),
-        visites_par_jour: (jourData || []).map((j: any) => ({
-          date: j.date,
-          count: j.count,
-        })),
-        distribution_pdv: Object.entries(distribution).map(([type, count]) => ({
-          type,
-          count,
-        })),
+        statsCacheTimestamp = Date.now()
       }
-    }
-    catch (err) {
-      console.error('Erreur chargement stats:', err)
-    }
+      catch (err) {
+        console.error('Erreur chargement stats:', err)
+      }
+      finally {
+        statsPromise = null
+      }
+    })()
+
+    return statsPromise
   }
 
   return {

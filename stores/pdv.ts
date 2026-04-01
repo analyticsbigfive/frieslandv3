@@ -139,17 +139,37 @@ export const usePDVStore = defineStore('pdv', () => {
       return cached.data
     }
 
-    const { data, error } = await buildScopedQuery(profile)
+    try {
+      const { data, error } = await buildScopedQuery(profile)
 
-    if (error) throw error
+      if (error) throw error
 
-    const scopedData = (data || []) as PDV[]
-    scopedCache.value[cacheKey] = {
-      data: scopedData,
-      timestamp: Date.now(),
+      const scopedData = (data || []) as PDV[]
+      scopedCache.value[cacheKey] = {
+        data: scopedData,
+        timestamp: Date.now(),
+      }
+
+      // Persist to IndexedDB for offline fallback
+      if (import.meta.client) {
+        const { cachePDVList } = useOfflineData()
+        void cachePDVList(scopedData)
+      }
+
+      return scopedData
     }
-
-    return scopedData
+    catch (err) {
+      // Fallback to IndexedDB cache on network error
+      if (import.meta.client) {
+        const { getCachedPDVListFallback } = useOfflineData()
+        const fallback = await getCachedPDVListFallback()
+        if (fallback) {
+          console.warn('fetchScopedPDV: using offline cache fallback')
+          return fallback
+        }
+      }
+      throw err
+    }
   }
 
   async function fetchPDVById(pdvId: string) {
@@ -204,13 +224,34 @@ export const usePDVStore = defineStore('pdv', () => {
   }
 
   async function fetchZones() {
-    const { data, error } = await supabase
-      .from('zones_secteurs')
-      .select('*')
-      .order('zone')
+    try {
+      const { data, error } = await supabase
+        .from('zones_secteurs')
+        .select('*')
+        .order('zone')
 
-    if (error) throw error
-    zones.value = (data || []) as ZoneSecteur[]
+      if (error) throw error
+      zones.value = (data || []) as ZoneSecteur[]
+
+      // Persist to IndexedDB for offline fallback
+      if (import.meta.client) {
+        const { cacheZones } = useOfflineData()
+        void cacheZones(zones.value)
+      }
+    }
+    catch (err) {
+      // Fallback to IndexedDB cache on network error
+      if (import.meta.client) {
+        const { getCachedZonesFallback } = useOfflineData()
+        const fallback = await getCachedZonesFallback()
+        if (fallback) {
+          console.warn('fetchZones: using offline cache fallback')
+          zones.value = fallback
+          return
+        }
+      }
+      throw err
+    }
   }
 
   async function importPDVFromCSV(records: Record<string, string>[]) {
