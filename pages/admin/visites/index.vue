@@ -86,7 +86,15 @@
               <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
                 <div class="flex items-center gap-1">
                   <span>{{ (visite as any).pdv?.nom_pdv || visite.pdv_id?.substring(0, 8) }}</span>
-                  <PDVPhotoModal :pdv-id="visite.pdv_id" :pdv-name="(visite as any).pdv?.nom_pdv" />
+                  <button
+                    v-if="visite.image_urls?.length"
+                    @click.stop="openPhotoGallery(visite)"
+                    class="inline-flex items-center justify-center w-6 h-6 rounded-md text-cyan-500 hover:text-cyan-700 hover:bg-cyan-50 dark:hover:bg-cyan-900/30 transition-colors"
+                    :title="`${visite.image_urls.length} photo(s) de visite`"
+                  >
+                    <UIcon name="i-heroicons-camera" class="w-4 h-4" />
+                  </button>
+                  <UIcon v-else name="i-heroicons-camera" class="w-4 h-4 text-gray-300" />
                 </div>
               </td>
               <td class="px-4 py-3 text-center">
