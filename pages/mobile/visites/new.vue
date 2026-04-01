@@ -538,6 +538,11 @@ const filteredPdvList = computed(() => {
   if (profile.secteurs_assignes && profile.secteurs_assignes.length > 0) {
     list = list.filter(p => profile.secteurs_assignes!.includes(p.secteur))
   }
+  // Toujours inclure le PDV pré-sélectionné via routing
+  if (preselectedPdvId.value && !list.some(p => p.pdv_id === preselectedPdvId.value)) {
+    const routingPdv = pdvList.value.find(p => p.pdv_id === preselectedPdvId.value)
+    if (routingPdv) list = [routingPdv, ...list]
+  }
   return list
 })
 const pdvOptions = computed(() =>
@@ -813,7 +818,30 @@ onMounted(async () => {
 
   // Pre-select PDV from routing context
   if (preselectedPdvId.value) {
+    // Si le PDV du routing n'est pas dans la liste scopée, l'ajouter
+    const alreadyInList = pdvList.value.some(p => p.pdv_id === preselectedPdvId.value)
+    if (!alreadyInList) {
+      const { data: routingPdv } = await supabase
+        .from('pdv')
+        .select('*')
+        .eq('pdv_id', preselectedPdvId.value)
+        .single()
+      if (routingPdv) {
+        pdvList.value = [...pdvList.value, routingPdv].sort((a, b) =>
+          (a.nom_pdv || '').localeCompare(b.nom_pdv || '')
+        )
+      }
+    }
     form.pdv_id = preselectedPdvId.value
+
+    // Passer automatiquement à l'étape suivante si PDV pré-sélectionné
+    toast.add({
+      title: 'PDV pré-sélectionné',
+      description: pdvOptions.value.find(o => o.value === preselectedPdvId.value)?.label || preselectedPdvId.value,
+      color: 'green',
+      icon: 'i-heroicons-map-pin',
+      timeout: 3000,
+    })
   }
 })
 </script>

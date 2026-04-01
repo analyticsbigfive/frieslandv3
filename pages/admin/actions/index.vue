@@ -109,8 +109,7 @@ const evoData = computed(() => {
   return evo.labels.map((label, i) => ({ date: label, count: evo.counts[i] }))
 })
 
-onMounted(async () => {
-  await dashboard.fetchZones()
-  await dashboard.fetchVisites()
+onMounted(() => {
+  Promise.all([dashboard.fetchZones(), dashboard.fetchVisites()])
 })
 </script>

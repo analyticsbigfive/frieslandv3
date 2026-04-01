@@ -36,7 +36,7 @@ export const useVisitesStore = defineStore('visites', () => {
     try {
       let query = supabase
         .from('visites')
-        .select('*, pdv:pdv_id(nom_pdv, zone, secteur, region, canal)', { count: 'exact' })
+        .select('*, pdv:pdv_id(pdv_id, nom_pdv, zone, secteur, region, canal, image_url)', { count: 'exact' })
         .order('date_visite', { ascending: false })
 
       if (filters.value.dateFrom) {
@@ -131,48 +131,99 @@ export const useVisitesStore = defineStore('visites', () => {
 
     statsPromise = (async () => {
       try {
-        // All 5 queries in parallel
+        // All 5 queries in parallel — each with individual error handling
         const [statsResult, perfResult, jourResult, distResult, countResult] = await Promise.all([
-          supabase.from('v_stats_visites').select('*').single(),
-          supabase.from('v_performance_commerciaux').select('*').limit(20),
-          supabase.from('v_visites_par_jour').select('*').limit(30),
-          supabase.from('v_distribution_pdv').select('*'),
+          supabase.from('v_stats_visites').select('*').single().then(r => r).catch(() => ({ data: null, error: 'view missing' })),
+          supabase.from('v_performance_commerciaux').select('*').limit(20).then(r => r).catch(() => ({ data: null, error: 'view missing' })),
+          supabase.from('v_visites_par_jour').select('*').limit(30).then(r => r).catch(() => ({ data: null, error: 'view missing' })),
+          supabase.from('v_distribution_pdv').select('*').then(r => r).catch(() => ({ data: null, error: 'view missing' })),
           supabase.from('pdv').select('*', { count: 'exact', head: true }).eq('is_active', true),
         ])
 
-        const statsData = statsResult.data
-        const perfData = perfResult.data
-        const jourData = jourResult.data
-        const distData = distResult.data
-        const totalPDV = countResult.count
+        // Log warnings for missing views
+        const viewErrors: string[] = []
+        if (statsResult.error) viewErrors.push('v_stats_visites')
+        if (perfResult.error) viewErrors.push('v_performance_commerciaux')
+        if (jourResult.error) viewErrors.push('v_visites_par_jour')
+        if (distResult.error) viewErrors.push('v_distribution_pdv')
+
+        if (viewErrors.length > 0) {
+          console.warn('Vues SQL manquantes ou inaccessibles:', viewErrors.join(', '))
+        }
+
+        const statsData = statsResult.data as any
+        const perfData = (perfResult.data || []) as any[]
+        const jourData = (jourResult.data || []) as any[]
+        const distData = (distResult.data || []) as any[]
+        const totalPDV = (countResult as any).count
+
+        // Fallback: si v_stats_visites manquante, calculer les stats de base
+        let fallbackStats: any = null
+        if (!statsData) {
+          const { count } = await supabase.from('visites').select('*', { count: 'exact', head: true })
+          const { count: monthCount } = await supabase.from('visites')
+            .select('*', { count: 'exact', head: true })
+            .gte('date_visite', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
+          fallbackStats = {
+            total_visites: count || 0,
+            visites_month: monthCount || 0,
+            commerciaux_actifs: 0,
+            visites_today: 0,
+            visites_week: 0,
+          }
+        }
+
+        // Fallback: si v_distribution_pdv manquante, calculer depuis pdv
+        let fallbackDist: any[] = distData
+        if (!distData.length && !distResult.error) {
+          // Data is just empty
+        }
+        else if (distResult.error) {
+          const { data: pdvData } = await supabase
+            .from('pdv')
+            .select('sous_categorie_pdv')
+            .eq('is_active', true)
+          if (pdvData) {
+            const grouped = new Map<string, number>()
+            pdvData.forEach((p: any) => {
+              const key = p.sous_categorie_pdv || 'Autre'
+              grouped.set(key, (grouped.get(key) || 0) + 1)
+            })
+            fallbackDist = [...grouped.entries()]
+              .map(([type, count]) => ({ type, count }))
+              .sort((a, b) => b.count - a.count)
+          }
+        }
+
+        const src = statsData || fallbackStats || {}
 
         stats.value = {
-          total_visites: statsData?.total_visites || 0,
+          total_visites: src.total_visites || 0,
           total_pdv: totalPDV || 0,
-          total_commerciaux: statsData?.commerciaux_actifs || 0,
-          visites_today: statsData?.visites_today || 0,
-          visites_week: statsData?.visites_week || 0,
-          visites_month: statsData?.visites_month || 0,
-          taux_evap: statsData?.taux_evap || 0,
-          taux_imp: statsData?.taux_imp || 0,
-          taux_scm: statsData?.taux_scm || 0,
-          taux_uht: statsData?.taux_uht || 0,
-          taux_yaourt: statsData?.taux_yaourt || 0,
+          total_commerciaux: src.commerciaux_actifs || 0,
+          visites_today: src.visites_today || 0,
+          visites_week: src.visites_week || 0,
+          visites_month: src.visites_month || 0,
+          taux_evap: src.taux_evap || 0,
+          taux_imp: src.taux_imp || 0,
+          taux_scm: src.taux_scm || 0,
+          taux_uht: src.taux_uht || 0,
+          taux_yaourt: src.taux_yaourt || 0,
           taux_prix_evap: 0,
           taux_prix_imp: 0,
           taux_prix_scm: 0,
-          performance_commerciaux: (perfData || []).map((p: any) => ({
+          performance_commerciaux: perfData.map((p: any) => ({
             nom: p.nom,
             email: p.email,
             total_visites: p.total_visites,
             visites_mois: p.visites_mois,
             taux_completion: 0,
           })),
-          visites_par_jour: (jourData || []).map((j: any) => ({
+          visites_par_jour: jourData.map((j: any) => ({
             date: j.date,
             count: j.count,
           })),
-          distribution_pdv: (distData || []).map((d: any) => ({
+          distribution_pdv: (fallbackDist.length ? fallbackDist : distData).map((d: any) => ({
             type: d.type,
             count: d.count,
           })),
@@ -182,6 +233,28 @@ export const useVisitesStore = defineStore('visites', () => {
       }
       catch (err) {
         console.error('Erreur chargement stats:', err)
+        // Initialize with empty stats so the page still renders
+        if (!stats.value) {
+          stats.value = {
+            total_visites: 0,
+            total_pdv: 0,
+            total_commerciaux: 0,
+            visites_today: 0,
+            visites_week: 0,
+            visites_month: 0,
+            taux_evap: 0,
+            taux_imp: 0,
+            taux_scm: 0,
+            taux_uht: 0,
+            taux_yaourt: 0,
+            taux_prix_evap: 0,
+            taux_prix_imp: 0,
+            taux_prix_scm: 0,
+            performance_commerciaux: [],
+            visites_par_jour: [],
+            distribution_pdv: [],
+          }
+        }
       }
       finally {
         statsPromise = null

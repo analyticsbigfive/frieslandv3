@@ -20,6 +20,15 @@
         <div ref="mapContainer" class="w-full h-full" />
       </ClientOnly>
     </div>
+
+    <!-- Photo modal triggered from map popups -->
+    <PDVPhotoModal
+      v-if="selectedPdvForPhoto"
+      ref="mapPhotoModal"
+      :pdv-id="selectedPdvForPhoto.pdv_id"
+      :image-url="selectedPdvForPhoto.image_url"
+      :pdv-name="selectedPdvForPhoto.nom_pdv"
+    />
   </div>
 </template>
 
@@ -36,6 +45,8 @@ const pdvStore = usePDVStore()
 const mapContainer = ref<HTMLElement | null>(null)
 const allPDV = ref<PDV[]>([])
 const selectedZone = ref('')
+const selectedPdvForPhoto = ref<PDV | null>(null)
+const mapPhotoModal = ref<any>(null)
 let map: any = null
 let markerGroup: any = null
 
@@ -75,12 +86,17 @@ function addMarkers() {
       fillOpacity: 0.8,
     })
 
+    const photoBtn = pdv.image_url
+      ? `<div class="mt-2"><img src="${pdv.image_url}" alt="${pdv.nom_pdv}" class="w-full h-20 object-cover rounded cursor-pointer pdv-photo-btn" data-pdv-id="${pdv.pdv_id}" /></div>`
+      : `<div class="mt-2"><button class="text-[10px] text-fc-red underline pdv-photo-btn" data-pdv-id="${pdv.pdv_id}">📷 Voir photo</button></div>`
+
     marker.bindPopup(`
       <div class="text-sm">
         <p class="font-bold">${pdv.nom_pdv}</p>
-        <p class="text-gray-500 dark:text-gray-400">${pdv.zone || ''} - ${pdv.secteur || ''}</p>
+        <p class="text-gray-500">${pdv.zone || ''} - ${pdv.secteur || ''}</p>
         <p class="text-gray-400 text-xs">${pdv.canal} / ${pdv.sous_categorie_pdv || ''}</p>
         <p class="text-gray-400 text-xs mt-1">${pdv.geolocation_lat?.toFixed(4)}, ${pdv.geolocation_lng?.toFixed(4)}</p>
+        ${photoBtn}
       </div>
     `)
 
@@ -117,6 +133,26 @@ async function initMap() {
   // Load PDV
   allPDV.value = await pdvStore.fetchAllPDV()
   addMarkers()
+
+  // Listen for photo button clicks inside Leaflet popups
+  map.on('popupopen', () => {
+    nextTick(() => {
+      document.querySelectorAll('.pdv-photo-btn').forEach(el => {
+        el.addEventListener('click', (e) => {
+          const pdvId = (e.currentTarget as HTMLElement).dataset.pdvId
+          if (pdvId) {
+            const pdv = allPDV.value.find(p => p.pdv_id === pdvId)
+            if (pdv) {
+              selectedPdvForPhoto.value = pdv
+              nextTick(() => {
+                mapPhotoModal.value?.openModal?.()
+              })
+            }
+          }
+        })
+      })
+    })
+  })
 }
 
 onMounted(async () => {

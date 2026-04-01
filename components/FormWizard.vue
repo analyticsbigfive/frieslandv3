@@ -66,18 +66,7 @@
         />
       </div>
 
-      <div class="px-4 pb-3 flex items-center justify-between">
-        <button
-          class="flex items-center gap-1 text-sm font-medium text-gray-500 dark:text-gray-400 px-4 py-2.5 rounded-lg transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-30"
-          :disabled="currentStep === 0"
-          @click="prevStep"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-          </svg>
-          Précédent
-        </button>
-
+      <div class="px-4 pb-3 flex items-center justify-center gap-3">
         <button
           class="text-sm font-medium text-gray-400 px-4 py-2.5 rounded-lg transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-600"
           @click="$emit('cancel')"
@@ -86,18 +75,7 @@
         </button>
 
         <button
-          v-if="currentStep < steps.length - 1"
-          class="flex items-center gap-1 text-sm font-bold text-fc-red px-4 py-2.5 rounded-lg transition-colors hover:bg-red-50"
-          @click="nextStep"
-        >
-          Suivant
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-
-        <button
-          v-else
+          v-if="currentStep === steps.length - 1"
           class="flex items-center gap-1.5 text-sm font-bold text-white bg-fc-red px-5 py-2.5 rounded-lg transition-all hover:bg-fc-red-600 disabled:opacity-50 shadow-sm"
           :disabled="saving"
           @click="$emit('submit')"
@@ -113,6 +91,27 @@
         </button>
       </div>
     </div>
+
+    <!-- Floating Prev/Next Buttons -->
+    <button
+      v-if="currentStep > 0"
+      class="fixed left-3 top-1/2 -translate-y-1/2 z-40 w-11 h-11 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-600 flex items-center justify-center text-gray-500 dark:text-gray-400 active:scale-90 transition-all hover:bg-gray-50 dark:hover:bg-gray-700"
+      @click="prevStep"
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+      </svg>
+    </button>
+
+    <button
+      v-if="currentStep < steps.length - 1"
+      class="fixed right-3 top-1/2 -translate-y-1/2 z-40 w-11 h-11 rounded-full bg-fc-red shadow-lg flex items-center justify-center text-white active:scale-90 transition-all hover:bg-fc-red/90"
+      @click="nextStep"
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
+      </svg>
+    </button>
   </div>
 </template>
 

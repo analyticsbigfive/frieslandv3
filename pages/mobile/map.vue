@@ -102,66 +102,75 @@ async function updateMarkers() {
     dashArray: '5 5',
   }).addTo(map)
 
-  // Get all PDVs and today's routing PDVs
+  // Fetch scoped PDVs for nearby display
   const allPDV = await pdvStore.fetchScopedPDV(authStore.profile)
-
-  // Routing PDV IDs
-  const routingPdvIds = new Set(
-    routingStore.routingPDVList.map(rp => rp.pdv_id)
-  )
+  const allPDVMap = new Map(allPDV.map((p: any) => [p.pdv_id, p]))
 
   let rCount = 0
   let nCount = 0
+  const routingPdvIds = new Set<string>()
 
-  allPDV.forEach((pdv: any) => {
-    if (!pdv.geolocation_lat || !pdv.geolocation_lng) return
+  // 1. Routing PDVs — always shown, using embedded pdv data from routingStore
+  routingStore.routingPDVList.forEach((rp: any) => {
+    // Use embedded pdv join data, fallback to scoped PDV list
+    const pdv = rp.pdv || allPDVMap.get(rp.pdv_id)
+    if (!pdv || !pdv.geolocation_lat || !pdv.geolocation_lng) return
+
+    routingPdvIds.add(rp.pdv_id)
+    rCount++
 
     const dist = haversineDistance(
       userPosition!.lat, userPosition!.lng,
       pdv.geolocation_lat, pdv.geolocation_lng
     )
 
-    const isRouting = routingPdvIds.has(pdv.pdv_id)
-    const isNearby = dist <= radius.value
-
-    // Show: routing PDVs always, others only if nearby
-    if (!isRouting && !isNearby) return
-
-    if (isRouting) rCount++
-    else nCount++
-
-    const routingPdvItem = routingStore.routingPDVList.find(rp => rp.pdv_id === pdv.pdv_id)
-    const routingStatus = routingPdvItem?.status || ''
-
-    // Marker color
-    let fillColor = '#3b82f6' // blue for nearby
-    let markerRadius = 6
-    if (isRouting) {
-      fillColor = routingStatus === 'completed' ? '#22c55e' : routingStatus === 'in_progress' ? '#f59e0b' : '#22c55e'
-      markerRadius = 8
-    }
+    // Marker color based on routing status
+    let fillColor = '#22c55e' // green default
+    if (rp.status === 'in_progress') fillColor = '#f59e0b'
+    else if (rp.status === 'completed') fillColor = '#22c55e'
 
     const marker = L.circleMarker([pdv.geolocation_lat, pdv.geolocation_lng], {
-      radius: markerRadius,
+      radius: 8,
       fillColor,
       color: '#fff',
-      weight: isRouting ? 2 : 1,
-      fillOpacity: isRouting ? 1 : 0.7,
+      weight: 2,
+      fillOpacity: 1,
     })
 
     // Popup
+    const pos = rp.position_order || '?'
+    const statusLabels: Record<string, string> = { pending: '⏳ En attente', in_progress: '🔄 En cours', completed: '✅ Fait', skipped: '⏭ Passé' }
     let popupContent = `<strong>${pdv.nom_pdv}</strong><br>${pdv.zone || ''}`
-    if (isRouting) {
-      const pos = routingPdvItem?.position_order || '?'
-      popupContent += `<br><span style="color:#22c55e;font-weight:bold">🗺 Routing #${pos}</span>`
-      if (routingStatus) {
-        const labels: Record<string, string> = { pending: '⏳ En attente', in_progress: '🔄 En cours', completed: '✅ Fait', skipped: '⏭ Passé' }
-        popupContent += `<br>${labels[routingStatus] || routingStatus}`
-      }
-    }
+    popupContent += `<br><span style="color:#22c55e;font-weight:bold">🗺 Routing #${pos}</span>`
+    if (rp.status) popupContent += `<br>${statusLabels[rp.status] || rp.status}`
     popupContent += `<br><small>${Math.round(dist)}m</small>`
 
     marker.bindPopup(popupContent)
+    markersLayer.addLayer(marker)
+  })
+
+  // 2. Nearby non-routing PDVs — shown if within radius
+  allPDV.forEach((pdv: any) => {
+    if (!pdv.geolocation_lat || !pdv.geolocation_lng) return
+    if (routingPdvIds.has(pdv.pdv_id)) return // already shown as routing
+
+    const dist = haversineDistance(
+      userPosition!.lat, userPosition!.lng,
+      pdv.geolocation_lat, pdv.geolocation_lng
+    )
+    if (dist > radius.value) return
+
+    nCount++
+
+    const marker = L.circleMarker([pdv.geolocation_lat, pdv.geolocation_lng], {
+      radius: 6,
+      fillColor: '#3b82f6',
+      color: '#fff',
+      weight: 1,
+      fillOpacity: 0.7,
+    })
+
+    marker.bindPopup(`<strong>${pdv.nom_pdv}</strong><br>${pdv.zone || ''}<br><small>${Math.round(dist)}m</small>`)
     markersLayer.addLayer(marker)
   })
 

@@ -139,8 +139,7 @@ async function fetchPDV() {
   }
 }
 
-onMounted(async () => {
-  await dashboard.fetchZones()
-  await fetchPDV()
+onMounted(() => {
+  Promise.all([dashboard.fetchZones(), fetchPDV()])
 })
 </script>

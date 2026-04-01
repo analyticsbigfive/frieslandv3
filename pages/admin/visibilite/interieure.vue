@@ -156,8 +156,7 @@ function mtEtat(etatKey: string) {
   )
 }
 
-onMounted(async () => {
-  await dashboard.fetchZones()
-  await dashboard.fetchVisites()
+onMounted(() => {
+  Promise.all([dashboard.fetchZones(), dashboard.fetchVisites()])
 })
 </script>

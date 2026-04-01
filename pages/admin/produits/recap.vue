@@ -130,8 +130,7 @@ function prixNon(key: string) {
   return catPresent(key) - prixOui(key)
 }
 
-onMounted(async () => {
-  await dashboard.fetchZones()
-  await dashboard.fetchVisites()
+onMounted(() => {
+  Promise.all([dashboard.fetchZones(), dashboard.fetchVisites()])
 })
 </script>

@@ -16,8 +16,8 @@ export const useRoutingStore = defineStore('routing', () => {
     try {
       const today = new Date().toISOString().slice(0, 10)
 
-      const { data, error } = await supabase
-        .from('routings')
+      const { data, error } = await (supabase
+        .from('routings') as any)
         .select(`
           *,
           user:user_id(id, nom, email),
@@ -37,9 +37,11 @@ export const useRoutingStore = defineStore('routing', () => {
         todayRouting.value = data as Routing
         routingPDVList.value = ((data as any).routing_pdv || [])
           .sort((a: RoutingPDV, b: RoutingPDV) => a.position_order - b.position_order) as RoutingPDV[]
+        console.info(`[Routing] ${routingPDVList.value.length} PDV chargés pour le ${today}`)
       } else {
         todayRouting.value = null
         routingPDVList.value = []
+        console.warn(`[Routing] Aucun routing trouvé pour user=${userId} date=${today}`)
       }
     } catch (err) {
       console.error('Erreur chargement routing:', err)
@@ -119,8 +121,8 @@ export const useRoutingStore = defineStore('routing', () => {
   }) {
     loading.value = true
     try {
-      let query = supabase
-        .from('routings')
+      let query = (supabase
+        .from('routings') as any)
         .select(`
           *,
           user:user_id(id, nom, email, zone_assignee),
@@ -191,8 +193,8 @@ export const useRoutingStore = defineStore('routing', () => {
 
   // ---- Admin: delete routing ----
   async function deleteRouting(routingId: string) {
-    const { error } = await supabase
-      .from('routings')
+    const { error } = await (supabase
+      .from('routings') as any)
       .delete()
       .eq('id', routingId)
 
@@ -202,8 +204,8 @@ export const useRoutingStore = defineStore('routing', () => {
   // ---- Admin: duplicate routing to another date ----
   async function duplicateRouting(routingId: string, newDate: string, newUserId?: string) {
     // Fetch original
-    const { data: original } = await supabase
-      .from('routings')
+    const { data: original } = await (supabase
+      .from('routings') as any)
       .select('*, routing_pdv(*)')
       .eq('id', routingId)
       .single()

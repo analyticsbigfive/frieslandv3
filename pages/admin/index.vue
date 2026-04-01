@@ -2,6 +2,13 @@
   <div id="dashboard-print-area">
     <definePageMeta :middleware="['auth', 'admin']" :layout="'admin'" />
 
+    <!-- Loading Overlay -->
+    <div v-if="loadingDashboard" class="flex flex-col items-center justify-center py-24 gap-4">
+      <div class="animate-spin w-10 h-10 border-4 border-fc-blue border-t-transparent rounded-full" />
+      <p class="text-sm text-gray-500 dark:text-gray-400">Chargement du tableau de bord…</p>
+    </div>
+
+    <template v-else>
     <!-- Header with actions -->
     <div class="flex items-center justify-between mb-6 print:hidden">
       <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Tableau de bord</h2>
@@ -159,6 +166,7 @@
         <p>Aucune donnée de performance disponible</p>
       </div>
     </div>
+    </template>
   </div>
 </template>
 
@@ -174,6 +182,7 @@ const visitesStore = useVisitesStore()
 const { exportToCsv } = useCsvExport()
 const toast = useToast()
 
+const loadingDashboard = ref(true)
 const stats = computed(() => visitesStore.stats)
 
 const productCategories = computed(() => [
@@ -292,7 +301,30 @@ function handlePrint() {
 
 // Load stats on mount
 onMounted(async () => {
-  await visitesStore.fetchStats()
+  loadingDashboard.value = true
+  try {
+    await visitesStore.fetchStats()
+    if (!stats.value?.total_visites && !stats.value?.total_pdv) {
+      toast.add({
+        title: 'Aucune donnée',
+        description: 'Les vues SQL ne semblent pas configurées. Exécutez les migrations Supabase.',
+        color: 'amber',
+        icon: 'i-heroicons-exclamation-triangle',
+        timeout: 8000,
+      })
+    }
+  }
+  catch {
+    toast.add({
+      title: 'Erreur de chargement',
+      description: 'Impossible de charger les statistiques du dashboard.',
+      color: 'red',
+      icon: 'i-heroicons-exclamation-triangle',
+    })
+  }
+  finally {
+    loadingDashboard.value = false
+  }
 })
 </script>
 
@@ -314,7 +346,7 @@ onMounted(async () => {
     padding: 20px;
   }
   /* Hide sidebar, nav, and action buttons */
-  aside, nav, .print\\:hidden {
+  aside, nav, [class*="print\:hidden"] {
     display: none !important;
   }
   /* Improve table print styling */
@@ -322,12 +354,12 @@ onMounted(async () => {
     font-size: 11px;
   }
   /* Force background colors for print */
-  .bg-white dark:bg-gray-800 {
+  .bg-white {
     background-color: white !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  .bg-gray-50 dark:bg-gray-700/50 {
+  .bg-gray-50 {
     background-color: #f9fafb !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;

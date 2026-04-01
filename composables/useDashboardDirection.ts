@@ -1,6 +1,7 @@
 /**
  * Composable pour les données du dashboard direction
  * Charge les visites avec jointure PDV et applique les filtres
+ * Fallback automatique si la RPC n'existe pas
  */
 import type { DashboardFilterValues } from '~/components/DashboardFilters.vue'
 
@@ -24,9 +25,11 @@ export interface VisiteWithPDV {
 
 export function useDashboardDirection() {
   const supabase = useSupabaseClient()
+  const toast = useToast()
 
   const visites = ref<VisiteWithPDV[]>([])
   const loading = ref(false)
+  const error = ref<string | null>(null)
   const totalVisites = computed(() => visites.value.length)
 
   const now = new Date()
@@ -50,17 +53,55 @@ export function useDashboardDirection() {
   const availableZones = ref<string[]>([''])
 
   async function fetchZones() {
-    const { data } = await supabase
-      .from('pdv')
-      .select('zone')
-      .not('zone', 'is', null)
-      .order('zone')
-    const zones = [...new Set((data || []).map((d: any) => d.zone).filter(Boolean))]
-    availableZones.value = ['', ...zones]
+    try {
+      const { data } = await supabase
+        .from('pdv')
+        .select('zone')
+        .not('zone', 'is', null)
+        .order('zone')
+      const zones = [...new Set((data || []).map((d: any) => d.zone).filter(Boolean))]
+      availableZones.value = ['', ...zones]
+    }
+    catch (err) {
+      console.warn('Erreur chargement zones:', err)
+    }
+  }
+
+  /** Fallback: requête directe visites + join PDV si la RPC n'existe pas */
+  async function fetchVisitesFallback() {
+    let query = supabase
+      .from('visites')
+      .select('visite_id, date_visite, commercial, email, data, pdv_id, pdv:pdv_id(pdv_id, nom_pdv, canal, categorie_pdv, sous_categorie_pdv, region, zone, secteur)')
+      .order('date_visite', { ascending: false })
+      .limit(2000)
+
+    if (filters.value.dateFrom) {
+      query = query.gte('date_visite', filters.value.dateFrom + 'T00:00:00')
+    }
+    if (filters.value.dateTo) {
+      query = query.lte('date_visite', filters.value.dateTo + 'T23:59:59')
+    }
+    if (filters.value.commercial) {
+      query = query.ilike('commercial', `%${filters.value.commercial}%`)
+    }
+
+    const { data, error: qError } = await query
+
+    if (qError) throw qError
+
+    visites.value = (data || []).map((row: any) => ({
+      visite_id: row.visite_id,
+      date_visite: row.date_visite,
+      commercial: row.commercial,
+      email: row.email,
+      data: row.data,
+      pdv: row.pdv || null,
+    }))
   }
 
   async function fetchVisites() {
     loading.value = true
+    error.value = null
     try {
       const params: Record<string, string | null> = {
         p_date_from: filters.value.dateFrom ? filters.value.dateFrom + 'T00:00:00' : null,
@@ -75,9 +116,14 @@ export function useDashboardDirection() {
         p_nom_pdv: filters.value.nomPdv || null,
       }
 
-      const { data, error } = await supabase.rpc('get_visites_filtered', params)
+      const { data, error: rpcError } = await supabase.rpc('get_visites_filtered', params)
 
-      if (error) throw error
+      if (rpcError) {
+        // Si la RPC n'existe pas, fallback vers requête directe
+        console.warn('RPC get_visites_filtered indisponible, fallback query directe:', rpcError.message)
+        await fetchVisitesFallback()
+        return
+      }
 
       // Transform flat RPC result to VisiteWithPDV structure
       visites.value = (data || []).map((row: any) => ({
@@ -100,8 +146,17 @@ export function useDashboardDirection() {
           : null,
       }))
     }
-    catch (err) {
+    catch (err: any) {
+      const msg = err?.message || 'Erreur inconnue'
+      error.value = msg
       console.error('Erreur chargement visites direction:', err)
+      toast.add({
+        title: 'Erreur de chargement',
+        description: `Impossible de charger les visites : ${msg}`,
+        color: 'red',
+        icon: 'i-heroicons-exclamation-triangle',
+        timeout: 6000,
+      })
     }
     finally {
       loading.value = false
@@ -185,6 +240,7 @@ export function useDashboardDirection() {
   return {
     visites,
     loading,
+    error,
     totalVisites,
     filters,
     availableZones,

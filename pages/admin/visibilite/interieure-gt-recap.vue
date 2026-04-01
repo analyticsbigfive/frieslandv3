@@ -46,7 +46,12 @@
           </thead>
           <tbody class="divide-y divide-gray-100">
             <tr v-for="(row, idx) in paginatedRows" :key="idx" class="hover:bg-gray-50 dark:hover:bg-gray-700">
-              <td class="px-3 py-2 font-medium text-gray-900 dark:text-gray-100 max-w-[180px] truncate">{{ row.nom }}</td>
+              <td class="px-3 py-2 font-medium text-gray-900 dark:text-gray-100 max-w-[180px]">
+                <div class="flex items-center gap-1">
+                  <span class="truncate">{{ row.nom }}</span>
+                  <PDVPhotoModal :pdv-id="row.pdv_id" :image-url="row.image_url" :pdv-name="row.nom" />
+                </div>
+              </td>
               <td class="px-3 py-2 text-gray-600">{{ row.region }}</td>
               <td class="px-3 py-2 text-gray-600">{{ row.zone }}</td>
               <td class="px-3 py-2 text-gray-600">{{ row.secteur }}</td>
@@ -107,6 +112,8 @@ const allRows = computed(() => {
     const int = v.data?.visibilite?.interieure || {} as any
     return {
       nom: v.pdv?.nom_pdv || '',
+      pdv_id: v.pdv?.pdv_id || '',
+      image_url: (v.pdv as any)?.image_url || null,
       region: v.pdv?.region || '',
       zone: v.pdv?.zone || '',
       secteur: v.pdv?.secteur || '',
@@ -135,8 +142,7 @@ const filteredRows = computed(() => {
 
 const paginatedRows = computed(() => filteredRows.value.slice((page.value - 1) * 100, page.value * 100))
 
-onMounted(async () => {
-  await dashboard.fetchZones()
-  await dashboard.fetchVisites()
+onMounted(() => {
+  Promise.all([dashboard.fetchZones(), dashboard.fetchVisites()])
 })
 </script>

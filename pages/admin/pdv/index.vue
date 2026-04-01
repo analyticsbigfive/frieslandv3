@@ -70,7 +70,10 @@
                     <MapPin class="w-4 h-4 text-fc-blue" />
                   </div>
                   <div>
-                    <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ pdv.nom_pdv }}</p>
+                    <div class="flex items-center gap-1">
+                      <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ pdv.nom_pdv }}</p>
+                      <PDVPhotoModal :image-url="pdv.image_url" :pdv-id="pdv.pdv_id" :pdv-name="pdv.nom_pdv" />
+                    </div>
                     <p class="text-xs text-gray-400">{{ pdv.pdv_id }}</p>
                   </div>
                 </div>

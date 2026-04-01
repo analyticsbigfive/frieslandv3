@@ -132,8 +132,7 @@ const chartData = computed(() =>
   tableData.value.map(r => ({ date: r.period, count: r.count }))
 )
 
-onMounted(async () => {
-  await dashboard.fetchZones()
-  await dashboard.fetchVisites()
+onMounted(() => {
+  Promise.all([dashboard.fetchZones(), dashboard.fetchVisites()])
 })
 </script>

@@ -142,7 +142,12 @@
             <tbody class="divide-y divide-gray-100">
               <tr v-for="row in paginatedRecap" :key="row.visite_id" class="hover:bg-gray-50 dark:hover:bg-gray-700">
                 <td class="px-3 py-2 whitespace-nowrap">{{ formatDate(row.date_visite) }}</td>
-                <td class="px-3 py-2 font-medium text-gray-900 dark:text-gray-100 max-w-[200px] truncate">{{ row.pdv?.nom_pdv || '—' }}</td>
+                <td class="px-3 py-2 font-medium text-gray-900 dark:text-gray-100 max-w-[200px]">
+                  <div class="flex items-center gap-1">
+                    <span class="truncate">{{ row.pdv?.nom_pdv || '—' }}</span>
+                    <PDVPhotoModal v-if="row.pdv?.pdv_id" :pdv-id="row.pdv.pdv_id" :pdv-name="row.pdv.nom_pdv" />
+                  </div>
+                </td>
                 <td class="px-3 py-2">{{ row.pdv?.canal || '—' }}</td>
                 <td class="px-3 py-2">{{ row.pdv?.region || '—' }}</td>
                 <td class="px-3 py-2">{{ row.commercial }}</td>
@@ -346,8 +351,7 @@ watch(() => route.query.tab, (tab) => {
   if (tab) activeTab.value = tab as string
 })
 
-onMounted(async () => {
-  await dashboard.fetchZones()
-  await dashboard.fetchVisites()
+onMounted(() => {
+  Promise.all([dashboard.fetchZones(), dashboard.fetchVisites()])
 })
 </script>
