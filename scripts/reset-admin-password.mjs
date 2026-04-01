@@ -14,7 +14,7 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 
 const ADMIN_EMAIL = 'admin@friesland.ci'
-const NEW_PASSWORD = 'FrieslandAdmin2026!'
+const NEW_PASSWORD = 'Test1234!'
 
 async function main() {
   const { data, error } = await supabase.auth.admin.listUsers()

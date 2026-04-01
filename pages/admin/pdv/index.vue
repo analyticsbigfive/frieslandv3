@@ -43,26 +43,26 @@
     </div>
 
     <!-- PDV Table -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nom</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Canal</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Catégorie</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Zone</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Secteur</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Région</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">GPS</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Nom</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Canal</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Catégorie</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Zone</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Secteur</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Région</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">GPS</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
             <tr
               v-for="pdv in pdvList"
               :key="pdv.pdv_id"
-              class="hover:bg-gray-50"
+              class="hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               <td class="px-4 py-3">
                 <div class="flex items-center gap-3">
@@ -70,7 +70,7 @@
                     <MapPin class="w-4 h-4 text-fc-blue" />
                   </div>
                   <div>
-                    <p class="text-sm font-medium text-gray-900">{{ pdv.nom_pdv }}</p>
+                    <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ pdv.nom_pdv }}</p>
                     <p class="text-xs text-gray-400">{{ pdv.pdv_id }}</p>
                   </div>
                 </div>
@@ -107,8 +107,8 @@
       </div>
 
       <!-- Pagination -->
-      <div class="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-        <p class="text-sm text-gray-500">{{ total }} PDV trouvé(s)</p>
+      <div class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <p class="text-sm text-gray-500 dark:text-gray-400">{{ total }} PDV trouvé(s)</p>
         <div class="flex gap-2">
           <UButton
             size="xs"
@@ -133,7 +133,7 @@
     <!-- Create/Edit Modal -->
     <UModal v-model="showCreate" :ui="{ width: 'max-w-2xl' }">
       <div class="p-6">
-        <h3 class="text-lg font-bold text-gray-900 mb-6">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-6">
           {{ editingPDV ? 'Modifier le PDV' : 'Nouveau Point de Vente' }}
         </h3>
 
@@ -193,12 +193,12 @@
     <!-- Import Modal -->
     <UModal v-model="showImport">
       <div class="p-6">
-        <h3 class="text-lg font-bold text-gray-900 mb-4">Import CSV PDV</h3>
-        <p class="text-sm text-gray-500 mb-4">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Import CSV PDV</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
           Importez un fichier CSV avec les colonnes : PDV ID, Nom du PDV, Canal, Catégorie de PDV, etc.
         </p>
 
-        <div class="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center mb-4">
+        <div class="border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-lg p-8 text-center mb-4">
           <input
             ref="fileInput"
             type="file"
@@ -233,7 +233,7 @@ import { MapPin } from 'lucide-vue-next'
 import type { PDV } from '~/types'
 
 definePageMeta({
-  middleware: ['auth'],
+  middleware: ['auth', 'admin'],
   layout: 'admin',
 })
 

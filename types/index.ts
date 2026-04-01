@@ -74,60 +74,140 @@ export interface RoutingData {
   mdm: string
 }
 
+// ---- Routing / Planning ----
+export type RoutingStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled'
+export type RoutingPDVStatus = 'pending' | 'in_progress' | 'completed' | 'skipped'
+
+export interface RoutingObjectives {
+  releve_stock?: boolean
+  encaissement?: boolean
+  photos?: boolean
+  merchandising?: boolean
+  prospection?: boolean
+  custom?: string
+}
+
+export interface RoutingPDV {
+  id: string
+  routing_id: string
+  pdv_id: string
+  position_order: number
+  objectifs: RoutingObjectives
+  status: RoutingPDVStatus
+  arrived_at?: string
+  completed_at?: string
+  geofence_validated: boolean
+  geolocation_lat?: number
+  geolocation_lng?: number
+  precision_gps?: number
+  result_notes?: string
+  visite_id?: string
+  created_at: string
+  updated_at: string
+  // Joined
+  pdv?: PDV
+}
+
+export interface Routing {
+  id: string
+  user_id: string
+  date_routing: string
+  created_by?: string
+  notes?: string
+  status: RoutingStatus
+  created_at: string
+  updated_at: string
+  // Joined
+  user?: Profile
+  creator?: Profile
+  routing_pdv?: RoutingPDV[]
+}
+
+// ---- Routing Templates (Permanent) ----
+export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6
+
+export interface RoutingTemplatePDV {
+  id: string
+  template_id: string
+  pdv_id: string
+  position_order: number
+  objectifs: RoutingObjectives
+  created_at: string
+  updated_at: string
+  // Joined
+  pdv?: PDV
+}
+
+export interface RoutingTemplate {
+  id: string
+  user_id: string
+  day_of_week: DayOfWeek
+  label?: string
+  notes?: string
+  is_active: boolean
+  created_by?: string
+  created_at: string
+  updated_at: string
+  // Joined
+  user?: Profile
+  creator?: Profile
+  routing_template_pdv?: RoutingTemplatePDV[]
+}
+
 // ---- Visite Data (JSONB) ----
 export interface VisiteProduits {
   evap: {
     present: boolean
-    br_gold?: ProductStatus
-    br_160g?: ProductStatus
-    brb_160g?: ProductStatus
-    br_400g?: ProductStatus
-    brb_400g?: ProductStatus
-    pearl_400g?: ProductStatus
-    prix_respectes?: boolean
+    br_gold: ProductStatus
+    br_160g: ProductStatus
+    brb_160g: ProductStatus
+    br_400g: ProductStatus
+    brb_400g: ProductStatus
+    pearl_400g: ProductStatus
+    prix_respectes: boolean
   }
   imp: {
     present: boolean
-    br_400g?: ProductStatus
-    br_900g?: ProductStatus
-    br_2_5kg?: ProductStatus
-    br_375g?: ProductStatus
-    brb_400g?: ProductStatus
-    br_20g?: ProductStatus
-    brb_25g?: ProductStatus
-    brd_15g?: ProductStatus
-    brd_350g?: ProductStatus
-    prix_respectes?: boolean
+    br_400g: ProductStatus
+    br_900g: ProductStatus
+    br_2_5kg: ProductStatus
+    br_375g: ProductStatus
+    brb_400g: ProductStatus
+    br_20g: ProductStatus
+    brb_25g: ProductStatus
+    brd_15g: ProductStatus
+    brd_350g: ProductStatus
+    prix_respectes: boolean
   }
   scm: {
     present: boolean
-    br_1kg?: ProductStatus
-    brb_1kg?: ProductStatus
-    brb_397g?: ProductStatus
-    br_397g?: ProductStatus
-    pearl_1kg?: ProductStatus
-    prix_respectes?: boolean
+    br_1kg: ProductStatus
+    brb_1kg: ProductStatus
+    brb_397g: ProductStatus
+    br_397g: ProductStatus
+    pearl_1kg: ProductStatus
+    prix_respectes: boolean
   }
   uht: {
     present: boolean
-    demi_ecreme?: ProductStatus
-    elopack_500ml?: ProductStatus
-    brique_1l?: ProductStatus
-    prix_respectes?: boolean
+    demi_ecreme: ProductStatus
+    elopack_500ml: ProductStatus
+    brique_1l: ProductStatus
+    prix_respectes: boolean
   }
   cereales: {
     present: boolean
-    brcv?: ProductStatus
-    brcc?: ProductStatus
-    prix_respectes?: boolean
+    brcv: ProductStatus
+    brcc: ProductStatus
+    prix_respectes: boolean
   }
   yaourt: {
     present: boolean
-    br_yogoo_fraise_mini_90ml?: ProductStatus
-    br_yogoo_fraise_maxi_318ml?: ProductStatus
-    br_yogoo_nature_mini_90ml?: ProductStatus
-    br_yogoo_nature_maxi_318ml?: ProductStatus
-    prix_respectes?: boolean
+    br_yogoo_fraise_mini_90ml: ProductStatus
+    br_yogoo_fraise_maxi_318ml: ProductStatus
+    br_yogoo_nature_mini_90ml: ProductStatus
+    br_yogoo_nature_maxi_318ml: ProductStatus
+    prix_respectes: boolean
   }
 }
 
@@ -135,29 +215,29 @@ export interface VisiteConcurrence {
   presence_concurrents: boolean
   evap: {
     present: boolean
-    cowmilk?: ProductStatus
-    nido_150g?: ProductStatus
-    autre?: ProductStatus
+    cowmilk: ProductStatus
+    nido_150g: ProductStatus
+    autre: ProductStatus
     nom_concurrent?: string
   }
   imp: {
     present: boolean
-    nido?: ProductStatus
-    laity?: ProductStatus
-    top_lait?: ProductStatus
-    autre?: ProductStatus
+    nido: ProductStatus
+    laity: ProductStatus
+    top_lait: ProductStatus
+    autre: ProductStatus
     nom_concurrent?: string
   }
   scm: {
     present: boolean
-    top_saho?: ProductStatus
-    autre?: ProductStatus
+    top_saho: ProductStatus
+    autre: ProductStatus
     nom_concurrent?: string
   }
   uht: {
     present: boolean
-    candia?: ProductStatus
-    autre?: ProductStatus
+    candia: ProductStatus
+    autre: ProductStatus
     nom_concurrent?: string
   }
 }
@@ -333,19 +413,19 @@ export interface GeofenceResult {
 export function getDefaultVisiteData(): VisiteData {
   return {
     produits: {
-      evap: { present: false },
-      imp: { present: false },
-      scm: { present: false },
-      uht: { present: false },
-      cereales: { present: false },
-      yaourt: { present: false },
+      evap: { present: false, br_gold: 'En rupture', br_160g: 'En rupture', brb_160g: 'En rupture', br_400g: 'En rupture', brb_400g: 'En rupture', pearl_400g: 'En rupture', prix_respectes: false },
+      imp: { present: false, br_400g: 'En rupture', br_900g: 'En rupture', br_2_5kg: 'En rupture', br_375g: 'En rupture', brb_400g: 'En rupture', br_20g: 'En rupture', brb_25g: 'En rupture', brd_15g: 'En rupture', brd_350g: 'En rupture', prix_respectes: false },
+      scm: { present: false, br_1kg: 'En rupture', brb_1kg: 'En rupture', brb_397g: 'En rupture', br_397g: 'En rupture', pearl_1kg: 'En rupture', prix_respectes: false },
+      uht: { present: false, demi_ecreme: 'En rupture', elopack_500ml: 'En rupture', brique_1l: 'En rupture', prix_respectes: false },
+      cereales: { present: false, brcv: 'En rupture', brcc: 'En rupture', prix_respectes: false },
+      yaourt: { present: false, br_yogoo_fraise_mini_90ml: 'En rupture', br_yogoo_fraise_maxi_318ml: 'En rupture', br_yogoo_nature_mini_90ml: 'En rupture', br_yogoo_nature_maxi_318ml: 'En rupture', prix_respectes: false },
     },
     concurrence: {
       presence_concurrents: false,
-      evap: { present: false },
-      imp: { present: false },
-      scm: { present: false },
-      uht: { present: false },
+      evap: { present: false, cowmilk: 'En rupture', nido_150g: 'En rupture', autre: 'En rupture' },
+      imp: { present: false, nido: 'En rupture', laity: 'En rupture', top_lait: 'En rupture', autre: 'En rupture' },
+      scm: { present: false, top_saho: 'En rupture', autre: 'En rupture' },
+      uht: { present: false, candia: 'En rupture', autre: 'En rupture' },
     },
     visibilite: {
       exterieure: {

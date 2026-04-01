@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900">ACTIONS</h1>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">ACTIONS</h1>
 
     <DashboardFilters
       v-model="dashboard.filters.value"
@@ -21,8 +21,8 @@
       <h2 class="text-lg font-bold text-gray-800">Taux de réalisation par action</h2>
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         <ClientOnly>
-          <div v-for="action in actionDefs" :key="action.key" class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-            <h4 class="text-xs font-semibold text-gray-500 mb-2 text-center">{{ action.label }}</h4>
+          <div v-for="action in actionDefs" :key="action.key" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
+            <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 text-center">{{ action.label }}</h4>
             <ChartsPieChart
               :labels="['Non', 'Oui']"
               :values="[actionAbsent(action.key), actionPresent(action.key)]"
@@ -35,12 +35,12 @@
       </div>
 
       <!-- Barres de progression détaillées -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 class="font-bold text-gray-900 mb-4">Détail des taux</h3>
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-4">Détail des taux</h3>
         <div class="space-y-4">
           <div v-for="action in actionStats" :key="action.key" class="space-y-1">
             <div class="flex items-center justify-between">
-              <span class="text-sm font-medium text-gray-700">{{ action.label }}</span>
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ action.label }}</span>
               <span class="text-sm font-bold" :class="action.pct >= 50 ? 'text-green-600' : 'text-orange-500'">
                 {{ action.pct }}% ({{ action.count }}/{{ dashboard.totalVisites.value }})
               </span>
@@ -57,8 +57,8 @@
       </div>
 
       <!-- Évolution -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 class="text-sm font-semibold text-gray-700 mb-4">Évolution des actions réalisées</h3>
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Évolution des actions réalisées</h3>
         <ClientOnly>
           <ChartsVisitesLineChart
             v-if="evoData.length"

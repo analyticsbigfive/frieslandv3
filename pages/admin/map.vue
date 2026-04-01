@@ -1,8 +1,8 @@
 <template>
   <div>
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" style="height: calc(100vh - 180px);">
-      <div class="p-4 border-b border-gray-100 flex items-center justify-between">
-        <h3 class="text-sm font-semibold text-gray-700">Carte des Points de Vente</h3>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden" style="height: calc(100vh - 180px);">
+      <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Carte des Points de Vente</h3>
         <div class="flex items-center gap-2">
           <span class="text-xs text-gray-400">{{ markers.length }} PDV</span>
           <USelectMenu
@@ -27,7 +27,7 @@
 import type { PDV } from '~/types'
 
 definePageMeta({
-  middleware: ['auth'],
+  middleware: ['auth', 'admin'],
   layout: 'admin',
 })
 
@@ -78,7 +78,7 @@ function addMarkers() {
     marker.bindPopup(`
       <div class="text-sm">
         <p class="font-bold">${pdv.nom_pdv}</p>
-        <p class="text-gray-500">${pdv.zone || ''} - ${pdv.secteur || ''}</p>
+        <p class="text-gray-500 dark:text-gray-400">${pdv.zone || ''} - ${pdv.secteur || ''}</p>
         <p class="text-gray-400 text-xs">${pdv.canal} / ${pdv.sous_categorie_pdv || ''}</p>
         <p class="text-gray-400 text-xs mt-1">${pdv.geolocation_lat?.toFixed(4)}, ${pdv.geolocation_lng?.toFixed(4)}</p>
       </div>

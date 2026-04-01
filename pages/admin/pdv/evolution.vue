@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900">PDV — ÉVOLUTION AJOUTS</h1>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">PDV — ÉVOLUTION AJOUTS</h1>
 
     <DashboardFilters
       v-model="dashboard.filters.value"
@@ -24,8 +24,8 @@
       </div>
 
       <!-- Evolution chart -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 class="text-sm font-semibold text-gray-700 mb-4">Évolution des ajouts de PDV par semaine</h3>
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Évolution des ajouts de PDV par semaine</h3>
         <ClientOnly>
           <ChartsVisitesLineChart
             v-if="evoData.length"
@@ -37,8 +37,8 @@
 
       <!-- Répartition par canal -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 class="text-sm font-semibold text-gray-700 mb-4">Par canal</h3>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Par canal</h3>
           <ClientOnly>
             <ChartsPieChart
               v-if="canalBreakdown.labels.length"
@@ -49,8 +49,8 @@
             />
           </ClientOnly>
         </div>
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 class="text-sm font-semibold text-gray-700 mb-4">Par catégorie</h3>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Par catégorie</h3>
           <ClientOnly>
             <ChartsPieChart
               v-if="categorieBreakdown.labels.length"

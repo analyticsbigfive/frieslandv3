@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-gray-50">
     <!-- Header -->
-    <div class="bg-fc-blue text-white px-4 py-3 flex items-center gap-3">
+    <div class="bg-fc-red text-white px-4 py-3 flex items-center gap-3">
       <button @click="router.back()">
         <UIcon name="i-heroicons-arrow-left" class="w-5 h-5" />
       </button>
@@ -9,7 +9,7 @@
     </div>
 
     <div v-if="loading" class="flex items-center justify-center py-20">
-      <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 text-fc-blue animate-spin" />
+      <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 text-fc-red animate-spin" />
     </div>
 
     <div v-else-if="!visite" class="px-4 py-20 text-center text-gray-400">
@@ -19,7 +19,7 @@
 
     <div v-else-if="visite" class="px-4 py-4 space-y-4 pb-24">
       <!-- Info card -->
-      <div class="bg-white rounded-xl shadow-sm p-4 space-y-3">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
         <div class="flex items-center justify-between">
           <span class="text-xs text-gray-400">#{{ visite.visite_id }}</span>
           <span
@@ -29,7 +29,7 @@
             {{ visite.geofence_validated ? '✓ GPS validé' : '⚠ GPS non validé' }}
           </span>
         </div>
-        <h2 class="text-lg font-bold text-gray-900">{{ pdvName }}</h2>
+        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">{{ pdvName }}</h2>
         <div class="grid grid-cols-2 gap-2 text-sm">
           <div>
             <span class="text-gray-400 text-xs">Date</span>
@@ -43,15 +43,15 @@
       </div>
 
       <!-- Produits -->
-      <div class="bg-white rounded-xl shadow-sm p-4 space-y-3">
-        <h3 class="font-bold text-sm text-gray-900">Produits</h3>
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
+        <h3 class="font-bold text-sm text-gray-900 dark:text-gray-100">Produits</h3>
         <div class="grid grid-cols-2 gap-2">
           <div
             v-for="cat in productCategories"
             :key="cat.key"
-            class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2"
+            class="flex items-center justify-between bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2"
           >
-            <span class="text-sm font-medium text-gray-700">{{ cat.label }}</span>
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ cat.label }}</span>
             <span
               :class="visite.data?.produits?.[cat.key]?.present ? 'text-green-500' : 'text-red-500'"
               class="text-xs font-bold"
@@ -63,8 +63,8 @@
       </div>
 
       <!-- Concurrence -->
-      <div class="bg-white rounded-xl shadow-sm p-4 space-y-3">
-        <h3 class="font-bold text-sm text-gray-900">Concurrence</h3>
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
+        <h3 class="font-bold text-sm text-gray-900 dark:text-gray-100">Concurrence</h3>
         <div class="flex items-center gap-2">
           <span class="text-sm text-gray-600">Présence de concurrents :</span>
           <span
@@ -78,9 +78,9 @@
           <div
             v-for="cat in concurrenceCategories"
             :key="cat.key"
-            class="bg-gray-50 rounded-lg px-3 py-2"
+            class="bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2"
           >
-            <span class="text-xs text-gray-500">{{ cat.label }}</span>
+            <span class="text-xs text-gray-500 dark:text-gray-400">{{ cat.label }}</span>
             <p
               :class="visite.data?.concurrence?.[cat.key]?.present ? 'text-red-500' : 'text-green-500'"
               class="text-sm font-bold"
@@ -92,8 +92,8 @@
       </div>
 
       <!-- Actions -->
-      <div class="bg-white rounded-xl shadow-sm p-4 space-y-3">
-        <h3 class="font-bold text-sm text-gray-900">Actions réalisées</h3>
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
+        <h3 class="font-bold text-sm text-gray-900 dark:text-gray-100">Actions réalisées</h3>
         <div class="space-y-2">
           <div
             v-for="action in actionsList"
@@ -105,14 +105,14 @@
               :class="visite.data?.actions?.[action.key] ? 'text-green-500' : 'text-gray-300'"
               class="w-5 h-5"
             />
-            <span class="text-sm text-gray-700">{{ action.label }}</span>
+            <span class="text-sm text-gray-700 dark:text-gray-300">{{ action.label }}</span>
           </div>
         </div>
       </div>
 
       <!-- Images -->
-      <div v-if="visite.image_urls?.length" class="bg-white rounded-xl shadow-sm p-4 space-y-3">
-        <h3 class="font-bold text-sm text-gray-900">Photos</h3>
+      <div v-if="visite.image_urls?.length" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
+        <h3 class="font-bold text-sm text-gray-900 dark:text-gray-100">Photos</h3>
         <div class="grid grid-cols-2 gap-2">
           <img
             v-for="(url, idx) in visite.image_urls"

@@ -15,8 +15,9 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
 
   colorMode: {
-    preference: 'light',
+    preference: 'system',
     fallback: 'light',
+    classSuffix: '',
   },
 
   supabase: {
@@ -26,7 +27,7 @@ export default defineNuxtConfig({
     redirectOptions: {
       login: '/login',
       callback: '/confirm',
-      exclude: ['/login', '/register'],
+      exclude: ['/login'],
     },
     cookieOptions: {
       maxAge: 60 * 60 * 24 * 30, // 30 days
@@ -108,6 +109,10 @@ export default defineNuxtConfig({
         { name: 'theme-color', content: '#C8102E' },
         { name: 'apple-mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
+        // Security headers
+        { 'http-equiv': 'X-Content-Type-Options', content: 'nosniff' },
+        { 'http-equiv': 'X-Frame-Options', content: 'DENY' },
+        { name: 'referrer', content: 'strict-origin-when-cross-origin' },
       ],
       link: [
         { rel: 'icon', type: 'image/png', href: '/favicon.png' },
@@ -118,8 +123,6 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      supabaseUrl: process.env.SUPABASE_URL,
-      supabaseKey: process.env.SUPABASE_KEY,
       geofenceRadius: 300,
       gpsMinAccuracy: 10,
     },

@@ -2,8 +2,8 @@
   <UModal v-model="isOpen" :ui="{ width: 'max-w-lg' }">
     <div class="p-6">
       <div class="mb-5">
-        <h3 class="text-lg font-bold text-gray-900">Nouveau PDV</h3>
-        <p class="text-sm text-gray-500 mt-1">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Nouveau PDV</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
           Créez un point de vente et utilisez-le immédiatement pour une visite.
         </p>
       </div>
@@ -77,14 +77,14 @@
           />
         </UFormGroup>
 
-        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
+        <div class="rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 p-4 space-y-3">
           <div class="flex items-start justify-between gap-3">
             <div>
               <p class="text-sm font-medium text-gray-800">Coordonnées GPS</p>
-              <p v-if="hasCoordinates" class="text-xs text-gray-500 mt-1">
+              <p v-if="hasCoordinates" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 {{ form.geolocation_lat?.toFixed(6) }}, {{ form.geolocation_lng?.toFixed(6) }}
               </p>
-              <p v-else class="text-xs text-gray-500 mt-1">
+              <p v-else class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 Aucune position enregistrée pour ce PDV.
               </p>
               <p

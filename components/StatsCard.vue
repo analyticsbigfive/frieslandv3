@@ -1,15 +1,15 @@
 <template>
   <div
-    class="rounded-xl bg-white p-5 shadow-sm border border-gray-100 card-hover"
+    class="rounded-xl bg-white dark:bg-gray-800 p-5 shadow-sm border border-gray-100 dark:border-gray-700 card-hover"
     :class="cardClass"
   >
     <div class="flex items-start justify-between">
       <div>
-        <p class="text-sm text-gray-500 font-medium">{{ title }}</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 font-medium">{{ title }}</p>
         <p class="text-2xl font-bold mt-1" :class="valueClass">
           {{ formattedValue }}
         </p>
-        <p v-if="subtitle" class="text-xs text-gray-400 mt-1">{{ subtitle }}</p>
+        <p v-if="subtitle" class="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400 mt-1">{{ subtitle }}</p>
       </div>
       <div
         class="w-12 h-12 rounded-xl flex items-center justify-center"
@@ -33,7 +33,7 @@
         </svg>
         {{ Math.abs(trend) }}%
       </span>
-      <span class="text-xs text-gray-400">vs mois dernier</span>
+      <span class="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400">vs mois dernier</span>
     </div>
   </div>
 </template>
@@ -63,32 +63,32 @@ const formattedValue = computed(() => {
 const colorMap = {
   blue: {
     card: '',
-    value: 'text-gray-900',
-    iconBg: 'bg-fc-blue-50',
+    value: 'text-gray-900 dark:text-gray-100',
+    iconBg: 'bg-fc-blue-50 dark:bg-fc-blue-900/30',
     iconColor: 'text-fc-blue',
   },
   red: {
     card: '',
-    value: 'text-gray-900',
-    iconBg: 'bg-fc-red-50',
+    value: 'text-gray-900 dark:text-gray-100',
+    iconBg: 'bg-fc-red-50 dark:bg-fc-red-900/30',
     iconColor: 'text-fc-red',
   },
   green: {
     card: '',
-    value: 'text-gray-900',
-    iconBg: 'bg-emerald-50',
+    value: 'text-gray-900 dark:text-gray-100',
+    iconBg: 'bg-emerald-50 dark:bg-emerald-900/30',
     iconColor: 'text-emerald-600',
   },
   orange: {
     card: '',
-    value: 'text-gray-900',
-    iconBg: 'bg-amber-50',
+    value: 'text-gray-900 dark:text-gray-100',
+    iconBg: 'bg-amber-50 dark:bg-amber-900/30',
     iconColor: 'text-amber-600',
   },
   purple: {
     card: '',
-    value: 'text-gray-900',
-    iconBg: 'bg-purple-50',
+    value: 'text-gray-900 dark:text-gray-100',
+    iconBg: 'bg-purple-50 dark:bg-purple-900/30',
     iconColor: 'text-purple-600',
   },
 }

@@ -1,9 +1,10 @@
 // stores/pdv.ts
-import { defineStore } from 'pinia'
+import { defineStore, skipHydrate } from 'pinia'
+import { markRaw } from 'vue'
 import type { PDV, Profile, ZoneSecteur } from '~/types'
 
 export const usePDVStore = defineStore('pdv', () => {
-  const supabase = useSupabaseClient()
+  const supabase = skipHydrate(markRaw(useSupabaseClient()))
   const cacheTTL = 5 * 60 * 1000
 
   const pdvList = ref<PDV[]>([])

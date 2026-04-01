@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900">VISIBILITÉ INTÉRIEURE (GT) RÉCAPITULATIF</h1>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">VISIBILITÉ INTÉRIEURE (GT) RÉCAPITULATIF</h1>
 
     <DashboardFilters
       v-model="dashboard.filters.value"
@@ -9,7 +9,7 @@
     />
 
     <!-- Column filters -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
       <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         <UFormGroup v-for="item in gtItems" :key="item.key" :label="item.label" size="sm">
           <USelectMenu v-model="colFilters[item.key]" :options="['', 'Présent', 'Absent']" placeholder="Tous" size="sm" />
@@ -23,7 +23,7 @@
     </div>
 
     <!-- Table -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead class="bg-amber-50">
@@ -45,8 +45,8 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
-            <tr v-for="(row, idx) in paginatedRows" :key="idx" class="hover:bg-gray-50">
-              <td class="px-3 py-2 font-medium text-gray-900 max-w-[180px] truncate">{{ row.nom }}</td>
+            <tr v-for="(row, idx) in paginatedRows" :key="idx" class="hover:bg-gray-50 dark:hover:bg-gray-700">
+              <td class="px-3 py-2 font-medium text-gray-900 dark:text-gray-100 max-w-[180px] truncate">{{ row.nom }}</td>
               <td class="px-3 py-2 text-gray-600">{{ row.region }}</td>
               <td class="px-3 py-2 text-gray-600">{{ row.zone }}</td>
               <td class="px-3 py-2 text-gray-600">{{ row.secteur }}</td>
@@ -67,8 +67,8 @@
         </table>
       </div>
 
-      <div class="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-        <p class="text-sm text-gray-500">{{ (page - 1) * 100 + 1 }} - {{ Math.min(page * 100, filteredRows.length) }} / {{ filteredRows.length }}</p>
+      <div class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <p class="text-sm text-gray-500 dark:text-gray-400">{{ (page - 1) * 100 + 1 }} - {{ Math.min(page * 100, filteredRows.length) }} / {{ filteredRows.length }}</p>
         <div class="flex gap-2">
           <UButton size="xs" variant="outline" :disabled="page <= 1" @click="page--">‹</UButton>
           <UButton size="xs" variant="outline" :disabled="page * 100 >= filteredRows.length" @click="page++">›</UButton>

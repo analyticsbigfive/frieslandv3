@@ -1,9 +1,10 @@
 // stores/visites.ts
-import { defineStore } from 'pinia'
+import { defineStore, skipHydrate } from 'pinia'
+import { markRaw } from 'vue'
 import type { Visite, DashboardStats } from '~/types'
 
 export const useVisitesStore = defineStore('visites', () => {
-  const supabase = useSupabaseClient()
+  const supabase = skipHydrate(markRaw(useSupabaseClient()))
 
   const visites = ref<Visite[]>([])
   const currentVisite = ref<Visite | null>(null)

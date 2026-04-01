@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900">VISIBILITÉ CONCURRENCE — ÉVOLUTION</h1>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">VISIBILITÉ CONCURRENCE — ÉVOLUTION</h1>
 
     <DashboardFilters
       v-model="dashboard.filters.value"
@@ -25,8 +25,8 @@
       <h2 class="text-lg font-bold text-gray-800">Visibilité extérieure concurrence</h2>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <ClientOnly>
-          <div v-for="item in concMarques" :key="item.key + '_ext'" class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-            <h4 class="text-xs font-semibold text-gray-500 mb-2 text-center">{{ item.label }} (Ext.)</h4>
+          <div v-for="item in concMarques" :key="item.key + '_ext'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
+            <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 text-center">{{ item.label }} (Ext.)</h4>
             <ChartsPieChart
               :labels="['Absent', 'Présent']"
               :values="[countExtAbsent(item.key), countExtPresent(item.key)]"
@@ -42,8 +42,8 @@
       <h2 class="text-lg font-bold text-gray-800">Visibilité intérieure concurrence</h2>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <ClientOnly>
-          <div v-for="item in concMarques" :key="item.key + '_int'" class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-            <h4 class="text-xs font-semibold text-gray-500 mb-2 text-center">{{ item.label }} (Int.)</h4>
+          <div v-for="item in concMarques" :key="item.key + '_int'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
+            <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 text-center">{{ item.label }} (Int.)</h4>
             <ChartsPieChart
               :labels="['Absent', 'Présent']"
               :values="[countIntAbsent(item.key), countIntPresent(item.key)]"
@@ -56,8 +56,8 @@
       </div>
 
       <!-- Stacked bar chart: Evolution -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 class="text-sm font-semibold text-gray-700 mb-4">Évolution de la visibilité concurrence (extérieure)</h3>
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Évolution de la visibilité concurrence (extérieure)</h3>
         <ClientOnly>
           <Bar v-if="evolutionChartData" :data="evolutionChartData" :options="chartOptions" />
         </ClientOnly>

@@ -1,7 +1,7 @@
 <template>
   <div class="pb-20">
     <div class="p-4 space-y-4">
-      <h2 class="text-lg font-bold text-gray-900">Contacts</h2>
+      <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Contacts</h2>
 
       <UInput
         v-model="search"
@@ -14,20 +14,20 @@
         <div
           v-for="contact in filteredContacts"
           :key="contact.id"
-          class="bg-white rounded-xl shadow-sm p-4 flex items-center gap-4"
+          class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 flex items-center gap-4"
         >
           <div
             class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
-            :class="contact.role === 'admin' ? 'bg-fc-red' : contact.role === 'superviseur' ? 'bg-fc-blue' : 'bg-gray-400'"
+            :class="contact.role === 'admin' ? 'bg-fc-red' : contact.role === 'superviseur' ? 'bg-amber-500' : 'bg-gray-400'"
           >
             {{ (contact.nom || '?')[0] }}
           </div>
           <div class="flex-1 min-w-0">
-            <h3 class="font-bold text-gray-900 text-sm truncate">{{ contact.nom }}</h3>
+            <h3 class="font-bold text-gray-900 dark:text-gray-100 text-sm truncate">{{ contact.nom }}</h3>
             <p class="text-xs text-gray-400">{{ contact.role }} {{ contact.zone ? `— ${contact.zone}` : '' }}</p>
           </div>
           <div class="flex gap-2">
-            <a v-if="contact.telephone" :href="`tel:${contact.telephone}`" class="text-fc-blue">
+            <a v-if="contact.telephone" :href="`tel:${contact.telephone}`" class="text-fc-red">
               <UIcon name="i-heroicons-phone" class="w-5 h-5" />
             </a>
             <a v-if="contact.email" :href="`mailto:${contact.email}`" class="text-gray-400">
@@ -45,9 +45,9 @@
 <script setup lang="ts">
 definePageMeta({ middleware: ['auth'], layout: 'mobile' })
 
-const supabase = useSupabaseClient()
 const authStore = useAuthStore()
 const { filterContacts } = useUserScope()
+const { getCachedContactsFallback } = useOfflineData()
 const search = ref('')
 const contacts = ref<any[]>([])
 
@@ -64,15 +64,28 @@ onMounted(async () => {
     await authStore.fetchProfile()
   }
 
-  const { data } = await supabase
-    .from('profiles')
-    .select('id, nom, email, role, zone_assignee, telephone, region, is_active')
-    .eq('is_active', true)
-    .order('nom')
+  try {
+    const { fetchUsers: fetchCachedUsers } = useUsersCache()
+    const data = await fetchCachedUsers()
+    const activeData = data.filter(u => u.is_active !== false)
 
-  contacts.value = filterContacts(data || []).map((contact: any) => ({
-    ...contact,
-    zone: contact.zone_assignee,
-  }))
+    const mapped = filterContacts(activeData).map((contact: any) => ({
+      ...contact,
+      zone: contact.zone_assignee,
+    }))
+    contacts.value = mapped
+    // Cache for offline
+    const { cacheContacts } = useOfflineData()
+    await cacheContacts(activeData)
+  } catch {
+    // Offline fallback
+    const cached = await getCachedContactsFallback()
+    if (cached) {
+      contacts.value = filterContacts(cached).map((contact: any) => ({
+        ...contact,
+        zone: contact.zone_assignee,
+      }))
+    }
+  }
 })
 </script>

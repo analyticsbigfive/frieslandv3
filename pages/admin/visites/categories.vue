@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900">VISITES — ÉVOLUTION PAR CATÉGORIE</h1>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">VISITES — ÉVOLUTION PAR CATÉGORIE</h1>
 
     <DashboardFilters
       v-model="dashboard.filters.value"
@@ -22,8 +22,8 @@
 
       <!-- Pie Chart: GT vs MT -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 class="text-sm font-semibold text-gray-700 mb-4">Répartition par canal</h3>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Répartition par canal</h3>
           <ClientOnly>
             <ChartsPieChart
               :labels="['General trade', 'Modern trade', 'Autre']"
@@ -34,8 +34,8 @@
             />
           </ClientOnly>
         </div>
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 class="text-sm font-semibold text-gray-700 mb-4">Répartition par catégorie PDV</h3>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Répartition par catégorie PDV</h3>
           <ClientOnly>
             <ChartsPieChart
               v-if="categorieBreakdown.labels.length"
@@ -49,29 +49,29 @@
       </div>
 
       <!-- Stacked bar: Evolution par canal par semaine -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 class="text-sm font-semibold text-gray-700 mb-4">Évolution des visites par canal</h3>
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Évolution des visites par canal</h3>
         <ClientOnly>
           <Bar v-if="evoChartData" :data="evoChartData" :options="chartOptions" />
         </ClientOnly>
       </div>
 
       <!-- Table: par catégorie PDV -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
         <div class="p-4 border-b">
-          <h3 class="font-bold text-gray-900">Détail par catégorie de PDV</h3>
+          <h3 class="font-bold text-gray-900 dark:text-gray-100">Détail par catégorie de PDV</h3>
         </div>
         <table class="w-full">
           <thead class="bg-gray-50">
             <tr>
-              <th class="text-left text-xs font-medium text-gray-500 px-4 py-3">Catégorie PDV</th>
-              <th class="text-center text-xs font-medium text-gray-500 px-4 py-3">Nb visites</th>
-              <th class="text-center text-xs font-medium text-gray-500 px-4 py-3">%</th>
+              <th class="text-left text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">Catégorie PDV</th>
+              <th class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">Nb visites</th>
+              <th class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">%</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
-            <tr v-for="row in categorieRows" :key="row.name" class="hover:bg-gray-50">
-              <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ row.name }}</td>
+            <tr v-for="row in categorieRows" :key="row.name" class="hover:bg-gray-50 dark:hover:bg-gray-700">
+              <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">{{ row.name }}</td>
               <td class="px-4 py-3 text-center text-sm font-bold text-fc-blue">{{ row.count }}</td>
               <td class="px-4 py-3 text-center">
                 <div class="flex items-center justify-center gap-2">

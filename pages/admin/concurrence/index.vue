@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900">CONCURRENCE — ÉVOLUTION</h1>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">CONCURRENCE — ÉVOLUTION</h1>
 
     <DashboardFilters
       v-model="dashboard.filters.value"
@@ -25,8 +25,8 @@
       <h2 class="text-lg font-bold text-gray-800">Présence concurrence par catégorie</h2>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <ClientOnly>
-          <div v-for="cat in categories" :key="cat.key" class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-            <h4 class="text-xs font-semibold text-gray-500 mb-2 text-center">{{ cat.label }}</h4>
+          <div v-for="cat in categories" :key="cat.key" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
+            <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 text-center">{{ cat.label }}</h4>
             <ChartsPieChart
               :labels="['Absent', 'Présent']"
               :values="[catAbsent(cat.key), catPresent(cat.key)]"
@@ -41,11 +41,11 @@
       <!-- Détail concurrents par catégorie -->
       <h2 class="text-lg font-bold text-gray-800">Détail par concurrent</h2>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div v-for="cat in categories" :key="cat.key" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 class="font-bold text-gray-900 mb-4">{{ cat.label }}</h3>
+        <div v-for="cat in categories" :key="cat.key" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-4">{{ cat.label }}</h3>
           <div class="space-y-3">
             <div v-for="comp in cat.competitors" :key="comp.key" class="flex items-center justify-between">
-              <span class="text-sm text-gray-700">{{ comp.label }}</span>
+              <span class="text-sm text-gray-700 dark:text-gray-300">{{ comp.label }}</span>
               <div class="flex items-center gap-2">
                 <div class="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
                   <div
@@ -62,8 +62,8 @@
       </div>
 
       <!-- Evolution stacked bar chart -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 class="text-sm font-semibold text-gray-700 mb-4">Évolution de la concurrence par semaine</h3>
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Évolution de la concurrence par semaine</h3>
         <ClientOnly>
           <Bar v-if="evolutionChartData" :data="evolutionChartData" :options="chartOptions" />
         </ClientOnly>

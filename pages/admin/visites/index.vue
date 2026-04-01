@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- Filters -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 mb-6">
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <UFormGroup label="Date début">
           <UInput v-model="filters.dateFrom" type="date" size="sm" />
@@ -34,35 +34,35 @@
     </div>
 
     <!-- Table -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commercial</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">PDV</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">EVAP</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">IMP</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">SCM</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">UHT</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Concurrence</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">GPS</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">ID</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Date</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Commercial</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">PDV</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">EVAP</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">IMP</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">SCM</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">UHT</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Concurrence</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">GPS</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
             <tr
               v-for="visite in visites"
               :key="visite.visite_id"
-              class="hover:bg-gray-50 cursor-pointer"
+              class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
               @click="viewVisite(visite)"
             >
-              <td class="px-4 py-3 text-sm text-gray-500 font-mono">{{ visite.visite_id?.substring(0, 8) }}</td>
-              <td class="px-4 py-3 text-sm text-gray-700">{{ formatDate(visite.date_visite) }}</td>
-              <td class="px-4 py-3 text-sm text-gray-900 font-medium">{{ visite.commercial }}</td>
-              <td class="px-4 py-3 text-sm text-gray-700">{{ (visite as any).pdv?.nom_pdv || visite.pdv_id?.substring(0, 8) }}</td>
+              <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono">{{ visite.visite_id?.substring(0, 8) }}</td>
+              <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ formatDate(visite.date_visite) }}</td>
+              <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 font-medium">{{ visite.commercial }}</td>
+              <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ (visite as any).pdv?.nom_pdv || visite.pdv_id?.substring(0, 8) }}</td>
               <td class="px-4 py-3 text-center">
                 <span :class="visite.data?.produits?.evap?.present ? 'badge-disponible' : 'badge-rupture'">
                   {{ visite.data?.produits?.evap?.present ? 'Oui' : 'Non' }}
@@ -117,8 +117,8 @@
       </div>
 
       <!-- Pagination -->
-      <div class="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-        <p class="text-sm text-gray-500">
+      <div class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
           {{ total }} visite(s) trouvée(s)
         </p>
         <div class="flex gap-2">
@@ -145,30 +145,30 @@
     <!-- Detail Modal -->
     <UModal v-model="showDetail" :ui="{ width: 'max-w-3xl' }">
       <div class="p-6" v-if="selectedVisite">
-        <h3 class="text-lg font-bold text-gray-900 mb-4">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
           Détail Visite - {{ selectedVisite.visite_id?.substring(0, 8) }}
         </h3>
 
         <div class="grid grid-cols-2 gap-4 mb-6">
           <div>
-            <p class="text-xs text-gray-500">Commercial</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Commercial</p>
             <p class="font-medium">{{ selectedVisite.commercial }}</p>
           </div>
           <div>
-            <p class="text-xs text-gray-500">Date</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Date</p>
             <p class="font-medium">{{ formatDate(selectedVisite.date_visite) }}</p>
           </div>
           <div>
-            <p class="text-xs text-gray-500">Email</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Email</p>
             <p class="font-medium">{{ selectedVisite.email }}</p>
           </div>
           <div>
-            <p class="text-xs text-gray-500">Géofence validé</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Géofence validé</p>
             <p class="font-medium">{{ selectedVisite.geofence_validated ? 'Oui ✓' : 'Non ✗' }}</p>
           </div>
         </div>
 
-        <div class="bg-gray-50 rounded-lg p-4 mb-4">
+        <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 mb-4">
           <h4 class="text-sm font-semibold mb-2">Données brutes (JSON)</h4>
           <pre class="text-xs overflow-auto max-h-64 bg-gray-900 text-green-400 p-3 rounded">{{ JSON.stringify(selectedVisite.data, null, 2) }}</pre>
         </div>
@@ -186,7 +186,7 @@
 import type { Visite } from '~/types'
 
 definePageMeta({
-  middleware: ['auth'],
+  middleware: ['auth', 'admin'],
   layout: 'admin',
 })
 

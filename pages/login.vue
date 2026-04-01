@@ -3,12 +3,12 @@
     <!-- Left Panel - Branding -->
     <div class="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-fc-red to-fc-red-700 relative overflow-hidden">
       <div class="absolute inset-0 opacity-10">
-        <div class="absolute -top-20 -right-20 w-96 h-96 bg-white rounded-full" />
-        <div class="absolute -bottom-32 -left-32 w-[500px] h-[500px] bg-white rounded-full" />
+        <div class="absolute -top-20 -right-20 w-96 h-96 bg-white dark:bg-gray-800 rounded-full" />
+        <div class="absolute -bottom-32 -left-32 w-[500px] h-[500px] bg-white dark:bg-gray-800 rounded-full" />
       </div>
       <div class="relative z-10 flex flex-col items-center justify-center w-full px-12">
-        <div class="w-24 h-24 bg-white rounded-2xl flex items-center justify-center mb-8 shadow-xl">
-          <span class="text-fc-red text-3xl font-black">FC</span>
+        <div class="w-24 h-24 bg-white dark:bg-gray-800 rounded-2xl flex items-center justify-center mb-8 shadow-xl p-2">
+          <img src="~/assets/logo.png" alt="Friesland" class="w-full h-full object-contain" />
         </div>
         <h1 class="text-4xl font-bold text-white mb-3">Friesland</h1>
         <h2 class="text-xl text-red-200 mb-6">Bonnet Rouge</h2>
@@ -19,20 +19,20 @@
     </div>
 
     <!-- Right Panel - Login Form -->
-    <div class="w-full lg:w-1/2 flex items-center justify-center px-6 py-12 bg-gray-50">
+    <div class="w-full lg:w-1/2 flex items-center justify-center px-6 py-12 bg-gray-50 dark:bg-gray-900 transition-colors">
       <div class="w-full max-w-md">
         <!-- Mobile logo -->
         <div class="lg:hidden flex flex-col items-center mb-10">
-          <div class="w-16 h-16 bg-fc-red rounded-xl flex items-center justify-center mb-4">
-            <span class="text-white text-2xl font-black">FC</span>
+          <div class="w-16 h-16 bg-white dark:bg-gray-800 rounded-xl flex items-center justify-center mb-4 shadow-sm p-1">
+            <img src="~/assets/logo.png" alt="Friesland" class="w-full h-full object-contain" />
           </div>
-          <h1 class="text-2xl font-bold text-gray-900">Friesland</h1>
-          <p class="text-gray-500 text-sm">Bonnet Rouge</p>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Friesland</h1>
+          <p class="text-gray-500 dark:text-gray-400 text-sm">Bonnet Rouge</p>
         </div>
 
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-          <h2 class="text-2xl font-bold text-gray-900 mb-1">Connexion</h2>
-          <p class="text-gray-500 text-sm mb-8">Entrez vos identifiants pour accéder à l'application</p>
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8">
+          <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">Connexion</h2>
+          <p class="text-gray-500 dark:text-gray-400 text-sm mb-8">Entrez vos identifiants pour accéder à l'application</p>
 
           <form @submit.prevent="handleLogin">
             <div class="space-y-5">
@@ -60,7 +60,7 @@
                   <template #trailing>
                     <button
                       type="button"
-                      class="text-gray-400 hover:text-gray-600"
+                      class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                       @click="showPassword = !showPassword"
                     >
                       <UIcon :name="showPassword ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'" class="w-5 h-5" />
@@ -72,7 +72,7 @@
               <!-- Error Message -->
               <div
                 v-if="errorMessage"
-                class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2"
+                class="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg text-sm flex items-center gap-2"
               >
                 <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-red-500 flex-shrink-0" />
                 {{ errorMessage }}
@@ -91,7 +91,7 @@
           </form>
         </div>
 
-        <p class="text-center text-xs text-gray-400 mt-6">
+        <p class="text-center text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400 mt-6">
           FrieslandCampina © {{ new Date().getFullYear() }} — Bonnet Rouge
         </p>
       </div>

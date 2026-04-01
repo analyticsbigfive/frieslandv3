@@ -1,6 +1,31 @@
 <template>
-  <div>
+  <div id="dashboard-print-area">
     <definePageMeta :middleware="['auth', 'admin']" :layout="'admin'" />
+
+    <!-- Header with actions -->
+    <div class="flex items-center justify-between mb-6 print:hidden">
+      <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Tableau de bord</h2>
+      <div class="flex items-center gap-2">
+        <UButton
+          size="sm"
+          variant="outline"
+          icon="i-heroicons-printer"
+          @click="handlePrint"
+        >
+          Imprimer
+        </UButton>
+        <UDropdown :items="exportMenuItems">
+          <UButton
+            size="sm"
+            variant="outline"
+            icon="i-heroicons-arrow-down-tray"
+            trailing-icon="i-heroicons-chevron-down"
+          >
+            Exporter
+          </UButton>
+        </UDropdown>
+      </div>
+    </div>
 
     <!-- KPI Cards Row -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -39,13 +64,13 @@
       <div
         v-for="cat in productCategories"
         :key="cat.key"
-        class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center"
+        class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 text-center"
       >
-        <p class="text-xs text-gray-500 font-medium mb-1">{{ cat.label }}</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">{{ cat.label }}</p>
         <p class="text-2xl font-bold" :class="getPercentColor(cat.value)">
           {{ cat.value }}%
         </p>
-        <p class="text-[10px] text-gray-400 mt-0.5">présence</p>
+        <p class="text-[10px] text-gray-400 dark:text-gray-500 dark:text-gray-400 mt-0.5">présence</p>
       </div>
     </div>
 
@@ -67,45 +92,56 @@
     </div>
 
     <!-- Performance Commerciaux -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-        <h3 class="text-sm font-semibold text-gray-700">Performance Commerciaux</h3>
-        <NuxtLink to="/admin/users" class="text-xs text-fc-blue hover:underline">
-          Voir tout →
-        </NuxtLink>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Performance Commerciaux</h3>
+        <div class="flex items-center gap-2">
+          <UButton
+            size="xs"
+            variant="ghost"
+            icon="i-heroicons-arrow-down-tray"
+            class="print:hidden"
+            @click="exportPerformance"
+          >
+            CSV
+          </UButton>
+          <NuxtLink to="/admin/users" class="text-xs text-fc-blue hover:underline print:hidden">
+            Voir tout →
+          </NuxtLink>
+        </div>
       </div>
 
       <div class="overflow-x-auto">
         <table class="w-full">
-          <thead class="bg-gray-50">
+          <thead class="bg-gray-50 dark:bg-gray-700/50">
             <tr>
-              <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commercial</th>
-              <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-              <th class="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Total</th>
-              <th class="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Ce mois</th>
-              <th class="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Progression</th>
+              <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Commercial</th>
+              <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Email</th>
+              <th class="px-5 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Total</th>
+              <th class="px-5 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Ce mois</th>
+              <th class="px-5 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Progression</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100">
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
             <tr
               v-for="com in stats?.performance_commerciaux?.slice(0, 10)"
               :key="com.email"
-              class="hover:bg-gray-50"
+              class="hover:bg-gray-50 dark:hover:bg-gray-700/50"
             >
               <td class="px-5 py-3">
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 rounded-full bg-fc-blue-50 text-fc-blue flex items-center justify-center text-xs font-medium">
                     {{ com.nom?.substring(0, 2).toUpperCase() }}
                   </div>
-                  <span class="text-sm font-medium text-gray-900">{{ com.nom }}</span>
+                  <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ com.nom }}</span>
                 </div>
               </td>
-              <td class="px-5 py-3 text-sm text-gray-500">{{ com.email }}</td>
-              <td class="px-5 py-3 text-center text-sm font-semibold text-gray-900">{{ com.total_visites }}</td>
+              <td class="px-5 py-3 text-sm text-gray-500 dark:text-gray-400">{{ com.email }}</td>
+              <td class="px-5 py-3 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">{{ com.total_visites }}</td>
               <td class="px-5 py-3 text-center text-sm font-semibold text-fc-blue">{{ com.visites_mois }}</td>
               <td class="px-5 py-3">
                 <div class="flex items-center justify-center">
-                  <div class="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div class="w-24 h-2 bg-gray-100 dark:bg-gray-600 rounded-full overflow-hidden">
                     <div
                       class="h-full bg-fc-blue rounded-full transition-all"
                       :style="{ width: getProgressWidth(com) }"
@@ -118,7 +154,7 @@
         </table>
       </div>
 
-      <div v-if="!stats?.performance_commerciaux?.length" class="p-12 text-center text-gray-400">
+      <div v-if="!stats?.performance_commerciaux?.length" class="p-12 text-center text-gray-400 dark:text-gray-500 dark:text-gray-400">
         <ClipboardList class="w-12 h-12 mx-auto mb-3 opacity-50" />
         <p>Aucune donnée de performance disponible</p>
       </div>
@@ -130,11 +166,13 @@
 import { ClipboardList, Calendar, MapPin, Users } from 'lucide-vue-next'
 
 definePageMeta({
-  middleware: ['auth'],
+  middleware: ['auth', 'admin'],
   layout: 'admin',
 })
 
 const visitesStore = useVisitesStore()
+const { exportToCsv } = useCsvExport()
+const toast = useToast()
 
 const stats = computed(() => visitesStore.stats)
 
@@ -157,8 +195,147 @@ function getProgressWidth(com: any) {
   return `${Math.round((com.total_visites / max) * 100)}%`
 }
 
+// ---- Export Functions ----
+const exportMenuItems = computed(() => [[
+  {
+    label: 'KPIs & Taux (CSV)',
+    icon: 'i-heroicons-chart-bar',
+    click: () => exportKPIs(),
+  },
+  {
+    label: 'Performance Commerciaux (CSV)',
+    icon: 'i-heroicons-users',
+    click: () => exportPerformance(),
+  },
+  {
+    label: 'Visites par jour (CSV)',
+    icon: 'i-heroicons-calendar-days',
+    click: () => exportVisitesParJour(),
+  },
+  {
+    label: 'Distribution PDV (CSV)',
+    icon: 'i-heroicons-map-pin',
+    click: () => exportDistribution(),
+  },
+  {
+    label: 'Tout exporter (CSV)',
+    icon: 'i-heroicons-arrow-down-tray',
+    click: () => exportAll(),
+  },
+]])
+
+function exportKPIs() {
+  if (!stats.value) return
+  const data = [{
+    'Total Visites': stats.value.total_visites,
+    'Visites ce mois': stats.value.visites_month,
+    'Visites cette semaine': stats.value.visites_week,
+    'Visites aujourd\'hui': stats.value.visites_today,
+    'Total PDV': stats.value.total_pdv,
+    'Total Commerciaux': stats.value.total_commerciaux,
+    'Taux EVAP (%)': stats.value.taux_evap,
+    'Taux IMP (%)': stats.value.taux_imp,
+    'Taux SCM (%)': stats.value.taux_scm,
+    'Taux UHT (%)': stats.value.taux_uht,
+    'Taux YAOURT (%)': stats.value.taux_yaourt,
+    'Prix EVAP respectés (%)': stats.value.taux_prix_evap,
+    'Prix IMP respectés (%)': stats.value.taux_prix_imp,
+    'Prix SCM respectés (%)': stats.value.taux_prix_scm,
+  }]
+  exportToCsv(data, `dashboard-kpis-${new Date().toISOString().slice(0, 10)}.csv`)
+  toast.add({ title: 'KPIs exportés', color: 'green' })
+}
+
+function exportPerformance() {
+  if (!stats.value?.performance_commerciaux?.length) return
+  const data = stats.value.performance_commerciaux.map(c => ({
+    'Commercial': c.nom,
+    'Email': c.email,
+    'Total Visites': c.total_visites,
+    'Visites ce mois': c.visites_mois,
+    'Taux Complétion (%)': c.taux_completion,
+  }))
+  exportToCsv(data, `performance-commerciaux-${new Date().toISOString().slice(0, 10)}.csv`)
+  toast.add({ title: 'Performance exportée', color: 'green' })
+}
+
+function exportVisitesParJour() {
+  if (!stats.value?.visites_par_jour?.length) return
+  const data = stats.value.visites_par_jour.map(v => ({
+    'Date': v.date,
+    'Nombre de visites': v.count,
+  }))
+  exportToCsv(data, `visites-par-jour-${new Date().toISOString().slice(0, 10)}.csv`)
+  toast.add({ title: 'Visites par jour exportées', color: 'green' })
+}
+
+function exportDistribution() {
+  if (!stats.value?.distribution_pdv?.length) return
+  const data = stats.value.distribution_pdv.map(d => ({
+    'Type de PDV': d.type,
+    'Nombre': d.count,
+  }))
+  exportToCsv(data, `distribution-pdv-${new Date().toISOString().slice(0, 10)}.csv`)
+  toast.add({ title: 'Distribution exportée', color: 'green' })
+}
+
+function exportAll() {
+  exportKPIs()
+  exportPerformance()
+  exportVisitesParJour()
+  exportDistribution()
+}
+
+function handlePrint() {
+  window.print()
+}
+
 // Load stats on mount
 onMounted(async () => {
   await visitesStore.fetchStats()
 })
 </script>
+
+<style>
+@media print {
+  /* Hide everything except the dashboard content */
+  body * {
+    visibility: hidden;
+  }
+  #dashboard-print-area,
+  #dashboard-print-area * {
+    visibility: visible;
+  }
+  #dashboard-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 20px;
+  }
+  /* Hide sidebar, nav, and action buttons */
+  aside, nav, .print\\:hidden {
+    display: none !important;
+  }
+  /* Improve table print styling */
+  table {
+    font-size: 11px;
+  }
+  /* Force background colors for print */
+  .bg-white dark:bg-gray-800 {
+    background-color: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .bg-gray-50 dark:bg-gray-700/50 {
+    background-color: #f9fafb !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* Page setup */
+  @page {
+    margin: 15mm;
+    size: landscape;
+  }
+}
+</style>

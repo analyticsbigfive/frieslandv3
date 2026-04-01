@@ -1,22 +1,18 @@
 <template>
   <aside
-    class="fixed top-0 left-0 z-40 h-screen bg-white border-r border-gray-200 transition-all duration-300 flex flex-col"
+    class="fixed top-0 left-0 z-40 h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 flex flex-col"
     :class="collapsed ? 'w-16' : 'w-64'"
   >
     <!-- Logo -->
-    <div class="h-16 flex items-center justify-center border-b border-gray-100 px-4">
+    <div class="h-16 flex items-center justify-center border-b border-gray-100 dark:border-gray-700 px-4">
       <div v-if="!collapsed" class="flex items-center gap-3">
-        <div class="w-8 h-8 bg-fc-blue rounded-lg flex items-center justify-center">
-          <span class="text-white font-bold text-sm">FC</span>
-        </div>
+        <img src="~/assets/logo.png" alt="Friesland" class="w-8 h-8 rounded-lg object-contain" />
         <div>
-          <h2 class="text-sm font-bold text-fc-blue leading-none">Friesland</h2>
+          <h2 class="text-sm font-bold text-fc-red leading-none">Friesland</h2>
           <p class="text-[10px] text-gray-400 leading-none mt-0.5">Bonnet Rouge</p>
         </div>
       </div>
-      <div v-else class="w-8 h-8 bg-fc-blue rounded-lg flex items-center justify-center">
-        <span class="text-white font-bold text-sm">FC</span>
-      </div>
+      <img v-else src="~/assets/logo.png" alt="FC" class="w-8 h-8 rounded-lg object-contain" />
     </div>
 
     <!-- Navigation -->
@@ -24,7 +20,7 @@
       <div v-for="section in navSections" :key="section.title" class="mb-6">
         <p
           v-if="!collapsed"
-          class="px-3 mb-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider"
+          class="px-3 mb-2 text-[10px] font-semibold text-gray-400 dark:text-gray-500 dark:text-gray-400 uppercase tracking-wider"
         >
           {{ section.title }}
         </p>
@@ -35,8 +31,8 @@
           :to="item.to"
           class="flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 text-sm transition-colors group"
           :class="isActive(item.to) 
-            ? 'bg-fc-blue-50 text-fc-blue font-medium' 
-            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'"
+            ? 'bg-fc-red-50 text-fc-red font-medium dark:bg-fc-red-900/20' 
+            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-200'"
         >
           <component :is="item.icon" class="w-5 h-5 flex-shrink-0" />
           <span v-if="!collapsed" class="truncate">{{ item.label }}</span>
@@ -51,9 +47,9 @@
     </nav>
 
     <!-- Collapse toggle -->
-    <div class="border-t border-gray-100 p-2">
+    <div class="border-t border-gray-100 dark:border-gray-700 p-2">
       <button
-        class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition-colors"
+        class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
         @click="$emit('toggle')"
       >
         <svg
@@ -85,6 +81,7 @@ import {
   Swords,
   Zap,
   ShoppingBag,
+  Route,
 } from 'lucide-vue-next'
 
 defineProps<{ collapsed: boolean }>()
@@ -102,6 +99,7 @@ const navSections = [
     title: 'Principal',
     items: [
       { label: 'Dashboard', to: '/admin', icon: LayoutDashboard },
+      { label: 'Routing & Planning', to: '/admin/routing', icon: Route },
     ],
   },
   {

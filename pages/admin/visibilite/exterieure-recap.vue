@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900">VISIBILITÉ EXTÉRIEURE RÉCAPITULATIF</h1>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">VISIBILITÉ EXTÉRIEURE RÉCAPITULATIF</h1>
 
     <DashboardFilters
       v-model="dashboard.filters.value"
@@ -9,7 +9,7 @@
     />
 
     <!-- Dropdowns supplémentaires pour filtrer les colonnes -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <UFormGroup v-for="item in visItems" :key="item.key" :label="item.label" size="sm">
           <USelectMenu
@@ -35,8 +35,8 @@
     <!-- KPI -->
     <div class="flex items-center gap-6">
       <div>
-        <p class="text-sm text-gray-500">Nombre de visites</p>
-        <p class="text-3xl font-bold text-gray-900">{{ filteredVisites.length }}</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Nombre de visites</p>
+        <p class="text-3xl font-bold text-gray-900 dark:text-gray-100">{{ filteredVisites.length }}</p>
       </div>
       <ClientOnly>
         <ChartsPieChart
@@ -50,7 +50,7 @@
     </div>
 
     <!-- Table -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead class="bg-amber-50">
@@ -69,8 +69,8 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
-            <tr v-for="(row, idx) in paginatedRows" :key="idx" class="hover:bg-gray-50">
-              <td class="px-3 py-2 text-gray-900 font-medium max-w-[200px] truncate">{{ row.nom }}</td>
+            <tr v-for="(row, idx) in paginatedRows" :key="idx" class="hover:bg-gray-50 dark:hover:bg-gray-700">
+              <td class="px-3 py-2 text-gray-900 dark:text-gray-100 font-medium max-w-[200px] truncate">{{ row.nom }}</td>
               <td class="px-3 py-2 text-gray-600">{{ row.zone }}</td>
               <td class="px-3 py-2 text-gray-600">{{ row.secteur }}</td>
               <td v-for="item in visItems" :key="item.key + idx" class="px-3 py-2 text-center">
@@ -86,8 +86,8 @@
         </table>
       </div>
 
-      <div class="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-        <p class="text-sm text-gray-500">{{ page * 100 - 99 }} - {{ Math.min(page * 100, filteredVisites.length) }} / {{ filteredVisites.length }}</p>
+      <div class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <p class="text-sm text-gray-500 dark:text-gray-400">{{ page * 100 - 99 }} - {{ Math.min(page * 100, filteredVisites.length) }} / {{ filteredVisites.length }}</p>
         <div class="flex gap-2">
           <UButton size="xs" variant="outline" :disabled="page <= 1" @click="page--">‹</UButton>
           <UButton size="xs" variant="outline" :disabled="page * 100 >= filteredVisites.length" @click="page++">›</UButton>

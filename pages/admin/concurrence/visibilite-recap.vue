@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900">VISIBILITÉ CONCURRENCE — RÉCAPITULATIF</h1>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">VISIBILITÉ CONCURRENCE — RÉCAPITULATIF</h1>
 
     <DashboardFilters
       v-model="dashboard.filters.value"
@@ -14,15 +14,15 @@
 
     <template v-else>
       <!-- KPI -->
-      <div class="flex items-center gap-6 text-sm text-gray-500">
-        <span>Total visites : <strong class="text-gray-900">{{ dashboard.totalVisites.value }}</strong></span>
-        <span>Lignes affichées : <strong class="text-gray-900">{{ paginatedRows.length }}</strong></span>
+      <div class="flex items-center gap-6 text-sm text-gray-500 dark:text-gray-400">
+        <span>Total visites : <strong class="text-gray-900 dark:text-gray-100">{{ dashboard.totalVisites.value }}</strong></span>
+        <span>Lignes affichées : <strong class="text-gray-900 dark:text-gray-100">{{ paginatedRows.length }}</strong></span>
       </div>
 
       <!-- Tableau récapitulatif -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-x-auto">
         <table class="w-full text-xs">
-          <thead class="bg-gray-50 sticky top-0">
+          <thead class="bg-gray-50 dark:bg-gray-700/50 sticky top-0">
             <tr>
               <th class="px-3 py-2 text-left font-semibold text-gray-600">Date</th>
               <th class="px-3 py-2 text-left font-semibold text-gray-600">PDV</th>
@@ -56,9 +56,9 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
-            <tr v-for="row in paginatedRows" :key="row.visite_id" class="hover:bg-gray-50">
+            <tr v-for="row in paginatedRows" :key="row.visite_id" class="hover:bg-gray-50 dark:hover:bg-gray-700">
               <td class="px-3 py-2 whitespace-nowrap">{{ formatDate(row.date_visite) }}</td>
-              <td class="px-3 py-2 font-medium text-gray-900">{{ row.pdv?.nom_pdv || '—' }}</td>
+              <td class="px-3 py-2 font-medium text-gray-900 dark:text-gray-100">{{ row.pdv?.nom_pdv || '—' }}</td>
               <td class="px-3 py-2">{{ row.pdv?.canal || '—' }}</td>
               <td class="px-3 py-2">{{ row.pdv?.region || '—' }}</td>
               <td class="px-3 py-2">{{ row.pdv?.zone || '—' }}</td>
@@ -85,7 +85,7 @@
       </div>
 
       <!-- Pagination -->
-      <div class="flex items-center justify-between text-sm text-gray-500">
+      <div class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
         <span>Page {{ page }} / {{ totalPages }}</span>
         <div class="flex gap-2">
           <UButton size="xs" variant="outline" :disabled="page <= 1" @click="page--">Précédent</UButton>
@@ -103,7 +103,7 @@ const dashboard = useDashboardDirection()
 
 const marques = [
   { key: 'nido', label: 'NIDO', textClass: 'text-red-600' },
-  { key: 'laity', label: 'LAITY', textClass: 'text-blue-600' },
+  { key: 'laity', label: 'LAITY', textClass: 'text-orange-600' },
   { key: 'candia', label: 'CANDIA', textClass: 'text-green-600' },
   { key: 'autre', label: 'AUTRE', textClass: 'text-purple-600' },
 ]

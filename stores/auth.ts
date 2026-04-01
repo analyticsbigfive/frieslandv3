@@ -1,9 +1,10 @@
 // stores/auth.ts
-import { defineStore } from 'pinia'
+import { defineStore, skipHydrate } from 'pinia'
+import { markRaw } from 'vue'
 import type { Profile, UserRole } from '~/types'
 
 export const useAuthStore = defineStore('auth', () => {
-  const supabase = useSupabaseClient()
+  const supabase = skipHydrate(markRaw(useSupabaseClient()))
   const user = useSupabaseUser()
 
   const profile = ref<Profile | null>(null)
@@ -104,15 +105,35 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function register(email: string, password: string, nom: string, role: UserRole = 'merchandiser') {
+    // Security: only admin/superviseur can create users
+    if (!isAdmin.value && !isSuperviseur.value) {
+      throw new Error('Permission refusée : seuls les administrateurs peuvent créer des utilisateurs')
+    }
+
+    // Input validation
+    if (!email || !password || !nom) {
+      throw new Error('Email, mot de passe et nom sont requis')
+    }
+    if (password.length < 8) {
+      throw new Error('Le mot de passe doit contenir au moins 8 caractères')
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      throw new Error('Format d\'email invalide')
+    }
+    // Sanitize inputs
+    const sanitizedNom = nom.trim().substring(0, 100)
+    const sanitizedEmail = email.trim().toLowerCase()
+
     loading.value = true
     error.value = null
 
     try {
       const { data, error: err } = await supabase.auth.signUp({
-        email,
+        email: sanitizedEmail,
         password,
         options: {
-          data: { nom, role },
+          data: { nom: sanitizedNom, role },
         },
       })
       if (err) throw err
@@ -146,9 +167,24 @@ export const useAuthStore = defineStore('auth', () => {
   async function updateProfile(updates: Partial<Profile>) {
     if (!user.value) return
 
+    // Sanitize string inputs to prevent XSS
+    const sanitized: Partial<Profile> = {}
+    const allowedFields: (keyof Profile)[] = ['nom', 'telephone', 'avatar_url', 'zone_assignee', 'region']
+
+    for (const [key, value] of Object.entries(updates)) {
+      if (!allowedFields.includes(key as keyof Profile)) continue
+      sanitized[key as keyof Profile] = typeof value === 'string'
+        ? value.trim().substring(0, 255) as any
+        : value as any
+    }
+
+    // Prevent self-role-escalation: users cannot change their own role
+    delete (sanitized as any).role
+    delete (sanitized as any).is_active
+
     const { data, error: err } = await supabase
       .from('profiles')
-      .update(updates)
+      .update(sanitized)
       .eq('id', user.value.id)
       .select()
       .single()

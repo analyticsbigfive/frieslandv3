@@ -1,6 +1,6 @@
 <template>
-  <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-    <h3 v-if="title" class="text-sm font-semibold text-gray-700 mb-4 text-center">{{ title }}</h3>
+  <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+    <h3 v-if="title" class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 text-center">{{ title }}</h3>
     <div :class="heightClass">
       <Doughnut v-if="chartData" :data="chartData" :options="mergedOptions" />
     </div>

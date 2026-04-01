@@ -24,24 +24,24 @@
     </div>
 
     <!-- Users Table -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Utilisateur</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rôle</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Zone</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Statut</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Utilisateur</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Email</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Rôle</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Zone</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Statut</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
             <tr
               v-for="user in filteredUsers"
               :key="user.id"
-              class="hover:bg-gray-50"
+              class="hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               <td class="px-4 py-3">
                 <div class="flex items-center gap-3">
@@ -49,7 +49,7 @@
                     :class="getRoleBg(user.role)">
                     {{ user.nom?.substring(0, 2).toUpperCase() || '??' }}
                   </div>
-                  <span class="text-sm font-medium text-gray-900">{{ user.nom || '-' }}</span>
+                  <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ user.nom || '-' }}</span>
                 </div>
               </td>
               <td class="px-4 py-3 text-sm text-gray-600">{{ user.email }}</td>
@@ -86,7 +86,7 @@
     <!-- Create/Edit Modal -->
     <UModal v-model="showCreate" :ui="{ width: 'max-w-lg' }">
       <div class="p-6">
-        <h3 class="text-lg font-bold text-gray-900 mb-6">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-6">
           {{ editingUser ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur' }}
         </h3>
 
@@ -99,8 +99,8 @@
             <UInput v-model="userForm.email" type="email" placeholder="email@example.com" />
           </UFormGroup>
 
-          <UFormGroup v-if="!editingUser" label="Mot de passe" required>
-            <UInput v-model="userForm.password" type="password" placeholder="Mot de passe" />
+          <UFormGroup v-if="!editingUser" label="Mot de passe" required hint="Min. 8 caractères">
+            <UInput v-model="userForm.password" type="password" placeholder="Mot de passe" minlength="8" />
           </UFormGroup>
 
           <UFormGroup label="Rôle">
@@ -132,7 +132,7 @@
 import type { Profile, UserRole } from '~/types'
 
 definePageMeta({
-  middleware: ['auth'],
+  middleware: ['auth', 'admin'],
   layout: 'admin',
 })
 
@@ -174,7 +174,7 @@ const filteredUsers = computed(() => {
 function getRoleBg(role: string) {
   const map: Record<string, string> = {
     admin: 'bg-purple-600',
-    superviseur: 'bg-fc-blue',
+    superviseur: 'bg-fc-red',
     merchandiser: 'bg-emerald-600',
     commercial: 'bg-amber-600',
   }
@@ -184,11 +184,11 @@ function getRoleBg(role: string) {
 function getRoleBadge(role: string) {
   const map: Record<string, string> = {
     admin: 'bg-purple-50 text-purple-700',
-    superviseur: 'bg-blue-50 text-blue-700',
+    superviseur: 'bg-red-50 text-red-700',
     merchandiser: 'bg-emerald-50 text-emerald-700',
     commercial: 'bg-amber-50 text-amber-700',
   }
-  return map[role] || 'bg-gray-50 text-gray-700'
+  return map[role] || 'bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300'
 }
 
 function getUserActions(user: Profile) {
@@ -218,12 +218,9 @@ function getUserActions(user: Profile) {
 async function fetchUsers() {
   loading.value = true
   try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (error) throw error
+    const { fetchUsers: fetchCachedUsers, invalidate } = useUsersCache()
+    invalidate() // Admin users page always needs fresh data
+    const data = await fetchCachedUsers(true)
     users.value = data as Profile[]
   }
   catch (err: any) {

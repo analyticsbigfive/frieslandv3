@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900">RÉCAPITULATIF PRODUITS</h1>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">RÉCAPITULATIF PRODUITS</h1>
 
     <DashboardFilters
       v-model="dashboard.filters.value"
@@ -29,8 +29,8 @@
       <h2 class="text-lg font-bold text-gray-800">Présence par famille de produit</h2>
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <ClientOnly>
-          <div v-for="cat in productCategories" :key="cat.key" class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-            <h4 class="text-xs font-semibold text-gray-500 mb-2 text-center">{{ cat.label }}</h4>
+          <div v-for="cat in productCategories" :key="cat.key" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
+            <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 text-center">{{ cat.label }}</h4>
             <ChartsPieChart
               :labels="['Absent', 'Présent']"
               :values="[catAbsent(cat.key), catPresent(cat.key)]"
@@ -46,8 +46,8 @@
       <h2 class="text-lg font-bold text-gray-800">Prix respectés</h2>
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <ClientOnly>
-          <div v-for="cat in productCategories" :key="cat.key + '_prix'" class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-            <h4 class="text-xs font-semibold text-gray-500 mb-2 text-center">{{ cat.label }} prix</h4>
+          <div v-for="cat in productCategories" :key="cat.key + '_prix'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
+            <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 text-center">{{ cat.label }} prix</h4>
             <ChartsPieChart
               :labels="['Non respecté', 'Respecté']"
               :values="[prixNon(cat.key), prixOui(cat.key)]"
@@ -60,23 +60,23 @@
       </div>
 
       <!-- Tableau récapitulatif global -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
         <div class="p-4 border-b">
-          <h3 class="font-bold text-gray-900">Tableau récapitulatif</h3>
+          <h3 class="font-bold text-gray-900 dark:text-gray-100">Tableau récapitulatif</h3>
         </div>
         <table class="w-full">
           <thead class="bg-gray-50">
             <tr>
-              <th class="text-left text-xs font-medium text-gray-500 px-4 py-3">Catégorie</th>
-              <th class="text-center text-xs font-medium text-gray-500 px-4 py-3">Présent</th>
-              <th class="text-center text-xs font-medium text-gray-500 px-4 py-3">% Présence</th>
-              <th class="text-center text-xs font-medium text-gray-500 px-4 py-3">Prix respectés</th>
-              <th class="text-center text-xs font-medium text-gray-500 px-4 py-3">% Prix</th>
+              <th class="text-left text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">Catégorie</th>
+              <th class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">Présent</th>
+              <th class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">% Présence</th>
+              <th class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">Prix respectés</th>
+              <th class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">% Prix</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
-            <tr v-for="cat in productCategories" :key="cat.key" class="hover:bg-gray-50">
-              <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ cat.label }}</td>
+            <tr v-for="cat in productCategories" :key="cat.key" class="hover:bg-gray-50 dark:hover:bg-gray-700">
+              <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">{{ cat.label }}</td>
               <td class="px-4 py-3 text-center text-sm font-bold text-green-600">{{ catPresent(cat.key) }}</td>
               <td class="px-4 py-3 text-center">
                 <div class="flex items-center justify-center gap-2">
@@ -86,7 +86,7 @@
                   <span class="text-xs font-medium text-gray-600">{{ catPct(cat.key) }}%</span>
                 </div>
               </td>
-              <td class="px-4 py-3 text-center text-sm font-bold text-blue-600">{{ prixOui(cat.key) }}</td>
+              <td class="px-4 py-3 text-center text-sm font-bold text-red-600">{{ prixOui(cat.key) }}</td>
               <td class="px-4 py-3 text-center text-sm">
                 {{ catPresent(cat.key) > 0 ? Math.round(prixOui(cat.key) / catPresent(cat.key) * 100) : 0 }}%
               </td>

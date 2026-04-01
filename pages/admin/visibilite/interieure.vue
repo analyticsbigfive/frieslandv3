@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900">VISIBILITÉ INTÉRIEURE</h1>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">VISIBILITÉ INTÉRIEURE</h1>
 
     <DashboardFilters
       v-model="dashboard.filters.value"
@@ -11,8 +11,8 @@
     <!-- KPI global -->
     <div class="flex flex-wrap items-center gap-6">
       <div>
-        <p class="text-sm text-gray-500">Présence de visibilité intérieure</p>
-        <p class="text-3xl font-bold text-gray-900">{{ visIntCount }}</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Présence de visibilité intérieure</p>
+        <p class="text-3xl font-bold text-gray-900 dark:text-gray-100">{{ visIntCount }}</p>
       </div>
       <ClientOnly>
         <ChartsPieChart

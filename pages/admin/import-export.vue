@@ -1,18 +1,18 @@
 <template>
   <div class="p-6 space-y-6">
     <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-bold text-gray-900">Import / Export</h1>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Import / Export</h1>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- Import CSV -->
-      <div class="bg-white rounded-xl shadow-sm p-6 space-y-4">
-        <h2 class="font-bold text-lg text-gray-900">Importer des données</h2>
-        <p class="text-sm text-gray-500">Importez vos données depuis un fichier CSV compatible Google Sheets</p>
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 space-y-4">
+        <h2 class="font-bold text-lg text-gray-900 dark:text-gray-100">Importer des données</h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Importez vos données depuis un fichier CSV compatible Google Sheets</p>
 
         <div class="space-y-3">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Type de données</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Type de données</label>
             <USelectMenu
               v-model="importType"
               :options="[
@@ -27,12 +27,12 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Fichier CSV</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fichier CSV</label>
             <input
               ref="fileInput"
               type="file"
               accept=".csv,.xlsx"
-              class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-fc-blue-50 file:text-fc-blue hover:file:bg-fc-blue-100"
+              class="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-fc-blue-50 file:text-fc-blue hover:file:bg-fc-blue-100"
               @change="handleFileSelect"
             />
           </div>
@@ -53,9 +53,9 @@
       </div>
 
       <!-- Export -->
-      <div class="bg-white rounded-xl shadow-sm p-6 space-y-4">
-        <h2 class="font-bold text-lg text-gray-900">Exporter des données</h2>
-        <p class="text-sm text-gray-500">Exportez au format Excel compatible avec Google Sheets</p>
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 space-y-4">
+        <h2 class="font-bold text-lg text-gray-900 dark:text-gray-100">Exporter des données</h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Exportez au format Excel compatible avec Google Sheets</p>
 
         <div class="space-y-3">
           <UButton

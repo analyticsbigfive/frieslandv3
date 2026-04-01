@@ -59,12 +59,12 @@
       <div
         v-for="pdv in filteredPDV"
         :key="pdv.pdv_id"
-        class="bg-white rounded-xl shadow-sm p-4 cursor-pointer active:bg-gray-50"
+        class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 cursor-pointer active:bg-gray-50 dark:active:bg-gray-700"
         @click="navigateTo(`/mobile/pdv/${pdv.pdv_id}`)"
       >
         <div class="flex items-start justify-between">
           <div class="flex-1">
-            <h3 class="font-bold text-gray-900">{{ pdv.nom_pdv }}</h3>
+            <h3 class="font-bold text-gray-900 dark:text-gray-100">{{ pdv.nom_pdv }}</h3>
             <p class="text-xs text-gray-400 mt-1">{{ pdv.zone }} — {{ pdv.region }}</p>
             <div class="flex gap-2 mt-2">
               <UBadge variant="subtle" color="blue" size="xs">{{ pdv.canal }}</UBadge>

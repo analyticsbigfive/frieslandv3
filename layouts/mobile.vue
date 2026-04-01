@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 flex flex-col safe-area-top safe-area-bottom">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col safe-area-top safe-area-bottom transition-colors">
     <!-- Mobile Header -->
     <header class="sticky top-0 z-40 bg-fc-red text-white px-4 py-3 flex items-center justify-between shadow-md">
       <div class="flex items-center gap-3">
@@ -12,10 +12,14 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
+        <img src="~/assets/logo.png" alt="FC" class="w-7 h-7 rounded object-contain bg-white/90 p-0.5" />
         <h1 class="text-lg font-semibold">{{ pageTitle }}</h1>
       </div>
 
       <div class="flex items-center gap-3">
+        <!-- Dark mode toggle -->
+        <DarkModeToggle variant="mobile" />
+
         <!-- GPS status -->
         <button
           class="relative p-1 rounded-lg hover:bg-white/10"
@@ -53,7 +57,7 @@
     <OfflineBanner />
 
     <!-- Content -->
-    <main class="flex-1 overflow-auto pb-20">
+    <main class="flex-1 overflow-auto pb-20 dark:text-gray-200">
       <slot />
     </main>
 
@@ -97,12 +101,14 @@ const pageTitle = computed(() => {
     '/mobile/visites': 'Mes Visites',
     '/mobile/visites/new': 'Nouvelle Visite',
     '/mobile/pdv': 'Points de Vente',
+    '/mobile/routing': 'Mon Routing',
     '/mobile/calendar': 'Calendrier',
     '/mobile/map': 'Carte',
     '/mobile/contacts': 'Contacts',
   }
   if (titles[route.path]) return titles[route.path]
   if (route.path.startsWith('/mobile/pdv/')) return 'Détail PDV'
+  if (route.path.startsWith('/mobile/visites/')) return 'Détail Visite'
   return 'Friesland'
 })
 </script>

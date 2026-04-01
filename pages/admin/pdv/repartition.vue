@@ -1,49 +1,49 @@
 <template>
   <div class="p-6 space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900">Répartition des PDV</h1>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Répartition des PDV</h1>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- Par canal -->
-      <div class="bg-white rounded-xl shadow-sm p-6">
-        <h3 class="font-bold text-gray-900 mb-4">Répartition par canal</h3>
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+        <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-4">Répartition par canal</h3>
         <DistributionChart v-if="canalData" :data="canalData" />
       </div>
 
       <!-- Par zone -->
-      <div class="bg-white rounded-xl shadow-sm p-6">
-        <h3 class="font-bold text-gray-900 mb-4">Répartition par zone</h3>
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+        <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-4">Répartition par zone</h3>
         <DistributionChart v-if="zoneData" :data="zoneData" />
       </div>
 
       <!-- Par catégorie -->
-      <div class="bg-white rounded-xl shadow-sm p-6">
-        <h3 class="font-bold text-gray-900 mb-4">Répartition par catégorie</h3>
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+        <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-4">Répartition par catégorie</h3>
         <DistributionChart v-if="categorieData" :data="categorieData" />
       </div>
 
       <!-- Par région -->
-      <div class="bg-white rounded-xl shadow-sm p-6">
-        <h3 class="font-bold text-gray-900 mb-4">Répartition par région</h3>
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+        <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-4">Répartition par région</h3>
         <DistributionChart v-if="regionData" :data="regionData" />
       </div>
     </div>
 
     <!-- Table detail -->
-    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
       <div class="p-4 border-b">
-        <h3 class="font-bold text-gray-900">Détail par zone</h3>
+        <h3 class="font-bold text-gray-900 dark:text-gray-100">Détail par zone</h3>
       </div>
       <table class="w-full">
         <thead class="bg-gray-50">
           <tr>
-            <th class="text-left text-xs font-medium text-gray-500 px-4 py-3">Zone</th>
-            <th class="text-center text-xs font-medium text-gray-500 px-4 py-3">Nb PDV</th>
-            <th class="text-center text-xs font-medium text-gray-500 px-4 py-3">%</th>
+            <th class="text-left text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">Zone</th>
+            <th class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">Nb PDV</th>
+            <th class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">%</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
           <tr v-for="row in zoneTable" :key="row.zone">
-            <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ row.zone }}</td>
+            <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">{{ row.zone }}</td>
             <td class="px-4 py-3 text-center text-sm text-fc-blue font-bold">{{ row.count }}</td>
             <td class="px-4 py-3 text-center text-sm text-gray-600">{{ row.pct }}%</td>
           </tr>

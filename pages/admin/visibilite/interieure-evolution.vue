@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900">VISIBILITÉ INTÉRIEURE — ÉVOLUTION</h1>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">VISIBILITÉ INTÉRIEURE — ÉVOLUTION</h1>
 
     <DashboardFilters
       v-model="dashboard.filters.value"
@@ -11,8 +11,8 @@
     <!-- KPI + présence globale -->
     <div class="flex flex-wrap items-center gap-6">
       <div>
-        <p class="text-sm text-gray-500">Présence de visibilité intérieure</p>
-        <p class="text-3xl font-bold text-gray-900">{{ visIntCount }}</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Présence de visibilité intérieure</p>
+        <p class="text-3xl font-bold text-gray-900 dark:text-gray-100">{{ visIntCount }}</p>
       </div>
     </div>
 
@@ -49,8 +49,8 @@
     </div>
 
     <!-- Evolution chart -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-      <h3 class="text-sm font-semibold text-gray-700 mb-4">Évolution des visites avec visibilité intérieure</h3>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+      <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Évolution des visites avec visibilité intérieure</h3>
       <ClientOnly>
         <ChartsVisitesLineChart
           v-if="evolutionData.length"

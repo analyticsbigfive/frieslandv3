@@ -1,5 +1,5 @@
 <template>
-  <nav class="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 safe-area-bottom">
+  <nav class="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 safe-area-bottom">
     <div class="flex items-center justify-around py-1">
       <NuxtLink
         v-for="item in navItems"
@@ -8,7 +8,7 @@
         class="flex flex-col items-center py-2 px-3 min-w-[64px] transition-colors"
         :class="isActive(item.to)
           ? 'text-fc-red border-t-2 border-fc-red -mt-[2px]'
-          : 'text-gray-400'"
+          : 'text-gray-400 dark:text-gray-500 dark:text-gray-400'"
       >
         <component :is="item.icon" class="w-5 h-5" />
         <span class="text-[10px] mt-0.5 font-medium">{{ item.label }}</span>
@@ -22,7 +22,7 @@ import {
   ClipboardList,
   MapPin,
   Users,
-  Calendar,
+  Route,
   Map,
 } from 'lucide-vue-next'
 
@@ -37,7 +37,7 @@ const navItems = [
   { label: 'Visites', to: '/mobile', icon: ClipboardList },
   { label: 'PDV', to: '/mobile/pdv', icon: MapPin },
   { label: 'Contacts', to: '/mobile/contacts', icon: Users },
-  { label: 'Calendrier', to: '/mobile/calendar', icon: Calendar },
+  { label: 'Routing', to: '/mobile/routing', icon: Route },
   { label: 'Map', to: '/mobile/map', icon: Map },
 ]
 </script>

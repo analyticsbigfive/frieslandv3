@@ -1,10 +1,10 @@
 <template>
-  <div class="flex rounded-lg overflow-hidden border border-gray-200">
+  <div class="flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600">
     <button
       class="flex-1 py-3 px-4 text-sm font-semibold text-center transition-all duration-200"
       :class="!modelValue
         ? 'bg-fc-red text-white shadow-inner'
-        : 'bg-white text-gray-500 hover:bg-gray-50'"
+        : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
       @click="$emit('update:modelValue', false)"
     >
       NON
@@ -13,7 +13,7 @@
       class="flex-1 py-3 px-4 text-sm font-semibold text-center transition-all duration-200"
       :class="modelValue
         ? 'bg-fc-red text-white shadow-inner'
-        : 'bg-white text-gray-500 hover:bg-gray-50'"
+        : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
       @click="$emit('update:modelValue', true)"
     >
       OUI
@@ -22,6 +22,6 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{ modelValue: boolean }>()
+defineProps<{ modelValue?: boolean }>()
 defineEmits(['update:modelValue'])
 </script>

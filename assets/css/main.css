@@ -28,6 +28,10 @@ body {
 ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #64748b; }
 
+.dark ::-webkit-scrollbar-track { background: #1e293b; }
+.dark ::-webkit-scrollbar-thumb { background: #475569; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
 /* Toggle buttons */
 .toggle-btn {
   @apply px-6 py-3 rounded-lg font-semibold text-sm transition-all duration-200 cursor-pointer select-none;

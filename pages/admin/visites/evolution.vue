@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900">VISITES — ÉVOLUTION</h1>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">VISITES — ÉVOLUTION</h1>
 
     <DashboardFilters
       v-model="dashboard.filters.value"
@@ -23,7 +23,7 @@
 
       <!-- Groupement -->
       <div class="flex items-center gap-3">
-        <span class="text-sm text-gray-500">Grouper par :</span>
+        <span class="text-sm text-gray-500 dark:text-gray-400">Grouper par :</span>
         <USelectMenu
           v-model="groupBy"
           :options="[
@@ -38,27 +38,27 @@
       </div>
 
       <!-- Chart -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 class="text-sm font-semibold text-gray-700 mb-4">Nombre de visites par {{ groupByLabel }}</h3>
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Nombre de visites par {{ groupByLabel }}</h3>
         <ClientOnly>
           <ChartsVisitesLineChart v-if="chartData.length" title="" :data="chartData" />
         </ClientOnly>
       </div>
 
       <!-- Table summary -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
         <table class="w-full">
           <thead class="bg-gray-50">
             <tr>
-              <th class="text-left text-xs font-medium text-gray-500 px-4 py-3">Période</th>
-              <th class="text-center text-xs font-medium text-gray-500 px-4 py-3">Nb visites</th>
-              <th class="text-center text-xs font-medium text-gray-500 px-4 py-3">GPS validé</th>
-              <th class="text-center text-xs font-medium text-gray-500 px-4 py-3">Commerciaux</th>
+              <th class="text-left text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">Période</th>
+              <th class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">Nb visites</th>
+              <th class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">GPS validé</th>
+              <th class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">Commerciaux</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
-            <tr v-for="row in tableData" :key="row.period" class="hover:bg-gray-50">
-              <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ row.period }}</td>
+            <tr v-for="row in tableData" :key="row.period" class="hover:bg-gray-50 dark:hover:bg-gray-700">
+              <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">{{ row.period }}</td>
               <td class="px-4 py-3 text-center text-sm text-fc-blue font-bold">{{ row.count }}</td>
               <td class="px-4 py-3 text-center text-sm text-green-600">{{ row.gpsOk }}</td>
               <td class="px-4 py-3 text-center text-sm text-gray-600">{{ row.commerciaux }}</td>
