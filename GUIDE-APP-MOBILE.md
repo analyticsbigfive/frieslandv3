@@ -8,7 +8,7 @@
 
 | | |
 |---|---|
-| **URL** | `https://votre-domaine.com/login` |
+| **URL** | `https://frieslandv3.vercel.app/login` |
 | **Email** | `merchandiser@friesland.ci` |
 | **Mot de passe** | `Test1234!` |
 
