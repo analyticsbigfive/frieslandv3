@@ -46,7 +46,9 @@
               </th>
               <th class="px-3 py-1"><UInput v-model="colFilters.region" size="2xs" placeholder="Filtrer..." class="w-20" /></th>
               <th class="px-3 py-1"><UInput v-model="colFilters.zone" size="2xs" placeholder="Filtrer..." class="w-20" /></th>
-              <th class="px-3 py-1"><UInput v-model="colFilters.commercial" size="2xs" placeholder="Filtrer..." class="w-20" /></th>
+              <th class="px-3 py-1">
+                <USelectMenu v-model="colFilters.commercial" :options="commercialColOptions" size="2xs" class="w-24" searchable searchable-placeholder="..." value-attribute="value" option-attribute="label" />
+              </th>
               <th v-for="m in marques" :key="m.key + '_ext_f'" class="px-2 py-1">
                 <USelectMenu v-model="colFilters[m.key + '_ext']" :options="presenceOptions" size="2xs" class="w-16" />
               </th>
@@ -105,6 +107,12 @@
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const dashboard = useDashboardDirection()
+const { users: cachedUsers, fetchUsers: fetchCachedUsers } = useUsersCache()
+
+const commercialColOptions = computed(() => [
+  { value: '', label: 'Tous' },
+  ...new Set(dashboard.visites.value.map(v => v.commercial).filter(Boolean))
+].map(v => typeof v === 'string' ? { value: v, label: v } : v))
 
 const marques = [
   { key: 'nido', label: 'NIDO', textClass: 'text-red-600' },
@@ -187,6 +195,7 @@ const paginatedRows = computed(() => {
 watch(filteredRows, () => { page.value = 1 })
 
 onMounted(() => {
+  fetchCachedUsers()
   Promise.all([dashboard.fetchZones(), dashboard.fetchVisites()])
 })
 </script>

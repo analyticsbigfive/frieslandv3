@@ -41,7 +41,17 @@
 
       <!-- Commercial -->
       <UFormGroup v-if="showCommercial" label="Commercial" size="sm">
-        <UInput v-model="model.commercial" placeholder="Nom..." size="sm" />
+        <USelectMenu
+          v-model="model.commercial"
+          :options="commercialOptions"
+          placeholder="Tous"
+          size="sm"
+          searchable
+          searchable-placeholder="Rechercher..."
+          :search-attributes="['label']"
+          value-attribute="value"
+          option-attribute="label"
+        />
       </UFormGroup>
 
       <!-- Région -->
@@ -128,6 +138,17 @@ const props = withDefaults(defineProps<{
 })
 
 const emit = defineEmits(['update:modelValue', 'filter'])
+
+// Charger les commerciaux pour le dropdown
+const { users: cachedUsers, fetchUsers: fetchCachedUsers } = useUsersCache()
+onMounted(() => { fetchCachedUsers() })
+
+const commercialOptions = computed(() => [
+  { value: '', label: 'Tous' },
+  ...cachedUsers.value
+    .filter(u => u.is_active !== false)
+    .map(u => ({ value: u.nom || u.email || '', label: `${u.nom || '—'} (${u.email})` }))
+])
 
 const model = computed({
   get: () => props.modelValue,

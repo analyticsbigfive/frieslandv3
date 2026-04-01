@@ -12,11 +12,31 @@
         </UFormGroup>
 
         <UFormGroup label="Commercial">
-          <UInput v-model="filters.commercial" placeholder="Nom..." size="sm" />
+          <USelectMenu
+            v-model="filters.commercial"
+            :options="commercialOptions"
+            placeholder="Tous"
+            size="sm"
+            searchable
+            searchable-placeholder="Rechercher..."
+            :search-attributes="['label']"
+            value-attribute="value"
+            option-attribute="label"
+          />
         </UFormGroup>
 
         <UFormGroup label="Email">
-          <UInput v-model="filters.email" placeholder="Email..." size="sm" />
+          <USelectMenu
+            v-model="filters.email"
+            :options="emailOptions"
+            placeholder="Tous"
+            size="sm"
+            searchable
+            searchable-placeholder="Rechercher..."
+            :search-attributes="['label']"
+            value-attribute="value"
+            option-attribute="label"
+          />
         </UFormGroup>
 
         <div class="flex items-end gap-2">
@@ -322,6 +342,21 @@ definePageMeta({
 
 const visitesStore = useVisitesStore()
 const { exportVisitesToExcel } = useCsvExport()
+const { users: cachedUsers, fetchUsers: fetchCachedUsers } = useUsersCache()
+
+const commercialOptions = computed(() => [
+  { value: '', label: 'Tous' },
+  ...cachedUsers.value
+    .filter(u => u.is_active !== false)
+    .map(u => ({ value: u.nom || u.email || '', label: `${u.nom || '—'} (${u.email})` }))
+])
+
+const emailOptions = computed(() => [
+  { value: '', label: 'Tous' },
+  ...cachedUsers.value
+    .filter(u => u.is_active !== false && u.email)
+    .map(u => ({ value: u.email!, label: u.email! }))
+])
 
 const visites = computed(() => visitesStore.visites)
 const total = computed(() => visitesStore.total)
@@ -432,6 +467,7 @@ async function loadVisites() {
 }
 
 onMounted(() => {
+  fetchCachedUsers()
   loadVisites()
 })
 </script>

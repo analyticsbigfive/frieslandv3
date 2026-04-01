@@ -129,7 +129,9 @@
                   <USelectMenu v-model="recapFilters.canal" :options="['', 'General trade', 'Modern trade']" size="2xs" class="w-24" />
                 </th>
                 <th class="px-3 py-1"><UInput v-model="recapFilters.region" size="2xs" placeholder="..." class="w-20" /></th>
-                <th class="px-3 py-1"><UInput v-model="recapFilters.commercial" size="2xs" placeholder="..." class="w-20" /></th>
+                <th class="px-3 py-1">
+                  <USelectMenu v-model="recapFilters.commercial" :options="commercialColOptions" size="2xs" class="w-24" searchable searchable-placeholder="..." value-attribute="value" option-attribute="label" />
+                </th>
                 <th class="px-3 py-1">
                   <USelectMenu v-model="recapFilters.present" :options="['', 'Oui', 'Non']" size="2xs" class="w-16" />
                 </th>
@@ -194,6 +196,12 @@ definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const route = useRoute()
 const dashboard = useDashboardDirection()
+const { users: cachedUsers, fetchUsers: fetchCachedUsers } = useUsersCache()
+
+const commercialColOptions = computed(() => [
+  { value: '', label: 'Tous' },
+  ...new Set(dashboard.visites.value.map(v => v.commercial).filter(Boolean))
+].map(v => typeof v === 'string' ? { value: v, label: v } : v))
 
 const cat = computed(() => (route.params.category as string) || 'evap')
 const title = computed(() => cat.value.toUpperCase())
@@ -352,6 +360,7 @@ watch(() => route.query.tab, (tab) => {
 })
 
 onMounted(() => {
+  fetchCachedUsers()
   Promise.all([dashboard.fetchZones(), dashboard.fetchVisites()])
 })
 </script>
