@@ -122,9 +122,11 @@
                 />
               </td>
               <td class="px-4 py-3 text-center">
-                <UBadge v-if="visite.image_urls?.length" variant="soft" color="cyan" size="xs">
-                  {{ visite.image_urls.length }} 📷
-                </UBadge>
+                <button v-if="visite.image_urls?.length" @click.stop="openPhotoGallery(visite)" class="inline-flex">
+                  <UBadge variant="soft" color="cyan" size="xs" class="cursor-pointer hover:ring-2 hover:ring-cyan-300 transition">
+                    {{ visite.image_urls.length }} 📷
+                  </UBadge>
+                </button>
                 <span v-else class="text-gray-300 text-xs">—</span>
               </td>
               <td class="px-4 py-3 text-center">
@@ -329,6 +331,38 @@
         </div>
       </div>
     </UModal>
+    <!-- Photo Gallery Modal -->
+    <UModal v-model="showPhotoGallery" :ui="{ width: 'max-w-2xl' }">
+      <div class="p-6" v-if="galleryVisite">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">
+            📷 Photos — {{ galleryVisite.commercial }} ({{ formatDate(galleryVisite.date_visite) }})
+          </h3>
+          <UButton variant="ghost" size="xs" icon="i-heroicons-x-mark" @click="showPhotoGallery = false" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div v-for="(url, idx) in galleryVisite.image_urls" :key="idx" class="relative group">
+            <img
+              :src="url"
+              :alt="`Photo ${idx + 1}`"
+              class="w-full h-48 object-cover rounded-lg border border-gray-200 dark:border-gray-600 cursor-pointer hover:opacity-90 transition"
+              @click="zoomedPhoto = url"
+            />
+            <span class="absolute top-2 left-2 bg-black/50 text-white text-[10px] px-1.5 py-0.5 rounded">{{ idx + 1 }}/{{ galleryVisite.image_urls!.length }}</span>
+          </div>
+        </div>
+      </div>
+    </UModal>
+
+    <!-- Zoomed Photo Modal -->
+    <UModal v-model="showZoomedPhoto" :ui="{ width: 'max-w-4xl' }">
+      <div class="p-2">
+        <div class="flex justify-end mb-1">
+          <UButton variant="ghost" size="xs" icon="i-heroicons-x-mark" @click="showZoomedPhoto = false" />
+        </div>
+        <img v-if="zoomedPhoto" :src="zoomedPhoto" alt="Photo agrandie" class="w-full rounded-lg object-contain max-h-[80vh]" />
+      </div>
+    </UModal>
   </div>
 </template>
 
@@ -365,6 +399,20 @@ const filters = visitesStore.filters
 
 const showDetail = ref(false)
 const selectedVisite = ref<Visite | null>(null)
+
+// Photo gallery
+const showPhotoGallery = ref(false)
+const galleryVisite = ref<Visite | null>(null)
+const zoomedPhoto = ref<string | null>(null)
+const showZoomedPhoto = computed({
+  get: () => !!zoomedPhoto.value,
+  set: (v) => { if (!v) zoomedPhoto.value = null },
+})
+
+function openPhotoGallery(visite: Visite) {
+  galleryVisite.value = visite
+  showPhotoGallery.value = true
+}
 
 // Constantes modale structurée
 const productCategories = [
