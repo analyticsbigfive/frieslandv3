@@ -252,8 +252,8 @@ const productDefs: Record<string, { key: string; name: string }[]> = {
     { key: 'br_yogoo_nature_maxi_318ml', name: 'Yogoo Nature Maxi 318ml' },
   ],
   cereales: [
-    { key: 'br_cereales_500g', name: 'Céréales 500g' },
-    { key: 'br_cereales_1kg', name: 'Céréales 1Kg' },
+    { key: 'brcv', name: 'Céréales BRCV' },
+    { key: 'brcc', name: 'Céréales BRCC' },
   ],
 }
 
