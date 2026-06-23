@@ -1,5 +1,5 @@
 <template>
-  <div class="pb-20">
+  <div class="mobile-page">
     <!-- Search & Filters -->
     <div class="p-4 space-y-3">
       <UInput
@@ -8,13 +8,16 @@
         placeholder="Rechercher un PDV..."
         size="lg"
         class="w-full"
+        aria-label="Rechercher un point de vente"
       />
 
       <!-- Sort toggle: proximity vs alphabetical -->
       <div class="flex items-center gap-2">
         <button
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
-          :class="sortByProximity ? 'bg-fc-blue text-white' : 'bg-gray-100 text-gray-600'"
+          type="button"
+          class="touch-target flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition-colors"
+          :class="sortByProximity ? 'bg-fc-red text-white' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'"
+          :aria-pressed="sortByProximity"
           @click="sortByProximity = !sortByProximity"
         >
           <UIcon name="i-heroicons-map-pin" class="w-3.5 h-3.5" />
@@ -29,17 +32,20 @@
         </span>
       </div>
 
-      <div class="flex gap-2 overflow-x-auto pb-1">
-        <UBadge
+      <div class="flex gap-2 overflow-x-auto pb-1" aria-label="Filtrer par zone">
+        <button
           v-for="zone in zones"
           :key="zone"
-          :color="selectedZone === zone ? 'blue' : 'gray'"
-          variant="solid"
-          class="cursor-pointer whitespace-nowrap"
+          type="button"
+          class="min-h-9 shrink-0 rounded-full px-3 text-xs font-semibold transition-colors"
+          :class="selectedZone === zone
+            ? 'bg-fc-red text-white'
+            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'"
+          :aria-pressed="selectedZone === zone"
           @click="selectedZone = selectedZone === zone ? '' : zone"
         >
           {{ zone }}
-        </UBadge>
+        </button>
       </div>
 
       <UButton
@@ -47,7 +53,7 @@
         block
         size="sm"
         icon="i-heroicons-plus"
-        class="bg-fc-blue"
+        class="bg-fc-red"
         @click="showCreatePDV = true"
       >
         Nouveau PDV
@@ -55,15 +61,28 @@
     </div>
 
     <!-- PDV List -->
-    <div class="px-4 space-y-3">
-      <div
+    <div v-if="loading" class="px-4 space-y-3">
+      <div v-for="i in 5" :key="i" class="mobile-card p-4 animate-pulse">
+        <div class="h-4 w-2/3 rounded bg-gray-200 dark:bg-gray-700" />
+        <div class="mt-3 flex gap-2">
+          <div class="h-5 w-20 rounded-full bg-gray-100 dark:bg-gray-700" />
+          <div class="h-5 w-24 rounded-full bg-gray-100 dark:bg-gray-700" />
+        </div>
+      </div>
+    </div>
+
+    <div v-else-if="filteredPDV.length" class="px-4 space-y-3">
+      <article
         v-for="pdv in filteredPDV"
         :key="pdv.pdv_id"
-        class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 cursor-pointer active:bg-gray-50 dark:active:bg-gray-700"
-        @click="navigateTo(`/mobile/pdv/${pdv.pdv_id}`)"
+        class="mobile-card overflow-hidden transition-all hover:border-red-100 hover:bg-red-50/40 dark:hover:border-red-900/50 dark:hover:bg-red-950/20"
       >
-        <div class="flex items-start justify-between">
-          <div class="flex-1">
+        <div class="flex items-start justify-between gap-3 p-4">
+          <NuxtLink
+            :to="`/mobile/pdv/${pdv.pdv_id}`"
+            class="min-w-0 flex-1"
+            :aria-label="`Ouvrir le PDV ${pdv.nom_pdv}`"
+          >
             <h3 class="font-bold text-gray-900 dark:text-gray-100">{{ pdv.nom_pdv }}</h3>
             <p class="text-xs text-gray-400 mt-1">{{ pdv.zone }} — {{ pdv.region }}</p>
             <div class="flex gap-2 mt-2">
@@ -80,20 +99,29 @@
                 {{ formatDistance(pdv._distance) }}
               </UBadge>
             </div>
-          </div>
+          </NuxtLink>
           <NuxtLink
             v-if="pdv.geolocation_lat"
             :to="`https://www.google.com/maps?q=${pdv.geolocation_lat},${pdv.geolocation_lng}`"
             target="_blank"
-            @click.stop
+            class="touch-target inline-flex items-center justify-center rounded-xl text-fc-red hover:bg-red-50 dark:hover:bg-red-950/30"
+            :aria-label="`Ouvrir ${pdv.nom_pdv} dans Google Maps`"
           >
-            <UIcon name="i-heroicons-map-pin" class="w-5 h-5 text-fc-blue" />
+            <UIcon name="i-heroicons-map-pin" class="w-5 h-5 text-fc-red" />
           </NuxtLink>
         </div>
-      </div>
+      </article>
     </div>
 
-    <p v-if="filteredPDV.length === 0" class="text-center text-gray-400 py-10 text-sm">Aucun PDV trouvé</p>
+    <div v-else class="px-4 py-14 text-center">
+      <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 dark:bg-red-950/30">
+        <UIcon name="i-heroicons-map-pin" class="h-8 w-8 text-fc-red" />
+      </div>
+      <p class="font-semibold text-gray-700 dark:text-gray-200">Aucun PDV trouvé</p>
+      <p class="mx-auto mt-1 max-w-[260px] text-sm text-gray-500 dark:text-gray-400">
+        Essayez une autre recherche ou changez de zone.
+      </p>
+    </div>
     <PDVQuickCreateModal
       v-model="showCreatePDV"
       @created="handlePDVCreated"
@@ -114,6 +142,7 @@ const search = ref('')
 const selectedZone = ref('')
 const sortByProximity = ref(true)
 const showCreatePDV = ref(false)
+const loading = ref(true)
 
 const allPDV = ref<any[]>([])
 const zones = computed(() => [...new Set(allPDV.value.map(p => p.zone).filter(Boolean))].sort())
@@ -190,14 +219,20 @@ const filteredPDV = computed(() => {
 })
 
 onMounted(async () => {
-  if (!authStore.profile) {
-    await authStore.fetchProfile()
-  }
+  loading.value = true
+  try {
+    if (!authStore.profile) {
+      await authStore.fetchProfile()
+    }
 
-  allPDV.value = await pdvStore.fetchScopedPDV(authStore.profile)
-  // Demander la position GPS si pas encore disponible
-  if (!currentPosition.value) {
-    requestPosition()
+    allPDV.value = await pdvStore.fetchScopedPDV(authStore.profile)
+    // Demander la position GPS si pas encore disponible
+    if (!currentPosition.value) {
+      requestPosition()
+    }
+  }
+  finally {
+    loading.value = false
   }
 })
 </script>

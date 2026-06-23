@@ -4,8 +4,11 @@
       <div
         v-if="visible"
         class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+        role="dialog"
+        aria-modal="true"
+        aria-live="polite"
       >
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 mx-6 max-w-sm w-full text-center transform">
+        <div class="mx-6 w-full max-w-sm rounded-2xl bg-white p-8 text-center shadow-2xl transform dark:bg-gray-800">
           <!-- Saving state -->
           <Transition name="save-state" mode="out-in">
             <div v-if="status === 'saving'" key="saving">
@@ -67,7 +70,8 @@
               <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">{{ errorTitle }}</h3>
               <p class="text-sm text-gray-500 dark:text-gray-400">{{ errorMessage }}</p>
               <button
-                class="mt-4 px-6 py-2 bg-fc-red text-white text-sm font-medium rounded-lg hover:bg-fc-red-600 transition-colors"
+                type="button"
+                class="touch-target mt-4 rounded-lg bg-fc-red px-6 py-2 text-sm font-semibold text-white transition-colors hover:bg-fc-red-600 active:bg-fc-red-700"
                 @click="$emit('retry')"
               >
                 Réessayer
@@ -96,7 +100,7 @@ const props = withDefaults(defineProps<{
   progress: 0,
   savingTitle: 'Enregistrement en cours',
   savingMessage: 'Veuillez patienter...',
-  successTitle: 'Enregistré avec succès !',
+  successTitle: 'Enregistré avec succès',
   successMessage: 'Les données ont été sauvegardées.',
   errorTitle: 'Erreur',
   errorMessage: 'Une erreur est survenue.',
@@ -193,5 +197,14 @@ watch(() => props.status, (newStatus) => {
   stroke-dasharray: 30;
   stroke-dashoffset: 30;
   animation: check-draw 0.4s ease-out 0.3s forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-spin-slow,
+  .animate-bounce-dot,
+  .animate-success-pop,
+  .animate-check-draw {
+    animation: none;
+  }
 }
 </style>

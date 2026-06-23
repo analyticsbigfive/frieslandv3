@@ -1,14 +1,21 @@
 <template>
-  <div class="pb-20 min-h-full bg-gray-50">
+  <div class="mobile-page">
     <!-- Date header -->
     <div class="px-4 pt-4 pb-2">
-      <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+      <section class="mobile-card p-4" aria-label="Progression du routing du jour">
         <div class="flex items-center justify-between mb-3">
           <div>
             <p class="text-xs text-gray-400 uppercase tracking-wide">Mon routing</p>
             <p class="text-lg font-bold text-gray-900 dark:text-gray-100">{{ todayLabel }}</p>
           </div>
-          <UButton variant="ghost" icon="i-heroicons-arrow-path" size="sm" :loading="routingStore.loading" @click="refreshRouting" />
+          <UButton
+            variant="ghost"
+            icon="i-heroicons-arrow-path"
+            size="sm"
+            :loading="routingStore.loading"
+            aria-label="Actualiser le routing"
+            @click="refreshRouting"
+          />
         </div>
 
         <!-- Progress bar -->
@@ -30,7 +37,7 @@
             {{ routingStatusLabel }}
           </UBadge>
         </template>
-      </div>
+      </section>
     </div>
 
     <!-- No routing -->
@@ -38,13 +45,13 @@
       <div class="w-20 h-20 mx-auto mb-4 bg-red-50 rounded-2xl flex items-center justify-center">
         <UIcon name="i-heroicons-map" class="w-10 h-10 text-fc-red opacity-50" />
       </div>
-      <p class="text-gray-500 dark:text-gray-400 font-medium">Aucun routing prévu</p>
-      <p class="text-gray-400 text-sm mt-1">Votre superviseur n'a pas encore assigné de visites pour aujourd'hui</p>
+      <p class="font-semibold text-gray-700 dark:text-gray-200">Aucun routing prévu</p>
+      <p class="mx-auto mt-1 max-w-[280px] text-sm text-gray-500 dark:text-gray-400">Votre superviseur n'a pas encore assigné de visites pour aujourd'hui.</p>
     </div>
 
     <!-- Loading skeleton -->
     <div v-else-if="routingStore.loading" class="px-4 py-4 space-y-3">
-      <div v-for="i in 4" :key="i" class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm animate-pulse">
+      <div v-for="i in 4" :key="i" class="mobile-card p-4 animate-pulse">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-full bg-gray-200" />
           <div class="flex-1 space-y-2">
@@ -60,7 +67,7 @@
       <div
         v-for="(rp, idx) in routingStore.routingPDVList"
         :key="rp.id"
-        class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border-l-4 transition-all"
+        class="mobile-card overflow-hidden border-l-4 transition-all"
         :class="borderClass(rp)"
       >
         <div class="p-4">
@@ -91,23 +98,23 @@
 
               <!-- Objectifs -->
               <div v-if="hasObjectifs(rp)" class="flex flex-wrap gap-1 mt-2">
-                <UBadge v-if="rp.objectifs.releve_stock" variant="soft" color="blue" size="xs">📦 Stock</UBadge>
-                <UBadge v-if="rp.objectifs.encaissement" variant="soft" color="green" size="xs">💰 Encais.</UBadge>
-                <UBadge v-if="rp.objectifs.photos" variant="soft" color="purple" size="xs">📸 Photos</UBadge>
-                <UBadge v-if="rp.objectifs.merchandising" variant="soft" color="amber" size="xs">🏪 Merch.</UBadge>
-                <UBadge v-if="rp.objectifs.prospection" variant="soft" color="cyan" size="xs">🔍 Prosp.</UBadge>
+                <UBadge v-if="rp.objectifs.releve_stock" variant="soft" color="blue" size="xs">Stock</UBadge>
+                <UBadge v-if="rp.objectifs.encaissement" variant="soft" color="green" size="xs">Encaissement</UBadge>
+                <UBadge v-if="rp.objectifs.photos" variant="soft" color="purple" size="xs">Photos</UBadge>
+                <UBadge v-if="rp.objectifs.merchandising" variant="soft" color="amber" size="xs">Merchandising</UBadge>
+                <UBadge v-if="rp.objectifs.prospection" variant="soft" color="cyan" size="xs">Prospection</UBadge>
                 <span v-if="rp.objectifs.custom" class="text-xs text-gray-500 dark:text-gray-400">{{ rp.objectifs.custom }}</span>
               </div>
 
               <!-- Timestamps -->
               <div v-if="rp.arrived_at || rp.completed_at" class="flex gap-3 mt-2 text-[10px] text-gray-400">
-                <span v-if="rp.arrived_at">⏱ Arrivée {{ formatTime(rp.arrived_at) }}</span>
-                <span v-if="rp.completed_at">✅ Terminé {{ formatTime(rp.completed_at) }}</span>
+                <span v-if="rp.arrived_at">Arrivée {{ formatTime(rp.arrived_at) }}</span>
+                <span v-if="rp.completed_at">Terminé {{ formatTime(rp.completed_at) }}</span>
               </div>
 
               <!-- Geofence validated -->
               <div v-if="rp.geofence_validated" class="mt-1">
-                <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">GPS ✓ validé</span>
+                <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">GPS validé</span>
               </div>
             </div>
 
@@ -179,8 +186,9 @@
     <UModal v-model="showSkipModal">
       <div class="p-6 space-y-4">
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Passer ce PDV</h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Indiquez une raison (optionnel)</p>
-        <UTextarea v-model="skipReason" placeholder="PDV fermé, inaccessible..." :rows="2" />
+        <UFormGroup label="Raison du passage" hint="Optionnel">
+          <UTextarea v-model="skipReason" placeholder="PDV fermé, inaccessible..." :rows="2" />
+        </UFormGroup>
         <div class="flex justify-end gap-3">
           <UButton variant="ghost" @click="showSkipModal = false">Annuler</UButton>
           <UButton color="amber" @click="confirmSkip">Confirmer</UButton>
@@ -220,9 +228,9 @@ const routingStatusColor = computed(() => {
 
 const routingStatusLabel = computed(() => {
   const s = routingStore.todayRouting?.status
-  if (s === 'completed') return '✅ Terminé'
-  if (s === 'in_progress') return '🔄 En cours'
-  return '⏳ En attente'
+  if (s === 'completed') return 'Terminé'
+  if (s === 'in_progress') return 'En cours'
+  return 'En attente'
 })
 
 function borderClass(rp: RoutingPDV) {

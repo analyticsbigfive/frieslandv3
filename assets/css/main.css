@@ -16,8 +16,80 @@
   --fc-gray-light: #F1F5F9;
 }
 
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  html,
+  body,
+  #__nuxt {
+    min-height: 100%;
+  }
+
+  body {
+    background: #f8fafc;
+    color: #0f172a;
+    touch-action: manipulation;
+    text-rendering: optimizeLegibility;
+    font-variant-numeric: tabular-nums;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button,
+  [role='button'] {
+    touch-action: manipulation;
+  }
+
+  :focus-visible {
+    outline: 3px solid rgb(200 16 46 / 35%);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .mobile-page {
+    @apply min-h-full bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100;
+  }
+
+  .mobile-card {
+    @apply rounded-xl border border-gray-100 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800;
+  }
+
+  .mobile-muted {
+    @apply text-gray-500 dark:text-gray-400;
+  }
+
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .mobile-bottom-inset {
+    padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
