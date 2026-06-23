@@ -107,12 +107,11 @@ export default defineNuxtConfig({
       meta: [
         { name: 'description', content: 'Application de collecte terrain Friesland Bonnet Rouge' },
         { name: 'theme-color', content: '#C8102E' },
+        { name: 'mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
-        // Security headers
-        { 'http-equiv': 'X-Content-Type-Options', content: 'nosniff' },
-        { 'http-equiv': 'X-Frame-Options', content: 'DENY' },
         { name: 'referrer', content: 'strict-origin-when-cross-origin' },
+        // Note: X-Frame-Options / X-Content-Type-Options sont servis en en-têtes HTTP (voir nitro.routeRules)
       ],
       link: [
         { rel: 'icon', type: 'image/png', href: '/favicon.png' },
@@ -125,6 +124,24 @@ export default defineNuxtConfig({
     public: {
       geofenceRadius: 300,
       gpsMinAccuracy: 10,
+    },
+  },
+
+  // Désactive le manifeste d'app (évite l'erreur dev "#app-manifest" / 404 builds/meta/*.json).
+  // L'app n'utilise pas les route rules basées sur le manifeste client.
+  experimental: {
+    appManifest: false,
+  },
+
+  // En-têtes de sécurité servis en HTTP (X-Frame-Options ne fonctionne pas en <meta>).
+  nitro: {
+    routeRules: {
+      '/**': {
+        headers: {
+          'X-Frame-Options': 'DENY',
+          'X-Content-Type-Options': 'nosniff',
+        },
+      },
     },
   },
 
