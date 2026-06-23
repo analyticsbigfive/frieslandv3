@@ -134,6 +134,54 @@ const savingScore = ref(false)
 const tiers = ref<any[]>([])
 const score = ref<any>({ w_osa_lineaire: 0.1, w_osa_pondere: 0.45, w_assortiment: 0.15, w_visibilite: 0.3 })
 
+// Visibilité
+const visStds = ref<any[]>([])
+const visGroupFilter = ref('Tous')
+const showVis = ref(false)
+const savingVis = ref(false)
+const visForm = ref<any>({ standard_group: '', ps_tier: 'BASIC', zone: 'exterieure', element_key: '', is_required: true })
+const visGroupOptions = computed(() => ['Tous', ...[...new Set(visStds.value.map(v => v.standard_group))].sort()])
+const filteredVis = computed(() => visStds.value.filter(v => visGroupFilter.value === 'Tous' || v.standard_group === visGroupFilter.value))
+const visCanSave = computed(() => !!visForm.value.standard_group && !!visForm.value.element_key)
+
+function openVisAdd() {
+  visForm.value = { standard_group: visGroupFilter.value !== 'Tous' ? visGroupFilter.value : '', ps_tier: 'BASIC', zone: 'exterieure', element_key: '', is_required: true }
+  showVis.value = true
+}
+async function saveVis() {
+  savingVis.value = true
+  try {
+    const { error } = await supabase.from('visibility_standards').upsert({
+      standard_group: visForm.value.standard_group.trim(),
+      ps_tier: visForm.value.ps_tier,
+      zone: visForm.value.zone,
+      element_key: visForm.value.element_key.trim(),
+      is_required: visForm.value.is_required !== false,
+    }, { onConflict: 'standard_group,ps_tier,zone,element_key' })
+    if (error) throw error
+    toast.add({ title: 'Standard de visibilité ajouté', color: 'green' })
+    showVis.value = false
+    await loadVis()
+  } catch (err: any) {
+    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+  } finally {
+    savingVis.value = false
+  }
+}
+async function removeVis(v: any) {
+  if (!confirm(`Retirer ${v.element_key} (${v.standard_group}/${v.ps_tier}/${v.zone}) ?`)) return
+  const { error } = await supabase.from('visibility_standards').delete()
+    .eq('standard_group', v.standard_group).eq('ps_tier', v.ps_tier).eq('zone', v.zone).eq('element_key', v.element_key)
+  if (error) { toast.add({ title: 'Erreur', description: error.message, color: 'red' }); return }
+  await loadVis()
+}
+async function loadVis() {
+  const { data } = await supabase.from('visibility_standards')
+    .select('standard_group, ps_tier, zone, element_key, is_required')
+    .order('standard_group').order('ps_tier').order('zone')
+  visStds.value = data || []
+}
+
 const sommePoids = computed(() =>
   Number(score.value.w_osa_lineaire) + Number(score.value.w_osa_pondere)
   + Number(score.value.w_assortiment) + Number(score.value.w_visibilite),
@@ -181,5 +229,5 @@ async function saveScore() {
   }
 }
 
-onMounted(load)
+onMounted(() => { load(); loadVis() })
 </script>
