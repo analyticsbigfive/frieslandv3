@@ -65,6 +65,12 @@
           </div>
 
           <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-1 shadow-sm">
+            <div class="pb-3 mb-1 border-b border-gray-100 dark:border-gray-700">
+              <div class="flex items-center justify-between gap-3">
+                <label class="text-sm font-medium text-gray-600 dark:text-gray-300">Prix respectés ?</label>
+                <div class="w-36 shrink-0"><ToggleYesNo v-model="form.produits.evap.prix_respectes" /></div>
+              </div>
+            </div>
             <h4 class="text-sm font-bold text-gray-800 mb-1">Quantités par produit</h4>
             <p class="text-xs text-gray-400 mb-2">Quantité en rayon. 0 = rupture. La présence est déduite des quantités.</p>
             <SkuQuantityInput
@@ -75,10 +81,6 @@
               :model-value="form.produits.evap.quantites?.[prod.key]"
               @update:model-value="setQty('evap', prod.key, $event)"
             />
-            <div class="space-y-1 pt-3 mt-2 border-t border-gray-100 dark:border-gray-700">
-              <label class="text-sm font-medium text-gray-600">Prix respectés?</label>
-              <ToggleYesNo v-model="form.produits.evap.prix_respectes" />
-            </div>
           </div>
         </div>
       </template>
@@ -97,6 +99,12 @@
           </div>
 
           <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-1 shadow-sm">
+            <div class="pb-3 mb-1 border-b border-gray-100 dark:border-gray-700">
+              <div class="flex items-center justify-between gap-3">
+                <label class="text-sm font-medium text-gray-600 dark:text-gray-300">Prix respectés ?</label>
+                <div class="w-36 shrink-0"><ToggleYesNo v-model="form.produits.imp.prix_respectes" /></div>
+              </div>
+            </div>
             <h4 class="text-sm font-bold text-gray-800 mb-1">Quantités par produit</h4>
             <p class="text-xs text-gray-400 mb-2">Quantité en rayon. 0 = rupture. La présence est déduite des quantités.</p>
             <SkuQuantityInput
@@ -107,10 +115,6 @@
               :model-value="form.produits.imp.quantites?.[prod.key]"
               @update:model-value="setQty('imp', prod.key, $event)"
             />
-            <div class="space-y-1 pt-3 mt-2 border-t border-gray-100 dark:border-gray-700">
-              <label class="text-sm font-medium text-gray-600">Prix respectés?</label>
-              <ToggleYesNo v-model="form.produits.imp.prix_respectes" />
-            </div>
           </div>
         </div>
       </template>
@@ -129,6 +133,12 @@
           </div>
 
           <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-1 shadow-sm">
+            <div class="pb-3 mb-1 border-b border-gray-100 dark:border-gray-700">
+              <div class="flex items-center justify-between gap-3">
+                <label class="text-sm font-medium text-gray-600 dark:text-gray-300">Prix respectés ?</label>
+                <div class="w-36 shrink-0"><ToggleYesNo v-model="form.produits.scm.prix_respectes" /></div>
+              </div>
+            </div>
             <h4 class="text-sm font-bold text-gray-800 mb-1">Quantités par produit</h4>
             <p class="text-xs text-gray-400 mb-2">Quantité en rayon. 0 = rupture. La présence est déduite des quantités.</p>
             <SkuQuantityInput
@@ -139,10 +149,6 @@
               :model-value="form.produits.scm.quantites?.[prod.key]"
               @update:model-value="setQty('scm', prod.key, $event)"
             />
-            <div class="space-y-1 pt-3 mt-2 border-t border-gray-100 dark:border-gray-700">
-              <label class="text-sm font-medium text-gray-600">Prix respectés?</label>
-              <ToggleYesNo v-model="form.produits.scm.prix_respectes" />
-            </div>
           </div>
         </div>
       </template>
@@ -161,6 +167,12 @@
           </div>
 
           <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-1 shadow-sm">
+            <div class="pb-3 mb-1 border-b border-gray-100 dark:border-gray-700">
+              <div class="flex items-center justify-between gap-3">
+                <label class="text-sm font-medium text-gray-600 dark:text-gray-300">Prix respectés ?</label>
+                <div class="w-36 shrink-0"><ToggleYesNo v-model="form.produits.uht.prix_respectes" /></div>
+              </div>
+            </div>
             <h4 class="text-sm font-bold text-gray-800 mb-1">Quantités par produit</h4>
             <p class="text-xs text-gray-400 mb-2">Quantité en rayon. 0 = rupture. La présence est déduite des quantités.</p>
             <SkuQuantityInput
@@ -171,10 +183,6 @@
               :model-value="form.produits.uht.quantites?.[prod.key]"
               @update:model-value="setQty('uht', prod.key, $event)"
             />
-            <div class="space-y-1 pt-3 mt-2 border-t border-gray-100 dark:border-gray-700">
-              <label class="text-sm font-medium text-gray-600">Prix respectés?</label>
-              <ToggleYesNo v-model="form.produits.uht.prix_respectes" />
-            </div>
           </div>
         </div>
       </template>
@@ -193,6 +201,12 @@
           </div>
 
           <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-1 shadow-sm">
+            <div class="pb-3 mb-1 border-b border-gray-100 dark:border-gray-700">
+              <div class="flex items-center justify-between gap-3">
+                <label class="text-sm font-medium text-gray-600 dark:text-gray-300">Prix respectés ?</label>
+                <div class="w-36 shrink-0"><ToggleYesNo v-model="form.produits.yaourt.prix_respectes" /></div>
+              </div>
+            </div>
             <h4 class="text-sm font-bold text-gray-800 mb-1">Quantités par produit</h4>
             <p class="text-xs text-gray-400 mb-2">Quantité en rayon. 0 = rupture. La présence est déduite des quantités.</p>
             <SkuQuantityInput
@@ -203,10 +217,6 @@
               :model-value="form.produits.yaourt.quantites?.[prod.key]"
               @update:model-value="setQty('yaourt', prod.key, $event)"
             />
-            <div class="space-y-1 pt-3 mt-2 border-t border-gray-100 dark:border-gray-700">
-              <label class="text-sm font-medium text-gray-600">Prix respectés?</label>
-              <ToggleYesNo v-model="form.produits.yaourt.prix_respectes" />
-            </div>
           </div>
         </div>
       </template>
@@ -225,6 +235,12 @@
           </div>
 
           <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-1 shadow-sm">
+            <div class="pb-3 mb-1 border-b border-gray-100 dark:border-gray-700">
+              <div class="flex items-center justify-between gap-3">
+                <label class="text-sm font-medium text-gray-600 dark:text-gray-300">Prix respectés ?</label>
+                <div class="w-36 shrink-0"><ToggleYesNo v-model="form.produits.cereales.prix_respectes" /></div>
+              </div>
+            </div>
             <h4 class="text-sm font-bold text-gray-800 mb-1">Quantités par produit</h4>
             <p class="text-xs text-gray-400 mb-2">Quantité en rayon. 0 = rupture. La présence est déduite des quantités.</p>
             <SkuQuantityInput
@@ -235,10 +251,6 @@
               :model-value="form.produits.cereales.quantites?.[prod.key]"
               @update:model-value="setQty('cereales', prod.key, $event)"
             />
-            <div class="space-y-1 pt-3 mt-2 border-t border-gray-100 dark:border-gray-700">
-              <label class="text-sm font-medium text-gray-600">Prix respectés?</label>
-              <ToggleYesNo v-model="form.produits.cereales.prix_respectes" />
-            </div>
           </div>
         </div>
       </template>
