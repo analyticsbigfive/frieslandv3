@@ -17,7 +17,7 @@
 
     <!-- Navigation -->
     <nav class="flex-1 overflow-y-auto py-4 px-2">
-      <div v-for="section in navSections" :key="section.title" class="mb-6">
+      <div v-for="section in visibleSections" :key="section.title" class="mb-6">
         <p
           v-if="!collapsed"
           class="px-3 mb-2 text-[10px] font-semibold text-gray-400 dark:text-gray-500 dark:text-gray-400 uppercase tracking-wider"
@@ -82,6 +82,9 @@ import {
   Zap,
   ShoppingBag,
   Route,
+  ShieldCheck,
+  Boxes,
+  SlidersHorizontal,
 } from 'lucide-vue-next'
 
 defineProps<{ collapsed: boolean }>()
@@ -96,6 +99,7 @@ function isActive(path: string): boolean {
 
 const navSections = [
   {
+    key: 'principal',
     title: 'Principal',
     items: [
       { label: 'Dashboard', to: '/admin', icon: LayoutDashboard },
@@ -103,6 +107,7 @@ const navSections = [
     ],
   },
   {
+    key: 'pdv',
     title: 'PDV',
     items: [
       { label: 'Liste des PDV', to: '/admin/pdv', icon: MapPin },
@@ -111,6 +116,7 @@ const navSections = [
     ],
   },
   {
+    key: 'visites',
     title: 'Visites',
     items: [
       { label: 'Visites', to: '/admin/visites', icon: ClipboardList },
@@ -119,6 +125,7 @@ const navSections = [
     ],
   },
   {
+    key: 'visibilite',
     title: 'Visibilité',
     items: [
       { label: 'Visibilité extérieure', to: '/admin/visibilite', icon: Eye },
@@ -130,6 +137,7 @@ const navSections = [
     ],
   },
   {
+    key: 'concurrence',
     title: 'Concurrence',
     items: [
       { label: 'Visibilité conc. : év.', to: '/admin/concurrence/visibilite-evolution', icon: Eye },
@@ -138,8 +146,11 @@ const navSections = [
     ],
   },
   {
+    key: 'produits',
     title: 'Produits',
     items: [
+      { label: 'Inventaire SKU', to: '/admin/produits/inventaire', icon: Boxes },
+      { label: 'Seuils stock', to: '/admin/produits/seuils', icon: SlidersHorizontal },
       { label: 'Dispo. EVAP', to: '/admin/produits/evap', icon: Package },
       { label: 'Prix EVAP', to: '/admin/produits/evap?tab=prix', icon: Package },
       { label: 'Récap. EVAP', to: '/admin/produits/evap?tab=recap', icon: ClipboardList },
@@ -156,18 +167,35 @@ const navSections = [
     ],
   },
   {
+    key: 'actions',
     title: 'Actions',
     items: [
       { label: 'Actions', to: '/admin/actions', icon: Zap },
     ],
   },
   {
+    key: 'administration',
     title: 'Administration',
     items: [
       { label: 'Utilisateurs', to: '/admin/users', icon: Users },
+      { label: 'Permissions', to: '/admin/permissions', icon: ShieldCheck },
       { label: 'Import / Export', to: '/admin/import-export', icon: Upload },
       { label: 'Carte', to: '/admin/map', icon: Map },
     ],
   },
 ]
+
+// RBAC: ne montrer que les sections autorisées pour le rôle courant.
+// Avant montage (SSR + 1er rendu client) on affiche tout pour éviter un
+// mismatch d'hydratation ; le filtrage s'applique une fois le profil chargé.
+const { fetchAccess, canAccessSection } = useAccessControl()
+const mounted = ref(false)
+const visibleSections = computed(() =>
+  mounted.value ? navSections.filter(s => canAccessSection(s.key)) : navSections
+)
+
+onMounted(async () => {
+  await fetchAccess()
+  mounted.value = true
+})
 </script>
