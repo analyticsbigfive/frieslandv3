@@ -63,11 +63,61 @@
         </div>
       </div>
 
-      <p class="text-xs text-gray-400">
-        Standards de disponibilité (quantités mini par SKU), poids par SKU et standards de visibilité : éditables en base
-        (<code>availability_standards</code>, <code>availability_weights</code>, <code>visibility_standards</code>). Écran CRUD dédié à venir.
-      </p>
+      <!-- Standards de visibilité (PLV requise) -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between gap-3">
+          <h2 class="font-bold text-gray-900 dark:text-gray-100">Standards de visibilité (PLV requise)</h2>
+          <div class="flex items-center gap-2">
+            <USelectMenu v-model="visGroupFilter" :options="visGroupOptions" size="xs" class="w-44" />
+            <UButton v-if="isAdmin" size="xs" icon="i-heroicons-plus" class="bg-fc-red" @click="openVisAdd">Ajouter</UButton>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-700/50">
+              <tr>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Groupe</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Tier</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Zone</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Élément PLV</th>
+                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Requis</th>
+                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-16"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+              <tr v-for="(v, i) in filteredVis" :key="i" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                <td class="px-4 py-2 text-gray-700 dark:text-gray-300">{{ v.standard_group }}</td>
+                <td class="px-4 py-2"><UBadge size="xs" variant="soft" color="blue">{{ v.ps_tier }}</UBadge></td>
+                <td class="px-4 py-2 text-gray-500 dark:text-gray-400">{{ v.zone }}</td>
+                <td class="px-4 py-2 text-gray-900 dark:text-gray-100">{{ v.element_key }}</td>
+                <td class="px-4 py-2 text-center">{{ v.is_required ? '✓' : '—' }}</td>
+                <td class="px-4 py-2 text-center">
+                  <button v-if="isAdmin" class="text-red-400 hover:text-red-600" @click="removeVis(v)"><UIcon name="i-heroicons-trash" class="w-4 h-4" /></button>
+                </td>
+              </tr>
+              <tr v-if="!filteredVis.length"><td colspan="6" class="px-4 py-6 text-center text-xs text-gray-400">Aucun standard de visibilité pour ce groupe. Ajoute les éléments PLV requis par tier.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="px-5 py-2 text-xs text-gray-400">Définis quels éléments PLV (poster, sign_board, reglettes…) sont requis par groupe × niveau Perfect Store × zone. Clés alignées sur <code>data.visibilite.&lt;zone&gt;.&lt;element_key&gt;</code>.</p>
+      </div>
     </template>
+
+    <!-- Modal ajout visibilité -->
+    <UModal v-model="showVis">
+      <div class="p-6 space-y-4">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Ajouter un standard de visibilité</h3>
+        <UFormGroup label="Groupe standard *"><UInput v-model="visForm.standard_group" placeholder="ex. BOUTIQUE" /></UFormGroup>
+        <UFormGroup label="Niveau Perfect Store *"><USelectMenu v-model="visForm.ps_tier" :options="['FLAGSHIP', 'VIP', 'CORE', 'BASIC']" /></UFormGroup>
+        <UFormGroup label="Zone *"><USelectMenu v-model="visForm.zone" :options="['exterieure', 'interieure']" /></UFormGroup>
+        <UFormGroup label="Élément PLV (clé) *"><UInput v-model="visForm.element_key" placeholder="ex. poster, sign_board, reglettes" /></UFormGroup>
+        <UFormGroup label="Requis"><ToggleYesNo v-model="visForm.is_required" /></UFormGroup>
+        <div class="flex justify-end gap-2 pt-2 border-t">
+          <UButton variant="ghost" @click="showVis = false">Annuler</UButton>
+          <UButton class="bg-fc-red" :loading="savingVis" :disabled="!visCanSave" @click="saveVis">Ajouter</UButton>
+        </div>
+      </div>
+    </UModal>
   </div>
 </template>
 

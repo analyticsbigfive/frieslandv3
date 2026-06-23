@@ -110,6 +110,10 @@ export function useCsvExport() {
       { header: 'Latitude', key: 'geolocation_lat', width: 15 },
       { header: 'Longitude', key: 'geolocation_lng', width: 15 },
       { header: 'Adressage', key: 'adressage', width: 30 },
+      { header: 'Territoire', key: 'territory_code', width: 15 },
+      { header: 'Area', key: 'area_code', width: 15 },
+      { header: 'Distributeur', key: 'distributor_name', width: 25 },
+      { header: 'Objectif Perfect Store', key: 'objectif_perfect_store', width: 20 },
       { header: 'Date', key: 'date_creation', width: 15 },
       { header: 'Ajouté par', key: 'ajoute_par', width: 30 },
     ]
