@@ -85,6 +85,8 @@ import {
   ShieldCheck,
   Boxes,
   SlidersHorizontal,
+  Trophy,
+  Database,
 } from 'lucide-vue-next'
 
 defineProps<{ collapsed: boolean }>()
@@ -104,6 +106,15 @@ const navSections = [
     items: [
       { label: 'Dashboard', to: '/admin', icon: LayoutDashboard },
       { label: 'Routing & Planning', to: '/admin/routing', icon: Route },
+    ],
+  },
+  {
+    key: 'perfect-store',
+    title: 'Perfect Store',
+    items: [
+      { label: 'Perfect Store', to: '/admin/perfect-store', icon: Trophy },
+      { label: 'Par visite', to: '/admin/perfect-store/visites', icon: ClipboardList },
+      { label: 'Standards', to: '/admin/perfect-store/standards', icon: SlidersHorizontal },
     ],
   },
   {
@@ -178,6 +189,7 @@ const navSections = [
     title: 'Administration',
     items: [
       { label: 'Utilisateurs', to: '/admin/users', icon: Users },
+      { label: 'Référentiels', to: '/admin/referentiels', icon: Database },
       { label: 'Permissions', to: '/admin/permissions', icon: ShieldCheck },
       { label: 'Import / Export', to: '/admin/import-export', icon: Upload },
       { label: 'Carte', to: '/admin/map', icon: Map },

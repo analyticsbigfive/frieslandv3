@@ -382,6 +382,9 @@ export interface DashboardStats {
   performance_commerciaux: CommercialPerformance[]
   visites_par_jour: { date: string; count: number }[]
   distribution_pdv: { type: string; count: number }[]
+  // Perfect Store
+  perfect_store_pct?: number | null
+  perfect_store_par_type?: { type_pdv: string; perfect_store_pct: number | null }[]
 }
 
 export interface CommercialPerformance {

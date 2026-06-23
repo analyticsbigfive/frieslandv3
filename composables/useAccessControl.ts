@@ -10,6 +10,7 @@ export interface DashboardSection {
 // Sections du dashboard (alignées sur les groupes de la sidebar).
 export const DASHBOARD_SECTIONS: DashboardSection[] = [
   { key: 'principal', title: 'Principal' },
+  { key: 'perfect-store', title: 'Perfect Store' },
   { key: 'pdv', title: 'PDV' },
   { key: 'visites', title: 'Visites' },
   { key: 'visibilite', title: 'Visibilité' },
@@ -24,6 +25,7 @@ export const MANAGED_ROLES: UserRole[] = ['admin', 'superviseur', 'merchandiser'
 // Résout un chemin /admin/... vers une clé de section.
 export function sectionKeyForPath(path: string): string | null {
   if (path === '/admin' || path.startsWith('/admin/routing')) return 'principal'
+  if (path.startsWith('/admin/perfect-store')) return 'perfect-store'
   if (path.startsWith('/admin/pdv')) return 'pdv'
   if (path.startsWith('/admin/visites')) return 'visites'
   if (path.startsWith('/admin/visibilite')) return 'visibilite'
@@ -32,6 +34,7 @@ export function sectionKeyForPath(path: string): string | null {
   if (path.startsWith('/admin/actions')) return 'actions'
   if (
     path.startsWith('/admin/users') ||
+    path.startsWith('/admin/referentiels') ||
     path.startsWith('/admin/import') ||
     path.startsWith('/admin/map') ||
     path.startsWith('/admin/permissions') ||

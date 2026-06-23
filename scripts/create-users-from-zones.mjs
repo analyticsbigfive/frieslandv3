@@ -37,7 +37,12 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
 const args = process.argv.slice(2)
 const DRY_RUN = args.includes('--dry-run')
 const passwordArg = args.find(a => a.startsWith('--password='))
-const DEFAULT_PASSWORD = passwordArg ? passwordArg.split('=')[1] : 'Friesland2024!'
+const DEFAULT_PASSWORD = passwordArg ? passwordArg.split('=')[1] : process.env.SEED_DEFAULT_PASSWORD
+
+if (!DEFAULT_PASSWORD) {
+  console.error('❌ Aucun mot de passe fourni: passez --password=... ou définissez SEED_DEFAULT_PASSWORD')
+  process.exit(1)
+}
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -171,11 +176,11 @@ async function main() {
   if (DRY_RUN) {
     console.log('🔶 Mode --dry-run: aucun utilisateur créé.')
     console.log(`   Relancez sans --dry-run pour créer les ${toCreate.length} comptes.`)
-    console.log(`   Mot de passe par défaut: ${DEFAULT_PASSWORD}`)
+    console.log('   Mot de passe défini via --password= ou SEED_DEFAULT_PASSWORD')
     return
   }
 
-  console.log(`🚀 Création des comptes (mot de passe: ${DEFAULT_PASSWORD})...\n`)
+  console.log('🚀 Création des comptes (mot de passe défini via --password= ou SEED_DEFAULT_PASSWORD)...\n')
 
   let created = 0
   let errors = 0
@@ -198,7 +203,7 @@ async function main() {
   console.log(`\n📊 Résultat: ${created} créé(s), ${errors} erreur(s), ${alreadyExist.length} déjà existant(s)`)
   console.log(`\n💡 Les utilisateurs peuvent se connecter avec:`)
   console.log(`   Email: leur email`)
-  console.log(`   Mot de passe: ${DEFAULT_PASSWORD}`)
+  console.log('   Mot de passe défini via --password= ou SEED_DEFAULT_PASSWORD')
   console.log(`   ⚠️  Pensez à leur demander de changer leur mot de passe !`)
 }
 

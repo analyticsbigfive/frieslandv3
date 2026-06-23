@@ -18,7 +18,7 @@
           class="w-40"
         />
       </div>
-      <UButton size="sm" @click="showCreate = true" icon="i-heroicons-plus" class="bg-fc-blue">
+      <UButton v-if="authStore.isAdmin" size="sm" @click="showCreate = true" icon="i-heroicons-plus" class="bg-fc-blue">
         Nouvel utilisateur
       </UButton>
     </div>
@@ -69,9 +69,10 @@
                 />
               </td>
               <td class="px-4 py-3 text-center">
-                <UDropdown :items="getUserActions(user)">
+                <UDropdown v-if="authStore.isAdmin" :items="getUserActions(user)">
                   <UButton variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" />
                 </UDropdown>
+                <span v-else class="text-xs text-gray-400">-</span>
               </td>
             </tr>
           </tbody>
@@ -132,7 +133,7 @@
 import type { Profile, UserRole } from '~/types'
 
 definePageMeta({
-  middleware: ['auth', 'admin'],
+  middleware: ['auth', 'admin', 'admin-strict'],
   layout: 'admin',
 })
 

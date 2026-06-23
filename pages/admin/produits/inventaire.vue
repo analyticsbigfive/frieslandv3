@@ -20,10 +20,10 @@
     <template v-else>
       <!-- KPIs globaux -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatsCard title="PDV couverts" :value="String(pdvCouverts)" icon="i-heroicons-building-storefront" color="blue" />
-        <StatsCard title="SKU en rupture (≥1 PDV)" :value="String(skuEnRupture)" icon="i-heroicons-x-circle" color="red" />
-        <StatsCard title="Lignes stock bas" :value="String(totalLow)" icon="i-heroicons-exclamation-triangle" color="orange" />
-        <StatsCard title="Dispo moyenne" :value="dispoMoyenne + '%'" icon="i-heroicons-check-circle" :color="dispoMoyenne >= 50 ? 'green' : 'orange'" />
+        <StatsCard title="PDV couverts" :value="String(pdvCouverts)" format="none" :icon="Building2" color="blue" />
+        <StatsCard title="SKU en rupture (≥1 PDV)" :value="String(skuEnRupture)" format="none" :icon="XCircle" color="red" />
+        <StatsCard title="Lignes stock bas" :value="String(totalLow)" format="none" :icon="AlertTriangle" color="orange" />
+        <StatsCard title="Dispo moyenne" :value="dispoMoyenne + '%'" format="none" :icon="CheckCircle" :color="dispoMoyenne >= 50 ? 'green' : 'orange'" />
       </div>
 
       <!-- Tableaux par catégorie -->
@@ -85,6 +85,7 @@
 </template>
 
 <script setup lang="ts">
+import { Building2, XCircle, AlertTriangle, CheckCircle } from 'lucide-vue-next'
 import { PRODUCT_CATALOG, computeSkuInventory, type SkuInventoryRow } from '~/utils/products'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })

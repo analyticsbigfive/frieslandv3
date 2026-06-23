@@ -551,7 +551,7 @@ const router = useRouter()
 const route = useRoute()
 const config = useRuntimeConfig()
 
-const geofenceRadius = config.public.geofenceRadius as number || 300
+const geofenceRadius = config.public.geofenceRadius as number || 200
 
 // Routing context (pre-selected PDV from routing page)
 const routingPdvId = computed(() => route.query.routing_pdv_id as string || '')

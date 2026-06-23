@@ -69,6 +69,16 @@ function filterMarkers() {
   addMarkers()
 }
 
+function isSafeImageUrl(u: unknown): u is string {
+  if (typeof u !== 'string') return false
+  try {
+    const url = new URL(u)
+    return url.protocol === 'https:' && url.hostname === 'iirgolfjwdnnesamzcbd.supabase.co'
+  } catch {
+    return false
+  }
+}
+
 function addMarkers() {
   if (!map || !markerGroup) return
 
@@ -86,19 +96,48 @@ function addMarkers() {
       fillOpacity: 0.8,
     })
 
-    const photoBtn = pdv.image_url
-      ? `<div class="mt-2"><img src="${pdv.image_url}" alt="${pdv.nom_pdv}" class="w-full h-20 object-cover rounded cursor-pointer pdv-photo-btn" data-pdv-id="${pdv.pdv_id}" /></div>`
-      : `<div class="mt-2"><button class="text-[10px] text-fc-red underline pdv-photo-btn" data-pdv-id="${pdv.pdv_id}">📷 Voir photo</button></div>`
+    const el = document.createElement('div')
+    el.className = 'text-sm'
 
-    marker.bindPopup(`
-      <div class="text-sm">
-        <p class="font-bold">${pdv.nom_pdv}</p>
-        <p class="text-gray-500">${pdv.zone || ''} - ${pdv.secteur || ''}</p>
-        <p class="text-gray-400 text-xs">${pdv.canal} / ${pdv.sous_categorie_pdv || ''}</p>
-        <p class="text-gray-400 text-xs mt-1">${pdv.geolocation_lat?.toFixed(4)}, ${pdv.geolocation_lng?.toFixed(4)}</p>
-        ${photoBtn}
-      </div>
-    `)
+    const nameP = document.createElement('p')
+    nameP.className = 'font-bold'
+    nameP.textContent = pdv.nom_pdv
+    el.appendChild(nameP)
+
+    const zoneP = document.createElement('p')
+    zoneP.className = 'text-gray-500'
+    zoneP.textContent = `${pdv.zone || ''} - ${pdv.secteur || ''}`
+    el.appendChild(zoneP)
+
+    const canalP = document.createElement('p')
+    canalP.className = 'text-gray-400 text-xs'
+    canalP.textContent = `${pdv.canal} / ${pdv.sous_categorie_pdv || ''}`
+    el.appendChild(canalP)
+
+    const coordP = document.createElement('p')
+    coordP.className = 'text-gray-400 text-xs mt-1'
+    coordP.textContent = `${pdv.geolocation_lat?.toFixed(4)}, ${pdv.geolocation_lng?.toFixed(4)}`
+    el.appendChild(coordP)
+
+    const photoWrap = document.createElement('div')
+    photoWrap.className = 'mt-2'
+    if (isSafeImageUrl(pdv.image_url)) {
+      const img = document.createElement('img')
+      img.src = pdv.image_url
+      img.alt = pdv.nom_pdv
+      img.className = 'w-full h-20 object-cover rounded cursor-pointer pdv-photo-btn'
+      img.dataset.pdvId = pdv.pdv_id
+      photoWrap.appendChild(img)
+    } else {
+      const btn = document.createElement('button')
+      btn.className = 'text-[10px] text-fc-red underline pdv-photo-btn'
+      btn.textContent = '📷 Voir photo'
+      btn.dataset.pdvId = pdv.pdv_id
+      photoWrap.appendChild(btn)
+    }
+    el.appendChild(photoWrap)
+
+    marker.bindPopup(el)
 
     markerGroup.addLayer(marker)
   })

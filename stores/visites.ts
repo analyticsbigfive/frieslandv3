@@ -36,7 +36,7 @@ export const useVisitesStore = defineStore('visites', () => {
     try {
       let query = supabase
         .from('visites')
-        .select('*, pdv:pdv_id(pdv_id, nom_pdv, zone, secteur, region, canal, image_url)', { count: 'exact' })
+        .select('*, pdv:pdv_id(pdv_id, nom_pdv, zone, secteur, region, canal, sous_categorie_pdv, image_url)', { count: 'exact' })
         .order('date_visite', { ascending: false })
 
       if (filters.value.dateFrom) {

@@ -1,5 +1,40 @@
 # ✅ Résumé d'Implémentation - Friesland Bonnet Rouge
 
+---
+
+## 🏆 Perfect Store + KPI (EOW) — `feat/perfect-store`
+
+### Fait
+- **Migration** `supabase/013_016_perfect_store.sql` : référentiels (pos_standard_map, availability_standards, assortment_standards, availability_weights, visibility_standards), config (perfect_store_tier_config, perfect_store_score_config), résultats (visite_perfect_store), moteur `compute_perfect_store()` + trigger, vues `v_perfect_store_global` / `v_perfect_store_par_type`. RLS + seeds idempotents.
+- **Doc formule** `FORMULE_ET_TESTS_perfect_store.md` (4 piliers, score composite, gating tier, cas EVAP GT).
+- **Scorer TS parité** `utils/perfectStore.ts` (`computeOsa`, `scorePerfectStore`) — reproduit exactement le SQL pour l'aperçu offline.
+- **Tests Vitest** `utils/perfectStore.spec.ts` : **8/8 verts**, cas EVAP GT (linéaire 83/50/67, pondérée 92/14/91) + gating tier.
+- **Composable** `composables/usePerfectStore.ts` : référentiels + `scoreVisite()` + `fetchGlobalKpi()` / `fetchKpiParType()`.
+- **Dashboard** `pages/admin/perfect-store/index.vue` : compteur global + ventilation par type. Compteur global aussi en tête de `pages/admin/index.vue`.
+- **Standards** `pages/admin/perfect-store/standards.vue` : édition seuils de tier + pondérations score (admin).
+- **RBAC** : section `perfect-store` (`supabase/018_rbac_perfect_store_section.sql` + `useAccessControl` DASHBOARD_SECTIONS/sectionKeyForPath + AdminSidebar).
+- **Géofence 200 m** : `nuxt.config` + fallbacks + `supabase/017_geofence_radius_200.sql`.
+- **Types** : `DashboardStats` étendu (`perfect_store_pct`, `perfect_store_par_type`).
+
+### Migrations à exécuter (Supabase SQL Editor, dans l'ordre)
+`010` → `011` → `012` → `013_016_perfect_store` → `017_geofence_radius_200` → `018_rbac_perfect_store_section`. Toutes idempotentes.
+
+### ⏳ En attente de validation (§ « à trancher » du brief)
+1. **Combinaison des piliers + seuils de tier** : externalisés et paramétrables (`perfect_store_tier_config` = 95/85/75/60 par défaut, `perfect_store_score_config` = poids 0.10/0.45/0.15/0.30). **À valider par le category management.**
+2. **Mapping format↔SKU IMP & SCM-MT** : laissé en TODO (commentaires dans la migration). La normalisation par Σpoids fait tourner le calcul sans fausser l'OSA en attendant. **Ne pas inventer.**
+3. **Visibilité** : seul groupe `BOUTIQUE` seedé ; MINI MARKET / KIOSQUE / etc. à compléter.
+
+### Reste à faire (non bloquant EOW)
+- OSA quantités branchée dans `inventaire.vue`/`recap.vue` via `availability_standards.min_quantity` (aujourd'hui via seuil_bas global ; le dashboard Perfect Store couvre déjà l'OSA).
+- Filtres (région/zone/période) + bascule taux_vente/taux_revu sur le dashboard Perfect Store (vues actuellement globales, trigger en taux_vente).
+- Import CSV routing au format **template** (jour/canal/position/sales_rep/mdm) — un import ponctuel email+date existe déjà.
+- Module promo : `promo_min = NULL` (désactivé), activable via config.
+- Géo-tracking continu : hooks seulement, en attente PO.
+
+> ⚠️ Voir aussi `SECURITY-AUDIT.md` : 3 findings critiques (clé service_role committée, auto-escalade RLS, XSS cartes) à traiter.
+
+---
+
 ## 🎯 Demandes Utilisateur Réalisées
 
 ### 1. ✅ Utilisateur Test dans le Dashboard

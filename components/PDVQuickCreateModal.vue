@@ -250,7 +250,7 @@ function buildPayload() {
     secteur: form.secteur.trim(),
     geolocation_lat: form.geolocation_lat,
     geolocation_lng: form.geolocation_lng,
-    rayon_geofence: Number(config.public.geofenceRadius) || 300,
+    rayon_geofence: Number(config.public.geofenceRadius) || 200,
     adressage: form.adressage.trim() || null,
     image_url: null,
     date_creation: new Date().toISOString().slice(0, 10),

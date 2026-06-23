@@ -34,6 +34,58 @@
       </div>
     </div>
 
+    <!-- Compteur Perfect Store (cœur EOW) -->
+    <NuxtLink
+      v-if="psGlobal"
+      to="/admin/perfect-store"
+      class="block mb-6 bg-gradient-to-br from-fc-red to-fc-red-600 rounded-2xl p-5 text-white shadow-sm hover:shadow-md transition-shadow"
+    >
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <p class="text-xs uppercase tracking-wide opacity-80">Perfect Store global</p>
+          <p class="text-4xl font-extrabold mt-1">{{ psGlobal.perfect_store_pct == null ? '—' : psGlobal.perfect_store_pct + '%' }}</p>
+          <p class="text-xs opacity-80 mt-1">{{ psGlobal.perfect_stores }} / {{ psGlobal.visites_scorees }} visites conformes · voir le détail →</p>
+        </div>
+        <UIcon name="i-heroicons-trophy" class="w-16 h-16 opacity-30" />
+      </div>
+    </NuxtLink>
+
+    <!-- KPI Perfect Store -->
+    <div v-if="psGlobal" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <StatsCard
+        title="Perfect Store"
+        :value="psGlobal.perfect_store_pct ?? 0"
+        format="percent"
+        :subtitle="`${psGlobal.perfect_stores}/${psGlobal.visites_scorees} visites conformes`"
+        :icon="Trophy"
+        color="red"
+      />
+      <StatsCard
+        title="Score global moyen"
+        :value="psGlobal.score_global_moyen_pct ?? 0"
+        format="percent"
+        subtitle="Composite pondéré"
+        :icon="BarChart3"
+        color="blue"
+      />
+      <StatsCard
+        title="OSA pondérée moy."
+        :value="psGlobal.osa_moyen_pct ?? 0"
+        format="percent"
+        subtitle="Disponibilité linéaire pondérée"
+        :icon="Package"
+        color="green"
+      />
+      <StatsCard
+        title="Visibilité moy."
+        :value="psGlobal.visibilite_moyenne_pct ?? 0"
+        format="percent"
+        subtitle="PLV requise présente"
+        :icon="Eye"
+        color="orange"
+      />
+    </div>
+
     <!-- KPI Cards Row -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       <StatsCard
@@ -171,7 +223,7 @@
 </template>
 
 <script setup lang="ts">
-import { ClipboardList, Calendar, MapPin, Users } from 'lucide-vue-next'
+import { ClipboardList, Calendar, MapPin, Users, Trophy, BarChart3, Package, Eye } from 'lucide-vue-next'
 
 definePageMeta({
   middleware: ['auth', 'admin'],
@@ -180,10 +232,12 @@ definePageMeta({
 
 const visitesStore = useVisitesStore()
 const { exportToCsv } = useCsvExport()
+const { fetchGlobalKpi } = usePerfectStore()
 const toast = useToast()
 
 const loadingDashboard = ref(true)
 const stats = computed(() => visitesStore.stats)
+const psGlobal = ref<Awaited<ReturnType<typeof fetchGlobalKpi>> | null>(null)
 
 const productCategories = computed(() => [
   { key: 'evap', label: 'EVAP', value: stats.value?.taux_evap ?? 0 },
@@ -302,6 +356,7 @@ function handlePrint() {
 // Load stats on mount
 onMounted(async () => {
   loadingDashboard.value = true
+  fetchGlobalKpi().then(g => { psGlobal.value = g }).catch(() => {})
   try {
     await visitesStore.fetchStats()
     if (!stats.value?.total_visites && !stats.value?.total_pdv) {
