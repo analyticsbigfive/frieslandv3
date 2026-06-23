@@ -11,6 +11,9 @@ dist
 .env.local
 .env.*.local
 
+# Audit sécurité interne (ne pas versionner — contient des détails sensibles)
+SECURITY-AUDIT.md
+
 # Logs
 logs
 *.log
