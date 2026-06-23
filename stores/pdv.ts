@@ -3,6 +3,10 @@ import { defineStore, skipHydrate } from 'pinia'
 import { markRaw } from 'vue'
 import type { PDV, Profile, ZoneSecteur } from '~/types'
 
+// Colonnes nécessaires aux listes (admin table + mobile).
+// Évite select('*') qui tire 24 colonnes inutiles (mdm, routing, dates…).
+const LIST_COLUMNS = 'id,pdv_id,nom_pdv,canal,categorie_pdv,sous_categorie_pdv,autre_sous_categorie,zone,secteur,region,adressage,image_url,geolocation_lat,geolocation_lng'
+
 export const usePDVStore = defineStore('pdv', () => {
   const supabase = skipHydrate(markRaw(useSupabaseClient()))
   const cacheTTL = 5 * 60 * 1000
@@ -53,7 +57,7 @@ export const usePDVStore = defineStore('pdv', () => {
   function buildScopedQuery(profile?: Profile | null) {
     let query = supabase
       .from('pdv')
-      .select('*')
+      .select(LIST_COLUMNS)
       .eq('is_active', true)
       .order('nom_pdv')
 
@@ -86,7 +90,7 @@ export const usePDVStore = defineStore('pdv', () => {
     try {
       let query = supabase
         .from('pdv')
-        .select('*', { count: 'exact' })
+        .select(LIST_COLUMNS, { count: 'estimated' })
         .eq('is_active', true)
         .order('nom_pdv', { ascending: true })
 
