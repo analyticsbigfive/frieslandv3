@@ -1,11 +1,20 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col safe-area-top safe-area-bottom transition-colors">
+  <div class="min-h-dvh bg-gray-50 dark:bg-gray-900 flex flex-col safe-area-top transition-colors">
+    <a
+      href="#mobile-main"
+      class="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[100] focus:rounded-lg focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-fc-red focus:shadow-lg"
+    >
+      Aller au contenu
+    </a>
+
     <!-- Mobile Header -->
-    <header class="sticky top-0 z-40 bg-fc-red text-white px-4 py-3 flex items-center justify-between shadow-md">
-      <div class="flex items-center gap-3">
+    <header class="sticky top-0 z-40 bg-fc-red text-white px-3 py-2.5 flex min-h-[56px] items-center justify-between gap-2 shadow-sm">
+      <div class="flex min-w-0 items-center gap-2">
         <button
           v-if="canGoBack"
-          class="p-1 rounded-lg hover:bg-white/10"
+          type="button"
+          class="touch-target inline-flex items-center justify-center rounded-xl transition-colors hover:bg-white/10 active:bg-white/15"
+          aria-label="Revenir à l'écran précédent"
           @click="$router.back()"
         >
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -13,17 +22,19 @@
           </svg>
         </button>
         <img src="~/assets/logo.png" alt="FC" class="w-7 h-7 rounded object-contain bg-white/90 p-0.5" />
-        <h1 class="text-lg font-semibold">{{ pageTitle }}</h1>
+        <h1 class="truncate text-base font-semibold leading-tight">{{ pageTitle }}</h1>
       </div>
 
-      <div class="flex items-center gap-3">
+      <div class="flex shrink-0 items-center gap-1.5">
         <!-- Dark mode toggle -->
         <DarkModeToggle variant="mobile" />
 
         <!-- GPS status -->
         <button
-          class="relative p-1 rounded-lg hover:bg-white/10"
+          type="button"
+          class="touch-target relative inline-flex items-center justify-center rounded-xl transition-colors hover:bg-white/10 active:bg-white/15"
           :title="gpsTooltip"
+          :aria-label="gpsTooltip"
           @click="refreshGps"
         >
           <UIcon
@@ -39,14 +50,23 @@
 
         <!-- Online status -->
         <span
-          class="w-2.5 h-2.5 rounded-full"
-          :class="isOnline ? 'bg-emerald-400' : 'bg-red-400'"
-        />
+          class="inline-flex min-h-8 items-center gap-1.5 rounded-full px-2 text-[11px] font-semibold"
+          :class="isOnline ? 'bg-white/10 text-white' : 'bg-amber-200 text-amber-950'"
+          :aria-label="isOnline ? 'Connexion active' : 'Mode hors ligne'"
+        >
+          <span
+            class="h-2 w-2 rounded-full"
+            :class="isOnline ? 'bg-emerald-300' : 'bg-amber-700'"
+            aria-hidden="true"
+          />
+          <span>{{ isOnline ? 'En ligne' : 'Offline' }}</span>
+        </span>
 
         <!-- Pending sync -->
         <span
           v-if="pendingCount > 0"
-          class="bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full"
+          class="rounded-full bg-amber-400 px-2 py-1 text-xs font-bold text-amber-950"
+          :aria-label="`${pendingCount} synchronisation(s) en attente`"
         >
           {{ pendingCount }}
         </span>
@@ -57,7 +77,7 @@
     <OfflineBanner />
 
     <!-- Content -->
-    <main class="flex-1 overflow-auto pb-20 dark:text-gray-200">
+    <main id="mobile-main" class="flex-1 overflow-auto mobile-bottom-inset dark:text-gray-200" tabindex="-1">
       <slot />
     </main>
 

@@ -1,17 +1,22 @@
 <template>
-  <nav class="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 safe-area-bottom">
-    <div class="flex items-center justify-around py-1">
+  <nav
+    class="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/95 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur dark:border-gray-700 dark:bg-gray-900/95 safe-area-bottom"
+    aria-label="Navigation mobile principale"
+  >
+    <div class="grid grid-cols-5 px-1 pt-1">
       <NuxtLink
         v-for="item in navItems"
         :key="item.to"
         :to="item.to"
-        class="flex flex-col items-center py-2 px-3 min-w-[64px] transition-colors"
+        class="touch-target flex flex-col items-center justify-center rounded-xl px-1 py-2 text-center transition-colors"
+        :aria-current="isActive(item.to) ? 'page' : undefined"
+        :aria-label="item.ariaLabel"
         :class="isActive(item.to)
-          ? 'text-fc-red border-t-2 border-fc-red -mt-[2px]'
-          : 'text-gray-400 dark:text-gray-500 dark:text-gray-400'"
+          ? 'bg-red-50 text-fc-red dark:bg-red-950/40 dark:text-red-200'
+          : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200'"
       >
-        <component :is="item.icon" class="w-5 h-5" />
-        <span class="text-[10px] mt-0.5 font-medium">{{ item.label }}</span>
+        <component :is="item.icon" class="h-5 w-5" aria-hidden="true" />
+        <span class="mt-0.5 text-[11px] font-semibold leading-tight">{{ item.label }}</span>
       </NuxtLink>
     </div>
   </nav>
@@ -34,10 +39,10 @@ function isActive(path: string) {
 }
 
 const navItems = [
-  { label: 'Visites', to: '/mobile', icon: ClipboardList },
-  { label: 'PDV', to: '/mobile/pdv', icon: MapPin },
-  { label: 'Contacts', to: '/mobile/contacts', icon: Users },
-  { label: 'Routing', to: '/mobile/routing', icon: Route },
-  { label: 'Map', to: '/mobile/map', icon: Map },
+  { label: 'Visites', to: '/mobile', icon: ClipboardList, ariaLabel: 'Voir les visites' },
+  { label: 'PDV', to: '/mobile/pdv', icon: MapPin, ariaLabel: 'Voir les points de vente' },
+  { label: 'Contacts', to: '/mobile/contacts', icon: Users, ariaLabel: 'Voir les contacts' },
+  { label: 'Routing', to: '/mobile/routing', icon: Route, ariaLabel: 'Voir le routing' },
+  { label: 'Carte', to: '/mobile/map', icon: Map, ariaLabel: 'Voir la carte' },
 ]
 </script>

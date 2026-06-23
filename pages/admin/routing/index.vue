@@ -64,9 +64,17 @@
             Actualiser
           </UButton>
         </div>
-        <UButton icon="i-heroicons-plus" class="bg-fc-red hover:bg-fc-red/90 ml-4" @click="showCreateModal = true">
-          Nouveau routing
-        </UButton>
+        <div class="flex gap-2 ml-4">
+          <UButton v-if="authStore.isAdmin" variant="outline" icon="i-heroicons-arrow-down-tray" @click="downloadRoutingTemplate">
+            Modèle CSV
+          </UButton>
+          <UButton v-if="authStore.isAdmin" variant="outline" icon="i-heroicons-arrow-up-tray" @click="showImportModal = true">
+            Importer CSV
+          </UButton>
+          <UButton icon="i-heroicons-plus" class="bg-fc-red hover:bg-fc-red/90" @click="openCreateRouting">
+            Nouveau routing
+          </UButton>
+        </div>
       </div>
 
       <!-- Routing list -->
@@ -333,7 +341,9 @@
     <!-- ==================== CREATE ROUTING MODAL ==================== -->
     <UModal v-model="showCreateModal" :ui="{ width: 'max-w-3xl' }">
       <div class="p-6 space-y-5">
-        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Nouveau routing</h2>
+        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">
+          {{ editingRoutingId ? 'Modifier le routing' : 'Nouveau routing' }}
+        </h2>
 
         <div class="grid grid-cols-2 gap-4">
           <div>
@@ -353,6 +363,16 @@
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date *</label>
             <UInput v-model="newRouting.date" type="date" size="lg" />
           </div>
+          <div v-if="editingRoutingId">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Statut</label>
+            <USelectMenu
+              v-model="newRouting.status"
+              :options="editStatusOptions"
+              option-attribute="label"
+              value-attribute="value"
+              size="lg"
+            />
+          </div>
         </div>
 
         <div>
@@ -366,10 +386,59 @@
             <span class="text-xs text-gray-400">{{ newRouting.pdvItems.length }} PDV sélectionnés</span>
           </div>
 
+          <!-- Préselection par colonnes PDV -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+            <USelectMenu v-model="pdvFilter.canal" :options="pdvFilterCanalOptions" option-attribute="label" value-attribute="value" placeholder="Canal" size="sm" />
+            <USelectMenu v-model="pdvFilter.region" :options="pdvFilterRegionOptions" option-attribute="label" value-attribute="value" placeholder="Région" size="sm" />
+            <USelectMenu v-model="pdvFilter.zone" :options="pdvFilterZoneOptions" option-attribute="label" value-attribute="value" placeholder="Zone" size="sm" />
+            <USelectMenu v-model="pdvFilter.secteur" :options="pdvFilterSecteurOptions" option-attribute="label" value-attribute="value" placeholder="Secteur" size="sm" />
+          </div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs text-gray-400">{{ filteredAvailablePdv.length }} PDV disponibles</span>
+            <div class="flex gap-2">
+              <UButton v-if="hasPdvFilter" size="xs" variant="ghost" icon="i-heroicons-x-mark" @click="clearPdvFilter">
+                Réinitialiser
+              </UButton>
+              <UButton
+                size="xs"
+                variant="soft"
+                icon="i-heroicons-plus-circle"
+                :disabled="!filteredAvailablePdv.length"
+                @click="addFilteredPDV"
+              >
+                Tout ajouter ({{ filteredAvailablePdv.length }})
+              </UButton>
+            </div>
+          </div>
+
+          <!-- Liste cochable des PDV filtrés -->
+          <div
+            v-if="hasPdvFilter"
+            class="border border-gray-200 dark:border-gray-700 rounded-lg max-h-48 overflow-y-auto mb-3 divide-y divide-gray-100 dark:divide-gray-700"
+          >
+            <label
+              v-for="p in filteredPdvForSelection"
+              :key="p.pdv_id"
+              class="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50"
+            >
+              <input
+                type="checkbox"
+                :checked="selectedPdvIds.has(p.pdv_id)"
+                class="rounded border-gray-300 text-fc-red focus:ring-fc-red"
+                @change="togglePdvSelection(p.pdv_id)"
+              />
+              <span class="text-sm text-gray-900 dark:text-gray-100 flex-1 min-w-0 truncate">{{ p.nom_pdv }}</span>
+              <span class="text-xs text-gray-400 shrink-0">{{ [p.zone, p.secteur].filter(Boolean).join(' / ') }}</span>
+            </label>
+            <p v-if="!filteredPdvForSelection.length" class="px-3 py-4 text-center text-xs text-gray-400">
+              Aucun PDV pour ces filtres
+            </p>
+          </div>
+
           <div class="flex gap-2 mb-3">
             <USelectMenu
               v-model="selectedPdvToAdd"
-              :options="availablePdvOptions"
+              :options="filteredAvailablePdvOptions"
               placeholder="Ajouter un PDV..."
               searchable
               searchable-placeholder="Rechercher un PDV..."
@@ -387,8 +456,19 @@
             <div
               v-for="(item, idx) in newRouting.pdvItems"
               :key="item.pdv_id"
-              class="flex items-center gap-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2"
+              class="flex items-center gap-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 transition-all"
+              :class="[
+                dragIndex === idx ? 'opacity-40' : '',
+                dragOverIndex === idx && dragIndex !== idx ? 'ring-2 ring-fc-red ring-inset' : '',
+              ]"
+              draggable="true"
+              @dragstart="onDragStart(idx)"
+              @dragenter.prevent="onDragEnter(idx)"
+              @dragover.prevent
+              @drop="onDrop(idx)"
+              @dragend="onDragEnd"
             >
+              <UIcon name="i-heroicons-bars-3" class="w-4 h-4 text-gray-300 cursor-grab active:cursor-grabbing shrink-0" title="Glisser pour réordonner" />
               <div class="flex flex-col gap-0.5">
                 <button class="text-gray-400 hover:text-gray-600 disabled:opacity-30" :disabled="idx === 0" @click="movePDV(idx, -1)">
                   <UIcon name="i-heroicons-chevron-up" class="w-3 h-3" />
@@ -397,7 +477,7 @@
                   <UIcon name="i-heroicons-chevron-down" class="w-3 h-3" />
                 </button>
               </div>
-              <span class="w-6 h-6 rounded-full bg-fc-red text-white text-xs flex items-center justify-center font-bold">{{ idx + 1 }}</span>
+              <span class="w-6 h-6 rounded-full bg-fc-red text-white text-xs flex items-center justify-center font-bold shrink-0">{{ idx + 1 }}</span>
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ getPDVName(item.pdv_id) }}</p>
               </div>
@@ -420,9 +500,9 @@
         </div>
 
         <div class="flex justify-end gap-3 pt-4 border-t">
-          <UButton variant="ghost" @click="showCreateModal = false">Annuler</UButton>
-          <UButton class="bg-fc-red hover:bg-fc-red/90" :loading="creating" :disabled="!canCreate" @click="handleCreate">
-            Créer le routing
+          <UButton variant="ghost" @click="closeRoutingModal">Annuler</UButton>
+          <UButton class="bg-fc-red hover:bg-fc-red/90" :loading="creating" :disabled="!canCreate" @click="handleSaveRouting">
+            {{ editingRoutingId ? 'Enregistrer' : 'Créer le routing' }}
           </UButton>
         </div>
       </div>
@@ -564,6 +644,49 @@
         </div>
       </div>
     </UModal>
+
+    <!-- ==================== IMPORT CSV ROUTINGS MODAL ==================== -->
+    <UModal v-model="showImportModal" :ui="{ width: 'max-w-xl' }">
+      <div class="p-6 space-y-4">
+        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Importer des routings (CSV)</h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          Format : <strong>1 ligne = 1 PDV</strong>. Plusieurs lignes même <em>email + date</em> = un routing ordonné (colonne <em>ordre</em>).
+          Un routing existant (même utilisateur + date) est <strong>mis à jour</strong>, pas dupliqué (progression terrain préservée).
+        </p>
+
+        <UButton variant="link" size="sm" icon="i-heroicons-arrow-down-tray" class="px-0" @click="downloadRoutingTemplate">
+          Télécharger le modèle CSV
+        </UButton>
+
+        <div class="border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-lg p-6 text-center">
+          <input ref="importFileInput" type="file" accept=".csv" class="hidden" @change="handleImportFileSelect" />
+          <UButton variant="outline" @click="($refs.importFileInput as HTMLInputElement)?.click()">
+            Choisir un fichier CSV
+          </UButton>
+          <p v-if="importFile" class="text-sm text-gray-600 mt-2">{{ importFile.name }}</p>
+        </div>
+
+        <!-- Résultat import -->
+        <div v-if="importSummary" class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 space-y-2">
+          <div class="flex flex-wrap gap-3 text-sm">
+            <span class="text-emerald-600 font-medium">{{ importSummary.created }} créé(s)</span>
+            <span class="text-blue-600 font-medium">{{ importSummary.updated }} mis à jour</span>
+            <span class="text-gray-500 dark:text-gray-400">{{ importSummary.pdvCount }} PDV</span>
+            <span v-if="importSummary.errors.length" class="text-red-600 font-medium">{{ importSummary.errors.length }} erreur(s)</span>
+          </div>
+          <div v-if="importSummary.errors.length" class="max-h-40 overflow-y-auto space-y-1 border-t border-gray-200 dark:border-gray-600 pt-2">
+            <p v-for="(e, i) in importSummary.errors" :key="i" class="text-xs text-red-600">⚠ {{ e }}</p>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-4 border-t">
+          <UButton variant="ghost" @click="closeImportModal">Fermer</UButton>
+          <UButton class="bg-fc-red hover:bg-fc-red/90" :disabled="!importFile" :loading="importing" @click="handleImportRoutings">
+            Importer
+          </UButton>
+        </div>
+      </div>
+    </UModal>
   </div>
 </template>
 
@@ -576,6 +699,46 @@ const supabase = useSupabaseClient()
 const authStore = useAuthStore()
 const routingStore = useRoutingStore()
 const toast = useToast()
+const { parseCsv, downloadRoutingTemplate } = useCsvExport()
+
+// ---- Import CSV routings ----
+const showImportModal = ref(false)
+const importFile = ref<File | null>(null)
+const importing = ref(false)
+const importSummary = ref<{ created: number; updated: number; pdvCount: number; errors: string[] } | null>(null)
+
+function handleImportFileSelect(e: Event) {
+  const target = e.target as HTMLInputElement
+  importFile.value = target.files?.[0] || null
+  importSummary.value = null
+}
+
+function closeImportModal() {
+  showImportModal.value = false
+  importFile.value = null
+  importSummary.value = null
+}
+
+async function handleImportRoutings() {
+  if (!importFile.value) return
+  importing.value = true
+  try {
+    const text = await importFile.value.text()
+    const rows = parseCsv(text)
+    const result = await routingStore.importRoutingsFromCSV(rows, authStore.profile!.id)
+    importSummary.value = result
+    toast.add({
+      title: 'Import terminé',
+      description: `${result.created} créé(s), ${result.updated} mis à jour, ${result.errors.length} erreur(s)`,
+      color: result.errors.length ? 'amber' : 'green',
+    })
+    loadRoutings()
+  } catch (err: any) {
+    toast.add({ title: 'Erreur d\'import', description: err.message, color: 'red' })
+  } finally {
+    importing.value = false
+  }
+}
 
 // ---- Tabs ----
 const tabs = [
@@ -607,10 +770,12 @@ const filters = reactive({
   status: '',
 })
 
+const editingRoutingId = ref<string | null>(null)
 const newRouting = reactive({
   userId: '',
   date: new Date().toISOString().slice(0, 10),
   notes: '',
+  status: 'pending',
   pdvItems: [] as { pdv_id: string; objectifs: RoutingObjectives }[],
 })
 
@@ -653,6 +818,8 @@ const statusOptions = [
   { value: 'cancelled', label: 'Annulé' },
 ]
 
+const editStatusOptions = statusOptions.filter(o => o.value)
+
 const dayNames: Record<number, string> = {
   0: 'Dimanche', 1: 'Lundi', 2: 'Mardi', 3: 'Mercredi',
   4: 'Jeudi', 5: 'Vendredi', 6: 'Samedi',
@@ -692,12 +859,120 @@ const merchandiserOptions = computed(() =>
     .map(u => ({ value: u.id, label: `${u.nom || u.email} (${u.zone_assignee || 'N/A'})` }))
 )
 
-const availablePdvOptions = computed(() => {
+// ---- Préselection PDV par colonnes (canal / région / zone / secteur) ----
+const pdvFilter = reactive({ canal: '', region: '', zone: '', secteur: '' })
+
+function filterOpts(values: (string | null | undefined)[]) {
+  return [
+    { value: '', label: 'Tous' },
+    ...[...new Set(values.filter(Boolean) as string[])].sort().map(v => ({ value: v, label: v })),
+  ]
+}
+
+const pdvFilterCanalOptions = computed(() => filterOpts(pdvList.value.map(p => p.canal)))
+const pdvFilterRegionOptions = computed(() =>
+  filterOpts(pdvList.value.filter(p => !pdvFilter.canal || p.canal === pdvFilter.canal).map(p => p.region))
+)
+const pdvFilterZoneOptions = computed(() =>
+  filterOpts(pdvList.value
+    .filter(p => (!pdvFilter.canal || p.canal === pdvFilter.canal) && (!pdvFilter.region || p.region === pdvFilter.region))
+    .map(p => p.zone))
+)
+const pdvFilterSecteurOptions = computed(() =>
+  filterOpts(pdvList.value
+    .filter(p => (!pdvFilter.canal || p.canal === pdvFilter.canal) && (!pdvFilter.region || p.region === pdvFilter.region) && (!pdvFilter.zone || p.zone === pdvFilter.zone))
+    .map(p => p.secteur))
+)
+
+const filteredAvailablePdv = computed(() => {
   const usedIds = new Set(newRouting.pdvItems.map(i => i.pdv_id))
-  return pdvList.value
-    .filter(p => !usedIds.has(p.pdv_id))
-    .map(p => ({ value: p.pdv_id, label: `${p.nom_pdv} (${p.zone || ''})` }))
+  return pdvList.value.filter(p =>
+    !usedIds.has(p.pdv_id) &&
+    (!pdvFilter.canal || p.canal === pdvFilter.canal) &&
+    (!pdvFilter.region || p.region === pdvFilter.region) &&
+    (!pdvFilter.zone || p.zone === pdvFilter.zone) &&
+    (!pdvFilter.secteur || p.secteur === pdvFilter.secteur)
+  )
 })
+
+const filteredAvailablePdvOptions = computed(() =>
+  filteredAvailablePdv.value.map(p => ({
+    value: p.pdv_id,
+    label: `${p.nom_pdv} — ${[p.zone, p.secteur].filter(Boolean).join(' / ') || p.region || ''}`,
+  }))
+)
+
+const hasPdvFilter = computed(() => !!(pdvFilter.canal || pdvFilter.region || pdvFilter.zone || pdvFilter.secteur))
+
+function clearPdvFilter() {
+  pdvFilter.canal = ''
+  pdvFilter.region = ''
+  pdvFilter.zone = ''
+  pdvFilter.secteur = ''
+}
+
+// Reset filtres enfants quand un filtre parent change
+watch(() => pdvFilter.canal, () => { pdvFilter.region = ''; pdvFilter.zone = ''; pdvFilter.secteur = '' })
+watch(() => pdvFilter.region, () => { pdvFilter.zone = ''; pdvFilter.secteur = '' })
+watch(() => pdvFilter.zone, () => { pdvFilter.secteur = '' })
+
+function addFilteredPDV() {
+  const usedIds = new Set(newRouting.pdvItems.map(i => i.pdv_id))
+  for (const p of filteredAvailablePdv.value) {
+    if (!usedIds.has(p.pdv_id)) {
+      newRouting.pdvItems.push({ pdv_id: p.pdv_id, objectifs: { releve_stock: true, photos: true } })
+    }
+  }
+}
+
+// Liste cochable des PDV correspondant aux filtres (inclut les déjà sélectionnés, affichés cochés)
+const filteredPdvForSelection = computed(() =>
+  pdvList.value.filter(p =>
+    (!pdvFilter.canal || p.canal === pdvFilter.canal) &&
+    (!pdvFilter.region || p.region === pdvFilter.region) &&
+    (!pdvFilter.zone || p.zone === pdvFilter.zone) &&
+    (!pdvFilter.secteur || p.secteur === pdvFilter.secteur)
+  )
+)
+
+const selectedPdvIds = computed(() => new Set(newRouting.pdvItems.map(i => i.pdv_id)))
+
+function togglePdvSelection(pdvId: string) {
+  const idx = newRouting.pdvItems.findIndex(i => i.pdv_id === pdvId)
+  if (idx !== -1) {
+    newRouting.pdvItems.splice(idx, 1)
+  } else {
+    newRouting.pdvItems.push({ pdv_id: pdvId, objectifs: { releve_stock: true, photos: true } })
+  }
+}
+
+// ---- Drag & drop natif pour réordonner les PDV sélectionnés ----
+const dragIndex = ref<number | null>(null)
+const dragOverIndex = ref<number | null>(null)
+
+function onDragStart(idx: number) {
+  dragIndex.value = idx
+}
+
+function onDragEnter(idx: number) {
+  dragOverIndex.value = idx
+}
+
+function onDrop(idx: number) {
+  const from = dragIndex.value
+  dragIndex.value = null
+  dragOverIndex.value = null
+  if (from === null || from === idx) return
+  const items = [...newRouting.pdvItems]
+  const [moved] = items.splice(from, 1)
+  items.splice(idx, 0, moved)
+  newRouting.pdvItems = items
+}
+
+function onDragEnd() {
+  dragIndex.value = null
+  dragOverIndex.value = null
+}
 
 const canCreate = computed(() =>
   newRouting.userId && newRouting.date && newRouting.pdvItems.length > 0
@@ -791,6 +1066,11 @@ function toggleObjectif(idx: number, key: string) {
 // ---- Routing actions ----
 function routingActions(routing: Routing) {
   return [[
+    {
+      label: 'Modifier',
+      icon: 'i-heroicons-pencil-square',
+      click: () => openEditRouting(routing),
+    },
     {
       label: 'Dupliquer',
       icon: 'i-heroicons-document-duplicate',
@@ -911,16 +1191,64 @@ async function loadTemplates() {
   await routingStore.fetchTemplates(templateFilterUser.value || undefined)
 }
 
-// ---- Create routing ----
-async function handleCreate() {
+// ---- Create / Edit routing ----
+function resetRoutingForm() {
+  newRouting.userId = ''
+  newRouting.date = new Date().toISOString().slice(0, 10)
+  newRouting.notes = ''
+  newRouting.status = 'pending'
+  newRouting.pdvItems = []
+  selectedPdvToAdd.value = ''
+  clearPdvFilter()
+}
+
+function openCreateRouting() {
+  editingRoutingId.value = null
+  resetRoutingForm()
+  showCreateModal.value = true
+}
+
+function openEditRouting(routing: Routing) {
+  editingRoutingId.value = routing.id
+  newRouting.userId = routing.user_id || routing.user?.id || ''
+  newRouting.date = routing.date_routing
+  newRouting.notes = routing.notes || ''
+  newRouting.status = routing.status
+  newRouting.pdvItems = sortedPDVs(routing).map(rp => ({
+    pdv_id: rp.pdv_id,
+    objectifs: { ...(rp.objectifs || {}) } as RoutingObjectives,
+  }))
+  selectedPdvToAdd.value = ''
+  clearPdvFilter()
+  showCreateModal.value = true
+}
+
+function closeRoutingModal() {
+  showCreateModal.value = false
+  editingRoutingId.value = null
+  resetRoutingForm()
+}
+
+async function handleSaveRouting() {
   creating.value = true
   try {
-    await routingStore.createRouting(newRouting.userId, newRouting.date, newRouting.pdvItems, authStore.profile!.id, newRouting.notes)
-    toast.add({ title: 'Routing créé', description: `${newRouting.pdvItems.length} PDV assignés`, color: 'green' })
-    showCreateModal.value = false
-    newRouting.userId = ''
-    newRouting.pdvItems = []
-    newRouting.notes = ''
+    if (editingRoutingId.value) {
+      await routingStore.updateRouting(
+        editingRoutingId.value,
+        {
+          user_id: newRouting.userId,
+          date_routing: newRouting.date,
+          notes: newRouting.notes || null,
+          status: newRouting.status,
+        },
+        newRouting.pdvItems,
+      )
+      toast.add({ title: 'Routing mis à jour', description: `${newRouting.pdvItems.length} PDV`, color: 'green' })
+    } else {
+      await routingStore.createRouting(newRouting.userId, newRouting.date, newRouting.pdvItems, authStore.profile!.id, newRouting.notes)
+      toast.add({ title: 'Routing créé', description: `${newRouting.pdvItems.length} PDV assignés`, color: 'green' })
+    }
+    closeRoutingModal()
     loadRoutings()
   } catch (err: any) {
     toast.add({ title: 'Erreur', description: err.message, color: 'red' })
@@ -997,7 +1325,7 @@ onMounted(async () => {
   const { fetchUsers: fetchCachedUsers } = useUsersCache()
   const [cachedUsers, pdvResult] = await Promise.all([
     fetchCachedUsers(),
-    supabase.from('pdv').select('pdv_id, nom_pdv, zone, secteur, geolocation_lat, geolocation_lng').eq('is_active', true).order('nom_pdv'),
+    supabase.from('pdv').select('pdv_id, nom_pdv, canal, region, zone, secteur, geolocation_lat, geolocation_lng').eq('is_active', true).order('nom_pdv'),
   ])
   users.value = cachedUsers.filter(u => u.is_active !== false)
   pdvList.value = pdvResult.data || []

@@ -154,6 +154,19 @@ export function useCsvExport() {
   }
 
   /**
+   * Télécharge un modèle CSV pour l'import de routings (1 ligne = 1 PDV).
+   * Plusieurs lignes même email+date = un routing ordonné.
+   */
+  function downloadRoutingTemplate() {
+    const rows = [
+      { email: 'merch1@exemple.com', date: '2026-06-25', pdv_id: 'PDV001', ordre: 1, releve_stock: 'TRUE', encaissement: 'FALSE', photos: 'TRUE', merchandising: 'FALSE', prospection: 'FALSE', notes: 'Tournée matin', statut: 'pending' },
+      { email: 'merch1@exemple.com', date: '2026-06-25', pdv_id: 'PDV002', ordre: 2, releve_stock: 'TRUE', encaissement: 'FALSE', photos: 'TRUE', merchandising: 'TRUE', prospection: 'FALSE', notes: '', statut: 'pending' },
+      { email: 'merch2@exemple.com', date: '2026-06-25', pdv_id: 'PDV010', ordre: 1, releve_stock: 'TRUE', encaissement: 'TRUE', photos: 'TRUE', merchandising: 'FALSE', prospection: 'FALSE', notes: '', statut: 'pending' },
+    ]
+    exportToCsv(rows, 'modele-import-routings.csv')
+  }
+
+  /**
    * Parse CSV file to array of objects
    */
   function parseCsv(text: string): Record<string, string>[] {
@@ -213,6 +226,7 @@ export function useCsvExport() {
     exportVisitesToExcel,
     exportPDVToExcel,
     exportToCsv,
+    downloadRoutingTemplate,
     parseCsv,
   }
 }

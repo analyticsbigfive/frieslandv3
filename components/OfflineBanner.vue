@@ -9,15 +9,17 @@
   >
     <div
       v-if="!isOnline || errorCount > 0"
-      class="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-between gap-3"
+      class="flex items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2 dark:border-amber-900/60 dark:bg-amber-950/40"
+      role="status"
+      aria-live="polite"
     >
       <div class="flex items-center gap-2 min-w-0">
         <UIcon name="i-heroicons-wifi" class="w-4 h-4 text-amber-600 shrink-0" />
-        <span class="text-sm text-amber-800 truncate">
+        <span class="truncate text-sm font-medium text-amber-900 dark:text-amber-100">
           <template v-if="!isOnline">
             Mode hors ligne
             <span v-if="pendingCount > 0" class="font-medium">
-              — {{ pendingCount }} en attente
+              - {{ pendingCount }} en attente
             </span>
           </template>
           <template v-else-if="errorCount > 0">
@@ -28,7 +30,8 @@
 
       <button
         v-if="errorCount > 0"
-        class="shrink-0 text-xs font-medium text-amber-700 bg-amber-200 hover:bg-amber-300 px-2.5 py-1 rounded-md transition-colors"
+        type="button"
+        class="touch-target shrink-0 rounded-lg bg-amber-200 px-3 py-2 text-xs font-semibold text-amber-900 transition-colors hover:bg-amber-300 active:bg-amber-400"
         @click="retryFailed()"
       >
         Réessayer

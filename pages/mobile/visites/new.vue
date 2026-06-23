@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-gray-50 dark:bg-gray-700/50 min-h-full">
+  <div class="mobile-page">
     <FormWizard
       v-model="currentTab"
       :steps="wizardSteps"
@@ -24,6 +24,9 @@
               value-attribute="value"
               size="lg"
             />
+            <p v-if="formError" class="mt-2 text-sm font-medium text-red-600" role="alert">
+              {{ formError }}
+            </p>
             <div v-if="canCreatePDV" class="mt-2 flex justify-end">
               <UButton
                 size="xs"
@@ -61,20 +64,23 @@
             </div>
           </div>
 
-          <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-3 shadow-sm">
-            <h4 class="text-sm font-bold text-gray-800">EVAP Présent? *</h4>
-            <ToggleYesNo v-model="form.produits.evap.present" />
-
-            <template v-if="form.produits.evap.present">
-              <div v-for="prod in evapProducts" :key="prod.key" class="space-y-1">
-                <label class="text-sm font-medium text-gray-600">{{ prod.label }} *</label>
-                <ToggleStatus v-model="form.produits.evap[prod.key]" />
+          <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-1 shadow-sm">
+            <div class="pb-3 mb-1 border-b border-gray-100 dark:border-gray-700">
+              <div class="flex items-center justify-between gap-3">
+                <label class="text-sm font-medium text-gray-600 dark:text-gray-300">Prix respectés ?</label>
+                <div class="w-36 shrink-0"><ToggleYesNo v-model="form.produits.evap.prix_respectes" /></div>
               </div>
-              <div class="space-y-1 pt-2 border-t border-gray-100 dark:border-gray-700">
-                <label class="text-sm font-medium text-gray-600">Prix respectés? *</label>
-                <ToggleYesNo v-model="form.produits.evap.prix_respectes" />
-              </div>
-            </template>
+            </div>
+            <h4 class="text-sm font-bold text-gray-800 mb-1">Quantités par produit</h4>
+            <p class="text-xs text-gray-400 mb-2">Quantité en rayon. 0 = rupture. La présence est déduite des quantités.</p>
+            <SkuQuantityInput
+              v-for="prod in evapProducts"
+              :key="prod.key"
+              :label="prod.label"
+              :seuil="getSeuil('evap', prod.key)"
+              :model-value="form.produits.evap.quantites?.[prod.key]"
+              @update:model-value="setQty('evap', prod.key, $event)"
+            />
           </div>
         </div>
       </template>
@@ -92,20 +98,23 @@
             </div>
           </div>
 
-          <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-3 shadow-sm">
-            <h4 class="text-sm font-bold text-gray-800">IMP Présent? *</h4>
-            <ToggleYesNo v-model="form.produits.imp.present" />
-
-            <template v-if="form.produits.imp.present">
-              <div v-for="prod in impProducts" :key="prod.key" class="space-y-1">
-                <label class="text-sm font-medium text-gray-600">{{ prod.label }} *</label>
-                <ToggleStatus v-model="form.produits.imp[prod.key]" />
+          <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-1 shadow-sm">
+            <div class="pb-3 mb-1 border-b border-gray-100 dark:border-gray-700">
+              <div class="flex items-center justify-between gap-3">
+                <label class="text-sm font-medium text-gray-600 dark:text-gray-300">Prix respectés ?</label>
+                <div class="w-36 shrink-0"><ToggleYesNo v-model="form.produits.imp.prix_respectes" /></div>
               </div>
-              <div class="space-y-1 pt-2 border-t border-gray-100 dark:border-gray-700">
-                <label class="text-sm font-medium text-gray-600">Prix respectés? *</label>
-                <ToggleYesNo v-model="form.produits.imp.prix_respectes" />
-              </div>
-            </template>
+            </div>
+            <h4 class="text-sm font-bold text-gray-800 mb-1">Quantités par produit</h4>
+            <p class="text-xs text-gray-400 mb-2">Quantité en rayon. 0 = rupture. La présence est déduite des quantités.</p>
+            <SkuQuantityInput
+              v-for="prod in impProducts"
+              :key="prod.key"
+              :label="prod.label"
+              :seuil="getSeuil('imp', prod.key)"
+              :model-value="form.produits.imp.quantites?.[prod.key]"
+              @update:model-value="setQty('imp', prod.key, $event)"
+            />
           </div>
         </div>
       </template>
@@ -123,20 +132,23 @@
             </div>
           </div>
 
-          <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-3 shadow-sm">
-            <h4 class="text-sm font-bold text-gray-800">SCM Présent? *</h4>
-            <ToggleYesNo v-model="form.produits.scm.present" />
-
-            <template v-if="form.produits.scm.present">
-              <div v-for="prod in scmProducts" :key="prod.key" class="space-y-1">
-                <label class="text-sm font-medium text-gray-600">{{ prod.label }} *</label>
-                <ToggleStatus v-model="form.produits.scm[prod.key]" />
+          <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-1 shadow-sm">
+            <div class="pb-3 mb-1 border-b border-gray-100 dark:border-gray-700">
+              <div class="flex items-center justify-between gap-3">
+                <label class="text-sm font-medium text-gray-600 dark:text-gray-300">Prix respectés ?</label>
+                <div class="w-36 shrink-0"><ToggleYesNo v-model="form.produits.scm.prix_respectes" /></div>
               </div>
-              <div class="space-y-1 pt-2 border-t border-gray-100 dark:border-gray-700">
-                <label class="text-sm font-medium text-gray-600">Prix respectés? *</label>
-                <ToggleYesNo v-model="form.produits.scm.prix_respectes" />
-              </div>
-            </template>
+            </div>
+            <h4 class="text-sm font-bold text-gray-800 mb-1">Quantités par produit</h4>
+            <p class="text-xs text-gray-400 mb-2">Quantité en rayon. 0 = rupture. La présence est déduite des quantités.</p>
+            <SkuQuantityInput
+              v-for="prod in scmProducts"
+              :key="prod.key"
+              :label="prod.label"
+              :seuil="getSeuil('scm', prod.key)"
+              :model-value="form.produits.scm.quantites?.[prod.key]"
+              @update:model-value="setQty('scm', prod.key, $event)"
+            />
           </div>
         </div>
       </template>
@@ -154,20 +166,23 @@
             </div>
           </div>
 
-          <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-3 shadow-sm">
-            <h4 class="text-sm font-bold text-gray-800">UHT Présent? *</h4>
-            <ToggleYesNo v-model="form.produits.uht.present" />
-
-            <template v-if="form.produits.uht.present">
-              <div v-for="prod in uhtProducts" :key="prod.key" class="space-y-1">
-                <label class="text-sm font-medium text-gray-600">{{ prod.label }} *</label>
-                <ToggleStatus v-model="form.produits.uht[prod.key]" />
+          <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-1 shadow-sm">
+            <div class="pb-3 mb-1 border-b border-gray-100 dark:border-gray-700">
+              <div class="flex items-center justify-between gap-3">
+                <label class="text-sm font-medium text-gray-600 dark:text-gray-300">Prix respectés ?</label>
+                <div class="w-36 shrink-0"><ToggleYesNo v-model="form.produits.uht.prix_respectes" /></div>
               </div>
-              <div class="space-y-1 pt-2 border-t border-gray-100 dark:border-gray-700">
-                <label class="text-sm font-medium text-gray-600">Prix respectés? *</label>
-                <ToggleYesNo v-model="form.produits.uht.prix_respectes" />
-              </div>
-            </template>
+            </div>
+            <h4 class="text-sm font-bold text-gray-800 mb-1">Quantités par produit</h4>
+            <p class="text-xs text-gray-400 mb-2">Quantité en rayon. 0 = rupture. La présence est déduite des quantités.</p>
+            <SkuQuantityInput
+              v-for="prod in uhtProducts"
+              :key="prod.key"
+              :label="prod.label"
+              :seuil="getSeuil('uht', prod.key)"
+              :model-value="form.produits.uht.quantites?.[prod.key]"
+              @update:model-value="setQty('uht', prod.key, $event)"
+            />
           </div>
         </div>
       </template>
@@ -185,20 +200,57 @@
             </div>
           </div>
 
-          <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-3 shadow-sm">
-            <h4 class="text-sm font-bold text-gray-800">YAOURT Présent?</h4>
-            <ToggleYesNo v-model="form.produits.yaourt.present" />
+          <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-1 shadow-sm">
+            <div class="pb-3 mb-1 border-b border-gray-100 dark:border-gray-700">
+              <div class="flex items-center justify-between gap-3">
+                <label class="text-sm font-medium text-gray-600 dark:text-gray-300">Prix respectés ?</label>
+                <div class="w-36 shrink-0"><ToggleYesNo v-model="form.produits.yaourt.prix_respectes" /></div>
+              </div>
+            </div>
+            <h4 class="text-sm font-bold text-gray-800 mb-1">Quantités par produit</h4>
+            <p class="text-xs text-gray-400 mb-2">Quantité en rayon. 0 = rupture. La présence est déduite des quantités.</p>
+            <SkuQuantityInput
+              v-for="prod in yaourtProducts"
+              :key="prod.key"
+              :label="prod.label"
+              :seuil="getSeuil('yaourt', prod.key)"
+              :model-value="form.produits.yaourt.quantites?.[prod.key]"
+              @update:model-value="setQty('yaourt', prod.key, $event)"
+            />
+          </div>
+        </div>
+      </template>
 
-            <template v-if="form.produits.yaourt.present">
-              <div v-for="prod in yaourtProducts" :key="prod.key" class="space-y-1">
-                <label class="text-sm font-medium text-gray-600">{{ prod.label }} *</label>
-                <ToggleStatus v-model="form.produits.yaourt[prod.key]" />
+      <!-- STEP: CEREALES -->
+      <template #cereales>
+        <div class="space-y-4">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center">
+              <span class="text-lg font-bold text-cyan-600">C</span>
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-gray-900 dark:text-gray-100">CÉRÉALES</h3>
+              <p class="text-xs text-gray-400">Quantités et prix céréales</p>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-1 shadow-sm">
+            <div class="pb-3 mb-1 border-b border-gray-100 dark:border-gray-700">
+              <div class="flex items-center justify-between gap-3">
+                <label class="text-sm font-medium text-gray-600 dark:text-gray-300">Prix respectés ?</label>
+                <div class="w-36 shrink-0"><ToggleYesNo v-model="form.produits.cereales.prix_respectes" /></div>
               </div>
-              <div class="space-y-1 pt-2 border-t border-gray-100 dark:border-gray-700">
-                <label class="text-sm font-medium text-gray-600">Prix respectés?</label>
-                <ToggleYesNo v-model="form.produits.yaourt.prix_respectes" />
-              </div>
-            </template>
+            </div>
+            <h4 class="text-sm font-bold text-gray-800 mb-1">Quantités par produit</h4>
+            <p class="text-xs text-gray-400 mb-2">Quantité en rayon. 0 = rupture. La présence est déduite des quantités.</p>
+            <SkuQuantityInput
+              v-for="prod in cerealesProducts"
+              :key="prod.key"
+              :label="prod.label"
+              :seuil="getSeuil('cereales', prod.key)"
+              :model-value="form.produits.cereales.quantites?.[prod.key]"
+              @update:model-value="setQty('cereales', prod.key, $event)"
+            />
           </div>
         </div>
       </template>
@@ -364,7 +416,8 @@
           <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm space-y-4">
             <button
               type="button"
-              class="w-full flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl py-8 hover:border-fc-red hover:bg-red-50 transition-colors"
+              class="flex min-h-[150px] w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 py-8 transition-colors hover:border-fc-red hover:bg-red-50 active:bg-red-100 dark:border-gray-600 dark:hover:bg-red-950/20"
+              aria-label="Prendre une photo ou importer depuis la galerie"
               @click="triggerCamera"
             >
               <UIcon name="i-heroicons-camera" class="w-10 h-10 text-gray-400 mb-2" />
@@ -390,15 +443,16 @@
               >
                 <img
                   :src="img"
-                  class="w-full h-24 object-cover rounded-lg border border-gray-200 dark:border-gray-600"
+                  :alt="`Photo ${idx + 1} du point de vente`"
+                  class="h-24 w-full rounded-lg border border-gray-200 object-cover dark:border-gray-600"
                 />
                 <button
                   type="button"
-                  class="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
-                  style="opacity: 1;"
+                  class="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-full bg-red-600 text-white shadow-md transition-colors hover:bg-red-700"
+                  :aria-label="`Retirer la photo ${idx + 1}`"
                   @click="removePhoto(idx)"
                 >
-                  ✕
+                  <UIcon name="i-heroicons-x-mark" class="h-5 w-5" />
                 </button>
               </div>
             </div>
@@ -418,7 +472,7 @@
       :progress="saveProgress"
       saving-title="Enregistrement de la visite"
       saving-message="Synchronisation des données..."
-      success-title="Visite enregistrée ✓"
+      success-title="Visite enregistrée"
       success-message="Les données ont été sauvegardées avec succès."
       @update:visible="showSaveOverlay = $event"
       @closed="onSaveComplete"
@@ -451,15 +505,31 @@
         </div>
       </div>
     </UModal>
+
+    <UModal v-model="showCancelConfirm">
+      <div class="space-y-4 p-6">
+        <div>
+          <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Annuler la visite ?</h3>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Les informations non enregistrées seront perdues.
+          </p>
+        </div>
+        <div class="flex justify-end gap-3">
+          <UButton variant="ghost" @click="showCancelConfirm = false">Continuer la saisie</UButton>
+          <UButton color="red" @click="confirmCancel">Annuler la visite</UButton>
+        </div>
+      </div>
+    </UModal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { getDefaultVisiteData } from '~/types'
 import type { PDV, VisiteData, VisiteProduits, VisiteConcurrence, VisiteVisibilite, VisiteActions } from '~/types'
+import { getSkus, quantityToLegacyStatus, categoryPresent } from '~/utils/products'
 
-// Helper types: exclude 'present' & 'prix_respectes' so indexed access yields ProductStatus only
-type ProductKey<T> = Exclude<keyof T, 'present' | 'prix_respectes'>
+// Helper types: exclude 'present', 'prix_respectes' & 'quantites' so indexed access yields ProductStatus only
+type ProductKey<T> = Exclude<keyof T, 'present' | 'prix_respectes' | 'quantites'>
 type VisibConcKey = Exclude<keyof VisiteVisibilite['concurrence'], 'presence_visibilite' | 'nom_concurrent_ext' | 'nom_concurrent_int'>
 
 definePageMeta({
@@ -492,6 +562,8 @@ const saving = ref(false)
 const showGeofenceAlert = ref(false)
 const geofenceDistance = ref(0)
 const showCreatePDV = ref(false)
+const showCancelConfirm = ref(false)
+const formError = ref('')
 
 // Save overlay state
 const showSaveOverlay = ref(false)
@@ -506,6 +578,7 @@ const wizardSteps = [
   { key: 'scm', label: 'SCM' },
   { key: 'uht', label: 'UHT' },
   { key: 'yaourt', label: 'Yaourt' },
+  { key: 'cereales', label: 'Céréales' },
   { key: 'concurrence', label: 'Concurrence' },
   { key: 'visibilite', label: 'Visibilité' },
   { key: 'actions', label: 'Actions' },
@@ -597,6 +670,18 @@ const yaourtProducts: { key: ProductKey<VisiteProduits['yaourt']>; label: string
   { key: 'br_yogoo_nature_maxi_318ml', label: 'BR Yogoo nature maxi 318 ml' },
 ]
 
+const cerealesProducts = getSkus('cereales').map(s => ({ key: s.key, label: s.label }))
+
+// Seuils stock bas par SKU (couleur des steppers)
+const { fetchThresholds, getSeuil } = useSkuThresholds()
+
+// Saisie quantité par SKU → écrit dans form.produits[cat].quantites[sku] (réactif)
+function setQty(cat: keyof VisiteProduits, sku: string, value: number) {
+  const catData = form.produits[cat] as any
+  if (!catData.quantites) catData.quantites = {}
+  catData.quantites[sku] = Math.max(0, Math.round(value || 0))
+}
+
 const visibConcurrenceItems: { key: VisibConcKey; label: string }[] = [
   { key: 'nido_exterieur', label: 'Visibilité extérieure NIDO' },
   { key: 'nido_interieur', label: 'Visibilité intérieure NIDO' },
@@ -623,9 +708,12 @@ function onStepChange(_step: number) {
 // --- Photo handling ---
 const cameraInput = ref<HTMLInputElement | null>(null)
 
-const photoThumbnails = computed(() => {
-  return form.images.map(f => URL.createObjectURL(f))
-})
+const photoThumbnails = ref<string[]>([])
+
+function rebuildPhotoThumbnails() {
+  photoThumbnails.value.forEach(url => URL.revokeObjectURL(url))
+  photoThumbnails.value = form.images.map(file => URL.createObjectURL(file))
+}
 
 function triggerCamera() {
   cameraInput.value?.click()
@@ -635,18 +723,23 @@ function onPhotosSelected(e: Event) {
   const input = e.target as HTMLInputElement
   if (input.files) {
     form.images.push(...Array.from(input.files))
+    rebuildPhotoThumbnails()
     input.value = '' // reset for re-select
   }
 }
 
 function removePhoto(idx: number) {
   form.images.splice(idx, 1)
+  rebuildPhotoThumbnails()
 }
 
 function handleCancel() {
-  if (confirm('Annuler la visite en cours ?')) {
-    router.push('/mobile')
-  }
+  showCancelConfirm.value = true
+}
+
+function confirmCancel() {
+  showCancelConfirm.value = false
+  router.push('/mobile')
 }
 
 function handlePDVCreated(pdv: PDV) {
@@ -678,7 +771,10 @@ function animateProgress(targetPercent: number, durationMs: number) {
 }
 
 async function handleSave() {
+  formError.value = ''
+
   if (!form.pdv_id) {
+    formError.value = 'Sélectionnez un PDV avant d’enregistrer la visite.'
     toast.add({ title: 'Sélectionnez un PDV', color: 'red' })
     currentTab.value = 0
     return
@@ -772,6 +868,16 @@ async function submitVisite(
     actions: JSON.parse(JSON.stringify(form.actions)),
   }
 
+  // Dériver présence + statut hérité par SKU depuis les quantités saisies (compat dashboards/export)
+  for (const cat of Object.keys(visiteData.produits) as (keyof VisiteProduits)[]) {
+    const catData: any = (visiteData.produits as any)[cat]
+    const q = catData.quantites || {}
+    for (const sku of getSkus(cat)) {
+      if (sku.key in catData) catData[sku.key] = quantityToLegacyStatus(q[sku.key] || 0)
+    }
+    catData.present = categoryPresent(catData, cat)
+  }
+
   let imageUrls: string[] = []
   if (form.images.length > 0 && isOnline.value) {
     imageUrls = await uploadImages(form.images, `visites/${visiteId}`)
@@ -814,6 +920,7 @@ onMounted(async () => {
   if (!authStore.profile) {
     await authStore.fetchProfile()
   }
+  void fetchThresholds()
   pdvList.value = await pdvStore.fetchScopedPDV(authStore.profile)
 
   // Pre-select PDV from routing context
@@ -843,5 +950,13 @@ onMounted(async () => {
       timeout: 3000,
     })
   }
+})
+
+watch(() => form.pdv_id, () => {
+  if (form.pdv_id) formError.value = ''
+})
+
+onUnmounted(() => {
+  photoThumbnails.value.forEach(url => URL.revokeObjectURL(url))
 })
 </script>

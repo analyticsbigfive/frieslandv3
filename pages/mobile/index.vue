@@ -1,6 +1,6 @@
 <template>
   <div
-    class="bg-gray-50 dark:bg-gray-700/50 min-h-full"
+    class="mobile-page"
     @touchstart.passive="onTouchStart"
     @touchmove.passive="onTouchMove"
     @touchend.passive="onTouchEnd"
@@ -19,7 +19,7 @@
 
     <!-- Mini Dashboard -->
     <div class="px-4 pt-3 pb-2">
-      <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+      <section class="mobile-card p-4" aria-label="Progression des visites du jour">
         <div class="flex items-center justify-between mb-2">
           <div>
             <p class="text-xs text-gray-400 uppercase tracking-wide">Aujourd'hui</p>
@@ -36,8 +36,10 @@
             :style="{ width: `${Math.min(progressPercent, 100)}%` }"
           />
         </div>
-        <p class="text-[11px] text-gray-400 mt-1">{{ progressPercent >= 100 ? '🎉 Objectif atteint !' : `${Math.round(progressPercent)}% de l'objectif` }}</p>
-      </div>
+        <p class="mt-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+          {{ progressPercent >= 100 ? 'Objectif atteint' : `${Math.round(progressPercent)}% de l'objectif` }}
+        </p>
+      </section>
     </div>
 
     <!-- Search & Filter -->
@@ -49,12 +51,15 @@
           icon="i-heroicons-magnifying-glass"
           size="sm"
           class="w-full"
+          aria-label="Rechercher une visite"
         />
       </div>
       <UButton
         variant="ghost"
         icon="i-heroicons-funnel"
         size="sm"
+        :aria-label="showFilters ? 'Masquer les filtres' : 'Afficher les filtres'"
+        :aria-pressed="showFilters"
         @click="showFilters = !showFilters"
       />
       <UButton
@@ -62,19 +67,22 @@
         icon="i-heroicons-arrow-path"
         size="sm"
         :loading="refreshing"
+        aria-label="Actualiser les visites"
         @click="loadVisites"
       />
     </div>
 
     <!-- Offline indicator -->
-    <div v-if="isOfflineData" class="mx-4 mb-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 flex items-center gap-2">
+    <div v-if="isOfflineData" class="mx-4 mb-2 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-900/60 dark:bg-amber-950/40">
       <UIcon name="i-heroicons-signal-slash" class="w-4 h-4 text-amber-500" />
-      <span class="text-xs text-amber-700">Données hors-ligne (cache)</span>
+      <span class="text-xs font-medium text-amber-800 dark:text-amber-100">Données hors ligne issues du cache</span>
     </div>
 
     <!-- Filter panel -->
     <div v-if="showFilters" class="px-4 pb-3 space-y-2">
-      <UInput v-model="dateFilter" type="date" size="sm" placeholder="Date..." />
+      <UFormGroup label="Date de visite">
+        <UInput v-model="dateFilter" type="date" size="sm" aria-label="Filtrer par date de visite" />
+      </UFormGroup>
     </div>
 
     <!-- Visites List -->
@@ -101,10 +109,12 @@
 
       <!-- Real visites -->
       <template v-else>
-        <div
+        <button
           v-for="visite in filteredVisites"
           :key="visite.visite_id"
-          class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 active:bg-gray-50 dark:active:bg-gray-700"
+          type="button"
+          class="mobile-card w-full p-4 text-left transition-all hover:border-red-100 hover:bg-red-50/40 active:scale-[0.99] dark:hover:border-red-900/50 dark:hover:bg-red-950/20"
+          :aria-label="`Ouvrir la visite ${getPDVName(visite)}`"
           @click="viewVisite(visite)"
         >
           <div class="flex items-start justify-between">
@@ -121,7 +131,7 @@
                 v-if="visite.geofence_validated"
                 class="bg-emerald-100 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full"
               >
-                GPS ✓
+                GPS validé
               </span>
               <span
                 v-if="visite.sync_status === 'pending'"
@@ -145,7 +155,7 @@
               {{ cat.toUpperCase() }}
             </span>
           </div>
-        </div>
+        </button>
 
         <!-- Empty state -->
         <div
@@ -155,15 +165,27 @@
           <div class="w-20 h-20 mx-auto mb-4 bg-red-50 rounded-2xl flex items-center justify-center">
             <UIcon name="i-heroicons-clipboard-document-list" class="w-10 h-10 text-fc-red opacity-50" />
           </div>
-          <p class="text-gray-500 dark:text-gray-400 font-medium">Aucune visite</p>
-          <p class="text-gray-400 text-sm mt-1">Appuyez sur + pour créer une visite</p>
+          <p class="font-semibold text-gray-700 dark:text-gray-200">Aucune visite trouvée</p>
+          <p class="mx-auto mt-1 max-w-[260px] text-sm text-gray-500 dark:text-gray-400">
+            Lancez une visite pour alimenter la base terrain.
+          </p>
+          <UButton
+            size="sm"
+            class="mt-4 bg-fc-red"
+            icon="i-heroicons-plus"
+            @click="navigateTo('/mobile/visites/new')"
+          >
+            Nouvelle visite
+          </UButton>
         </div>
       </template>
     </div>
 
     <!-- FAB: New Visit -->
     <button
-      class="fixed bottom-24 right-4 w-14 h-14 bg-fc-red rounded-full shadow-lg flex items-center justify-center text-white z-40 active:scale-95 transition-transform"
+      type="button"
+      class="fixed bottom-24 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-fc-red text-white shadow-lg transition-transform hover:bg-fc-red-600 active:scale-95"
+      aria-label="Créer une nouvelle visite"
       @click="navigateTo('/mobile/visites/new')"
     >
       <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">

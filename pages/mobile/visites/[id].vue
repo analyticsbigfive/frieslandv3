@@ -1,15 +1,7 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <!-- Header -->
-    <div class="bg-fc-red text-white px-4 py-3 flex items-center gap-3">
-      <button @click="router.back()">
-        <UIcon name="i-heroicons-arrow-left" class="w-5 h-5" />
-      </button>
-      <h1 class="font-bold text-lg">Détail Visite</h1>
-    </div>
-
+  <div class="mobile-page">
     <div v-if="loading" class="flex items-center justify-center py-20">
-      <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 text-fc-red animate-spin" />
+      <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 text-fc-red animate-spin" aria-label="Chargement de la visite" />
     </div>
 
     <div v-else-if="!visite" class="px-4 py-20 text-center text-gray-400">
@@ -17,7 +9,7 @@
       <p>Visite introuvable</p>
     </div>
 
-    <div v-else-if="visite" class="px-4 py-4 space-y-4 pb-24">
+    <div v-else-if="visite" class="px-4 py-4 space-y-4">
       <!-- Info card -->
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
         <div class="flex items-center justify-between">
@@ -26,7 +18,7 @@
             class="text-xs font-medium px-2 py-1 rounded-full"
             :class="visite.geofence_validated ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'"
           >
-            {{ visite.geofence_validated ? '✓ GPS validé' : '⚠ GPS non validé' }}
+            {{ visite.geofence_validated ? 'GPS validé' : 'GPS non validé' }}
           </span>
         </div>
         <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">{{ pdvName }}</h2>
@@ -118,6 +110,7 @@
             v-for="(url, idx) in visite.image_urls"
             :key="idx"
             :src="url"
+            :alt="`Photo ${idx + 1} de la visite`"
             class="w-full h-32 object-cover rounded-lg"
           />
         </div>
@@ -129,11 +122,10 @@
 <script setup lang="ts">
 definePageMeta({
   middleware: ['auth'],
-  layout: false,
+  layout: 'mobile',
 })
 
 const route = useRoute()
-const router = useRouter()
 const supabase = useSupabaseClient()
 const authStore = useAuthStore()
 const user = useSupabaseUser()

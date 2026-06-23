@@ -7,7 +7,9 @@
       "Bash(dir:*)",
       "Bash(ls:*)",
       "Bash(grep:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "PowerShell($j = Get-Content D:\\\\frieslandv3\\\\package.json -Raw | ConvertFrom-Json; $j.scripts)",
+      "PowerShell(npx eslint pages/admin/routing/index.vue stores/routing.ts stores/pdv.ts 2>&1)"
     ]
   }
 }

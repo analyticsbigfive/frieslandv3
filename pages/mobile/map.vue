@@ -1,17 +1,18 @@
 <template>
-  <div class="h-[calc(100vh-120px)] relative">
+  <div class="relative h-[calc(100dvh-128px)]">
     <!-- Map -->
     <div id="mobile-map" class="w-full h-full" />
 
     <!-- Controls overlay -->
     <div class="absolute top-3 right-3 z-[1000] flex flex-col gap-2">
       <!-- Radius filter -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-3 space-y-2 min-w-[180px]">
+      <div class="rounded-xl bg-white/95 p-3 shadow-lg backdrop-blur dark:bg-gray-800/95 space-y-2 min-w-[180px]">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-medium text-gray-600">Rayon</span>
+          <label for="radius-filter" class="text-xs font-medium text-gray-600 dark:text-gray-300">Rayon</label>
           <span class="text-xs font-bold text-fc-red">{{ radiusKm }} km</span>
         </div>
         <input
+          id="radius-filter"
           v-model.number="radius"
           type="range"
           min="200"
@@ -23,7 +24,7 @@
       </div>
 
       <!-- Legend -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-3 space-y-1.5">
+      <div class="rounded-xl bg-white/95 p-3 shadow-lg backdrop-blur dark:bg-gray-800/95 space-y-1.5">
         <p class="text-[10px] font-medium text-gray-400 uppercase">Légende</p>
         <div class="flex items-center gap-2">
           <span class="w-3 h-3 rounded-full bg-[#C8102E]" />
@@ -42,7 +43,7 @@
 
     <!-- Stats overlay bottom -->
     <div class="absolute bottom-3 left-3 right-3 z-[1000]">
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-3 flex items-center justify-around">
+      <div class="rounded-xl bg-white/95 p-3 shadow-lg backdrop-blur dark:bg-gray-800/95 flex items-center justify-around">
         <div class="text-center">
           <p class="text-lg font-bold text-fc-red">{{ routingPdvCount }}</p>
           <p class="text-[10px] text-gray-400">Routing</p>
@@ -139,9 +140,9 @@ async function updateMarkers() {
 
     // Popup
     const pos = rp.position_order || '?'
-    const statusLabels: Record<string, string> = { pending: '⏳ En attente', in_progress: '🔄 En cours', completed: '✅ Fait', skipped: '⏭ Passé' }
+    const statusLabels: Record<string, string> = { pending: 'En attente', in_progress: 'En cours', completed: 'Fait', skipped: 'Passé' }
     let popupContent = `<strong>${pdv.nom_pdv}</strong><br>${pdv.zone || ''}`
-    popupContent += `<br><span style="color:#22c55e;font-weight:bold">🗺 Routing #${pos}</span>`
+    popupContent += `<br><span style="color:#15803d;font-weight:bold">Routing #${pos}</span>`
     if (rp.status) popupContent += `<br>${statusLabels[rp.status] || rp.status}`
     popupContent += `<br><small>${Math.round(dist)}m</small>`
 

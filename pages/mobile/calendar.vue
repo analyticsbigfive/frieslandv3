@@ -1,21 +1,21 @@
 <template>
-  <div class="pb-20">
+  <div class="mobile-page">
     <div class="p-4">
       <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Calendrier de visites</h2>
 
       <!-- Month nav -->
-      <div class="flex items-center justify-between bg-white dark:bg-gray-800 rounded-xl p-3 shadow-sm mb-4">
-        <button @click="prevMonth">
+      <div class="mobile-card mb-4 flex items-center justify-between p-3">
+        <button type="button" class="touch-target inline-flex items-center justify-center rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700" aria-label="Mois précédent" @click="prevMonth">
           <UIcon name="i-heroicons-chevron-left" class="w-5 h-5 text-gray-500 dark:text-gray-400" />
         </button>
         <span class="font-bold text-gray-800">{{ monthLabel }}</span>
-        <button @click="nextMonth">
+        <button type="button" class="touch-target inline-flex items-center justify-center rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700" aria-label="Mois suivant" @click="nextMonth">
           <UIcon name="i-heroicons-chevron-right" class="w-5 h-5 text-gray-500 dark:text-gray-400" />
         </button>
       </div>
 
       <!-- Days grid -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+      <div class="mobile-card overflow-hidden">
         <div class="grid grid-cols-7 text-center text-xs font-medium text-gray-400 py-2 border-b">
           <div v-for="d in ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim']" :key="d">{{ d }}</div>
         </div>
@@ -23,7 +23,7 @@
           <div
             v-for="(day, idx) in calendarDays"
             :key="idx"
-            class="py-2 relative"
+            class="relative min-h-11 py-2"
             :class="{
               'text-gray-300': !day.currentMonth,
               'text-gray-900 dark:text-gray-100': day.currentMonth,
@@ -43,13 +43,13 @@
       <!-- Upcoming visits -->
       <div class="mt-6 space-y-3">
         <h3 class="font-bold text-gray-800 text-sm">Visites récentes ce mois</h3>
-        <div v-if="monthVisites.length === 0" class="text-center text-gray-400 text-sm py-4">
-          Aucune visite ce mois
+        <div v-if="monthVisites.length === 0" class="mobile-card py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+          Aucune visite enregistrée ce mois.
         </div>
         <div
           v-for="v in monthVisites.slice(0, 10)"
           :key="v.visite_id"
-          class="bg-white dark:bg-gray-800 rounded-lg p-3 shadow-sm"
+          class="mobile-card p-3"
         >
           <div class="flex items-center justify-between">
             <span class="font-medium text-sm text-gray-900 dark:text-gray-100">{{ v.pdv?.nom_pdv || v.pdv_id }}</span>

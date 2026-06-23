@@ -229,6 +229,188 @@ export const useRoutingStore = defineStore('routing', () => {
     )
   }
 
+  // ---- Admin: update routing (metadata + PDV list diff) ----
+  // Preserves progress (status/geofence/visite_id) on PDV kept in the list.
+  async function updateRouting(
+    routingId: string,
+    updates: { user_id?: string; date_routing?: string; notes?: string | null; status?: string },
+    pdvItems?: { pdv_id: string; objectifs: RoutingObjectives }[]
+  ) {
+    // 1. Update routing metadata
+    const metaUpdate: any = { ...updates, updated_at: new Date().toISOString() }
+    const { error: metaError } = await (supabase
+      .from('routings') as any)
+      .update(metaUpdate)
+      .eq('id', routingId)
+    if (metaError) throw metaError
+
+    // 2. Sync PDV list (only if provided)
+    if (!pdvItems) return
+
+    const { data: existing, error: exErr } = await (supabase
+      .from('routing_pdv') as any)
+      .select('id, pdv_id')
+      .eq('routing_id', routingId)
+    if (exErr) throw exErr
+
+    const existingByPdv = new Map<string, any>((existing || []).map((r: any) => [r.pdv_id, r]))
+    const desiredPdvIds = new Set(pdvItems.map(i => i.pdv_id))
+
+    // Delete PDV removed from the list
+    const toDelete = (existing || []).filter((r: any) => !desiredPdvIds.has(r.pdv_id))
+    if (toDelete.length) {
+      const { error } = await (supabase
+        .from('routing_pdv') as any)
+        .delete()
+        .in('id', toDelete.map((r: any) => r.id))
+      if (error) throw error
+    }
+
+    // Update kept PDV (objectifs + order, progress preserved) / insert new ones
+    for (let idx = 0; idx < pdvItems.length; idx++) {
+      const item = pdvItems[idx]
+      const existingRow = existingByPdv.get(item.pdv_id)
+      if (existingRow) {
+        const { error } = await (supabase
+          .from('routing_pdv') as any)
+          .update({ position_order: idx + 1, objectifs: item.objectifs })
+          .eq('id', existingRow.id)
+        if (error) throw error
+      } else {
+        const { error } = await (supabase
+          .from('routing_pdv') as any)
+          .insert({
+            routing_id: routingId,
+            pdv_id: item.pdv_id,
+            position_order: idx + 1,
+            objectifs: item.objectifs,
+            status: 'pending',
+          })
+        if (error) throw error
+      }
+    }
+  }
+
+  // ---- Admin: bulk import routings from CSV (1 ligne = 1 PDV) ----
+  // Upsert basé sur email + date (contrainte UNIQUE(user_id, date_routing)).
+  async function importRoutingsFromCSV(rows: Record<string, string>[], createdBy: string) {
+    const summary = { created: 0, updated: 0, pdvCount: 0, errors: [] as string[] }
+    if (!rows.length) return summary
+
+    // Résolution email -> user_id
+    const { data: profiles, error: pErr } = await (supabase.from('profiles') as any)
+      .select('id, email')
+    if (pErr) throw pErr
+    const emailToId = new Map<string, string>(
+      (profiles || []).map((p: any) => [String(p.email || '').trim().toLowerCase(), p.id])
+    )
+
+    // PDV valides
+    const { data: pdvs, error: pdvErr } = await (supabase.from('pdv') as any)
+      .select('pdv_id')
+      .eq('is_active', true)
+    if (pdvErr) throw pdvErr
+    const validPdv = new Set((pdvs || []).map((p: any) => p.pdv_id))
+
+    const parseBool = (v?: string) => {
+      const s = (v || '').trim().toLowerCase()
+      return s === 'true' || s === '1' || s === 'oui' || s === 'yes' || s === 'x'
+    }
+
+    // Regroupement par email + date
+    type Grp = { email: string; date: string; notes: string; status: string; items: { pdv_id: string; ordre: number; objectifs: RoutingObjectives }[] }
+    const groups = new Map<string, Grp>()
+
+    rows.forEach((r, i) => {
+      const lineNo = i + 2 // ligne 1 = en-têtes
+      const email = (r.email || '').trim().toLowerCase()
+      const date = (r.date || '').trim()
+      const pdvId = (r.pdv_id || '').trim()
+
+      if (!email || !date || !pdvId) {
+        summary.errors.push(`Ligne ${lineNo}: email, date ou pdv_id manquant`)
+        return
+      }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        summary.errors.push(`Ligne ${lineNo}: date "${date}" invalide (format AAAA-MM-JJ)`)
+        return
+      }
+
+      const key = `${email}__${date}`
+      let g = groups.get(key)
+      if (!g) {
+        g = { email, date, notes: '', status: 'pending', items: [] }
+        groups.set(key, g)
+      }
+      if (r.notes && r.notes.trim() && !g.notes) g.notes = r.notes.trim()
+      if (r.statut && r.statut.trim()) g.status = r.statut.trim().toLowerCase()
+
+      g.items.push({
+        pdv_id: pdvId,
+        ordre: parseInt(r.ordre) || g.items.length + 1,
+        objectifs: {
+          releve_stock: parseBool(r.releve_stock),
+          encaissement: parseBool(r.encaissement),
+          photos: parseBool(r.photos),
+          merchandising: parseBool(r.merchandising),
+          prospection: parseBool(r.prospection),
+        },
+      })
+    })
+
+    // Traitement de chaque groupe (routing)
+    for (const g of groups.values()) {
+      const userId = emailToId.get(g.email)
+      if (!userId) {
+        summary.errors.push(`${g.email} (${g.date}): utilisateur introuvable`)
+        continue
+      }
+
+      const items = g.items
+        .filter((it) => {
+          if (!validPdv.has(it.pdv_id)) {
+            summary.errors.push(`${g.email} (${g.date}): PDV "${it.pdv_id}" introuvable, ignoré`)
+            return false
+          }
+          return true
+        })
+        .sort((a, b) => a.ordre - b.ordre)
+        .map(it => ({ pdv_id: it.pdv_id, objectifs: it.objectifs }))
+
+      if (!items.length) {
+        summary.errors.push(`${g.email} (${g.date}): aucun PDV valide, routing ignoré`)
+        continue
+      }
+
+      const validStatus = ['pending', 'in_progress', 'completed', 'cancelled'].includes(g.status) ? g.status : 'pending'
+
+      // Routing existant ? (UNIQUE user_id + date_routing)
+      const { data: existing } = await (supabase.from('routings') as any)
+        .select('id')
+        .eq('user_id', userId)
+        .eq('date_routing', g.date)
+        .maybeSingle()
+
+      try {
+        if (existing?.id) {
+          await updateRouting(existing.id, { notes: g.notes || null, status: validStatus }, items)
+          summary.updated++
+        } else {
+          const created = await createRouting(userId, g.date, items, createdBy, g.notes || undefined)
+          if (validStatus !== 'pending') {
+            await (supabase.from('routings') as any).update({ status: validStatus }).eq('id', (created as any).id)
+          }
+          summary.created++
+        }
+        summary.pdvCount += items.length
+      } catch (err: any) {
+        summary.errors.push(`${g.email} (${g.date}): ${err.message}`)
+      }
+    }
+
+    return summary
+  }
+
   // ---- Computed helpers ----
   const completedCount = computed(() =>
     routingPDVList.value.filter(rp => rp.status === 'completed').length
@@ -470,8 +652,10 @@ export const useRoutingStore = defineStore('routing', () => {
     syncRoutingStatus,
     fetchRoutings,
     createRouting,
+    updateRouting,
     deleteRouting,
     duplicateRouting,
+    importRoutingsFromCSV,
     // Templates
     templates,
     templateLoading,

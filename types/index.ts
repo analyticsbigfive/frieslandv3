@@ -155,6 +155,9 @@ export interface RoutingTemplate {
 }
 
 // ---- Visite Data (JSONB) ----
+// Quantité saisie par SKU (nouveau format). Clé = clé SKU du catalogue.
+export type SkuQuantites = Record<string, number>
+
 export interface VisiteProduits {
   evap: {
     present: boolean
@@ -165,6 +168,7 @@ export interface VisiteProduits {
     brb_400g: ProductStatus
     pearl_400g: ProductStatus
     prix_respectes: boolean
+    quantites?: SkuQuantites
   }
   imp: {
     present: boolean
@@ -178,6 +182,7 @@ export interface VisiteProduits {
     brd_15g: ProductStatus
     brd_350g: ProductStatus
     prix_respectes: boolean
+    quantites?: SkuQuantites
   }
   scm: {
     present: boolean
@@ -187,6 +192,7 @@ export interface VisiteProduits {
     br_397g: ProductStatus
     pearl_1kg: ProductStatus
     prix_respectes: boolean
+    quantites?: SkuQuantites
   }
   uht: {
     present: boolean
@@ -194,12 +200,14 @@ export interface VisiteProduits {
     elopack_500ml: ProductStatus
     brique_1l: ProductStatus
     prix_respectes: boolean
+    quantites?: SkuQuantites
   }
   cereales: {
     present: boolean
     brcv: ProductStatus
     brcc: ProductStatus
     prix_respectes: boolean
+    quantites?: SkuQuantites
   }
   yaourt: {
     present: boolean
@@ -208,6 +216,7 @@ export interface VisiteProduits {
     br_yogoo_nature_mini_90ml: ProductStatus
     br_yogoo_nature_maxi_318ml: ProductStatus
     prix_respectes: boolean
+    quantites?: SkuQuantites
   }
 }
 
@@ -413,12 +422,12 @@ export interface GeofenceResult {
 export function getDefaultVisiteData(): VisiteData {
   return {
     produits: {
-      evap: { present: false, br_gold: 'En rupture', br_160g: 'En rupture', brb_160g: 'En rupture', br_400g: 'En rupture', brb_400g: 'En rupture', pearl_400g: 'En rupture', prix_respectes: false },
-      imp: { present: false, br_400g: 'En rupture', br_900g: 'En rupture', br_2_5kg: 'En rupture', br_375g: 'En rupture', brb_400g: 'En rupture', br_20g: 'En rupture', brb_25g: 'En rupture', brd_15g: 'En rupture', brd_350g: 'En rupture', prix_respectes: false },
-      scm: { present: false, br_1kg: 'En rupture', brb_1kg: 'En rupture', brb_397g: 'En rupture', br_397g: 'En rupture', pearl_1kg: 'En rupture', prix_respectes: false },
-      uht: { present: false, demi_ecreme: 'En rupture', elopack_500ml: 'En rupture', brique_1l: 'En rupture', prix_respectes: false },
-      cereales: { present: false, brcv: 'En rupture', brcc: 'En rupture', prix_respectes: false },
-      yaourt: { present: false, br_yogoo_fraise_mini_90ml: 'En rupture', br_yogoo_fraise_maxi_318ml: 'En rupture', br_yogoo_nature_mini_90ml: 'En rupture', br_yogoo_nature_maxi_318ml: 'En rupture', prix_respectes: false },
+      evap: { present: false, br_gold: 'En rupture', br_160g: 'En rupture', brb_160g: 'En rupture', br_400g: 'En rupture', brb_400g: 'En rupture', pearl_400g: 'En rupture', prix_respectes: false, quantites: {} },
+      imp: { present: false, br_400g: 'En rupture', br_900g: 'En rupture', br_2_5kg: 'En rupture', br_375g: 'En rupture', brb_400g: 'En rupture', br_20g: 'En rupture', brb_25g: 'En rupture', brd_15g: 'En rupture', brd_350g: 'En rupture', prix_respectes: false, quantites: {} },
+      scm: { present: false, br_1kg: 'En rupture', brb_1kg: 'En rupture', brb_397g: 'En rupture', br_397g: 'En rupture', pearl_1kg: 'En rupture', prix_respectes: false, quantites: {} },
+      uht: { present: false, demi_ecreme: 'En rupture', elopack_500ml: 'En rupture', brique_1l: 'En rupture', prix_respectes: false, quantites: {} },
+      cereales: { present: false, brcv: 'En rupture', brcc: 'En rupture', prix_respectes: false, quantites: {} },
+      yaourt: { present: false, br_yogoo_fraise_mini_90ml: 'En rupture', br_yogoo_fraise_maxi_318ml: 'En rupture', br_yogoo_nature_mini_90ml: 'En rupture', br_yogoo_nature_maxi_318ml: 'En rupture', prix_respectes: false, quantites: {} },
     },
     concurrence: {
       presence_concurrents: false,

@@ -1,5 +1,5 @@
 <template>
-  <div class="pb-20">
+  <div class="mobile-page">
     <!-- Loading -->
     <div v-if="loading" class="flex items-center justify-center py-20">
       <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-fc-red" />
@@ -14,7 +14,7 @@
     <!-- Content -->
     <div v-else class="p-4 space-y-4">
       <!-- Header card -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
+      <div class="mobile-card p-4">
         <div class="flex items-start justify-between">
           <div>
             <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">{{ pdv.nom_pdv }}</h2>
@@ -40,7 +40,7 @@
       <!-- Read mode -->
       <template v-if="!editing">
         <!-- Location info -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
+        <div class="mobile-card p-4 space-y-3">
           <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Localisation</h3>
           <div class="grid grid-cols-2 gap-3">
             <div>
@@ -63,7 +63,7 @@
         </div>
 
         <!-- GPS -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
+        <div class="mobile-card p-4 space-y-3">
           <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Coordonnées GPS</h3>
           <div class="grid grid-cols-2 gap-3">
             <div>
@@ -91,7 +91,7 @@
       <!-- Edit mode -->
       <template v-else>
         <form @submit.prevent="handleSave" class="space-y-4">
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-4">
+          <div class="mobile-card p-4 space-y-4">
             <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Informations</h3>
 
             <UFormGroup label="Nom du PDV" required>
@@ -120,7 +120,7 @@
             </UFormGroup>
           </div>
 
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-4">
+          <div class="mobile-card p-4 space-y-4">
             <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Localisation</h3>
 
             <UFormGroup label="Zone">
@@ -140,7 +140,7 @@
             </UFormGroup>
           </div>
 
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-4">
+          <div class="mobile-card p-4 space-y-4">
             <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Coordonnées GPS</h3>
 
             <UFormGroup label="Latitude">
@@ -180,7 +180,7 @@
       :progress="saveOverlayProgress"
       saving-title="Mise à jour du PDV"
       saving-message="Enregistrement des modifications..."
-      success-title="PDV mis à jour ✓"
+      success-title="PDV mis à jour"
       success-message="Les modifications ont été enregistrées."
       @update:visible="showSaveOverlay = $event"
       @closed="onSaveOverlayClosed"
