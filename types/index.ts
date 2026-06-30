@@ -257,6 +257,10 @@ export interface VisiteConcurrence {
 }
 
 export interface VisiteVisibilite {
+  /** Relevé générique piloté par element_visibilite.code (source BIG FIVE KPI). */
+  standards: Record<string, boolean>
+  /** La promotion ne compte dans le Perfect Store que lorsqu'elle est active au PDV. */
+  promotion_applicable: boolean
   exterieure: {
     presence_visibilite: boolean
     photo_branding?: string
@@ -411,21 +415,27 @@ export type NiveauPerfectStore =
 // Résultat calculé par visite (table resultat_perfect_store). Calcul côté Postgres.
 export interface ResultatPerfectStore {
   visite_id: string
+  base_calcul: 'taux_vente' | 'taux_revu'
   dispo_rayon_evap: number | null
   dispo_rayon_imp: number | null
   dispo_rayon_scm: number | null
   dispo_rayon: number | null
   visibilite: number | null
   promotion: number | null
+  score_global: number | null
   niveau: NiveauPerfectStore | null
   calcule_le: string
 }
 
-// Répartition des niveaux (vue v_perfect_store_global).
+// Agrégat global (vue v_perfect_store_global).
 export interface RepartitionNiveau {
-  niveau: string
-  nb_visites: number
-  dispo_rayon_moyen: number | null
+  visites_scorees: number
+  perfect_stores: number
+  perfect_store_pct: number | null
+  score_global_moyen_pct: number | null
+  osa_moyen_pct: number | null
+  visibilite_moyenne_pct: number | null
+  promotion_moyenne_pct: number | null
 }
 
 // Couverture par merchandiser et période (vue v_couverture).
@@ -433,8 +443,6 @@ export interface CouvertureLigne {
   merchandiser: string
   periode: string
   pdv_vus: number
-  cible: number | null
-  taux: number | null
 }
 
 // ---- Offline Queue ----
@@ -482,6 +490,8 @@ export function getDefaultVisiteData(): VisiteData {
       uht: { present: false, candia: 'En rupture', autre: 'En rupture' },
     },
     visibilite: {
+      standards: {},
+      promotion_applicable: false,
       exterieure: {
         presence_visibilite: false,
         full_branding: false,

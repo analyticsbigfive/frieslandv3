@@ -51,7 +51,15 @@
     </NuxtLink>
 
     <!-- KPI Perfect Store -->
-    <div v-if="psGlobal" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div v-if="psGlobal" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4 mb-6">
+      <StatsCard
+        title="Couverture mois"
+        :value="coverage?.pdv_vus ?? 0"
+        format="number"
+        subtitle="PDV distincts visités"
+        :icon="MapPinned"
+        color="purple"
+      />
       <StatsCard
         title="Perfect Store"
         :value="psGlobal.perfect_store_pct ?? 0"
@@ -83,6 +91,14 @@
         subtitle="PLV requise présente"
         :icon="Eye"
         color="orange"
+      />
+      <StatsCard
+        title="Promotion effective"
+        :value="psGlobal.promotion_moyenne_pct ?? 0"
+        format="percent"
+        subtitle="Visites avec promo active"
+        :icon="BadgePercent"
+        color="red"
       />
     </div>
 
@@ -223,7 +239,7 @@
 </template>
 
 <script setup lang="ts">
-import { ClipboardList, Calendar, MapPin, Users, Trophy, BarChart3, Package, Eye } from 'lucide-vue-next'
+import { ClipboardList, Calendar, MapPin, Users, Trophy, BarChart3, Package, Eye, MapPinned, BadgePercent } from 'lucide-vue-next'
 
 definePageMeta({
   middleware: ['auth', 'admin'],
@@ -232,12 +248,13 @@ definePageMeta({
 
 const visitesStore = useVisitesStore()
 const { exportToCsv } = useCsvExport()
-const { fetchGlobalKpi } = usePerfectStore()
+const { fetchGlobalKpi, fetchCoverage } = usePerfectStore()
 const toast = useToast()
 
 const loadingDashboard = ref(true)
 const stats = computed(() => visitesStore.stats)
 const psGlobal = ref<Awaited<ReturnType<typeof fetchGlobalKpi>> | null>(null)
+const coverage = ref<Awaited<ReturnType<typeof fetchCoverage>> | null>(null)
 
 const productCategories = computed(() => [
   { key: 'evap', label: 'EVAP', value: stats.value?.taux_evap ?? 0 },
@@ -357,6 +374,7 @@ function handlePrint() {
 onMounted(async () => {
   loadingDashboard.value = true
   fetchGlobalKpi().then(g => { psGlobal.value = g }).catch(() => {})
+  fetchCoverage().then(c => { coverage.value = c }).catch(() => {})
   try {
     await visitesStore.fetchStats()
     if (!stats.value?.total_visites && !stats.value?.total_pdv) {

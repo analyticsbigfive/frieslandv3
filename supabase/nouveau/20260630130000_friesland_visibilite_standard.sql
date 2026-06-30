@@ -13,11 +13,30 @@ create table if not exists element_visibilite (
   id        bigint generated always as identity primary key,
   segment   text not null check (segment in
               ('boutique','superette','table_top','pushcart','porridge','kiosque_aboki')),
+  code      text,
   nom       text not null,
   pilier    text not null check (pilier in ('visibilite','promotion')),
+  emplacement text,
   optionnel boolean not null default false,   -- true = ne compte pas dans la note
   unique (segment, nom)
 );
+alter table element_visibilite add column if not exists code text;
+alter table element_visibilite add column if not exists emplacement text;
+
+-- Une première ébauche de standard_visibilite utilisait un schéma incompatible.
+-- On la conserve comme archive si elle existe, puis on installe le modèle Big Five.
+do $$
+begin
+  if to_regclass('public.standard_visibilite') is not null
+     and not exists (
+       select 1 from information_schema.columns
+       where table_schema='public' and table_name='standard_visibilite'
+         and column_name='segment'
+     )
+  then
+    alter table standard_visibilite rename to standard_visibilite_legacy;
+  end if;
+end $$;
 
 -- Standard : quel élément est requis à quel niveau de Perfect Store
 create table if not exists standard_visibilite (
@@ -88,6 +107,79 @@ insert into element_visibilite(segment,nom,pilier,optionnel) values
   ('kiosque_aboki','FULL BRANDING','visibilite',false),
   ('kiosque_aboki','Promotion','promotion',false)
 on conflict (segment,nom) do nothing;
+
+-- Identifiants stables écrits dans visites.data.visibilite.standards + emplacement.
+update element_visibilite e
+set code = v.code, emplacement = v.emplacement
+from (values
+  ('boutique','Affiche','affiche','exterieure'),
+  ('boutique','Flèche','fleche','exterieure'),
+  ('boutique','Guirlande','guirlande','exterieure'),
+  ('boutique','sign board','sign_board','exterieure'),
+  ('boutique','Panneau privilège','panneau_privilege','exterieure'),
+  ('boutique','Full branding','full_branding','exterieure'),
+  ('boutique','Reglette','reglette','interieure'),
+  ('boutique','Maison BR','maison_br','interieure'),
+  ('boutique','Hanger','hanger','interieure'),
+  ('boutique','Wobler','wobler','interieure'),
+  ('boutique','Présentoire','presentoir','interieure'),
+  ('boutique','TG','tg','interieure'),
+  ('boutique','Plaque BR','plaque_br','interieure'),
+  ('boutique','Merchandising','merchandising','interieure'),
+  ('boutique','Standard','standard','promotion'),
+  ('boutique','Hotesses','hotesses','promotion'),
+  ('boutique','Dégustation','degustation','promotion'),
+  ('superette','Affiche','affiche','exterieure'),
+  ('superette','Flèche (Entrée et sortie)','fleche','exterieure'),
+  ('superette','sign board lumineux','sign_board','exterieure'),
+  ('superette','Panneau privilège lumineux','panneau_privilege','exterieure'),
+  ('superette','Reglette','reglette','interieure'),
+  ('superette','Espace BR','espace_br','interieure'),
+  ('superette','Wobler rayon','wobler','interieure'),
+  ('superette','Présentoire','presentoir','interieure'),
+  ('superette','TG','tg','interieure'),
+  ('superette','Plaque BR','plaque_br','interieure'),
+  ('superette','Merchandising','merchandising','interieure'),
+  ('superette','Standard','standard','promotion'),
+  ('superette','Hotesses','hotesses','promotion'),
+  ('superette','Dégustation','degustation','promotion'),
+  ('table_top','PARASOLS','parasol','exterieure'),
+  ('table_top','NAPPE','nappe','interieure'),
+  ('table_top','HANGER','hanger','interieure'),
+  ('table_top','TABLIER','tablier','interieure'),
+  ('table_top','Promotion','promotion','promotion'),
+  ('pushcart','AFFICHE','affiche','exterieure'),
+  ('pushcart','THERMOS','thermos','interieure'),
+  ('pushcart','VERRE JETABLE','verre_jetable','interieure'),
+  ('pushcart','CHASUBLE','chasuble','interieure'),
+  ('pushcart','FULL BRANDING','full_branding','exterieure'),
+  ('pushcart','Promotion','promotion','promotion'),
+  ('porridge','PARASOLS','parasol','exterieure'),
+  ('porridge','NAPPE','nappe','interieure'),
+  ('porridge','HANGER','hanger','interieure'),
+  ('porridge','VERRE JETABLE','verre_jetable','interieure'),
+  ('porridge','TABLIER','tablier','interieure'),
+  ('porridge','STANDARD','standard','promotion'),
+  ('porridge','DEGUSTATION','degustation','promotion'),
+  ('kiosque_aboki','AFFICHE','affiche','exterieure'),
+  ('kiosque_aboki','THERMOS','thermos','interieure'),
+  ('kiosque_aboki','VERRE','verre','interieure'),
+  ('kiosque_aboki','CARAFE','carafe','interieure'),
+  ('kiosque_aboki','MAISON BR','maison_br','interieure'),
+  ('kiosque_aboki','CHASUBLE','chasuble','interieure'),
+  ('kiosque_aboki','FULL BRANDING','full_branding','exterieure'),
+  ('kiosque_aboki','Promotion','promotion','promotion')
+) as v(segment,nom,code,emplacement)
+where e.segment=v.segment and e.nom=v.nom;
+
+alter table element_visibilite alter column code set not null;
+alter table element_visibilite alter column emplacement set not null;
+alter table element_visibilite drop constraint if exists element_visibilite_emplacement_check;
+alter table element_visibilite
+  add constraint element_visibilite_emplacement_check
+  check (emplacement in ('exterieure','interieure','promotion'));
+create unique index if not exists element_visibilite_segment_code_uq
+  on element_visibilite(segment,code);
 
 insert into standard_visibilite(segment,niveau_perfect_store,element_visibilite_id,requis)
 select v.seg, v.niv, e.id, v.requis from (values
@@ -322,4 +414,41 @@ select v.seg, v.niv, e.id, v.requis from (values
 ) as v(seg,niv,nom,requis)
 join element_visibilite e on e.segment=v.seg and e.nom=v.nom
 on conflict do nothing;
+
+-- Résolution type de PDV -> matrice de visibilité.
+create table if not exists segment_visibilite_type_pdv (
+  type_pdv_id bigint primary key references type_pdv(id) on delete cascade,
+  segment text not null check (segment in
+    ('boutique','superette','table_top','pushcart','porridge','kiosque_aboki'))
+);
+
+insert into segment_visibilite_type_pdv(type_pdv_id,segment)
+select tp.id, v.segment from (values
+  ('Boutique A','boutique'),('Boutique B','boutique'),('Boutique C','boutique'),
+  ('Superettes A','superette'),('Superettes B','superette'),('Superettes C','superette'),
+  ('Hypermarket','superette'),('Supermarket A','superette'),('Supermarket B','superette'),('Supermarket C','superette'),
+  ('Table Top','table_top'),('Open Market Table Top','table_top'),
+  ('Pushcard A','pushcart'),('Pushcard B','pushcart'),
+  ('Porridge','porridge'),
+  ('Kiosk A','kiosque_aboki'),('Kiosk B','kiosque_aboki'),
+  ('Aboki A','kiosque_aboki'),('Aboki B','kiosque_aboki'),
+  ('Horeca coffee','kiosque_aboki')
+) as v(nom,segment)
+join type_pdv tp on tp.nom=v.nom
+on conflict (type_pdv_id) do update set segment=excluded.segment;
+
+alter table element_visibilite enable row level security;
+alter table standard_visibilite enable row level security;
+alter table segment_visibilite_type_pdv enable row level security;
+
+drop policy if exists element_visibilite_read on element_visibilite;
+create policy element_visibilite_read on element_visibilite
+  for select to authenticated using (true);
+drop policy if exists standard_visibilite_read on standard_visibilite;
+create policy standard_visibilite_read on standard_visibilite
+  for select to authenticated using (true);
+drop policy if exists segment_visibilite_type_pdv_read on segment_visibilite_type_pdv;
+create policy segment_visibilite_type_pdv_read on segment_visibilite_type_pdv
+  for select to authenticated using (true);
+
 commit;

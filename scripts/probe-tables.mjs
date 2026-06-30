@@ -24,9 +24,11 @@ const tables = [
   'element_visibilite', 'standard_visibilite', 'reference_produit',
 ]
 
+// ⚠️ NE PAS chaîner { head: true } avec .limit() : avale silencieusement les
+// erreurs PostgREST (faux positifs "existe" constatés en prod le 2026-06-30).
 const exists = [], missing = []
 for (const t of tables) {
-  const { error } = await sb.from(t).select('*', { head: true, count: 'exact' }).limit(1)
+  const { error } = await sb.from(t).select('*').limit(1)
   if (error && /does not exist|find the table|schema cache/i.test(error.message)) missing.push(t)
   else if (error) exists.push(`${t} (?: ${error.message.slice(0, 40)})`)
   else exists.push(t)

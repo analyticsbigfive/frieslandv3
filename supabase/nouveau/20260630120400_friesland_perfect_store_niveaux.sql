@@ -12,31 +12,23 @@ create table if not exists niveau_perfect_store (
   code            text primary key,          -- 'FLAGSHIP STORE' | 'VIP PERFECT STORE' | 'CORE PERFECT STORE' | 'BASIC PERFECT STORE'
   rang            int  not null,             -- plus grand = plus exigeant
   dispo_rayon_min numeric,                   -- disponibilité en rayon minimale (%)
-  visibilite_min  numeric,                   -- % matériel obligatoire posé minimal -- TODO confirmer client
-  promotion_min   numeric                    -- exécution promo minimale (%) -- TODO confirmer client
-);
-
--- Matériel de visibilité attendu par catégorie de PDV et par niveau.
--- Seul le matériel 'obligatoire' compte dans la note de visibilité (l'optionnel est ignoré).
-create table if not exists standard_visibilite (
-  id               bigint generated always as identity primary key,
-  categorie_pdv_id bigint not null references categorie_pdv(id) on delete cascade,
-  niveau_code      text   not null references niveau_perfect_store(code) on delete cascade,
-  emplacement      text   not null check (emplacement in ('interieur','exterieur')),
-  element          text   not null,          -- ex. enseigne lumineuse, habillage complet, accroche-rayon, tête de gondole…
-  obligatoire      boolean not null default true,
-  unique (categorie_pdv_id, niveau_code, emplacement, element)
+  visibilite_min  numeric,                   -- visibilité parfaite = 100 %
+  promotion_min   numeric                    -- exécution promo = 100 % si applicable
 );
 
 -- Seuils de disponibilité en rayon par niveau (valeurs réunion).
 insert into niveau_perfect_store(code, rang, dispo_rayon_min, visibilite_min, promotion_min) values
-  ('FLAGSHIP STORE',       4, 95, null, null),   -- TODO confirmer client : seuils visibilité / promotion
-  ('VIP PERFECT STORE',    3, 85, null, null),   -- TODO confirmer client
-  ('CORE PERFECT STORE',   2, 75, null, null),   -- TODO confirmer client
-  ('BASIC PERFECT STORE',  1, 60, null, null)    -- TODO confirmer client
-on conflict (code) do nothing;
+  ('FLAGSHIP STORE',       4, 95, 100, 100),
+  ('VIP PERFECT STORE',    3, 85, 100, 100),
+  ('CORE PERFECT STORE',   2, 75, 100, 100),
+  ('BASIC PERFECT STORE',  1, 60, 100, 100)
+on conflict (code) do update set
+  rang = excluded.rang,
+  dispo_rayon_min = excluded.dispo_rayon_min,
+  visibilite_min = excluded.visibilite_min,
+  promotion_min = excluded.promotion_min;
 
--- TODO confirmer client : matériel de visibilité obligatoire par catégorie/niveau.
--- Données absentes du fichier source (cf. note l.188 de 20260630120300_*). Table créée vide.
+-- La promotion est optionnelle par visite : promotion_min ne s'applique que
+-- lorsque visites.data.visibilite.promotion_applicable = true.
 
 commit;

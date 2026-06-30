@@ -357,7 +357,7 @@ const areaOptions = computed(() => [
 ])
 const distributorOptions = computed(() => [
   { value: '', label: '—' },
-  ...distributeurs.value.map(d => ({ value: d.name, label: `${d.name} (${d.trade_type})` })),
+  ...distributeurs.value.map(d => ({ value: d.name, label: d.national ? `${d.name} (National)` : d.name })),
 ])
 
 let searchTimeout: any

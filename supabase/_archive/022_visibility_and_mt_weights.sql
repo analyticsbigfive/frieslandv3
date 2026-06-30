@@ -1,3 +1,4 @@
+-- LEGACY (Système A) — remplacé par supabase/nouveau (Système B) le 2026-06-30. Ne plus modifier.
 -- ============================================================
 -- 022_visibility_and_mt_weights.sql
 -- Issu du .xlsx NATIF (openpyxl, vraie structure 2D) :

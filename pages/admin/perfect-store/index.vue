@@ -26,12 +26,13 @@
         </div>
       </div>
 
-      <!-- KPI secondaires -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <!-- KPI Big Five -->
+      <div class="grid grid-cols-2 xl:grid-cols-5 gap-4">
+        <StatsCard title="Couverture du mois" :value="String(coverage?.pdv_vus ?? 0)" format="none" :icon="MapPinned" color="purple" />
         <StatsCard title="Score global moyen" :value="fmtPct(global.score_global_moyen_pct)" format="none" :icon="BarChart3" color="blue" />
         <StatsCard title="OSA pondérée moyenne" :value="fmtPct(global.osa_moyen_pct)" format="none" :icon="Package" color="green" />
         <StatsCard title="Visibilité moyenne" :value="fmtPct(global.visibilite_moyenne_pct)" format="none" :icon="Eye" color="orange" />
-        <StatsCard title="Visites scorées" :value="String(global.visites_scorees)" format="none" :icon="ClipboardCheck" color="purple" />
+        <StatsCard title="Promotion effective" :value="fmtPct(global.promotion_moyenne_pct)" format="none" :icon="BadgePercent" color="red" />
       </div>
 
       <!-- Ventilation par type de PDV -->
@@ -77,13 +78,11 @@
         </div>
       </div>
 
-      <p class="text-xs text-gray-400">
-        Note : filtres (région/zone/période) et bascule taux vente / taux revu — à venir (le trigger SQL score en taux_vente).
-      </p>
+      <p class="text-xs text-gray-400">Couverture = nombre de PDV distincts effectivement visités pendant le mois. La promotion est exclue du score lorsqu’elle n’est pas applicable.</p>
     </template>
 
     <div v-else class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-6 text-sm text-amber-800 dark:text-amber-200">
-      Vues Perfect Store indisponibles. Lance la migration <code>013_016_perfect_store.sql</code> dans Supabase.
+      Vues Perfect Store indisponibles. Lance les migrations <code>supabase/nouveau</code> dans Supabase.
     </div>
 
     <!-- Légende : comprendre le calcul + seuils par tier -->
@@ -141,7 +140,7 @@
                 <td class="px-4 py-2 text-center text-gray-400">{{ t.promo_min == null ? 'off' : fmtRatio(t.promo_min) }}</td>
               </tr>
               <tr v-if="!tiers.length">
-                <td colspan="5" class="px-4 py-6 text-center text-xs text-gray-400">Seuils indisponibles — lance la migration <code>013_016</code>.</td>
+                <td colspan="5" class="px-4 py-6 text-center text-xs text-gray-400">Seuils indisponibles — lance les migrations Big Five.</td>
               </tr>
             </tbody>
           </table>
@@ -156,16 +155,17 @@
 </template>
 
 <script setup lang="ts">
-import { BarChart3, Package, Eye, ClipboardCheck } from 'lucide-vue-next'
-import type { PerfectStoreGlobalKpi, PerfectStoreTypeKpi } from '~/composables/usePerfectStore'
+import { BarChart3, Package, Eye, MapPinned, BadgePercent } from 'lucide-vue-next'
+import type { CoverageKpi, PerfectStoreGlobalKpi, PerfectStoreTypeKpi } from '~/composables/usePerfectStore'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
-const { refs, fetchRefs, fetchGlobalKpi, fetchKpiParType } = usePerfectStore()
+const { refs, fetchRefs, fetchGlobalKpi, fetchKpiParType, fetchCoverage } = usePerfectStore()
 
 const loading = ref(true)
 const global = ref<PerfectStoreGlobalKpi | null>(null)
 const parType = ref<PerfectStoreTypeKpi[]>([])
+const coverage = ref<CoverageKpi | null>(null)
 
 // Seuils de tier (live depuis les référentiels), triés du + exigeant au - exigeant
 const tiers = computed(() => [...(refs.value?.tierConfig || [])].sort((a, b) => b.rang - a.rang))
@@ -180,9 +180,10 @@ function fmtRatio(v: number | null | undefined): string {
 onMounted(async () => {
   fetchRefs()
   try {
-    const [g, t] = await Promise.all([fetchGlobalKpi(), fetchKpiParType()])
+    const [g, t, c] = await Promise.all([fetchGlobalKpi(), fetchKpiParType(), fetchCoverage()])
     global.value = g
     parType.value = t
+    coverage.value = c
   } finally {
     loading.value = false
   }

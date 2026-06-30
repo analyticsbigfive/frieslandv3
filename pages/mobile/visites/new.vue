@@ -361,16 +361,77 @@
 
       <!-- STEP: Visibilité -->
       <template #visibilite>
-        <div class="space-y-6">
-          <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-3 shadow-sm">
-            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100 mb-2">Visibilité intérieure</h3>
-            <div class="space-y-1">
-              <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Présence de visibilité intérieure *</h4>
-              <ToggleYesNo v-model="form.visibilite.interieure.presence_visibilite" />
+        <div class="space-y-4">
+          <div v-if="visibilitySegment" class="rounded-2xl bg-slate-900 p-4 text-white shadow-sm">
+            <p class="text-xs font-medium uppercase tracking-wide text-white/60">Standard applicable</p>
+            <div class="mt-1 flex items-center justify-between gap-3">
+              <div>
+                <h3 class="text-lg font-bold">{{ visibilitySegmentLabel }}</h3>
+                <p class="mt-1 text-xs text-white/70">Relevez chaque élément observé. Les éléments optionnels sont suivis mais ne bloquent pas le KPI.</p>
+              </div>
+              <UIcon name="i-heroicons-eye" class="h-8 w-8 shrink-0 text-white/50" />
             </div>
           </div>
 
-          <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-3 shadow-sm">
+          <template v-if="visibilitySegment">
+            <div
+              v-for="section in visibilitySections"
+              :key="section.key"
+              class="rounded-2xl bg-white p-4 shadow-sm dark:bg-gray-800"
+            >
+              <div class="mb-4 flex items-center gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-fc-red dark:bg-red-950/30">
+                  <UIcon :name="section.icon" class="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 class="text-base font-bold text-gray-900 dark:text-gray-100">{{ section.label }}</h3>
+                  <p class="text-xs text-gray-400">{{ section.items.length }} élément(s) à contrôler</p>
+                </div>
+              </div>
+
+              <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                <div
+                  v-for="item in section.items"
+                  :key="`${item.segment}-${item.code}`"
+                  class="flex min-h-14 items-center justify-between gap-3 py-3"
+                >
+                  <div class="min-w-0">
+                    <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ item.nom }}</p>
+                    <p v-if="item.optionnel" class="mt-0.5 text-xs text-amber-600">Optionnel — suivi uniquement</p>
+                  </div>
+                  <ToggleYesNo v-model="form.visibilite.standards[item.code]" />
+                </div>
+              </div>
+            </div>
+
+            <div class="rounded-2xl bg-white p-4 shadow-sm dark:bg-gray-800">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <h3 class="text-base font-bold text-gray-900 dark:text-gray-100">Promotion en cours</h3>
+                  <p class="mt-1 text-xs text-gray-400">Activez uniquement si ce PDV bénéficie d’une promotion aujourd’hui.</p>
+                </div>
+                <ToggleYesNo v-model="form.visibilite.promotion_applicable" />
+              </div>
+
+              <div v-if="form.visibilite.promotion_applicable" class="mt-4 divide-y divide-gray-100 border-t border-gray-100 dark:divide-gray-700 dark:border-gray-700">
+                <div
+                  v-for="item in promotionElements"
+                  :key="`${item.segment}-${item.code}`"
+                  class="flex min-h-14 items-center justify-between gap-3 py-3"
+                >
+                  <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ item.nom }}</p>
+                  <ToggleYesNo v-model="form.visibilite.standards[item.code]" />
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <div v-else class="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
+            <p class="text-sm font-semibold text-amber-900 dark:text-amber-100">Aucun standard paramétré pour ce type de PDV</p>
+            <p class="mt-1 text-xs text-amber-700 dark:text-amber-300">La visite sera enregistrée, mais aucun niveau Perfect Store ne sera attribué.</p>
+          </div>
+
+          <div class="rounded-2xl bg-white p-4 shadow-sm dark:bg-gray-800">
             <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100 mb-2">Visibilité concurrence</h3>
             <div class="space-y-1">
               <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Présence de visibilité *</label>
@@ -639,7 +700,7 @@ const evapProducts: { key: ProductKey<VisiteProduits['evap']>; label: string }[]
 ]
 
 const impProducts: { key: ProductKey<VisiteProduits['imp']>; label: string }[] = [
-  { key: 'br_400g', label: 'BR 2' },
+  { key: 'br_400g', label: 'BR tin 2500g' },
   { key: 'br_20g', label: 'BR 15g' },
   { key: 'brb_25g', label: 'BRB 16g' },
   { key: 'br_375g', label: 'BR 360g' },
@@ -647,6 +708,7 @@ const impProducts: { key: ProductKey<VisiteProduits['imp']>; label: string }[] =
   { key: 'brb_400g', label: 'BRB 360g' },
   { key: 'br_2_5kg', label: 'BR 900g Tin' },
   { key: 'brd_15g', label: 'BRD 15g' },
+  { key: 'brd_350g', label: 'BR Délice Pouch 350g' },
 ]
 
 const scmProducts: { key: ProductKey<VisiteProduits['scm']>; label: string }[] = [
@@ -700,6 +762,38 @@ const actionItems: { key: keyof VisiteActions; label: string }[] = [
   { key: 'pose_affiches', label: 'Pose d\'affiches' },
   { key: 'pose_materiel_visibilite', label: 'Pose matériel de visibilité' },
 ]
+
+const { fetchElements: fetchVisibilityElements, forPdv, visibilitySegmentForPdv } = useVisibilityStandards()
+const selectedPDV = computed(() => pdvList.value.find(p => p.pdv_id === form.pdv_id) || null)
+const visibilitySegment = computed(() => visibilitySegmentForPdv(selectedPDV.value?.sous_categorie_pdv))
+const visibilitySegmentLabel = computed(() => ({
+  boutique: 'Boutique',
+  superette: 'Superette / commerce moderne',
+  table_top: 'Table Top',
+  pushcart: 'Pushcart',
+  porridge: 'Porridge',
+  kiosque_aboki: 'Kiosque / Aboki',
+}[visibilitySegment.value || ''] || '—'))
+const exteriorVisibilityElements = computed(() => forPdv(selectedPDV.value?.sous_categorie_pdv, 'exterieure'))
+const interiorVisibilityElements = computed(() => forPdv(selectedPDV.value?.sous_categorie_pdv, 'interieure'))
+const promotionElements = computed(() => forPdv(selectedPDV.value?.sous_categorie_pdv, 'promotion'))
+const visibilitySections = computed(() => [
+  { key: 'exterieure', label: 'Visibilité extérieure', icon: 'i-heroicons-building-storefront', items: exteriorVisibilityElements.value },
+  { key: 'interieure', label: 'Visibilité intérieure', icon: 'i-heroicons-view-columns', items: interiorVisibilityElements.value },
+].filter(section => section.items.length > 0))
+
+watch([selectedPDV, () => visibilitySegment.value], () => {
+  const allElements = [
+    ...exteriorVisibilityElements.value,
+    ...interiorVisibilityElements.value,
+    ...promotionElements.value,
+  ]
+  for (const element of allElements) {
+    if (typeof form.visibilite.standards[element.code] !== 'boolean') {
+      form.visibilite.standards[element.code] = false
+    }
+  }
+}, { immediate: true })
 
 function onStepChange(_step: number) {
   // Hook for step-specific validation
@@ -868,6 +962,24 @@ async function submitVisite(
     actions: JSON.parse(JSON.stringify(form.actions)),
   }
 
+  // Les indicateurs historiques restent alimentés pour les dashboards existants.
+  const observed = visiteData.visibilite.standards
+  visiteData.visibilite.exterieure.poster = observed.affiche === true
+  visiteData.visibilite.exterieure.guirlande = observed.guirlande === true
+  visiteData.visibilite.exterieure.sign_board = observed.sign_board === true
+  visiteData.visibilite.exterieure.panneau_privilege = observed.panneau_privilege === true
+  visiteData.visibilite.exterieure.full_branding = observed.full_branding === true
+  visiteData.visibilite.interieure.reglettes = observed.reglette === true
+  visiteData.visibilite.interieure.maison_bonnet_rouge = observed.maison_br === true
+  visiteData.visibilite.interieure.hanger = observed.hanger === true
+  visiteData.visibilite.interieure.presentoirs = observed.presentoir === true
+  visiteData.visibilite.interieure.tete_gondole = observed.tg === true
+  visiteData.visibilite.interieure.merchandising = observed.merchandising === true
+  visiteData.visibilite.exterieure.presence_visibilite = exteriorVisibilityElements.value
+    .some(element => visiteData.visibilite.standards[element.code] === true)
+  visiteData.visibilite.interieure.presence_visibilite = interiorVisibilityElements.value
+    .some(element => visiteData.visibilite.standards[element.code] === true)
+
   // Dériver présence + statut hérité par SKU depuis les quantités saisies (compat dashboards/export)
   for (const cat of Object.keys(visiteData.produits) as (keyof VisiteProduits)[]) {
     const catData: any = (visiteData.produits as any)[cat]
@@ -921,6 +1033,7 @@ onMounted(async () => {
     await authStore.fetchProfile()
   }
   void fetchThresholds()
+  void fetchVisibilityElements()
   pdvList.value = await pdvStore.fetchScopedPDV(authStore.profile)
 
   // Pre-select PDV from routing context

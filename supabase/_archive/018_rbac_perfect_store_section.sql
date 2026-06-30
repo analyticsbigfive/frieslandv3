@@ -1,3 +1,4 @@
+-- LEGACY (Système A) — remplacé par supabase/nouveau (Système B) le 2026-06-30. Ne plus modifier.
 -- ============================================================
 -- 018_rbac_perfect_store_section.sql
 -- Ajoute la section 'perfect-store' au RBAC (role_section_access).

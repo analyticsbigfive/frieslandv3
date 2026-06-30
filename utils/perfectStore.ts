@@ -1,9 +1,14 @@
 // utils/perfectStore.ts
-// Scorer Perfect Store TS PUR — parité exacte avec la fonction SQL
-// public.compute_perfect_store (migration 013_016_perfect_store.sql).
+// Scorer Perfect Store TS PUR — parité avec les fonctions SQL Big Five.
 // Sert à l'aperçu offline dans l'app mobile (cohérent avec useOfflineSync).
 // La logique de référence reste le SQL ; voir FORMULE_ET_TESTS_perfect_store.md.
 import type { VisiteData } from '~/types'
+import {
+  visibilityElementObserved,
+  visibilitySegmentForPdv,
+  type VisibilityElementRef,
+  type VisibilitySegment,
+} from './visibilityStandards'
 
 export type PerfectBasis = 'taux_vente' | 'taux_revu'
 export type TradeType = 'GT' | 'MT'
@@ -61,6 +66,29 @@ export function computeOsa(dispo: Record<string, boolean>, weights: Record<strin
     osaLineaire: keys.length > 0 ? nAvail / keys.length : null,
     osaPondere: wtot > 0 ? wsum / wtot : null,
   }
+}
+
+/**
+ * Disponibilité en rayon pondérée d'une catégorie, en % (0–100).
+ * Miroir TS de la fonction SQL `calculer_dispo_categorie`
+ * (supabase/nouveau/20260630130100_friesland_perfect_store_calcul.sql) :
+ *   round( Σ(poids × dispo) / Σ(poids) × 100 ).
+ * @param poids poids de chaque référence évaluée (somme libre, renormalisée).
+ * @param dispo 1 si la référence est disponible (qté ≥ seuil), 0 sinon — même longueur que `poids`.
+ */
+export function calculerDisponibiliteRayon(poids: number[], dispo: number[]): number {
+  if (poids.length !== dispo.length) {
+    throw new Error('calculerDisponibiliteRayon: poids et dispo de longueurs différentes')
+  }
+  const wtot = poids.reduce((a, w) => a + w, 0)
+  if (wtot === 0) return 0
+  const wsum = poids.reduce((a, w, i) => a + w * (dispo[i] ? 1 : 0), 0)
+  return Math.round((wsum / wtot) * 100)
+}
+
+/** 1 si la quantité relevée atteint le seuil de disponibilité, 0 sinon (miroir SQL). */
+export function estDisponible(quantite: number, seuil: number): number {
+  return quantite >= seuil ? 1 : 0
 }
 
 /** Détermine le trade type comme la fonction SQL (canal ILIKE '%modern%' OR canal='MT'). */
@@ -184,5 +212,180 @@ export function scorePerfectStore(
     dispoCategorie: catDetail,
     isPerfectStore: tierAtteint !== null,
     tierAtteint,
+  }
+}
+
+// ============================================================================
+// SYSTÈME B — scorer aperçu offline, miroir TS de calculer_perfect_store (SQL,
+// supabase/nouveau/20260630130100_friesland_perfect_store_calcul.sql).
+// Modèle B : disponibilité pondérée par catégorie + matrice de visibilité par
+// segment/niveau + promotion optionnelle, via les référentiels normalisés.
+// ============================================================================
+
+export interface PerfectStoreRefsB {
+  /** Pont clé JSONB (categorie_jsonb + sku_key) -> nom de référence. */
+  correspondance: { categorie_jsonb: string; sku_key: string; reference_nom: string }[]
+  /** Poids de chaque référence par canal (GT/MT). */
+  poids: { reference_nom: string; canal: TradeType; base_calcul: PerfectBasis; poids: number }[]
+  /** Quantité minimale par référence × segment × grade. */
+  seuils: { reference_nom: string; segment: string; grade: string; quantite_min: number }[]
+  /** Résolution type de PDV (= pdv.sous_categorie_pdv) -> canal/segment/grade. */
+  segmentGrade: { type_pdv_nom: string; canal: TradeType | null; segment: string; grade: string }[]
+  /** Catalogue et matrice de visibilité/promotion issus du fichier BIG FIVE KPI. */
+  visibilityElements: VisibilityElementRef[]
+  visibilityStandards: {
+    segment: VisibilitySegment
+    niveau_perfect_store: 'flagship' | 'vip' | 'core' | 'basic'
+    element_code: string
+    requis: boolean
+  }[]
+  visibilitySegmentMap: { type_pdv_nom: string; segment: VisibilitySegment }[]
+  /** Niveaux Perfect Store : disponibilité + visibilité parfaite + promotion optionnelle. */
+  niveaux: {
+    code: string
+    rang: number
+    dispo_rayon_min: number | null
+    visibilite_min: number | null
+    promotion_min: number | null
+  }[]
+}
+
+export interface PerfectStoreResultB {
+  /** Dispo en rayon (ratio 0–1) — exposée sous osaPondere/scoreGlobal pour parité d'affichage avec le Système A. */
+  osaPondere: number | null
+  scoreGlobal: number | null
+  assortimentTaux: null
+  visibiliteTaux: number | null
+  promotionTaux: number | null
+  /** Détail par catégorie EVAP/IMP/SCM (dispo en %, ou null si non évaluable). */
+  dispoCategorie: Record<string, number | null>
+  isPerfectStore: boolean
+  tierAtteint: string | null
+}
+
+interface ScorePdvB { sous_categorie_pdv?: string | null; canal?: string | null }
+
+/**
+ * Aperçu Perfect Store (Système B) pour une visite. Réplique exacte de la
+ * fonction SQL calculer_perfect_store : moyenne des catégories EVAP/IMP/SCM
+ * évaluables, gating conjonctif par dispo_rayon_min.
+ */
+export function scoreVisiteB(
+  data: VisiteData,
+  pdv: ScorePdvB,
+  refs: PerfectStoreRefsB,
+  basis: PerfectBasis = 'taux_vente',
+): PerfectStoreResultB {
+  const produits: any = (data as any)?.produits || {}
+  const sg = refs.segmentGrade.find(s => s.type_pdv_nom === (pdv.sous_categorie_pdv || ''))
+  // Canal : segment_grade > canal du pdv (modern/MT) > GT par défaut (cf. SQL).
+  const canal: TradeType = sg?.canal ?? tradeTypeForCanal(pdv.canal)
+  const dispoSegment = sg?.segment
+  const grade = sg?.grade
+
+  const dispoCategorie: Record<string, number | null> = {}
+  for (const cat of ['evap', 'imp', 'scm']) {
+    const poids: number[] = []
+    const dispo: number[] = []
+    for (const c of refs.correspondance.filter(x => x.categorie_jsonb === cat)) {
+      const p = refs.poids.find(x =>
+        x.reference_nom === c.reference_nom
+        && x.canal === canal
+        && x.base_calcul === basis,
+      )
+      const s = dispoSegment && grade
+        ? refs.seuils.find(x => x.reference_nom === c.reference_nom && x.segment === dispoSegment && x.grade === grade)
+        : undefined
+      if (!p || !s) continue   // référence non évaluable pour ce canal/segment/grade
+      const qteRaw = produits?.[cat]?.quantites?.[c.sku_key]
+      const qte = Number.isFinite(Number(qteRaw)) ? Number(qteRaw) : 0
+      poids.push(Number(p.poids))
+      dispo.push(estDisponible(qte, s.quantite_min))
+    }
+    dispoCategorie[cat] = poids.length ? calculerDisponibiliteRayon(poids, dispo) : null
+  }
+
+  const cats = Object.values(dispoCategorie).filter((x): x is number => x !== null)
+  const dispoRayon = cats.length ? Math.round(cats.reduce((a, b) => a + b, 0) / cats.length) : null
+
+  const segment = refs.visibilitySegmentMap
+    .find(item => item.type_pdv_nom === (pdv.sous_categorie_pdv || ''))?.segment
+    ?? visibilitySegmentForPdv(pdv.sous_categorie_pdv)
+  const promotionApplicable = (data as any)?.visibilite?.promotion_applicable === true
+  const tierKey = (code: string) => {
+    const normalized = code.trim().toLowerCase()
+    if (normalized.startsWith('flagship')) return 'flagship'
+    if (normalized.startsWith('vip')) return 'vip'
+    if (normalized.startsWith('core')) return 'core'
+    return 'basic'
+  }
+  const rateFor = (code: string, pillar: 'visibilite' | 'promotion'): number | null => {
+    if (!segment) return null
+    const matrixRows = refs.visibilityStandards
+      .filter(standard =>
+        standard.segment === segment
+        && standard.niveau_perfect_store === tierKey(code)
+      )
+    if (!matrixRows.length) return null
+    const requiredCodes = matrixRows
+      .filter(standard => standard.requis)
+      .map(standard => refs.visibilityElements.find(element =>
+        element.segment === segment
+        && element.code === standard.element_code
+        && element.pilier === pillar
+        && !element.optionnel,
+      ))
+      .filter((element): element is VisibilityElementRef => !!element)
+      .map(element => element.code)
+    if (!requiredCodes.length) return 1
+    const observed = requiredCodes.filter(codeValue => visibilityElementObserved(data, codeValue)).length
+    return observed / requiredCodes.length
+  }
+
+  let niveau: string | null = null
+  let visibiliteTaux: number | null = null
+  let promotionTaux: number | null = null
+  const niveaux = [...refs.niveaux].sort((a, b) => b.rang - a.rang)
+  for (const candidate of niveaux) {
+    const visibility = rateFor(candidate.code, 'visibilite')
+    const promotion = promotionApplicable ? rateFor(candidate.code, 'promotion') : null
+    const availabilityOk = dispoRayon != null
+      && candidate.dispo_rayon_min != null
+      && dispoRayon >= candidate.dispo_rayon_min
+    const visibilityOk = visibility != null
+      && visibility * 100 >= (candidate.visibilite_min ?? 100)
+    const promotionOk = !promotionApplicable
+      || (promotion != null && promotion * 100 >= (candidate.promotion_min ?? 100))
+
+    if (candidate === niveaux.at(-1)) {
+      visibiliteTaux = visibility
+      promotionTaux = promotion
+    }
+    if (availabilityOk && visibilityOk && promotionOk) {
+      niveau = candidate.code
+      visibiliteTaux = visibility
+      promotionTaux = promotion
+      break
+    }
+  }
+
+  const scoreParts = [
+    dispoRayon == null ? null : dispoRayon / 100,
+    visibiliteTaux,
+    promotionApplicable ? promotionTaux : null,
+  ].filter((value): value is number => value != null)
+  const scoreGlobal = scoreParts.length
+    ? scoreParts.reduce((sum, value) => sum + value, 0) / scoreParts.length
+    : null
+
+  return {
+    osaPondere: dispoRayon == null ? null : dispoRayon / 100,
+    scoreGlobal,
+    assortimentTaux: null,
+    visibiliteTaux,
+    promotionTaux,
+    dispoCategorie,
+    isPerfectStore: niveau !== null,
+    tierAtteint: niveau,
   }
 }

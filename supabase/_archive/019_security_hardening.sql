@@ -1,3 +1,4 @@
+-- LEGACY (Système A) — remplacé par supabase/nouveau (Système B) le 2026-06-30. Ne plus modifier.
 -- ============================================================
 -- 019_security_hardening.sql — Durcissement RLS & RPC (audit sécurité)
 -- À exécuter dans le SQL Editor de Supabase. Idempotent, sûr à ré-exécuter.

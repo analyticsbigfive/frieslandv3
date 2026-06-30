@@ -57,11 +57,11 @@ on conflict (categorie_jsonb, sku_key) do nothing;
 --   SCM : clés brb_1kg / br_397g / brb_397g sans référence dans le référentiel.
 
 -- --- Segment + grade par type de PDV (commerce traditionnel) ---
--- Noms repris à l'identique de la migration 2 (attention 'Boutique  B' = double espace).
+-- Noms canoniques (espaces normalisés).
 insert into segment_grade_type_pdv(type_pdv_id, segment, grade)
 select tp.id, v.segment, v.grade from (values
   ('Boutique A',  'Boutique',   'A'),
-  ('Boutique  B', 'Boutique',   'B'),
+  ('Boutique B',  'Boutique',   'B'),
   ('Boutique C',  'Boutique',   'C'),
   ('Superettes A','Minimarket', 'A'),
   ('Superettes B','Minimarket', 'B'),

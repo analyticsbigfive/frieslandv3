@@ -60,6 +60,7 @@
               <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">OSA pond.</th>
               <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Assort.</th>
               <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Visi.</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Promo.</th>
               <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Score</th>
               <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Conformité</th>
             </tr>
@@ -73,6 +74,7 @@
               <td class="px-4 py-3 text-center text-sm">{{ pct(row.ps?.osaPondere) }}</td>
               <td class="px-4 py-3 text-center text-sm">{{ pct(row.ps?.assortimentTaux) }}</td>
               <td class="px-4 py-3 text-center text-sm">{{ pct(row.ps?.visibiliteTaux) }}</td>
+              <td class="px-4 py-3 text-center text-sm">{{ pct(row.ps?.promotionTaux) }}</td>
               <td class="px-4 py-3 text-center">
                 <span class="text-sm font-bold" :class="scoreColor(row.ps?.scoreGlobal)">{{ pct(row.ps?.scoreGlobal) }}</span>
               </td>
@@ -106,7 +108,7 @@
     </div>
 
     <p v-if="!refsReady" class="mt-3 text-xs text-amber-600">
-      Référentiels Perfect Store indisponibles (lance la migration <code>013_016_perfect_store.sql</code>) — scores vides en attendant.
+      Référentiels Perfect Store indisponibles — lance les migrations <code>supabase/nouveau</code>.
     </p>
   </div>
 </template>

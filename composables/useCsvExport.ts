@@ -36,6 +36,8 @@ export function useCsvExport() {
       { header: 'Présence de concurrents', key: 'concurrence', width: 22 },
       { header: 'Présence de visibilité extérieure', key: 'visib_ext', width: 30 },
       { header: 'Présence de visibilité intérieure', key: 'visib_int', width: 30 },
+      { header: 'Promotion applicable', key: 'promo_applicable', width: 22 },
+      { header: 'Éléments visibilité / promotion observés', key: 'visib_standards', width: 55 },
       { header: 'Référencement produits', key: 'act_ref', width: 22 },
       { header: 'Exécution promotions', key: 'act_promo', width: 22 },
       { header: 'Prospection PDV', key: 'act_prosp', width: 20 },
@@ -76,6 +78,11 @@ export function useCsvExport() {
         concurrence: d?.concurrence?.presence_concurrents ? 'TRUE' : 'FALSE',
         visib_ext: d?.visibilite?.exterieure?.presence_visibilite ? 'TRUE' : 'FALSE',
         visib_int: d?.visibilite?.interieure?.presence_visibilite ? 'TRUE' : 'FALSE',
+        promo_applicable: d?.visibilite?.promotion_applicable ? 'TRUE' : 'FALSE',
+        visib_standards: Object.entries(d?.visibilite?.standards || {})
+          .filter(([, observed]) => observed)
+          .map(([code]) => code)
+          .join(', '),
         act_ref: d?.actions?.referencement_produits ? 'TRUE' : 'FALSE',
         act_promo: d?.actions?.execution_activites_promotionnelles ? 'TRUE' : 'FALSE',
         act_prosp: d?.actions?.prospection_pdv ? 'TRUE' : 'FALSE',

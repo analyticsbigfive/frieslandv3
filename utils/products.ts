@@ -35,7 +35,7 @@ export const PRODUCT_CATALOG: ProductCategoryDef[] = [
   {
     // Libellés alignés sur reference_produit.nom (référentiel) — clés JSONB inchangées.
     key: 'imp', label: 'IMP', color: '#10B981', skus: [
-      { key: 'br_400g', label: 'BR 2', seuilBasDefaut: DEFAULT_SEUIL_BAS }, // TODO confirmer client (libellé ambigu, pas de référence)
+      { key: 'br_400g', label: 'BR tin 2500g', seuilBasDefaut: DEFAULT_SEUIL_BAS },
       { key: 'br_20g', label: 'BR 15g', seuilBasDefaut: DEFAULT_SEUIL_BAS },
       { key: 'brb_25g', label: 'BRB 16g', seuilBasDefaut: DEFAULT_SEUIL_BAS }, // TODO confirmer client (pas de référence IMP BRB)
       { key: 'br_375g', label: 'BR Pouch 360g', seuilBasDefaut: DEFAULT_SEUIL_BAS },
@@ -43,6 +43,7 @@ export const PRODUCT_CATALOG: ProductCategoryDef[] = [
       { key: 'brb_400g', label: 'BRB 360g', seuilBasDefaut: DEFAULT_SEUIL_BAS }, // TODO confirmer client (pas de référence IMP BRB)
       { key: 'br_2_5kg', label: 'BR tin 900g', seuilBasDefaut: DEFAULT_SEUIL_BAS },
       { key: 'brd_15g', label: 'BR Délice 15g', seuilBasDefaut: DEFAULT_SEUIL_BAS },
+      { key: 'brd_350g', label: 'BR Délice Pouch 350g', seuilBasDefaut: DEFAULT_SEUIL_BAS },
     ],
   },
   {

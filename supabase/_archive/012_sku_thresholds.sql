@@ -1,3 +1,4 @@
+-- LEGACY (Système A) — remplacé par supabase/nouveau (Système B) le 2026-06-30. Ne plus modifier.
 -- ============================================================
 -- 012_sku_thresholds.sql
 -- Seuils "stock bas" configurables par SKU (pour calcul dispo / OOS / stock bas).

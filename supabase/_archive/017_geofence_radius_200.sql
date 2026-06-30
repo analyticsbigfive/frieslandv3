@@ -1,3 +1,4 @@
+-- LEGACY (Système A) — remplacé par supabase/nouveau (Système B) le 2026-06-30. Ne plus modifier.
 -- ============================================================
 -- 017_geofence_radius_200.sql
 -- Aligne le rayon de géofence sur 200 m (décision meeting : alerte < 200 m).
