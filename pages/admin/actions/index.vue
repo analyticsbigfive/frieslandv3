@@ -18,7 +18,7 @@
       </div>
 
       <!-- Pie charts par action -->
-      <h2 class="text-lg font-bold text-gray-800">Taux de réalisation par action</h2>
+      <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100">Taux de réalisation par action</h2>
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         <ClientOnly>
           <div v-for="action in actionDefs" :key="action.key" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">

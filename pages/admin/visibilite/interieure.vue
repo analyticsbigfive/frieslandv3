@@ -26,7 +26,7 @@
     </div>
 
     <!-- ======================== GENERAL TRADE ======================== -->
-    <h2 class="text-xl font-bold text-gray-800 border-b pb-2">General trade</h2>
+    <h2 class="text-xl font-bold text-gray-800 dark:text-gray-100 border-b pb-2">General trade</h2>
 
     <!-- Présence GT -->
     <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
@@ -60,7 +60,7 @@
     </div>
 
     <!-- ======================== MODERN TRADE ======================== -->
-    <h2 class="text-xl font-bold text-gray-800 border-b pb-2">Modern trade</h2>
+    <h2 class="text-xl font-bold text-gray-800 dark:text-gray-100 border-b pb-2">Modern trade</h2>
 
     <!-- Présence MT -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">

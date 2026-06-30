@@ -28,7 +28,7 @@
 
     <!-- Pie charts row: Présence -->
     <div>
-      <h2 class="text-lg font-bold text-gray-800 mb-4">Présence</h2>
+      <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">Présence</h2>
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <ClientOnly>
           <ChartsPieChart
@@ -46,7 +46,7 @@
 
     <!-- Pie charts row: État -->
     <div>
-      <h2 class="text-lg font-bold text-gray-800 mb-4">État</h2>
+      <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">État</h2>
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <ClientOnly>
           <ChartsPieChart

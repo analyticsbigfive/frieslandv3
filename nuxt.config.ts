@@ -122,7 +122,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      geofenceRadius: 200,
+      geofenceRadius: 200, // TODO confirmer client (valeur réunion : 200 m)
       gpsMinAccuracy: 10,
     },
   },

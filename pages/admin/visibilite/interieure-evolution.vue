@@ -17,7 +17,7 @@
     </div>
 
     <!-- GT Pie charts -->
-    <h2 class="text-lg font-bold text-gray-800">General trade</h2>
+    <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100">General trade</h2>
     <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
       <ClientOnly>
         <ChartsPieChart
@@ -33,7 +33,7 @@
     </div>
 
     <!-- MT Pie charts -->
-    <h2 class="text-lg font-bold text-gray-800">Modern trade</h2>
+    <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100">Modern trade</h2>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
       <ClientOnly>
         <ChartsPieChart

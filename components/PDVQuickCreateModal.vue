@@ -80,7 +80,7 @@
         <div class="rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 p-4 space-y-3">
           <div class="flex items-start justify-between gap-3">
             <div>
-              <p class="text-sm font-medium text-gray-800">Coordonnées GPS</p>
+              <p class="text-sm font-medium text-gray-800 dark:text-gray-100">Coordonnées GPS</p>
               <p v-if="hasCoordinates" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 {{ form.geolocation_lat?.toFixed(6) }}, {{ form.geolocation_lng?.toFixed(6) }}
               </p>

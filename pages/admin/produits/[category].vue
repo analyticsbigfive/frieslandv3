@@ -36,7 +36,7 @@
         </div>
 
         <!-- Pie charts par produit: Présent/Absent -->
-        <h2 class="text-lg font-bold text-gray-800">Disponibilité par SKU</h2>
+        <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100">Disponibilité par SKU</h2>
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           <ClientOnly>
             <div v-for="prod in prods" :key="prod.key" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">

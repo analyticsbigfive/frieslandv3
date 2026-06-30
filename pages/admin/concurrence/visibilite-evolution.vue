@@ -22,7 +22,7 @@
       </div>
 
       <!-- Pie charts: Visibilité extérieure concurrence -->
-      <h2 class="text-lg font-bold text-gray-800">Visibilité extérieure concurrence</h2>
+      <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100">Visibilité extérieure concurrence</h2>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <ClientOnly>
           <div v-for="item in concMarques" :key="item.key + '_ext'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
@@ -39,7 +39,7 @@
       </div>
 
       <!-- Pie charts: Visibilité intérieure concurrence -->
-      <h2 class="text-lg font-bold text-gray-800">Visibilité intérieure concurrence</h2>
+      <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100">Visibilité intérieure concurrence</h2>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <ClientOnly>
           <div v-for="item in concMarques" :key="item.key + '_int'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">

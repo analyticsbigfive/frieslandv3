@@ -8,7 +8,7 @@
         <button type="button" class="touch-target inline-flex items-center justify-center rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700" aria-label="Mois précédent" @click="prevMonth">
           <UIcon name="i-heroicons-chevron-left" class="w-5 h-5 text-gray-500 dark:text-gray-400" />
         </button>
-        <span class="font-bold text-gray-800">{{ monthLabel }}</span>
+        <span class="font-bold text-gray-800 dark:text-gray-100">{{ monthLabel }}</span>
         <button type="button" class="touch-target inline-flex items-center justify-center rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700" aria-label="Mois suivant" @click="nextMonth">
           <UIcon name="i-heroicons-chevron-right" class="w-5 h-5 text-gray-500 dark:text-gray-400" />
         </button>
@@ -42,7 +42,7 @@
 
       <!-- Upcoming visits -->
       <div class="mt-6 space-y-3">
-        <h3 class="font-bold text-gray-800 text-sm">Visites récentes ce mois</h3>
+        <h3 class="font-bold text-gray-800 dark:text-gray-100 text-sm">Visites récentes ce mois</h3>
         <div v-if="monthVisites.length === 0" class="mobile-card py-8 text-center text-sm text-gray-500 dark:text-gray-400">
           Aucune visite enregistrée ce mois.
         </div>

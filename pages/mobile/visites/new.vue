@@ -71,7 +71,7 @@
                 <div class="w-36 shrink-0"><ToggleYesNo v-model="form.produits.evap.prix_respectes" /></div>
               </div>
             </div>
-            <h4 class="text-sm font-bold text-gray-800 mb-1">Quantités par produit</h4>
+            <h4 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">Quantités par produit</h4>
             <p class="text-xs text-gray-400 mb-2">Quantité en rayon. 0 = rupture. La présence est déduite des quantités.</p>
             <SkuQuantityInput
               v-for="prod in evapProducts"
@@ -105,7 +105,7 @@
                 <div class="w-36 shrink-0"><ToggleYesNo v-model="form.produits.imp.prix_respectes" /></div>
               </div>
             </div>
-            <h4 class="text-sm font-bold text-gray-800 mb-1">Quantités par produit</h4>
+            <h4 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">Quantités par produit</h4>
             <p class="text-xs text-gray-400 mb-2">Quantité en rayon. 0 = rupture. La présence est déduite des quantités.</p>
             <SkuQuantityInput
               v-for="prod in impProducts"
@@ -139,7 +139,7 @@
                 <div class="w-36 shrink-0"><ToggleYesNo v-model="form.produits.scm.prix_respectes" /></div>
               </div>
             </div>
-            <h4 class="text-sm font-bold text-gray-800 mb-1">Quantités par produit</h4>
+            <h4 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">Quantités par produit</h4>
             <p class="text-xs text-gray-400 mb-2">Quantité en rayon. 0 = rupture. La présence est déduite des quantités.</p>
             <SkuQuantityInput
               v-for="prod in scmProducts"
@@ -173,7 +173,7 @@
                 <div class="w-36 shrink-0"><ToggleYesNo v-model="form.produits.uht.prix_respectes" /></div>
               </div>
             </div>
-            <h4 class="text-sm font-bold text-gray-800 mb-1">Quantités par produit</h4>
+            <h4 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">Quantités par produit</h4>
             <p class="text-xs text-gray-400 mb-2">Quantité en rayon. 0 = rupture. La présence est déduite des quantités.</p>
             <SkuQuantityInput
               v-for="prod in uhtProducts"
@@ -207,7 +207,7 @@
                 <div class="w-36 shrink-0"><ToggleYesNo v-model="form.produits.yaourt.prix_respectes" /></div>
               </div>
             </div>
-            <h4 class="text-sm font-bold text-gray-800 mb-1">Quantités par produit</h4>
+            <h4 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">Quantités par produit</h4>
             <p class="text-xs text-gray-400 mb-2">Quantité en rayon. 0 = rupture. La présence est déduite des quantités.</p>
             <SkuQuantityInput
               v-for="prod in yaourtProducts"
@@ -241,7 +241,7 @@
                 <div class="w-36 shrink-0"><ToggleYesNo v-model="form.produits.cereales.prix_respectes" /></div>
               </div>
             </div>
-            <h4 class="text-sm font-bold text-gray-800 mb-1">Quantités par produit</h4>
+            <h4 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">Quantités par produit</h4>
             <p class="text-xs text-gray-400 mb-2">Quantité en rayon. 0 = rupture. La présence est déduite des quantités.</p>
             <SkuQuantityInput
               v-for="prod in cerealesProducts"
@@ -259,7 +259,7 @@
       <template #concurrence>
         <div class="space-y-6">
           <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-3 shadow-sm">
-            <h3 class="text-sm font-bold text-gray-800">Présence de concurrents *</h3>
+            <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100">Présence de concurrents *</h3>
             <ToggleYesNo v-model="form.concurrence.presence_concurrents" />
           </div>
 
@@ -363,7 +363,7 @@
       <template #visibilite>
         <div class="space-y-6">
           <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-3 shadow-sm">
-            <h3 class="text-lg font-bold text-gray-800 mb-2">Visibilité intérieure</h3>
+            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100 mb-2">Visibilité intérieure</h3>
             <div class="space-y-1">
               <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Présence de visibilité intérieure *</h4>
               <ToggleYesNo v-model="form.visibilite.interieure.presence_visibilite" />
@@ -371,7 +371,7 @@
           </div>
 
           <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-3 shadow-sm">
-            <h3 class="text-lg font-bold text-gray-800 mb-2">Visibilité concurrence</h3>
+            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100 mb-2">Visibilité concurrence</h3>
             <div class="space-y-1">
               <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Présence de visibilité *</label>
               <ToggleYesNo v-model="form.visibilite.concurrence.presence_visibilite" />
@@ -392,7 +392,7 @@
         <div class="space-y-4">
           <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-4 shadow-sm">
             <div v-for="action in actionItems" :key="action.key" class="space-y-2">
-              <h3 class="text-sm font-bold text-gray-800">{{ action.label }} *</h3>
+              <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100">{{ action.label }} *</h3>
               <ToggleYesNo v-model="form.actions[action.key]" />
             </div>
           </div>

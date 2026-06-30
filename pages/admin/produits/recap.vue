@@ -26,7 +26,7 @@
       </div>
 
       <!-- Pie charts côte à côte -->
-      <h2 class="text-lg font-bold text-gray-800">Présence par famille de produit</h2>
+      <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100">Présence par famille de produit</h2>
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <ClientOnly>
           <div v-for="cat in productCategories" :key="cat.key" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
@@ -43,7 +43,7 @@
       </div>
 
       <!-- Prix respectés par famille -->
-      <h2 class="text-lg font-bold text-gray-800">Prix respectés</h2>
+      <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100">Prix respectés</h2>
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <ClientOnly>
           <div v-for="cat in productCategories" :key="cat.key + '_prix'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">

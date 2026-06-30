@@ -22,7 +22,7 @@
       </div>
 
       <!-- Pie charts par catégorie: Présence/Absence -->
-      <h2 class="text-lg font-bold text-gray-800">Présence concurrence par catégorie</h2>
+      <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100">Présence concurrence par catégorie</h2>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <ClientOnly>
           <div v-for="cat in categories" :key="cat.key" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
@@ -39,7 +39,7 @@
       </div>
 
       <!-- Détail concurrents par catégorie -->
-      <h2 class="text-lg font-bold text-gray-800">Détail par concurrent</h2>
+      <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100">Détail par concurrent</h2>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div v-for="cat in categories" :key="cat.key" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-4">{{ cat.label }}</h3>

@@ -400,6 +400,43 @@ export interface CommercialPerformance {
   taux_completion: number
 }
 
+// ---- Perfect Store ----
+// Niveaux du plus exigeant au moins exigeant. Conservés tels quels (référentiel).
+export type NiveauPerfectStore =
+  | 'FLAGSHIP STORE'
+  | 'VIP PERFECT STORE'
+  | 'CORE PERFECT STORE'
+  | 'BASIC PERFECT STORE'
+
+// Résultat calculé par visite (table resultat_perfect_store). Calcul côté Postgres.
+export interface ResultatPerfectStore {
+  visite_id: string
+  dispo_rayon_evap: number | null
+  dispo_rayon_imp: number | null
+  dispo_rayon_scm: number | null
+  dispo_rayon: number | null
+  visibilite: number | null
+  promotion: number | null
+  niveau: NiveauPerfectStore | null
+  calcule_le: string
+}
+
+// Répartition des niveaux (vue v_perfect_store_global).
+export interface RepartitionNiveau {
+  niveau: string
+  nb_visites: number
+  dispo_rayon_moyen: number | null
+}
+
+// Couverture par merchandiser et période (vue v_couverture).
+export interface CouvertureLigne {
+  merchandiser: string
+  periode: string
+  pdv_vus: number
+  cible: number | null
+  taux: number | null
+}
+
 // ---- Offline Queue ----
 export interface OfflineQueueItem {
   id: string

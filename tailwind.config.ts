@@ -9,6 +9,10 @@ export default <Config>{
     './composables/**/*.{js,ts}',
     './plugins/**/*.{js,ts}',
     './app.vue',
+    // Nuxt UI runtime : ses classes (ps-*, pe-*, start-0, end-0, inset-y-0…)
+    // ne sont générées que si Tailwind scanne ses fichiers. Sans ça, les icônes
+    // des UInput sortent du champ et les paddings de positionnement disparaissent.
+    './node_modules/@nuxt/ui/dist/runtime/**/*.{vue,mjs,js,ts}',
   ],
   theme: {
     extend: {

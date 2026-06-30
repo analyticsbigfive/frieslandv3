@@ -3,7 +3,7 @@ import type { GeofenceResult } from '~/types'
 
 export function useGeofencing() {
   const config = useRuntimeConfig()
-  const maxRadius = config.public.geofenceRadius as number || 200
+  const maxRadius = config.public.geofenceRadius as number || 200 // TODO confirmer client (valeur réunion : 200 m)
   const minAccuracy = config.public.gpsMinAccuracy as number || 10
 
   const isChecking = ref(false)
