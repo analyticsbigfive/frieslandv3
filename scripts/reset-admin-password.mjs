@@ -14,7 +14,12 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 
 const ADMIN_EMAIL = 'admin@friesland.ci'
-const NEW_PASSWORD = 'Test1234!'
+const NEW_PASSWORD = process.env.SEED_DEFAULT_PASSWORD
+
+if (!NEW_PASSWORD) {
+  console.error('❌ SEED_DEFAULT_PASSWORD doit être défini dans l\'environnement')
+  process.exit(1)
+}
 
 async function main() {
   const { data, error } = await supabase.auth.admin.listUsers()
@@ -29,7 +34,7 @@ async function main() {
     console.error('❌ Erreur réinitialisation:', pwError.message)
     process.exit(1)
   }
-  console.log(`✅ Mot de passe réinitialisé pour ${ADMIN_EMAIL}: ${NEW_PASSWORD}`)
+  console.log(`✅ Mot de passe réinitialisé pour ${ADMIN_EMAIL} (défini via SEED_DEFAULT_PASSWORD)`)
 }
 
 main().catch(console.error)

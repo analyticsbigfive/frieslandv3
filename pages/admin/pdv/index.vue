@@ -36,7 +36,7 @@
         <UButton size="sm" variant="outline" @click="showImport = true" icon="i-heroicons-arrow-up-tray">
           Import CSV
         </UButton>
-        <UButton size="sm" @click="showCreate = true" icon="i-heroicons-plus" class="bg-fc-blue">
+        <UButton size="sm" @click="openCreatePDV" icon="i-heroicons-plus" class="bg-fc-blue">
           Nouveau PDV
         </UButton>
       </div>
@@ -172,6 +172,57 @@
             <UFormGroup label="Région">
               <UInput v-model="pdvForm.region" placeholder="Région..." />
             </UFormGroup>
+            <UFormGroup label="Territoire">
+              <USelectMenu
+                v-model="pdvForm.territory_code"
+                :options="territoryOptions"
+                option-attribute="label"
+                value-attribute="value"
+                placeholder="Territoire..."
+                searchable
+                searchable-placeholder="Rechercher..."
+              />
+            </UFormGroup>
+            <UFormGroup label="Area / quartier">
+              <USelectMenu
+                v-model="pdvForm.area_code"
+                :options="areaOptions"
+                option-attribute="label"
+                value-attribute="value"
+                placeholder="Area..."
+                searchable
+                searchable-placeholder="Rechercher..."
+              />
+            </UFormGroup>
+            <UFormGroup label="Distributeur">
+              <USelectMenu
+                v-model="pdvForm.distributor_name"
+                :options="distributorOptions"
+                option-attribute="label"
+                value-attribute="value"
+                placeholder="Distributeur..."
+                searchable
+                searchable-placeholder="Rechercher..."
+              />
+            </UFormGroup>
+            <UFormGroup label="Objectif Perfect Store">
+              <USelectMenu
+                v-model="pdvForm.objectif_perfect_store"
+                :options="['', 'FLAGSHIP', 'VIP', 'CORE', 'BASIC']"
+                placeholder="Objectif..."
+              />
+            </UFormGroup>
+            <div class="col-span-2">
+              <UButton
+                size="xs"
+                variant="soft"
+                icon="i-heroicons-arrow-down-on-square"
+                :disabled="!pdvForm.territory_code"
+                @click="deriveGeo"
+              >
+                Dériver zone / secteur / région depuis le territoire
+              </UButton>
+            </div>
             <UFormGroup label="Adressage">
               <UInput v-model="pdvForm.adressage" placeholder="Adresse..." />
             </UFormGroup>
@@ -198,7 +249,9 @@
       <div class="p-6">
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Import CSV PDV</h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          Importez un fichier CSV avec les colonnes : PDV ID, Nom du PDV, Canal, Catégorie de PDV, etc.
+          Colonnes : PDV ID, Nom du PDV, Canal, Catégorie de PDV, Région, Zone, Secteur, Geolocation, Adressage…
+          <br>Référentiels (optionnel) : <strong>Territoire</strong> (code), <strong>Area</strong> (code), <strong>Distributeur</strong>, <strong>Objectif Perfect Store</strong> (FLAGSHIP/VIP/CORE/BASIC).
+          <br>Astuce : exporte d'abord (bouton Export) pour récupérer le modèle avec les bons en-têtes.
         </p>
 
         <div class="border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-lg p-8 text-center mb-4">
@@ -269,10 +322,43 @@ const pdvForm = ref({
   adressage: '',
   geolocation_lat: null as number | null,
   geolocation_lng: null as number | null,
+  territory_code: '',
+  area_code: '',
+  distributor_name: '',
+  objectif_perfect_store: '',
 })
 
 const zoneOptions = computed(() => ['', ...pdvStore.uniqueZones])
 const regionOptions = computed(() => ['', ...pdvStore.uniqueRegions])
+
+// Référentiels (migration 020) pour rattacher le PDV
+const { distributeurs, territories, areas, subRegions, fetchReferentiels } = useReferentiels()
+
+// #2 Auto-dérivation : remplit zone/secteur/région depuis le territoire/area sélectionnés
+function deriveGeo() {
+  const terr = territories.value.find(t => t.code === pdvForm.value.territory_code)
+  if (terr) {
+    pdvForm.value.zone = terr.name
+    const sr = subRegions.value.find(s => s.code === terr.sub_region_code)
+    if (sr) pdvForm.value.region = sr.name
+  }
+  const area = areas.value.find(a => a.territory_code === pdvForm.value.territory_code && a.area_code === pdvForm.value.area_code)
+  if (area?.area_name) pdvForm.value.secteur = area.area_name
+}
+const territoryOptions = computed(() => [
+  { value: '', label: '—' },
+  ...territories.value.map(t => ({ value: t.code, label: t.name })),
+])
+const areaOptions = computed(() => [
+  { value: '', label: '—' },
+  ...areas.value
+    .filter(a => !pdvForm.value.territory_code || a.territory_code === pdvForm.value.territory_code)
+    .map(a => ({ value: a.area_code, label: a.area_name || a.area_code })),
+])
+const distributorOptions = computed(() => [
+  { value: '', label: '—' },
+  ...distributeurs.value.map(d => ({ value: d.name, label: `${d.name} (${d.trade_type})` })),
+])
 
 let searchTimeout: any
 
@@ -290,10 +376,24 @@ function getPDVActions(pdv: PDV) {
     {
       label: 'Modifier',
       icon: 'i-heroicons-pencil',
-      click: () => {
+      click: async () => {
         editingPDV.value = pdv
         Object.assign(pdvForm.value, pdv)
+        // Reset référentiels (absents de LIST_COLUMNS), puis préremplir via la ligne complète
+        pdvForm.value.territory_code = ''
+        pdvForm.value.area_code = ''
+        pdvForm.value.distributor_name = ''
+        pdvForm.value.objectif_perfect_store = ''
         showCreate.value = true
+        try {
+          const full: any = await pdvStore.fetchPDVById(pdv.pdv_id)
+          if (full) {
+            pdvForm.value.territory_code = full.territory_code || ''
+            pdvForm.value.area_code = full.area_code || ''
+            pdvForm.value.distributor_name = full.distributor_name || ''
+            pdvForm.value.objectif_perfect_store = full.objectif_perfect_store || ''
+          }
+        } catch { /* colonnes absentes avant migration 020 — ignorer */ }
       },
     },
     {
@@ -315,15 +415,43 @@ function getPDVActions(pdv: PDV) {
   ]]
 }
 
+function openCreatePDV() {
+  editingPDV.value = null
+  pdvForm.value = {
+    nom_pdv: '',
+    canal: 'General trade',
+    categorie_pdv: 'Point de vente détail',
+    sous_categorie_pdv: 'Boutique C',
+    zone: '',
+    secteur: '',
+    region: '',
+    adressage: '',
+    geolocation_lat: null,
+    geolocation_lng: null,
+    territory_code: '',
+    area_code: '',
+    distributor_name: '',
+    objectif_perfect_store: '',
+  }
+  showCreate.value = true
+}
+
 async function handleSavePDV() {
   saving.value = true
   try {
+    // Vides -> null (objectif_perfect_store a un CHECK : '' interdit)
+    const payload: any = { ...pdvForm.value }
+    payload.territory_code = payload.territory_code || null
+    payload.area_code = payload.area_code || null
+    payload.distributor_name = payload.distributor_name || null
+    payload.objectif_perfect_store = payload.objectif_perfect_store || null
+
     if (editingPDV.value) {
-      await pdvStore.updatePDV(editingPDV.value.pdv_id, pdvForm.value)
+      await pdvStore.updatePDV(editingPDV.value.pdv_id, payload)
       toast.add({ title: 'PDV mis à jour' })
     }
     else {
-      await pdvStore.createPDV(pdvForm.value)
+      await pdvStore.createPDV(payload)
       toast.add({ title: 'PDV créé' })
     }
     showCreate.value = false
@@ -377,5 +505,6 @@ async function loadPDV() {
 
 onMounted(() => {
   loadPDV()
+  fetchReferentiels()
 })
 </script>

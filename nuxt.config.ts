@@ -122,7 +122,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      geofenceRadius: 300,
+      geofenceRadius: 200,
       gpsMinAccuracy: 10,
     },
   },

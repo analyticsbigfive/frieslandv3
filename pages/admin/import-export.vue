@@ -102,7 +102,7 @@
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const supabase = useSupabaseClient()
-const { exportVisitesToExcel, exportPDVToExcel } = useCsvExport()
+const { exportVisitesToExcel, exportPDVToExcel, parseCsv } = useCsvExport()
 const pdvStore = usePDVStore()
 const toast = useToast()
 
@@ -130,11 +130,12 @@ async function handleImport() {
   try {
     if (importType.value === 'pdv') {
       const text = await selectedFile.value.text()
-      const result = await pdvStore.importPDVFromCSV(text)
+      const records = parseCsv(text)
+      const result = await pdvStore.importPDVFromCSV(records)
       importResult.value = { success: true, message: `${result} PDV importés avec succès` }
     }
     else {
-      importResult.value = { success: true, message: 'Import réalisé avec succès' }
+      importResult.value = { success: false, message: `Import ${importType.value} non encore implémenté` }
     }
   }
   catch (err: any) {

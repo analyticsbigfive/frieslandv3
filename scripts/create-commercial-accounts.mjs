@@ -60,7 +60,12 @@ const merchandiserTreichville = {
   secteurs: ['TREICHVILLE', 'MARCORY TREICHVILLE'],
 }
 
-const DEFAULT_PASSWORD = 'FrieslandCI2025!'
+const DEFAULT_PASSWORD = process.env.SEED_DEFAULT_PASSWORD
+
+if (!DEFAULT_PASSWORD) {
+  console.error('❌ SEED_DEFAULT_PASSWORD doit être défini dans l\'environnement')
+  process.exit(1)
+}
 
 async function createAccount(user) {
   const { email, nom, role, zone, region } = user
@@ -127,7 +132,7 @@ async function main() {
   console.log('🚀 Création des comptes commerciaux FrieslandCampina')
   console.log('=' .repeat(60))
   console.log(`📊 ${commerciaux.length} commerciaux + 1 merchandiser Treichville`)
-  console.log(`🔑 Mot de passe par défaut: ${DEFAULT_PASSWORD}`)
+  console.log('🔑 Mot de passe défini via SEED_DEFAULT_PASSWORD')
   console.log('=' .repeat(60))
 
   let created = 0

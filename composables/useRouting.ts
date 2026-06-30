@@ -24,7 +24,7 @@ export function useRouting() {
     validationError.value = null
 
     try {
-      const radius = routingPdv.pdv.rayon_geofence || 300
+      const radius = routingPdv.pdv.rayon_geofence || 200
       const result = await validateGeofence(
         routingPdv.pdv.geolocation_lat,
         routingPdv.pdv.geolocation_lng,

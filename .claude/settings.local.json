@@ -9,7 +9,8 @@
       "Bash(grep:*)",
       "Bash(npm install:*)",
       "PowerShell($j = Get-Content D:\\\\frieslandv3\\\\package.json -Raw | ConvertFrom-Json; $j.scripts)",
-      "PowerShell(npx eslint pages/admin/routing/index.vue stores/routing.ts stores/pdv.ts 2>&1)"
+      "PowerShell(npx eslint pages/admin/routing/index.vue stores/routing.ts stores/pdv.ts 2>&1)",
+      "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' 'https://iirgolfjwdnnesamzcbd.supabase.co/rest/v1/pdv?select=pdv_id&limit=1' -H 'apikey: sb_publishable_KetU2JMWVnKJlAepynQFqQ_GVh3XiqL' -H 'Authorization: Bearer sb_publishable_KetU2JMWVnKJlAepynQFqQ_GVh3XiqL' --max-time 15)"
     ]
   }
 }

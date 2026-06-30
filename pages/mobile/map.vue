@@ -85,6 +85,42 @@ const radiusKm = computed(() => (radius.value / 1000).toFixed(1))
 const routingPdvCount = ref(0)
 const nearbyPdvCount = ref(0)
 
+function buildPopupEl(opts: { nom?: string; zone?: string; routingPos?: string; status?: string; distance?: number }) {
+  const el = document.createElement('div')
+
+  const name = document.createElement('strong')
+  name.textContent = opts.nom || ''
+  el.appendChild(name)
+
+  if (opts.zone) {
+    el.appendChild(document.createElement('br'))
+    el.appendChild(document.createTextNode(opts.zone))
+  }
+
+  if (opts.routingPos !== undefined) {
+    el.appendChild(document.createElement('br'))
+    const span = document.createElement('span')
+    span.style.color = '#15803d'
+    span.style.fontWeight = 'bold'
+    span.textContent = `Routing #${opts.routingPos}`
+    el.appendChild(span)
+  }
+
+  if (opts.status) {
+    el.appendChild(document.createElement('br'))
+    el.appendChild(document.createTextNode(opts.status))
+  }
+
+  if (opts.distance !== undefined) {
+    el.appendChild(document.createElement('br'))
+    const small = document.createElement('small')
+    small.textContent = `${Math.round(opts.distance)}m`
+    el.appendChild(small)
+  }
+
+  return el
+}
+
 async function updateMarkers() {
   if (!map || !L || !userPosition) return
 
@@ -141,12 +177,13 @@ async function updateMarkers() {
     // Popup
     const pos = rp.position_order || '?'
     const statusLabels: Record<string, string> = { pending: 'En attente', in_progress: 'En cours', completed: 'Fait', skipped: 'Passé' }
-    let popupContent = `<strong>${pdv.nom_pdv}</strong><br>${pdv.zone || ''}`
-    popupContent += `<br><span style="color:#15803d;font-weight:bold">Routing #${pos}</span>`
-    if (rp.status) popupContent += `<br>${statusLabels[rp.status] || rp.status}`
-    popupContent += `<br><small>${Math.round(dist)}m</small>`
-
-    marker.bindPopup(popupContent)
+    marker.bindPopup(buildPopupEl({
+      nom: pdv.nom_pdv,
+      zone: pdv.zone || '',
+      routingPos: String(pos),
+      status: rp.status ? (statusLabels[rp.status] || rp.status) : undefined,
+      distance: dist,
+    }))
     markersLayer.addLayer(marker)
   })
 
@@ -171,7 +208,11 @@ async function updateMarkers() {
       fillOpacity: 0.7,
     })
 
-    marker.bindPopup(`<strong>${pdv.nom_pdv}</strong><br>${pdv.zone || ''}<br><small>${Math.round(dist)}m</small>`)
+    marker.bindPopup(buildPopupEl({
+      nom: pdv.nom_pdv,
+      zone: pdv.zone || '',
+      distance: dist,
+    }))
     markersLayer.addLayer(marker)
   })
 

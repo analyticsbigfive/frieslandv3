@@ -50,6 +50,11 @@ export interface PDV {
   canal_routing?: string
   sales_rep_routing?: string
   mdm?: string
+  // Référentiels (migration 020) + Perfect Store (013_016)
+  territory_code?: string
+  area_code?: string
+  distributor_name?: string
+  objectif_perfect_store?: 'FLAGSHIP' | 'VIP' | 'CORE' | 'BASIC'
   is_active: boolean
   created_at: string
 }
@@ -382,6 +387,9 @@ export interface DashboardStats {
   performance_commerciaux: CommercialPerformance[]
   visites_par_jour: { date: string; count: number }[]
   distribution_pdv: { type: string; count: number }[]
+  // Perfect Store
+  perfect_store_pct?: number | null
+  perfect_store_par_type?: { type_pdv: string; perfect_store_pct: number | null }[]
 }
 
 export interface CommercialPerformance {
