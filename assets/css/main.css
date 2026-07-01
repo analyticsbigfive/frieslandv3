@@ -28,7 +28,7 @@
   }
 
   body {
-    background: #f8fafc;
+    background: #f6f7f9;
     color: #0f172a;
     touch-action: manipulation;
     text-rendering: optimizeLegibility;
@@ -86,10 +86,46 @@
   .mobile-bottom-inset {
     padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
   }
+
+  .admin-surface {
+    @apply rounded-2xl border border-slate-200/80 bg-white shadow-[0_14px_40px_-32px_rgba(15,23,42,0.55)] dark:border-slate-700 dark:bg-slate-800;
+  }
+
+  .admin-metric-tile {
+    @apply rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_12px_32px_-28px_rgba(15,23,42,0.5)] transition duration-300 hover:-translate-y-0.5 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600;
+  }
+
+  .admin-toolbar {
+    @apply rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_12px_32px_-30px_rgba(15,23,42,0.5)] dark:border-slate-700 dark:bg-slate-800;
+  }
+
+  .admin-table thead {
+    @apply bg-slate-50/80 dark:bg-slate-700/50;
+  }
+
+  .admin-table {
+    @apply w-full;
+  }
+
+  .admin-table th {
+    @apply px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400;
+  }
+
+  .admin-table td {
+    @apply px-5 py-3.5 text-sm text-slate-600 dark:text-slate-300;
+  }
+
+  .admin-table tbody {
+    @apply divide-y divide-slate-100 dark:divide-slate-700;
+  }
+
+  .admin-table tbody tr {
+    @apply transition-colors hover:bg-slate-50/70 dark:hover:bg-slate-700/40;
+  }
 }
 
 body {
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Avenir Next', Avenir, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -131,7 +167,7 @@ body {
 
 /* Card hover effects */
 .card-hover {
-  @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5;
+  @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md;
 }
 
 /* Mobile bottom navigation */

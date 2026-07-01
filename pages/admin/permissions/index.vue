@@ -8,9 +8,9 @@
       </p>
     </div>
 
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="admin-surface overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full">
+        <table class="admin-table">
           <thead class="bg-gray-50 dark:bg-gray-700/50">
             <tr>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Section</th>

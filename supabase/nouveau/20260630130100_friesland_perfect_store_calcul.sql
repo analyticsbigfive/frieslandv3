@@ -14,6 +14,9 @@ create table if not exists resultat_perfect_store (
   dispo_rayon_imp  numeric,
   dispo_rayon_scm  numeric,
   dispo_rayon      numeric,
+  assortiment      numeric,
+  sku_presents     integer,
+  heros_presents   boolean,
   visibilite       numeric,
   promotion        numeric,
   score_global     numeric,
@@ -23,6 +26,9 @@ create table if not exists resultat_perfect_store (
 
 alter table resultat_perfect_store add column if not exists base_calcul text not null default 'taux_vente';
 alter table resultat_perfect_store add column if not exists score_global numeric;
+alter table resultat_perfect_store add column if not exists assortiment numeric;
+alter table resultat_perfect_store add column if not exists sku_presents integer;
+alter table resultat_perfect_store add column if not exists heros_presents boolean;
 
 -- Disponibilité pondérée d'une catégorie, en %.
 create or replace function calculer_dispo_categorie(
@@ -139,6 +145,13 @@ declare
   v_imp numeric;
   v_scm numeric;
   v_dispo numeric;
+  v_sku_presents integer;
+  v_min_sku_presents integer;
+  v_heros_obligatoires boolean;
+  v_heros_total integer;
+  v_heros_presents_count integer;
+  v_assortiment numeric;
+  v_heros_ok boolean;
   v_visi numeric;
   v_promo numeric;
   v_score numeric;
@@ -175,6 +188,47 @@ begin
   from (values(v_evap),(v_imp),(v_scm)) as t(x)
   where x is not null;
 
+  -- Assortiment : nombre minimal de SKU présents + Hero SKU obligatoires.
+  -- La présence (quantité > 0) reste distincte de la disponibilité
+  -- (quantité >= seuil_disponibilite), conformément au fichier source.
+  select sa.min_sku_presents, sa.heros_obligatoires
+  into v_min_sku_presents, v_heros_obligatoires
+  from standard_assortiment sa
+  where sa.segment = v_segment
+    and sa.grade = v_grade;
+
+  if v_min_sku_presents is not null then
+    select
+      count(*) filter (
+        where coalesce(
+          (v_data->'produits'->cr.categorie_jsonb->'quantites'->>cr.sku_key)::numeric,
+          0
+        ) > 0
+      ),
+      count(*) filter (where rp.role = 'phare'),
+      count(*) filter (
+        where rp.role = 'phare'
+          and coalesce(
+            (v_data->'produits'->cr.categorie_jsonb->'quantites'->>cr.sku_key)::numeric,
+            0
+          ) > 0
+      )
+    into v_sku_presents, v_heros_total, v_heros_presents_count
+    from correspondance_reference cr
+    join reference_produit rp on rp.id = cr.reference_produit_id;
+
+    v_assortiment := round(
+      least(v_sku_presents::numeric / v_min_sku_presents, 1) * 100,
+      2
+    );
+    v_heros_ok := not v_heros_obligatoires
+      or v_heros_total = v_heros_presents_count;
+  else
+    v_sku_presents := null;
+    v_assortiment := null;
+    v_heros_ok := null;
+  end if;
+
   v_promo_applicable := coalesce(
     (v_data->'visibilite'->>'promotion_applicable')::boolean,
     false
@@ -197,6 +251,10 @@ begin
 
     if v_dispo is not null
        and v_dispo >= coalesce(n.dispo_rayon_min,0)
+       and (
+         v_assortiment is null
+         or (v_assortiment >= 100 and coalesce(v_heros_ok,false))
+       )
        and v_visi is not null
        and v_visi >= coalesce(n.visibilite_min,100)
        and (
@@ -220,10 +278,12 @@ begin
 
   insert into resultat_perfect_store(
     visite_id,base_calcul,dispo_rayon_evap,dispo_rayon_imp,dispo_rayon_scm,
-    dispo_rayon,visibilite,promotion,score_global,niveau,calcule_le
+    dispo_rayon,assortiment,sku_presents,heros_presents,
+    visibilite,promotion,score_global,niveau,calcule_le
   ) values (
     p_visite_id,p_base_calcul,v_evap,v_imp,v_scm,
-    v_dispo,v_visi,v_promo,v_score,v_niveau,now()
+    v_dispo,v_assortiment,v_sku_presents,v_heros_ok,
+    v_visi,v_promo,v_score,v_niveau,now()
   )
   on conflict (visite_id) do update set
     base_calcul=excluded.base_calcul,
@@ -231,6 +291,9 @@ begin
     dispo_rayon_imp=excluded.dispo_rayon_imp,
     dispo_rayon_scm=excluded.dispo_rayon_scm,
     dispo_rayon=excluded.dispo_rayon,
+    assortiment=excluded.assortiment,
+    sku_presents=excluded.sku_presents,
+    heros_presents=excluded.heros_presents,
     visibilite=excluded.visibilite,
     promotion=excluded.promotion,
     score_global=excluded.score_global,
@@ -268,7 +331,8 @@ select
   round(avg(score_global),1) as score_global_moyen_pct,
   round(avg(dispo_rayon),1) as osa_moyen_pct,
   round(avg(visibilite),1) as visibilite_moyenne_pct,
-  round(avg(promotion),1) as promotion_moyenne_pct
+  round(avg(promotion),1) as promotion_moyenne_pct,
+  round(avg(assortiment),1) as assortiment_moyen_pct
 from resultat_perfect_store;
 
 create or replace view v_perfect_store_par_categorie_pdv as

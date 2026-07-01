@@ -1,14 +1,14 @@
 <template>
   <div>
     <!-- Header actions -->
-    <div class="flex items-center justify-between mb-6">
-      <div class="flex items-center gap-3">
+    <div class="admin-toolbar mb-6 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+      <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <UInput
           v-model="searchQuery"
           placeholder="Rechercher un PDV..."
           icon="i-heroicons-magnifying-glass"
           size="sm"
-          class="w-64"
+          class="w-full sm:w-64"
           @input="debouncedSearch"
         />
         <USelectMenu
@@ -29,7 +29,7 @@
         />
       </div>
 
-      <div class="flex gap-2">
+      <div class="flex flex-wrap gap-2">
         <UButton size="sm" variant="outline" @click="handleExport" icon="i-heroicons-arrow-down-tray">
           Export
         </UButton>
@@ -43,10 +43,10 @@
     </div>
 
     <!-- PDV Table -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="admin-surface overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead class="bg-gray-50">
+        <table class="admin-table w-full">
+          <thead>
             <tr>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Nom</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Canal</th>

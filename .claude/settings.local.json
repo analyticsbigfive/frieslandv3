@@ -10,11 +10,18 @@
       "Bash(npm install:*)",
       "PowerShell($j = Get-Content D:\\\\frieslandv3\\\\package.json -Raw | ConvertFrom-Json; $j.scripts)",
       "PowerShell(npx eslint pages/admin/routing/index.vue stores/routing.ts stores/pdv.ts 2>&1)",
-<<<<<<< Updated upstream
-      "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' 'https://iirgolfjwdnnesamzcbd.supabase.co/rest/v1/pdv?select=pdv_id&limit=1' -H 'apikey: sb_publishable_KetU2JMWVnKJlAepynQFqQ_GVh3XiqL' -H 'Authorization: Bearer sb_publishable_KetU2JMWVnKJlAepynQFqQ_GVh3XiqL' --max-time 15)"
-=======
-      "Bash(awk '{print $NF}')"
->>>>>>> Stashed changes
+      "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' 'https://iirgolfjwdnnesamzcbd.supabase.co/rest/v1/pdv?select=pdv_id&limit=1' -H 'apikey: sb_publishable_KetU2JMWVnKJlAepynQFqQ_GVh3XiqL' -H 'Authorization: Bearer sb_publishable_KetU2JMWVnKJlAepynQFqQ_GVh3XiqL' --max-time 15)",
+      "Bash(awk '{print $NF}')",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__list_migrations",
+      "Bash(lsof -iTCP -sTCP:LISTEN -P)",
+      "Bash(curl -s -o /tmp/referentiels.html -w \"HTTP %{http_code}\\\\n\" http://localhost:3000/admin/referentiels)",
+      "Bash(xargs -I{} sh -c 'echo \"=== {} ===\"; grep -n \"row level security\\\\|create table if not exists \\\\\\(distributeur\\\\|territoire\\\\|zone\\\\|type_pdv\\\\|categorie_pdv\\\\|sous_region\\\\\\)\" {}')",
+      "mcp__supabase__execute_sql",
+      "mcp__plugin_supabase_supabase__list_projects",
+      "mcp__plugin_supabase_supabase__list_migrations",
+      "mcp__plugin_supabase_supabase__list_tables",
+      "Bash(python3 -c ' *)"
     ]
   }
 }

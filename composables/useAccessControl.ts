@@ -74,8 +74,11 @@ export function useAccessControl() {
     if (!r) return false
     if (r === 'admin') return true // admin: accès total garanti (anti-lockout)
     const roleMap = access.value[r]
-    // Matrice non configurée (migration 011 pas encore lancée) → comportement hérité (accès)
-    if (!roleMap || Object.keys(roleMap).length === 0) return true
+    // Matrice absente/incomplète : refus par défaut pour éviter un accès implicite.
+    // Le superviseur garde seulement les sections opérationnelles historiques.
+    if (!roleMap || Object.keys(roleMap).length === 0) {
+      return r === 'superviseur' && sectionKey !== 'administration'
+    }
     return !!roleMap[sectionKey]
   }
 

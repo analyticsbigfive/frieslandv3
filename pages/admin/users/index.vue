@@ -1,21 +1,21 @@
 <template>
-  <div>
+  <div class="space-y-6">
     <!-- Header -->
-    <div class="flex items-center justify-between mb-6">
-      <div class="flex items-center gap-3">
+    <div class="admin-toolbar flex-col items-stretch sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
         <UInput
           v-model="searchQuery"
           placeholder="Rechercher..."
           icon="i-heroicons-magnifying-glass"
           size="sm"
-          class="w-64"
+          class="w-full sm:w-64"
         />
         <USelectMenu
           v-model="roleFilter"
           :options="['', 'admin', 'superviseur', 'merchandiser', 'commercial']"
           placeholder="Rôle"
           size="sm"
-          class="w-40"
+          class="w-full sm:w-40"
         />
       </div>
       <UButton v-if="authStore.isAdmin" size="sm" @click="showCreate = true" icon="i-heroicons-plus" class="bg-fc-blue">
@@ -24,9 +24,9 @@
     </div>
 
     <!-- Users Table -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="admin-surface overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full">
+        <table class="admin-table">
           <thead class="bg-gray-50">
             <tr>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Utilisateur</th>

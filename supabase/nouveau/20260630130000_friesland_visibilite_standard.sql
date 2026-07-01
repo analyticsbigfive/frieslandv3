@@ -22,19 +22,45 @@ create table if not exists element_visibilite (
 );
 alter table element_visibilite add column if not exists code text;
 alter table element_visibilite add column if not exists emplacement text;
+-- Une exécution antérieure peut avoir déjà posé ces contraintes. Le seed
+-- renseigne code/emplacement dans l'étape suivante : on les relâche donc
+-- temporairement pour rendre la migration entièrement rejouable.
+alter table element_visibilite alter column code drop not null;
+alter table element_visibilite alter column emplacement drop not null;
 
 -- Une première ébauche de standard_visibilite utilisait un schéma incompatible.
--- On la conserve comme archive si elle existe, puis on installe le modèle Big Five.
+-- La présence de "segment" seule ne suffit pas : certaines versions intermédiaires
+-- n'avaient pas encore niveau_perfect_store, element_visibilite_id ou requis.
+-- On archive toute version incomplète sous un nom unique, sans perdre ses données,
+-- puis on installe le modèle Big Five. Ce bloc reste sûr si la migration est rejouée.
 do $$
+declare
+  v_colonnes_attendues integer;
+  v_archive_name text;
 begin
-  if to_regclass('public.standard_visibilite') is not null
-     and not exists (
-       select 1 from information_schema.columns
-       where table_schema='public' and table_name='standard_visibilite'
-         and column_name='segment'
-     )
-  then
-    alter table standard_visibilite rename to standard_visibilite_legacy;
+  if to_regclass('public.standard_visibilite') is not null then
+    select count(*)
+      into v_colonnes_attendues
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'standard_visibilite'
+      and column_name in (
+        'segment',
+        'niveau_perfect_store',
+        'element_visibilite_id',
+        'requis'
+      );
+
+    if v_colonnes_attendues <> 4 then
+      v_archive_name := 'standard_visibilite_legacy_'
+        || to_char(clock_timestamp(), 'YYYYMMDDHH24MISSMS')
+        || '_'
+        || pg_backend_pid();
+      execute format(
+        'alter table public.standard_visibilite rename to %I',
+        v_archive_name
+      );
+    end if;
   end if;
 end $$;
 
@@ -106,7 +132,9 @@ insert into element_visibilite(segment,nom,pilier,optionnel) values
   ('kiosque_aboki','CHASUBLE','visibilite',false),
   ('kiosque_aboki','FULL BRANDING','visibilite',false),
   ('kiosque_aboki','Promotion','promotion',false)
-on conflict (segment,nom) do nothing;
+on conflict (segment,nom) do update set
+  pilier = excluded.pilier,
+  optionnel = excluded.optionnel;
 
 -- Identifiants stables écrits dans visites.data.visibilite.standards + emplacement.
 update element_visibilite e
@@ -413,7 +441,9 @@ select v.seg, v.niv, e.id, v.requis from (values
   ('kiosque_aboki','basic','Promotion',false)
 ) as v(seg,niv,nom,requis)
 join element_visibilite e on e.segment=v.seg and e.nom=v.nom
-on conflict do nothing;
+on conflict (niveau_perfect_store,element_visibilite_id) do update set
+  segment = excluded.segment,
+  requis = excluded.requis;
 
 -- Résolution type de PDV -> matrice de visibilité.
 create table if not exists segment_visibilite_type_pdv (

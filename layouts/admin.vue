@@ -1,22 +1,37 @@
 <template>
-  <div class="min-h-screen flex bg-gray-50 dark:bg-gray-900 transition-colors">
+  <div class="flex min-h-dvh bg-[#f6f7f9] transition-colors dark:bg-slate-950">
+    <a href="#admin-main-content" class="sr-only z-[60] rounded-lg bg-white px-4 py-2 text-sm font-semibold text-fc-red focus:not-sr-only focus:fixed focus:left-4 focus:top-4">
+      Aller au contenu
+    </a>
+    <button
+      v-if="mobileSidebarOpen"
+      type="button"
+      aria-label="Fermer le menu"
+      class="fixed inset-0 z-40 bg-slate-950/35 backdrop-blur-sm lg:hidden"
+      @click="mobileSidebarOpen = false"
+    />
+
     <!-- Sidebar -->
     <AdminSidebar
       :collapsed="sidebarCollapsed"
+      :mobile-open="mobileSidebarOpen"
       @toggle="sidebarCollapsed = !sidebarCollapsed"
+      @navigate="mobileSidebarOpen = false"
     />
 
     <!-- Main Content -->
     <div
-      class="flex-1 flex flex-col min-h-screen transition-all duration-300"
-      :class="sidebarCollapsed ? 'ml-16' : 'ml-64'"
+      class="flex min-h-dvh min-w-0 flex-1 flex-col transition-[margin] duration-300"
+      :class="sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'"
     >
       <!-- Top Header -->
-      <header class="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3 flex items-center justify-between">
+      <header class="sticky top-0 z-30 flex min-h-16 items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90 sm:px-6 lg:px-8">
         <div class="flex items-center gap-4">
           <button
-            class="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-300"
-            @click="sidebarCollapsed = !sidebarCollapsed"
+            type="button"
+            aria-label="Ouvrir le menu"
+            class="rounded-lg p-2 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 lg:hidden"
+            @click="mobileSidebarOpen = true"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -67,8 +82,10 @@
       </header>
 
       <!-- Page content -->
-      <main class="flex-1 p-6 dark:text-gray-200">
-        <slot />
+      <main id="admin-main-content" class="flex-1 px-4 py-6 dark:text-slate-200 sm:px-6 lg:px-8 lg:py-8">
+        <div class="mx-auto w-full max-w-[1600px]">
+          <slot />
+        </div>
       </main>
     </div>
   </div>
@@ -80,6 +97,7 @@ const authStore = useAuthStore()
 const { isOnline, pendingCount } = useOfflineSync()
 
 const sidebarCollapsed = ref(false)
+const mobileSidebarOpen = ref(false)
 
 const pageTitle = computed(() => {
   const titles: Record<string, string> = {
@@ -89,10 +107,14 @@ const pageTitle = computed(() => {
     '/admin/pdv': 'Points de Vente',
     '/admin/users': 'Utilisateurs',
     '/admin/permissions': 'Permissions & accès',
+    '/admin/referentiels': 'Référentiels',
+    '/admin/perfect-store': 'Perfect Store',
+    '/admin/perfect-store/visites': 'Perfect Store par visite',
+    '/admin/perfect-store/standards': 'Standards Perfect Store',
     '/admin/produits/inventaire': 'Inventaire SKU',
     '/admin/produits/seuils': 'Seuils de stock',
     '/admin/produits': 'Produits',
-    '/admin/import': 'Import / Export',
+    '/admin/import-export': 'Import / Export',
     '/admin/map': 'Carte',
   }
   return titles[route.path] || 'Dashboard'
@@ -123,4 +145,8 @@ const userMenuItems = [
     },
   }],
 ]
+
+watch(mobileSidebarOpen, (opened) => {
+  if (opened) sidebarCollapsed.value = false
+})
 </script>

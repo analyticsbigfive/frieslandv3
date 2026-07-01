@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- Filters -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 mb-6">
+    <div class="admin-toolbar mb-6">
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <UFormGroup label="Date début">
           <UInput v-model="filters.dateFrom" type="date" size="sm" />
@@ -44,7 +44,7 @@
             Filtrer
           </UButton>
           <UButton size="sm" variant="ghost" @click="resetFilters">
-            Reset
+            Réinitialiser
           </UButton>
           <UButton size="sm" variant="outline" @click="handleExport" icon="i-heroicons-arrow-down-tray">
             Export
@@ -54,10 +54,10 @@
     </div>
 
     <!-- Table -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="admin-surface overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead class="bg-gray-50">
+        <table class="admin-table w-full">
+          <thead>
             <tr>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">ID</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Date</th>

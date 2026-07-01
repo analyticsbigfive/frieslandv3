@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <div class="flex items-start justify-between gap-4">
+    <div class="flex flex-col items-start justify-between gap-4 sm:flex-row">
       <div>
         <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Référentiels</h1>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Distributeurs, territoires, types de PDV, poids et seuils de disponibilité <span class="text-xs">(Système B)</span>.</p>
@@ -27,11 +27,13 @@
       Référentiels indisponibles — migrations <code>supabase/nouveau</code> requises.
     </div>
 
-    <UInput v-model="search" icon="i-heroicons-magnifying-glass" placeholder="Rechercher..." size="sm" class="w-72" />
+    <div class="admin-toolbar">
+      <UInput v-model="search" icon="i-heroicons-magnifying-glass" placeholder="Rechercher..." size="sm" class="w-full sm:w-72" />
+    </div>
 
     <!-- Distributeurs -->
-    <div v-if="tab === 'distributeurs'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-      <table class="w-full">
+    <div v-if="tab === 'distributeurs'" class="admin-surface overflow-x-auto">
+      <table class="admin-table">
         <thead class="bg-gray-50 dark:bg-gray-700/50">
           <tr><th class="th-l">Distributeur</th><th class="th-c">Couverture</th><th class="th-c w-24">Actions</th></tr>
         </thead>
@@ -46,8 +48,8 @@
     </div>
 
     <!-- Territoires -->
-    <div v-else-if="tab === 'territoires'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-      <table class="w-full">
+    <div v-else-if="tab === 'territoires'" class="admin-surface overflow-x-auto">
+      <table class="admin-table">
         <thead class="bg-gray-50 dark:bg-gray-700/50">
           <tr><th class="th-l">Code</th><th class="th-l">Territoire</th><th class="th-l">Sous-région</th><th class="th-c w-24">Actions</th></tr>
         </thead>
@@ -63,8 +65,8 @@
     </div>
 
     <!-- Distributeurs ↔ Territoires (M2M, lecture seule) -->
-    <div v-else-if="tab === 'zones'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-      <table class="w-full">
+    <div v-else-if="tab === 'zones'" class="admin-surface overflow-x-auto">
+      <table class="admin-table">
         <thead class="bg-gray-50 dark:bg-gray-700/50">
           <tr><th class="th-l">Code Area</th><th class="th-l">Zone / Area</th><th class="th-l">Territoire</th><th class="th-c w-24">Actions</th></tr>
         </thead>
@@ -80,8 +82,8 @@
     </div>
 
     <!-- Distributeurs ↔ Territoires (M2M, lecture seule) -->
-    <div v-else-if="tab === 'distrib'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-      <table class="w-full">
+    <div v-else-if="tab === 'distrib'" class="admin-surface overflow-x-auto">
+      <table class="admin-table">
         <thead class="bg-gray-50 dark:bg-gray-700/50">
           <tr><th class="th-l">Territoire</th><th class="th-l">Distributeur assigné</th></tr>
         </thead>
@@ -97,8 +99,8 @@
     </div>
 
     <!-- Types PDV -->
-    <div v-else-if="tab === 'pos'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-      <table class="w-full">
+    <div v-else-if="tab === 'pos'" class="admin-surface overflow-x-auto">
+      <table class="admin-table">
         <thead class="bg-gray-50 dark:bg-gray-700/50">
           <tr><th class="th-l">Type (niveau 4)</th><th class="th-l">Catégorie (niveau 3)</th><th class="th-c">Canal</th><th class="th-c w-24">Actions</th></tr>
         </thead>
@@ -114,8 +116,8 @@
     </div>
 
     <!-- Poids SKU (disponibilité) -->
-    <div v-else-if="tab === 'poids'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-      <table class="w-full">
+    <div v-else-if="tab === 'poids'" class="admin-surface overflow-x-auto">
+      <table class="admin-table">
         <thead class="bg-gray-50 dark:bg-gray-700/50">
           <tr><th class="th-l">Catégorie</th><th class="th-l">Référence</th><th class="th-c">Canal</th><th class="th-c">Base</th><th class="th-c">Poids</th><th class="th-c w-24">Actions</th></tr>
         </thead>
@@ -133,8 +135,8 @@
     </div>
 
     <!-- Seuils de disponibilité -->
-    <div v-else class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-      <table class="w-full">
+    <div v-else class="admin-surface overflow-x-auto">
+      <table class="admin-table">
         <thead class="bg-gray-50 dark:bg-gray-700/50">
           <tr><th class="th-l">Catégorie</th><th class="th-l">Référence</th><th class="th-l">Segment</th><th class="th-c">Grade</th><th class="th-c">Qté min</th><th class="th-c w-24">Actions</th></tr>
         </thead>

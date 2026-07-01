@@ -53,6 +53,16 @@ create table if not exists seuil_disponibilite (
   quantite_min         integer not null,
   primary key (reference_produit_id, segment, grade)
 );
+-- Règle d'assortiment indiquée sous le tableau de disponibilité :
+-- nombre de SKU cibles, minimum présents et présence obligatoire des Hero SKU.
+create table if not exists standard_assortiment (
+  segment              text not null check (segment in ('Boutique','Minimarket')),
+  grade                text not null check (grade in ('A','B','C')),
+  sku_cibles           integer not null check (sku_cibles > 0),
+  min_sku_presents     integer not null check (min_sku_presents > 0),
+  heros_obligatoires  boolean not null default true,
+  primary key (segment, grade)
+);
 
 insert into categorie_produit(code,nom) values
   ('EVAP','Lait évaporé'),
@@ -225,6 +235,20 @@ select rp.id, v.segment, v.grade, v.qte from (values
 ) as v(nom,segment,grade,qte)
 join reference_produit rp on rp.nom=v.nom
 on conflict do nothing;
+
+insert into standard_assortiment(
+  segment,grade,sku_cibles,min_sku_presents,heros_obligatoires
+) values
+  ('Boutique','A',15,10,true),
+  ('Boutique','B',12,8,true),
+  ('Boutique','C',11,5,true),
+  ('Minimarket','A',15,10,true),
+  ('Minimarket','B',12,8,true),
+  ('Minimarket','C',11,5,true)
+on conflict (segment,grade) do update set
+  sku_cibles = excluded.sku_cibles,
+  min_sku_presents = excluded.min_sku_presents,
+  heros_obligatoires = excluded.heros_obligatoires;
 
 -- Les deux bases du fichier sont conservées : taux_vente et taux_revu.
 -- Seuils de visibilité MT (hyper/supermarchés) : absents du fichier -> à fournir.

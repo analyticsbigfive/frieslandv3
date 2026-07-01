@@ -1,7 +1,10 @@
 <template>
   <aside
-    class="fixed top-0 left-0 z-40 h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 flex flex-col"
-    :class="collapsed ? 'w-16' : 'w-64'"
+    class="fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-slate-200/80 bg-white transition-transform duration-300 dark:border-slate-700 dark:bg-slate-900 lg:translate-x-0"
+    :class="[
+      mobileOpen ? 'translate-x-0' : '-translate-x-full',
+      collapsed ? 'lg:w-16' : 'lg:w-64',
+    ]"
   >
     <!-- Logo -->
     <div class="h-16 flex items-center justify-center border-b border-gray-100 dark:border-gray-700 px-4">
@@ -20,7 +23,7 @@
       <div v-for="section in visibleSections" :key="section.title" class="mb-6">
         <p
           v-if="!collapsed"
-          class="px-3 mb-2 text-[10px] font-semibold text-gray-400 dark:text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+          class="mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500"
         >
           {{ section.title }}
         </p>
@@ -29,10 +32,11 @@
           v-for="item in section.items"
           :key="item.to"
           :to="item.to"
-          class="flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 text-sm transition-colors group"
+          class="group mb-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200"
           :class="isActive(item.to) 
-            ? 'bg-fc-red-50 text-fc-red font-medium dark:bg-fc-red-900/20' 
-            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-200'"
+            ? 'bg-red-50 text-fc-red font-semibold dark:bg-red-950/30'
+            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'"
+          @click="$emit('navigate')"
         >
           <component :is="item.icon" class="w-5 h-5 flex-shrink-0" />
           <span v-if="!collapsed" class="truncate">{{ item.label }}</span>
@@ -47,8 +51,10 @@
     </nav>
 
     <!-- Collapse toggle -->
-    <div class="border-t border-gray-100 dark:border-gray-700 p-2">
+    <div class="hidden border-t border-gray-100 p-2 dark:border-gray-700 lg:block">
       <button
+        type="button"
+        :aria-label="collapsed ? 'Déployer le menu' : 'Réduire le menu'"
         class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
         @click="$emit('toggle')"
       >
@@ -89,8 +95,8 @@ import {
   Database,
 } from 'lucide-vue-next'
 
-defineProps<{ collapsed: boolean }>()
-defineEmits(['toggle'])
+defineProps<{ collapsed: boolean; mobileOpen?: boolean }>()
+defineEmits(['toggle', 'navigate'])
 
 const route = useRoute()
 

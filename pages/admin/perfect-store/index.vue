@@ -7,41 +7,46 @@
       </p>
     </div>
 
-    <div v-if="loading" class="flex items-center justify-center py-12">
-      <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-fc-red" />
+    <div v-if="loading" class="grid gap-4 lg:grid-cols-3">
+      <div class="admin-surface h-44 animate-pulse bg-slate-100 dark:bg-slate-800 lg:col-span-2" />
+      <div class="admin-surface h-44 animate-pulse bg-slate-100 dark:bg-slate-800" />
     </div>
 
     <template v-else-if="global">
       <!-- Compteur global -->
-      <div class="bg-gradient-to-br from-fc-red to-fc-red-600 rounded-2xl p-6 text-white shadow-sm">
-        <div class="flex items-center justify-between flex-wrap gap-4">
+      <div class="admin-surface relative overflow-hidden p-6 sm:p-8">
+        <div class="absolute inset-y-0 left-0 w-1.5 bg-fc-red" />
+        <div class="flex items-center justify-between flex-wrap gap-6">
           <div>
-            <p class="text-sm/none opacity-80 mb-1">Taux Perfect Store global</p>
-            <p class="text-5xl font-extrabold">{{ fmtPct(global.perfect_store_pct) }}</p>
-            <p class="text-sm opacity-80 mt-2">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-fc-red">Performance réseau</p>
+            <p class="mt-3 text-5xl font-semibold tracking-tight text-slate-950 dark:text-white">{{ fmtPct(global.perfect_store_pct) }}</p>
+            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
               {{ global.perfect_stores }} / {{ global.visites_scorees }} visites conformes
             </p>
           </div>
-          <UIcon name="i-heroicons-trophy" class="w-20 h-20 opacity-30" />
+          <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-fc-red dark:bg-red-950/30">
+            <UIcon name="i-heroicons-trophy" class="h-8 w-8" />
+          </div>
         </div>
       </div>
 
       <!-- KPI Big Five -->
-      <div class="grid grid-cols-2 xl:grid-cols-5 gap-4">
+      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatsCard title="Couverture du mois" :value="String(coverage?.pdv_vus ?? 0)" format="none" :icon="MapPinned" color="purple" />
         <StatsCard title="Score global moyen" :value="fmtPct(global.score_global_moyen_pct)" format="none" :icon="BarChart3" color="blue" />
         <StatsCard title="OSA pondérée moyenne" :value="fmtPct(global.osa_moyen_pct)" format="none" :icon="Package" color="green" />
+        <StatsCard title="Assortiment moyen" :value="fmtPct(global.assortiment_moyen_pct)" format="none" :icon="ListChecks" color="purple" />
         <StatsCard title="Visibilité moyenne" :value="fmtPct(global.visibilite_moyenne_pct)" format="none" :icon="Eye" color="orange" />
         <StatsCard title="Promotion effective" :value="fmtPct(global.promotion_moyenne_pct)" format="none" :icon="BadgePercent" color="red" />
       </div>
 
       <!-- Ventilation par type de PDV -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+      <div class="admin-surface overflow-hidden">
         <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
           <h2 class="font-bold text-gray-900 dark:text-gray-100">Perfect Store par type de magasin</h2>
         </div>
         <div class="overflow-x-auto">
-          <table class="w-full">
+          <table class="admin-table">
             <thead class="bg-gray-50 dark:bg-gray-700/50">
               <tr>
                 <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Type</th>
@@ -86,7 +91,7 @@
     </div>
 
     <!-- Légende : comprendre le calcul + seuils par tier -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="admin-surface overflow-hidden">
       <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
         <h2 class="font-bold text-gray-900 dark:text-gray-100">Comment le Perfect Store est calculé</h2>
       </div>
@@ -121,7 +126,7 @@
 
         <!-- Seuils par tier (live) -->
         <div class="overflow-x-auto border border-gray-100 dark:border-gray-700 rounded-lg">
-          <table class="w-full text-sm">
+          <table class="admin-table text-sm">
             <thead class="bg-gray-50 dark:bg-gray-700/50">
               <tr>
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Tier</th>
@@ -146,7 +151,7 @@
           </table>
         </div>
         <p class="text-xs text-gray-400">
-          Distinct du <strong>score global</strong> (moyenne pondérée continue des piliers, pour les tendances). Seuils éditables dans
+          Distinct du <strong>score global</strong> (moyenne continue des piliers évaluables, pour les tendances). Seuils consultables dans
           <NuxtLink to="/admin/perfect-store/standards" class="text-fc-red underline">Standards</NuxtLink>.
         </p>
       </div>
@@ -155,7 +160,7 @@
 </template>
 
 <script setup lang="ts">
-import { BarChart3, Package, Eye, MapPinned, BadgePercent } from 'lucide-vue-next'
+import { BarChart3, Package, Eye, MapPinned, BadgePercent, ListChecks } from 'lucide-vue-next'
 import type { CoverageKpi, PerfectStoreGlobalKpi, PerfectStoreTypeKpi } from '~/composables/usePerfectStore'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })

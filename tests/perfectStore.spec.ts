@@ -57,12 +57,12 @@ describe('estDisponible — quantité ≥ seuil', () => {
 // Référentiel EVAP · GT · Boutique A, identique au seed + verif SQL Path 1.
 const REFS_B: PerfectStoreRefsB = {
   correspondance: [
-    { categorie_jsonb: 'evap', sku_key: 'br_gold', reference_nom: 'BR Gold 160g' },
-    { categorie_jsonb: 'evap', sku_key: 'br_160g', reference_nom: 'BR 150g' },
-    { categorie_jsonb: 'evap', sku_key: 'brb_160g', reference_nom: 'BRB 150g' },
-    { categorie_jsonb: 'evap', sku_key: 'br_400g', reference_nom: 'BR 380g' },
-    { categorie_jsonb: 'evap', sku_key: 'brb_400g', reference_nom: 'BRB 380g' },
-    { categorie_jsonb: 'evap', sku_key: 'pearl_400g', reference_nom: 'Pearl 380g' },
+    { categorie_jsonb: 'evap', sku_key: 'br_gold', reference_nom: 'BR Gold 160g', role: 'soutien' },
+    { categorie_jsonb: 'evap', sku_key: 'br_160g', reference_nom: 'BR 150g', role: 'phare' },
+    { categorie_jsonb: 'evap', sku_key: 'brb_160g', reference_nom: 'BRB 150g', role: 'croissance' },
+    { categorie_jsonb: 'evap', sku_key: 'br_400g', reference_nom: 'BR 380g', role: 'soutien' },
+    { categorie_jsonb: 'evap', sku_key: 'brb_400g', reference_nom: 'BRB 380g', role: 'a_retirer' },
+    { categorie_jsonb: 'evap', sku_key: 'pearl_400g', reference_nom: 'Pearl 380g', role: 'soutien' },
   ],
   poids: [
     { reference_nom: 'BR 150g', canal: 'GT', base_calcul: 'taux_vente', poids: 0.749443117 },
@@ -79,6 +79,9 @@ const REFS_B: PerfectStoreRefsB = {
     { reference_nom: 'BRB 380g', segment: 'Boutique', grade: 'A', quantite_min: 12 },
     { reference_nom: 'BR Gold 160g', segment: 'Boutique', grade: 'A', quantite_min: 24 },
     { reference_nom: 'Pearl 380g', segment: 'Boutique', grade: 'A', quantite_min: 24 },
+  ],
+  assortmentStandards: [
+    { segment: 'Boutique', grade: 'A', sku_cibles: 6, min_sku_presents: 4, heros_obligatoires: true },
   ],
   segmentGrade: [{ type_pdv_nom: 'Boutique A', canal: 'GT', segment: 'Boutique', grade: 'A' }],
   visibilityElements: [
@@ -110,6 +113,8 @@ describe('scoreVisiteB — EVAP GT Boutique A (Système B, bout en bout)', () =>
     const r = scoreVisiteB(mkData({ br_160g: 48, brb_160g: 0, br_400g: 24, brb_400g: 12, br_gold: 24, pearl_400g: 24 }), pdvBoutiqueA, REFS_B)
     expect(r.dispoCategorie.evap).toBe(92)
     expect(r.osaPondere).toBeCloseTo(0.92)
+    expect(r.assortimentTaux).toBe(1)
+    expect(r.herosPresents).toBe(true)
     expect(r.isPerfectStore).toBe(true)
     expect(r.tierAtteint).toBe('VIP PERFECT STORE')
   })
@@ -127,6 +132,19 @@ describe('scoreVisiteB — EVAP GT Boutique A (Système B, bout en bout)', () =>
   it('une visibilité incomplète bloque tous les niveaux', () => {
     const r = scoreVisiteB(mkData({ br_160g: 48, brb_160g: 24, br_400g: 24, brb_400g: 12, br_gold: 24, pearl_400g: 24 }, { affiche: false }), pdvBoutiqueA, REFS_B)
     expect(r.visibiliteTaux).toBe(0)
+    expect(r.tierAtteint).toBe(null)
+  })
+  it('un Hero SKU absent bloque la conformité même si le minimum de SKU est atteint', () => {
+    const r = scoreVisiteB(mkData({
+      br_160g: 0,
+      brb_160g: 24,
+      br_400g: 24,
+      brb_400g: 12,
+      br_gold: 24,
+      pearl_400g: 24,
+    }), pdvBoutiqueA, REFS_B)
+    expect(r.assortimentTaux).toBe(1)
+    expect(r.herosPresents).toBe(false)
     expect(r.tierAtteint).toBe(null)
   })
   it('la promotion est ignorée si non applicable et bloque si applicable mais non exécutée', () => {

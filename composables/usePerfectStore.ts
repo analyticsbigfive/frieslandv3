@@ -5,7 +5,8 @@
 // (v_perfect_store_global / v_perfect_store_par_categorie_pdv).
 //
 // Le score Big Five combine disponibilité, visibilité parfaite et promotion
-// lorsqu'elle est applicable. L'assortiment séparé du système historique reste nul.
+// lorsqu'elle est applicable. L'assortiment applique le minimum de SKU présents
+// et l'obligation des Hero SKU indiqués dans le fichier.
 import {
   scoreVisiteB,
   type PerfectStoreRefsB,
@@ -19,6 +20,7 @@ export interface PerfectStoreGlobalKpi {
   perfect_store_pct: number | null
   score_global_moyen_pct: number | null
   osa_moyen_pct: number | null
+  assortiment_moyen_pct: number | null
   visibilite_moyenne_pct: number | null
   promotion_moyenne_pct: number | null
 }
@@ -50,23 +52,29 @@ export function usePerfectStore() {
   async function fetchRefs(force = false) {
     if (loaded.value && !force && refs.value) return refs.value
     try {
-      const [corr, poids, seuils, sg, niv, elements, standards, segmentMap] = await Promise.all([
-        supabase.from('correspondance_reference').select('categorie_jsonb, sku_key, reference_produit(nom)'),
+      const [corr, poids, seuils, assortiment, sg, niv, elements, standards, segmentMap] = await Promise.all([
+        supabase.from('correspondance_reference').select('categorie_jsonb, sku_key, reference_produit(nom, role)'),
         supabase.from('poids_reference').select('canal, base_calcul, poids, reference_produit(nom)'),
         supabase.from('seuil_disponibilite').select('segment, grade, quantite_min, reference_produit(nom)'),
+        supabase.from('standard_assortiment').select('segment, grade, sku_cibles, min_sku_presents, heros_obligatoires'),
         supabase.from('segment_grade_type_pdv').select('segment, grade, type_pdv(nom, categorie_pdv(canal))'),
         supabase.from('niveau_perfect_store').select('code, rang, dispo_rayon_min, visibilite_min, promotion_min').order('rang', { ascending: false }),
         supabase.from('element_visibilite').select('id, segment, code, nom, pilier, emplacement, optionnel'),
         supabase.from('standard_visibilite').select('segment, niveau_perfect_store, requis, element_visibilite(code)'),
         supabase.from('segment_visibilite_type_pdv').select('segment, type_pdv(nom)'),
       ])
-      const firstError = [corr, poids, seuils, sg, niv, elements, standards, segmentMap].find(result => result.error)?.error
+      const firstError = [corr, poids, seuils, assortiment, sg, niv, elements, standards, segmentMap].find(result => result.error)?.error
       if (firstError) throw firstError
 
       const nomOf = (r: any) => r?.reference_produit?.nom ?? r?.reference_produit?.[0]?.nom ?? ''
       const one = (value: any) => Array.isArray(value) ? value[0] : value
       refs.value = {
-        correspondance: (corr.data || []).map((r: any) => ({ categorie_jsonb: r.categorie_jsonb, sku_key: r.sku_key, reference_nom: nomOf(r) })),
+        correspondance: (corr.data || []).map((r: any) => ({
+          categorie_jsonb: r.categorie_jsonb,
+          sku_key: r.sku_key,
+          reference_nom: nomOf(r),
+          role: one(r.reference_produit)?.role,
+        })),
         poids: (poids.data || []).map((r: any) => ({
           reference_nom: nomOf(r),
           canal: r.canal,
@@ -74,6 +82,13 @@ export function usePerfectStore() {
           poids: Number(r.poids),
         })),
         seuils: (seuils.data || []).map((r: any) => ({ reference_nom: nomOf(r), segment: r.segment, grade: r.grade, quantite_min: r.quantite_min })),
+        assortmentStandards: (assortiment.data || []).map((r: any) => ({
+          segment: r.segment,
+          grade: r.grade,
+          sku_cibles: Number(r.sku_cibles),
+          min_sku_presents: Number(r.min_sku_presents),
+          heros_obligatoires: !!r.heros_obligatoires,
+        })),
         segmentGrade: (sg.data || []).map((r: any) => {
           const tp = Array.isArray(r.type_pdv) ? r.type_pdv[0] : r.type_pdv
           const cp = tp ? (Array.isArray(tp.categorie_pdv) ? tp.categorie_pdv[0] : tp.categorie_pdv) : null
@@ -100,7 +115,7 @@ export function usePerfectStore() {
         tierConfig: (niv.data || []).map((n: any) => ({
           ps_tier: n.code,
           osa_min: n.dispo_rayon_min == null ? 0 : Number(n.dispo_rayon_min) / 100,
-          assort_min: 0,
+          assort_min: 1,
           visi_min: n.visibilite_min == null ? 0 : Number(n.visibilite_min) / 100,
           promo_min: n.promotion_min == null ? null : Number(n.promotion_min) / 100,
           rang: n.rang,
@@ -123,7 +138,7 @@ export function usePerfectStore() {
   /** KPI global calculé côté PostgreSQL sur toutes les visites scorées. */
   async function fetchGlobalKpi(): Promise<PerfectStoreGlobalKpi | null> {
     const { data, error } = await supabase.from('v_perfect_store_global')
-      .select('visites_scorees, perfect_stores, perfect_store_pct, score_global_moyen_pct, osa_moyen_pct, visibilite_moyenne_pct, promotion_moyenne_pct')
+      .select('visites_scorees, perfect_stores, perfect_store_pct, score_global_moyen_pct, osa_moyen_pct, assortiment_moyen_pct, visibilite_moyenne_pct, promotion_moyenne_pct')
       .maybeSingle()
     if (error) {
       console.warn('v_perfect_store_global (B) indisponible', error.message)

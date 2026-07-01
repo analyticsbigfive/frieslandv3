@@ -13,15 +13,11 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   const role = authStore.profile?.role
 
-  // Seuls admin + superviseur accèdent au dashboard
-  if (role !== 'admin' && role !== 'superviseur') {
-    return navigateTo('/mobile')
-  }
-
   // Admin: accès total
   if (role === 'admin') return
 
-  // Autres rôles dashboard: vérif accès section (RBAC)
+  // Tous les autres rôles passent par la matrice RBAC. Les rôles terrain sont
+  // refusés par défaut, mais un admin peut leur ouvrir une section précise.
   const { fetchAccess, canAccessPath } = useAccessControl()
   await fetchAccess()
 

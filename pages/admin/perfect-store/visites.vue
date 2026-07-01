@@ -6,7 +6,7 @@
     </div>
 
     <!-- Filters (identiques à la section Visites) -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 mb-6">
+    <div class="admin-toolbar mb-6">
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <UFormGroup label="Date début">
           <UInput v-model="filters.dateFrom" type="date" size="sm" />
@@ -42,16 +42,16 @@
         </UFormGroup>
         <div class="flex items-end gap-2">
           <UButton size="sm" icon="i-heroicons-magnifying-glass" @click="loadVisites">Filtrer</UButton>
-          <UButton size="sm" variant="ghost" @click="resetFilters">Reset</UButton>
+          <UButton size="sm" variant="ghost" @click="resetFilters">Réinitialiser</UButton>
         </div>
       </div>
     </div>
 
     <!-- Table -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="admin-surface overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead class="bg-gray-50">
+        <table class="admin-table w-full">
+          <thead>
             <tr>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Date</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Commercial</th>
@@ -59,6 +59,7 @@
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Type</th>
               <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">OSA pond.</th>
               <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Assort.</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Hero SKU</th>
               <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Visi.</th>
               <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Promo.</th>
               <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Score</th>
@@ -72,7 +73,15 @@
               <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ row.v.pdv?.nom_pdv || row.v.pdv_id?.substring(0, 8) }}</td>
               <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">{{ row.v.pdv?.sous_categorie_pdv || '—' }}</td>
               <td class="px-4 py-3 text-center text-sm">{{ pct(row.ps?.osaPondere) }}</td>
-              <td class="px-4 py-3 text-center text-sm">{{ pct(row.ps?.assortimentTaux) }}</td>
+              <td class="px-4 py-3 text-center text-sm">
+                {{ pct(row.ps?.assortimentTaux) }}
+                <span v-if="row.ps?.skuPresents != null" class="block text-[10px] text-gray-400">{{ row.ps.skuPresents }} SKU présents</span>
+              </td>
+              <td class="px-4 py-3 text-center">
+                <UBadge v-if="row.ps?.herosPresents === true" color="green" variant="soft" size="xs">Présents</UBadge>
+                <UBadge v-else-if="row.ps?.herosPresents === false" color="red" variant="soft" size="xs">Manquant</UBadge>
+                <span v-else class="text-gray-400">—</span>
+              </td>
               <td class="px-4 py-3 text-center text-sm">{{ pct(row.ps?.visibiliteTaux) }}</td>
               <td class="px-4 py-3 text-center text-sm">{{ pct(row.ps?.promotionTaux) }}</td>
               <td class="px-4 py-3 text-center">
@@ -114,7 +123,6 @@
 </template>
 
 <script setup lang="ts">
-import type { PerfectTier } from '~/utils/perfectStore'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
@@ -154,9 +162,13 @@ function scoreColor(v: number | null | undefined): string {
   if (v >= 0.6) return 'text-amber-600'
   return 'text-red-600'
 }
-function tierColor(t: PerfectTier | null | undefined): any {
-  const map: Record<string, string> = { FLAGSHIP: 'purple', VIP: 'green', CORE: 'blue', BASIC: 'orange' }
-  return (t && map[t]) || 'gray'
+function tierColor(t: string | null | undefined): any {
+  const value = t || ''
+  if (value.startsWith('FLAGSHIP')) return 'purple'
+  if (value.startsWith('VIP')) return 'green'
+  if (value.startsWith('CORE')) return 'blue'
+  if (value.startsWith('BASIC')) return 'orange'
+  return 'gray'
 }
 function formatDate(date: string) {
   if (!date) return '-'

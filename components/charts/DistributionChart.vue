@@ -1,8 +1,14 @@
 <template>
-  <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">{{ title }}</h3>
-    <div class="h-64">
+  <div class="admin-surface h-full p-6">
+    <div class="mb-5">
+      <h3 class="font-semibold text-slate-950 dark:text-white">{{ title }}</h3>
+      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Composition du parc par format de magasin.</p>
+    </div>
+    <div v-if="chartData" class="h-72">
       <Doughnut v-if="chartData" :data="chartData" :options="chartOptions" />
+    </div>
+    <div v-else class="flex h-72 items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-400 dark:bg-slate-700/40">
+      Aucune donnée de répartition
     </div>
   </div>
 </template>
@@ -16,8 +22,8 @@ const props = defineProps<{
 }>()
 
 const colors = [
-  '#003DA5', '#C8102E', '#10B981', '#F59E0B', '#8B5CF6',
-  '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#6366F1',
+  '#C8102E', '#334155', '#64748B', '#94A3B8', '#CBD5E1',
+  '#9B0D23', '#475569', '#7F1D1D', '#A8A29E', '#D6D3D1',
 ]
 
 const chartData = computed(() => {

@@ -224,11 +224,19 @@ export function scorePerfectStore(
 
 export interface PerfectStoreRefsB {
   /** Pont clé JSONB (categorie_jsonb + sku_key) -> nom de référence. */
-  correspondance: { categorie_jsonb: string; sku_key: string; reference_nom: string }[]
+  correspondance: { categorie_jsonb: string; sku_key: string; reference_nom: string; role?: string }[]
   /** Poids de chaque référence par canal (GT/MT). */
   poids: { reference_nom: string; canal: TradeType; base_calcul: PerfectBasis; poids: number }[]
   /** Quantité minimale par référence × segment × grade. */
   seuils: { reference_nom: string; segment: string; grade: string; quantite_min: number }[]
+  /** Minimum de SKU présents et obligation des références Hero par segment/grade. */
+  assortmentStandards: {
+    segment: string
+    grade: string
+    sku_cibles: number
+    min_sku_presents: number
+    heros_obligatoires: boolean
+  }[]
   /** Résolution type de PDV (= pdv.sous_categorie_pdv) -> canal/segment/grade. */
   segmentGrade: { type_pdv_nom: string; canal: TradeType | null; segment: string; grade: string }[]
   /** Catalogue et matrice de visibilité/promotion issus du fichier BIG FIVE KPI. */
@@ -254,7 +262,9 @@ export interface PerfectStoreResultB {
   /** Dispo en rayon (ratio 0–1) — exposée sous osaPondere/scoreGlobal pour parité d'affichage avec le Système A. */
   osaPondere: number | null
   scoreGlobal: number | null
-  assortimentTaux: null
+  assortimentTaux: number | null
+  skuPresents: number | null
+  herosPresents: boolean | null
   visibiliteTaux: number | null
   promotionTaux: number | null
   /** Détail par catégorie EVAP/IMP/SCM (dispo en %, ou null si non évaluable). */
@@ -308,6 +318,24 @@ export function scoreVisiteB(
   const cats = Object.values(dispoCategorie).filter((x): x is number => x !== null)
   const dispoRayon = cats.length ? Math.round(cats.reduce((a, b) => a + b, 0) / cats.length) : null
 
+  const assortmentStandard = refs.assortmentStandards.find(item =>
+    item.segment === dispoSegment && item.grade === grade,
+  )
+  let skuPresents: number | null = null
+  let assortimentTaux: number | null = null
+  let herosPresents: boolean | null = null
+  if (assortmentStandard) {
+    const present = (item: PerfectStoreRefsB['correspondance'][number]) => {
+      const raw = produits?.[item.categorie_jsonb]?.quantites?.[item.sku_key]
+      return Number.isFinite(Number(raw)) && Number(raw) > 0
+    }
+    skuPresents = refs.correspondance.filter(present).length
+    assortimentTaux = Math.min(skuPresents / assortmentStandard.min_sku_presents, 1)
+    const heroes = refs.correspondance.filter(item => item.role === 'phare')
+    herosPresents = !assortmentStandard.heros_obligatoires
+      || heroes.every(present)
+  }
+
   const segment = refs.visibilitySegmentMap
     .find(item => item.type_pdv_nom === (pdv.sous_categorie_pdv || ''))?.segment
     ?? visibilitySegmentForPdv(pdv.sous_categorie_pdv)
@@ -354,6 +382,8 @@ export function scoreVisiteB(
       && dispoRayon >= candidate.dispo_rayon_min
     const visibilityOk = visibility != null
       && visibility * 100 >= (candidate.visibilite_min ?? 100)
+    const assortmentOk = assortimentTaux == null
+      || (assortimentTaux >= 1 && herosPresents === true)
     const promotionOk = !promotionApplicable
       || (promotion != null && promotion * 100 >= (candidate.promotion_min ?? 100))
 
@@ -361,7 +391,7 @@ export function scoreVisiteB(
       visibiliteTaux = visibility
       promotionTaux = promotion
     }
-    if (availabilityOk && visibilityOk && promotionOk) {
+    if (availabilityOk && assortmentOk && visibilityOk && promotionOk) {
       niveau = candidate.code
       visibiliteTaux = visibility
       promotionTaux = promotion
@@ -381,7 +411,9 @@ export function scoreVisiteB(
   return {
     osaPondere: dispoRayon == null ? null : dispoRayon / 100,
     scoreGlobal,
-    assortimentTaux: null,
+    assortimentTaux,
+    skuPresents,
+    herosPresents,
     visibiliteTaux,
     promotionTaux,
     dispoCategorie,

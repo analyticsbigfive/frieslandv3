@@ -1,245 +1,188 @@
 <template>
-  <div id="dashboard-print-area">
-    <definePageMeta :middleware="['auth', 'admin']" :layout="'admin'" />
-
-    <!-- Loading Overlay -->
-    <div v-if="loadingDashboard" class="flex flex-col items-center justify-center py-24 gap-4">
-      <div class="animate-spin w-10 h-10 border-4 border-fc-blue border-t-transparent rounded-full" />
-      <p class="text-sm text-gray-500 dark:text-gray-400">Chargement du tableau de bord…</p>
+  <div id="dashboard-print-area" class="space-y-8">
+    <div v-if="loadingDashboard" class="space-y-6" aria-label="Chargement du tableau de bord">
+      <div class="h-9 w-72 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700" />
+      <div class="grid gap-5 lg:grid-cols-12">
+        <div class="h-64 animate-pulse rounded-3xl bg-white dark:bg-slate-800 lg:col-span-7" />
+        <div class="grid grid-cols-2 gap-4 lg:col-span-5">
+          <div v-for="i in 4" :key="i" class="h-28 animate-pulse rounded-2xl bg-white dark:bg-slate-800" />
+        </div>
+      </div>
     </div>
 
     <template v-else>
-    <!-- Header with actions -->
-    <div class="flex items-center justify-between mb-6 print:hidden">
-      <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Tableau de bord</h2>
-      <div class="flex items-center gap-2">
-        <UButton
-          size="sm"
-          variant="outline"
-          icon="i-heroicons-printer"
-          @click="handlePrint"
-        >
-          Imprimer
-        </UButton>
-        <UDropdown :items="exportMenuItems">
-          <UButton
-            size="sm"
-            variant="outline"
-            icon="i-heroicons-arrow-down-tray"
-            trailing-icon="i-heroicons-chevron-down"
-          >
-            Exporter
-          </UButton>
-        </UDropdown>
-      </div>
-    </div>
-
-    <!-- Compteur Perfect Store (cœur EOW) -->
-    <NuxtLink
-      v-if="psGlobal"
-      to="/admin/perfect-store"
-      class="block mb-6 bg-gradient-to-br from-fc-red to-fc-red-600 rounded-2xl p-5 text-white shadow-sm hover:shadow-md transition-shadow"
-    >
-      <div class="flex items-center justify-between flex-wrap gap-3">
+      <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between print:hidden">
         <div>
-          <p class="text-xs uppercase tracking-wide opacity-80">Perfect Store global</p>
-          <p class="text-4xl font-extrabold mt-1">{{ psGlobal.perfect_store_pct == null ? '—' : psGlobal.perfect_store_pct + '%' }}</p>
-          <p class="text-xs opacity-80 mt-1">{{ psGlobal.perfect_stores }} / {{ psGlobal.visites_scorees }} visites conformes · voir le détail →</p>
+          <p class="text-sm font-medium text-fc-red">Pilotage commercial</p>
+          <h2 class="mt-1 text-3xl font-semibold tracking-tight text-slate-950 dark:text-white">Vue d’ensemble</h2>
+          <p class="mt-2 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
+            Suivi du Perfect Store, de la couverture terrain et de la disponibilité produit.
+          </p>
         </div>
-        <UIcon name="i-heroicons-trophy" class="w-16 h-16 opacity-30" />
-      </div>
-    </NuxtLink>
-
-    <!-- KPI Perfect Store -->
-    <div v-if="psGlobal" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4 mb-6">
-      <StatsCard
-        title="Couverture mois"
-        :value="coverage?.pdv_vus ?? 0"
-        format="number"
-        subtitle="PDV distincts visités"
-        :icon="MapPinned"
-        color="purple"
-      />
-      <StatsCard
-        title="Perfect Store"
-        :value="psGlobal.perfect_store_pct ?? 0"
-        format="percent"
-        :subtitle="`${psGlobal.perfect_stores}/${psGlobal.visites_scorees} visites conformes`"
-        :icon="Trophy"
-        color="red"
-      />
-      <StatsCard
-        title="Score global moyen"
-        :value="psGlobal.score_global_moyen_pct ?? 0"
-        format="percent"
-        subtitle="Composite pondéré"
-        :icon="BarChart3"
-        color="blue"
-      />
-      <StatsCard
-        title="OSA pondérée moy."
-        :value="psGlobal.osa_moyen_pct ?? 0"
-        format="percent"
-        subtitle="Disponibilité linéaire pondérée"
-        :icon="Package"
-        color="green"
-      />
-      <StatsCard
-        title="Visibilité moy."
-        :value="psGlobal.visibilite_moyenne_pct ?? 0"
-        format="percent"
-        subtitle="PLV requise présente"
-        :icon="Eye"
-        color="orange"
-      />
-      <StatsCard
-        title="Promotion effective"
-        :value="psGlobal.promotion_moyenne_pct ?? 0"
-        format="percent"
-        subtitle="Visites avec promo active"
-        :icon="BadgePercent"
-        color="red"
-      />
-    </div>
-
-    <!-- KPI Cards Row -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      <StatsCard
-        title="Total Visites"
-        :value="stats?.total_visites ?? 0"
-        subtitle="Tous les temps"
-        :icon="ClipboardList"
-        color="blue"
-      />
-      <StatsCard
-        title="Visites ce mois"
-        :value="stats?.visites_month ?? 0"
-        subtitle="Mois en cours"
-        :icon="Calendar"
-        color="green"
-      />
-      <StatsCard
-        title="Points de Vente"
-        :value="stats?.total_pdv ?? 0"
-        subtitle="PDV actifs"
-        :icon="MapPin"
-        color="orange"
-      />
-      <StatsCard
-        title="Commerciaux"
-        :value="stats?.total_commerciaux ?? 0"
-        subtitle="Actifs ce mois"
-        :icon="Users"
-        color="purple"
-      />
-    </div>
-
-    <!-- Taux de présence produits -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-      <div
-        v-for="cat in productCategories"
-        :key="cat.key"
-        class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 text-center"
-      >
-        <p class="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">{{ cat.label }}</p>
-        <p class="text-2xl font-bold" :class="getPercentColor(cat.value)">
-          {{ cat.value }}%
-        </p>
-        <p class="text-[10px] text-gray-400 dark:text-gray-500 dark:text-gray-400 mt-0.5">présence</p>
-      </div>
-    </div>
-
-    <!-- Charts Row -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-      <ClientOnly>
-        <ChartsVisitesLineChart
-          title="Évolution des visites"
-          :data="stats?.visites_par_jour ?? []"
-        />
-      </ClientOnly>
-
-      <ClientOnly>
-        <ChartsDistributionChart
-          title="Distribution par type de PDV"
-          :data="stats?.distribution_pdv ?? []"
-        />
-      </ClientOnly>
-    </div>
-
-    <!-- Performance Commerciaux -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Performance Commerciaux</h3>
         <div class="flex items-center gap-2">
-          <UButton
-            size="xs"
-            variant="ghost"
-            icon="i-heroicons-arrow-down-tray"
-            class="print:hidden"
-            @click="exportPerformance"
-          >
-            CSV
-          </UButton>
-          <NuxtLink to="/admin/users" class="text-xs text-fc-blue hover:underline print:hidden">
-            Voir tout →
-          </NuxtLink>
+          <UButton size="sm" variant="ghost" icon="i-heroicons-printer" @click="handlePrint">Imprimer</UButton>
+          <UDropdown :items="exportMenuItems">
+            <UButton size="sm" variant="outline" icon="i-heroicons-arrow-down-tray" trailing-icon="i-heroicons-chevron-down">
+              Exporter
+            </UButton>
+          </UDropdown>
         </div>
-      </div>
+      </header>
 
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead class="bg-gray-50 dark:bg-gray-700/50">
-            <tr>
-              <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Commercial</th>
-              <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Email</th>
-              <th class="px-5 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Total</th>
-              <th class="px-5 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Ce mois</th>
-              <th class="px-5 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Progression</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-            <tr
-              v-for="com in stats?.performance_commerciaux?.slice(0, 10)"
-              :key="com.email"
-              class="hover:bg-gray-50 dark:hover:bg-gray-700/50"
-            >
-              <td class="px-5 py-3">
-                <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 rounded-full bg-fc-blue-50 text-fc-blue flex items-center justify-center text-xs font-medium">
-                    {{ com.nom?.substring(0, 2).toUpperCase() }}
-                  </div>
-                  <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ com.nom }}</span>
+      <section v-if="psGlobal" aria-labelledby="performance-heading" class="grid gap-5 lg:grid-cols-12">
+        <NuxtLink
+          to="/admin/perfect-store"
+          class="group relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_45px_-32px_rgba(15,23,42,0.45)] transition duration-300 hover:-translate-y-0.5 hover:border-red-200 dark:border-slate-700 dark:bg-slate-800 lg:col-span-7"
+        >
+          <div class="absolute inset-y-0 left-0 w-1.5 bg-fc-red" />
+          <div class="flex h-full flex-col justify-between gap-8 pl-2">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p id="performance-heading" class="text-sm font-semibold text-slate-500 dark:text-slate-400">Performance Perfect Store</p>
+                <div class="mt-3 flex items-end gap-3">
+                  <span class="text-6xl font-semibold tracking-[-0.06em] text-slate-950 dark:text-white">
+                    {{ formatPercent(psGlobal.perfect_store_pct) }}
+                  </span>
+                  <span class="mb-2 rounded-lg bg-red-50 px-2.5 py-1 text-xs font-semibold text-fc-red dark:bg-red-950/40">
+                    {{ psGlobal.perfect_stores }} conformes
+                  </span>
                 </div>
-              </td>
-              <td class="px-5 py-3 text-sm text-gray-500 dark:text-gray-400">{{ com.email }}</td>
-              <td class="px-5 py-3 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">{{ com.total_visites }}</td>
-              <td class="px-5 py-3 text-center text-sm font-semibold text-fc-blue">{{ com.visites_mois }}</td>
-              <td class="px-5 py-3">
-                <div class="flex items-center justify-center">
-                  <div class="w-24 h-2 bg-gray-100 dark:bg-gray-600 rounded-full overflow-hidden">
-                    <div
-                      class="h-full bg-fc-blue rounded-full transition-all"
-                      :style="{ width: getProgressWidth(com) }"
-                    />
-                  </div>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+              </div>
+              <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-fc-red transition group-hover:scale-105 dark:bg-red-950/40">
+                <Trophy class="h-6 w-6" />
+              </div>
+            </div>
+            <div>
+              <div class="mb-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                <span>{{ psGlobal.perfect_stores }} visites conformes</span>
+                <span>{{ psGlobal.visites_scorees }} évaluées</span>
+              </div>
+              <div class="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
+                <div class="h-full rounded-full bg-fc-red transition-all duration-700" :style="{ width: perfectStoreProgress }" />
+              </div>
+              <p class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-fc-red">
+                Ouvrir l’analyse détaillée
+                <UIcon name="i-heroicons-arrow-right" class="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </p>
+            </div>
+          </div>
+        </NuxtLink>
 
-      <div v-if="!stats?.performance_commerciaux?.length" class="p-12 text-center text-gray-400 dark:text-gray-500 dark:text-gray-400">
-        <ClipboardList class="w-12 h-12 mx-auto mb-3 opacity-50" />
-        <p>Aucune donnée de performance disponible</p>
-      </div>
-    </div>
+        <div class="grid grid-cols-2 gap-4 lg:col-span-5">
+          <article v-for="metric in activityMetrics" :key="metric.label" class="admin-metric-tile">
+            <div class="flex items-start justify-between gap-3">
+              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">{{ metric.label }}</p>
+              <component :is="metric.icon" class="h-4 w-4 text-slate-400" />
+            </div>
+            <p class="mt-3 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">{{ metric.value }}</p>
+            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">{{ metric.hint }}</p>
+          </article>
+        </div>
+      </section>
+
+      <section v-if="psGlobal" aria-labelledby="pillars-heading">
+        <div class="mb-4 flex items-end justify-between gap-4">
+          <div>
+            <h3 id="pillars-heading" class="text-lg font-semibold tracking-tight text-slate-950 dark:text-white">Santé des piliers</h3>
+            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Les composantes qui déterminent la conformité Perfect Store.</p>
+          </div>
+          <NuxtLink to="/admin/perfect-store/standards" class="text-sm font-semibold text-fc-red hover:underline">Voir les standards</NuxtLink>
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatsCard title="OSA pondérée" :value="psGlobal.osa_moyen_pct ?? 0" format="percent" subtitle="Disponibilité au seuil" :icon="Package" color="green" />
+          <StatsCard title="Assortiment" :value="psGlobal.assortiment_moyen_pct ?? 0" format="percent" subtitle="Minimum SKU et Hero" :icon="ListChecks" color="purple" />
+          <StatsCard title="Visibilité" :value="psGlobal.visibilite_moyenne_pct ?? 0" format="percent" subtitle="PLV requise présente" :icon="Eye" color="orange" />
+          <StatsCard title="Promotion" :value="psGlobal.promotion_moyenne_pct ?? 0" format="percent" subtitle="Si une promotion est active" :icon="BadgePercent" color="red" />
+        </div>
+      </section>
+
+      <section class="grid gap-6 xl:grid-cols-12">
+        <article class="admin-surface p-6 xl:col-span-5">
+          <div class="mb-6">
+            <h3 class="text-lg font-semibold tracking-tight text-slate-950 dark:text-white">Disponibilité par catégorie</h3>
+            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Part des visites où la catégorie est présente.</p>
+          </div>
+          <div class="space-y-5">
+            <div v-for="cat in productCategories" :key="cat.key">
+              <div class="mb-2 flex items-center justify-between">
+                <span class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ cat.label }}</span>
+                <span class="text-sm font-semibold tabular-nums" :class="getPercentColor(cat.value)">{{ cat.value }}%</span>
+              </div>
+              <div class="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
+                <div class="h-full rounded-full transition-all duration-700" :class="getPercentBarColor(cat.value)" :style="{ width: `${Math.min(100, Math.max(0, cat.value))}%` }" />
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <div class="xl:col-span-7">
+          <ClientOnly>
+            <ChartsVisitesLineChart title="Évolution des visites" :data="stats?.visites_par_jour ?? []" />
+          </ClientOnly>
+        </div>
+      </section>
+
+      <section class="grid gap-6 xl:grid-cols-12">
+        <div class="xl:col-span-5">
+          <ClientOnly>
+            <ChartsDistributionChart title="Répartition des points de vente" :data="stats?.distribution_pdv ?? []" />
+          </ClientOnly>
+        </div>
+
+        <article class="admin-surface overflow-hidden xl:col-span-7">
+          <div class="flex items-center justify-between border-b border-slate-100 px-6 py-5 dark:border-slate-700">
+            <div>
+              <h3 class="font-semibold text-slate-950 dark:text-white">Activité des commerciaux</h3>
+              <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Classement selon le volume total de visites.</p>
+            </div>
+            <UButton size="xs" variant="ghost" icon="i-heroicons-arrow-down-tray" class="print:hidden" @click="exportPerformance">CSV</UButton>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="admin-table w-full">
+              <thead>
+                <tr>
+                  <th>Commercial</th>
+                  <th class="text-center">Total</th>
+                  <th class="text-center">Ce mois</th>
+                  <th>Volume relatif</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="com in stats?.performance_commerciaux?.slice(0, 8)" :key="com.email">
+                  <td>
+                    <div class="flex items-center gap-3">
+                      <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-xs font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-200">
+                        {{ com.nom?.substring(0, 2).toUpperCase() }}
+                      </div>
+                      <div>
+                        <p class="font-medium text-slate-900 dark:text-white">{{ com.nom }}</p>
+                        <p class="text-xs text-slate-400">{{ com.email }}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="text-center font-semibold tabular-nums">{{ com.total_visites }}</td>
+                  <td class="text-center font-semibold tabular-nums text-fc-red">{{ com.visites_mois }}</td>
+                  <td>
+                    <div class="h-1.5 w-28 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
+                      <div class="h-full rounded-full bg-fc-red transition-all" :style="{ width: getProgressWidth(com) }" />
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-if="!stats?.performance_commerciaux?.length" class="px-6 py-14 text-center">
+            <ClipboardList class="mx-auto h-9 w-9 text-slate-300" />
+            <p class="mt-3 text-sm font-medium text-slate-500">Aucune activité disponible</p>
+          </div>
+        </article>
+      </section>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ClipboardList, Calendar, MapPin, Users, Trophy, BarChart3, Package, Eye, MapPinned, BadgePercent } from 'lucide-vue-next'
+import { ClipboardList, Calendar, MapPin, Users, Trophy, Package, Eye, BadgePercent, ListChecks } from 'lucide-vue-next'
 
 definePageMeta({
   middleware: ['auth', 'admin'],
@@ -255,6 +198,39 @@ const loadingDashboard = ref(true)
 const stats = computed(() => visitesStore.stats)
 const psGlobal = ref<Awaited<ReturnType<typeof fetchGlobalKpi>> | null>(null)
 const coverage = ref<Awaited<ReturnType<typeof fetchCoverage>> | null>(null)
+const numberFormatter = new Intl.NumberFormat('fr-FR')
+
+const activityMetrics = computed(() => [
+  {
+    label: 'Couverture du mois',
+    value: numberFormatter.format(coverage.value?.pdv_vus ?? 0),
+    hint: 'PDV distincts visités',
+    icon: MapPin,
+  },
+  {
+    label: 'Visites ce mois',
+    value: numberFormatter.format(stats.value?.visites_month ?? 0),
+    hint: 'Activité de la période',
+    icon: Calendar,
+  },
+  {
+    label: 'Parc actif',
+    value: numberFormatter.format(stats.value?.total_pdv ?? 0),
+    hint: 'Points de vente',
+    icon: MapPin,
+  },
+  {
+    label: 'Équipe active',
+    value: numberFormatter.format(stats.value?.total_commerciaux ?? 0),
+    hint: `${numberFormatter.format(stats.value?.total_visites ?? 0)} visites cumulées`,
+    icon: Users,
+  },
+])
+
+const perfectStoreProgress = computed(() => {
+  const value = Number(psGlobal.value?.perfect_store_pct ?? 0)
+  return `${Math.min(100, Math.max(0, value))}%`
+})
 
 const productCategories = computed(() => [
   { key: 'evap', label: 'EVAP', value: stats.value?.taux_evap ?? 0 },
@@ -268,6 +244,17 @@ function getPercentColor(val: number) {
   if (val >= 70) return 'text-emerald-600'
   if (val >= 40) return 'text-amber-600'
   return 'text-red-600'
+}
+
+function getPercentBarColor(val: number) {
+  if (val >= 70) return 'bg-emerald-500'
+  if (val >= 40) return 'bg-amber-500'
+  return 'bg-fc-red'
+}
+
+function formatPercent(value: number | null | undefined) {
+  if (value == null) return '—'
+  return `${Number(value).toLocaleString('fr-FR', { maximumFractionDigits: 1 })}%`
 }
 
 function getProgressWidth(com: any) {

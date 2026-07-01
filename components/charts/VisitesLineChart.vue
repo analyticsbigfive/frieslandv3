@@ -1,8 +1,14 @@
 <template>
-  <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">{{ title }}</h3>
-    <div class="h-64">
+  <div class="admin-surface h-full p-6">
+    <div class="mb-5">
+      <h3 class="font-semibold text-slate-950 dark:text-white">{{ title }}</h3>
+      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Volume quotidien sur la période disponible.</p>
+    </div>
+    <div v-if="chartData" class="h-72">
       <Line v-if="chartData" :data="chartData" :options="chartOptions" />
+    </div>
+    <div v-else class="flex h-72 items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-400 dark:bg-slate-700/40">
+      Aucune visite sur la période
     </div>
   </div>
 </template>
@@ -28,13 +34,13 @@ const chartData = computed(() => {
     datasets: [{
       label: 'Visites',
       data: sorted.map(d => d.count),
-      borderColor: '#003DA5',
-      backgroundColor: 'rgba(0, 61, 165, 0.1)',
+      borderColor: '#C8102E',
+      backgroundColor: 'rgba(200, 16, 46, 0.08)',
       fill: true,
       tension: 0.4,
       pointRadius: 3,
       pointHoverRadius: 6,
-      pointBackgroundColor: '#003DA5',
+      pointBackgroundColor: '#C8102E',
     }],
   }
 })
