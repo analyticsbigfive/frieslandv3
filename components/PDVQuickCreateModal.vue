@@ -29,6 +29,9 @@
             <USelectMenu
               v-model="form.categorie_pdv"
               :options="categorieOptions"
+              searchable
+              placeholder="Catégorie..."
+              @update:model-value="onCategorieChange"
             />
           </UFormGroup>
 
@@ -36,6 +39,9 @@
             <USelectMenu
               v-model="form.sous_categorie_pdv"
               :options="sousCategorieOptions"
+              :disabled="!form.categorie_pdv"
+              searchable
+              placeholder="Type de PDV..."
             />
           </UFormGroup>
 
@@ -133,7 +139,7 @@
 </template>
 
 <script setup lang="ts">
-import type { PDV, PDVCategorie, PDVSousCategorie } from '~/types'
+import type { PDV } from '~/types'
 
 const props = defineProps<{
   modelValue: boolean
@@ -165,29 +171,63 @@ const defaultZone = computed(() => authStore.profile?.zone_assignee || '')
 const defaultRegion = computed(() => authStore.profile?.region || '')
 const secteurOptions = computed(() => authStore.profile?.secteurs_assignes?.filter(Boolean) || [])
 
+// Nouvelle organisation géo : zone = territoire (name), secteur = area (name).
+// Le distributeur découle du territoire : nationaux (toujours) + ceux liés au territoire.
+const { distributeurs, territories, areas, territoireDistributeurs, posTypes, fetchReferentiels } = useReferentiels()
+
+const currentTerritory = computed(() => territories.value.find(t => t.name === form.zone))
+const territoryCode = computed(() => currentTerritory.value?.code || '')
+const selectedArea = computed(() =>
+  areas.value.find(a => a.name === form.secteur && (!territoryCode.value || a.territory_code === territoryCode.value))
+)
+
+const nationalDistributors = computed(() => distributeurs.value.filter(d => d.national))
+const territoryDistributors = computed(() => {
+  if (!territoryCode.value) return []
+  const linked = new Set(
+    territoireDistributeurs.value
+      .filter(td => td.territory_code === territoryCode.value)
+      .map(td => td.distributor_name)
+  )
+  return distributeurs.value.filter(d => linked.has(d.name) && !d.national)
+})
+const distributorOptions = computed(() => {
+  const out: { value: string, label: string }[] = []
+  const seen = new Set<string>()
+  for (const d of [...territoryDistributors.value, ...nationalDistributors.value]) {
+    if (seen.has(d.name)) continue
+    seen.add(d.name)
+    out.push({ value: d.name, label: d.national ? `${d.name} · national` : d.name })
+  }
+  if (form.distributor_name && !seen.has(form.distributor_name)) {
+    out.push({ value: form.distributor_name, label: form.distributor_name })
+  }
+  return out
+})
+
 const canalOptions = ['General trade', 'Modern trade']
-const categorieOptions: PDVCategorie[] = [
-  'Point de vente détail',
-  'Point de consommation',
-  'Supermarché',
-  'Grossiste',
-]
-const sousCategorieOptions: PDVSousCategorie[] = [
-  'Boutique A',
-  'Boutique B',
-  'Boutique C',
-  'Superette GT',
-  'Kiosque',
-]
+// Cascade Catégorie (level3 / groupe) → Sous-catégorie (level4 / type de PDV),
+// lues depuis posTypes (référentiel type_pdv) → uniquement des valeurs valides.
+// Le level4 pilote le scoring Perfect Store.
+const categorieOptions = computed(() => [...new Set(posTypes.value.map(p => p.level3_group).filter(Boolean))].sort())
+const sousCategorieOptions = computed(() => posTypes.value
+  .filter(p => !form.categorie_pdv || p.level3_group === form.categorie_pdv)
+  .map(p => p.level4_type))
+function onCategorieChange() {
+  if (!sousCategorieOptions.value.includes(form.sous_categorie_pdv)) {
+    form.sous_categorie_pdv = ''
+  }
+}
 
 const form = reactive({
   nom_pdv: '',
   canal: 'General trade',
-  categorie_pdv: 'Point de vente détail' as PDVCategorie,
-  sous_categorie_pdv: 'Boutique C' as PDVSousCategorie,
+  categorie_pdv: '' as string,
+  sous_categorie_pdv: '' as string,
   zone: '',
   secteur: '',
   region: '',
+  distributor_name: '',
   adressage: '',
   geolocation_lat: null as number | null,
   geolocation_lng: null as number | null,
@@ -200,21 +240,25 @@ const hasCoordinates = computed(() =>
 function resetForm() {
   form.nom_pdv = ''
   form.canal = 'General trade'
-  form.categorie_pdv = 'Point de vente détail'
-  form.sous_categorie_pdv = 'Boutique C'
+  form.categorie_pdv = ''
+  form.sous_categorie_pdv = ''
   form.zone = defaultZone.value
   form.secteur = secteurOptions.value[0] || ''
   form.region = defaultRegion.value
+  form.distributor_name = territoryDistributors.value[0]?.name || nationalDistributors.value[0]?.name || ''
   form.adressage = ''
   form.geolocation_lat = currentPosition.value?.lat || null
   form.geolocation_lng = currentPosition.value?.lng || null
 }
 
-watch(() => props.modelValue, (open) => {
+watch(() => props.modelValue, async (open) => {
   if (open) {
+    await fetchReferentiels()
     resetForm()
   }
 })
+
+onMounted(() => { fetchReferentiels() })
 
 async function fillWithCurrentPosition() {
   gpsLoading.value = true
@@ -260,6 +304,9 @@ function buildPayload() {
     region: form.region.trim(),
     zone: form.zone.trim(),
     secteur: form.secteur.trim(),
+    territory_code: territoryCode.value || null,
+    area_code: selectedArea.value?.code || null,
+    distributor_name: form.distributor_name || null,
     geolocation_lat: form.geolocation_lat,
     geolocation_lng: form.geolocation_lng,
     rayon_geofence: Number(config.public.geofenceRadius) || 200,

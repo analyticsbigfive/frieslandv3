@@ -151,16 +151,21 @@
                 :options="['General trade', 'Modern trade']"
               />
             </UFormGroup>
-            <UFormGroup label="Catégorie">
+            <UFormGroup label="Catégorie" hint="Groupe (niveau 3) du référentiel">
               <USelectMenu
                 v-model="pdvForm.categorie_pdv"
-                :options="['Point de vente détail', 'Point de consommation', 'Supermarché', 'Grossiste']"
+                :options="categorieOptions"
+                searchable
+                searchable-placeholder="Rechercher une catégorie..."
+                placeholder="Catégorie..."
+                @update:model-value="onCategorieChange"
               />
             </UFormGroup>
             <UFormGroup label="Sous-catégorie" hint="Type de PDV (référentiel) — pilote le scoring Perfect Store">
               <USelectMenu
                 v-model="pdvForm.sous_categorie_pdv"
                 :options="sousCategorieOptions"
+                :disabled="!pdvForm.categorie_pdv"
                 searchable
                 searchable-placeholder="Rechercher un type..."
                 placeholder="Type de PDV..."
@@ -312,8 +317,8 @@ const importFile = ref<File | null>(null)
 const pdvForm = ref({
   nom_pdv: '',
   canal: 'General trade',
-  categorie_pdv: 'Point de vente détail',
-  sous_categorie_pdv: 'Boutique C',
+  categorie_pdv: '',
+  sous_categorie_pdv: '',
   zone: '',
   secteur: '',
   region: '',
@@ -334,7 +339,17 @@ const regionOptions = computed(() => ['', ...pdvStore.uniqueRegions])
 // Référentiels géo (Système B) : hiérarchie Region → Sous-région → Territoire → Area.
 const { distributeurs, regions, territories, areas, subRegions, posTypes, territoireDistributeurs, fetchReferentiels } = useReferentiels()
 
-const sousCategorieOptions = computed(() => posTypes.value.map(p => p.level4_type))
+// Cascade Catégorie (level3 / groupe) → Sous-catégorie (level4 / type de PDV).
+const categorieOptions = computed(() => [...new Set(posTypes.value.map(p => p.level3_group).filter(Boolean))].sort())
+const sousCategorieOptions = computed(() => posTypes.value
+  .filter(p => !pdvForm.value.categorie_pdv || p.level3_group === pdvForm.value.categorie_pdv)
+  .map(p => p.level4_type))
+function onCategorieChange() {
+  // Réinitialise la sous-catégorie si elle n'appartient plus à la catégorie choisie.
+  if (!sousCategorieOptions.value.includes(pdvForm.value.sous_categorie_pdv)) {
+    pdvForm.value.sous_categorie_pdv = ''
+  }
+}
 
 // Cascade géographique simplifiée (CI uniquement) : Région → Territoire → Area.
 // La sous-région est intermédiaire, dérivée automatiquement du territoire.
@@ -452,8 +467,8 @@ function openCreatePDV() {
   pdvForm.value = {
     nom_pdv: '',
     canal: 'General trade',
-    categorie_pdv: 'Point de vente détail',
-    sous_categorie_pdv: 'Boutique C',
+    categorie_pdv: '',
+    sous_categorie_pdv: '',
     zone: '',
     secteur: '',
     region: '',

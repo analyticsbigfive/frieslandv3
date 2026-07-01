@@ -108,14 +108,20 @@
             <UFormGroup label="Catégorie">
               <USelectMenu
                 v-model="form.categorie_pdv"
-                :options="['Point de vente détail', 'Point de consommation', 'Supermarché', 'Grossiste']"
+                :options="categorieOptions"
+                searchable
+                placeholder="Catégorie..."
+                @update:model-value="onCategorieChange"
               />
             </UFormGroup>
 
             <UFormGroup label="Sous-catégorie">
               <USelectMenu
                 v-model="form.sous_categorie_pdv"
-                :options="['Boutique A', 'Boutique B', 'Boutique C', 'Superette GT', 'Kiosque']"
+                :options="sousCategorieOptions"
+                :disabled="!form.categorie_pdv"
+                searchable
+                placeholder="Type de PDV..."
               />
             </UFormGroup>
           </div>
@@ -200,6 +206,18 @@ const authStore = useAuthStore()
 const { matchesPDVScope } = useUserScope()
 const toast = useToast()
 
+// Cascade Catégorie (level3) → Sous-catégorie (level4), depuis le référentiel type_pdv.
+const { posTypes, fetchReferentiels } = useReferentiels()
+const categorieOptions = computed(() => [...new Set(posTypes.value.map(p => p.level3_group).filter(Boolean))].sort())
+const sousCategorieOptions = computed(() => posTypes.value
+  .filter(p => !form.value.categorie_pdv || p.level3_group === form.value.categorie_pdv)
+  .map(p => p.level4_type))
+function onCategorieChange() {
+  if (!sousCategorieOptions.value.includes(form.value.sous_categorie_pdv)) {
+    form.value.sous_categorie_pdv = ''
+  }
+}
+
 const loading = ref(true)
 const editing = ref(false)
 const saving = ref(false)
@@ -225,6 +243,7 @@ const form = ref({
 
 onMounted(async () => {
   try {
+    fetchReferentiels()
     if (!authStore.profile) {
       await authStore.fetchProfile()
     }
