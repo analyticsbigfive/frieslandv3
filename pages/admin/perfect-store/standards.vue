@@ -162,59 +162,60 @@
         </div>
       </div>
 
-      <div class="admin-toolbar">
-        <div class="grid gap-3 sm:grid-cols-3">
-          <UFormGroup label="Segment">
-            <USelectMenu v-model="segmentFilter" :options="segmentOptions" option-attribute="label" value-attribute="value" />
-          </UFormGroup>
-          <UFormGroup label="Niveau">
-            <USelectMenu v-model="niveauFilter" :options="niveauFilterOptions" option-attribute="label" value-attribute="value" />
-          </UFormGroup>
-          <UFormGroup label="Pilier">
-            <USelectMenu v-model="pillarFilter" :options="pillarOptions" option-attribute="label" value-attribute="value" />
-          </UFormGroup>
-        </div>
-      </div>
-
       <div class="admin-surface overflow-hidden">
         <div class="border-b border-gray-100 px-5 py-3 dark:border-gray-700">
-          <h2 class="font-bold text-gray-900 dark:text-gray-100">Matrice des standards</h2>
+          <h2 class="font-bold text-gray-900 dark:text-gray-100">Matrice des standards de visibilité</h2>
+          <p class="mt-1 text-xs text-gray-400">
+            Une coche = l'élément est exigé pour atteindre ce niveau. Ces exigences alimentent directement le score
+            visibilité/promotion de chaque visite (fonction de calcul Perfect Store).
+          </p>
+        </div>
+        <div class="border-b border-gray-100 px-5 py-3 dark:border-gray-700">
+          <div class="grid gap-3 sm:grid-cols-2">
+            <UFormGroup label="Segment" size="sm">
+              <USelectMenu v-model="segmentFilter" :options="matrixSegmentOptions" option-attribute="label" value-attribute="value" size="sm" />
+            </UFormGroup>
+            <UFormGroup label="Pilier" size="sm">
+              <USelectMenu v-model="pillarFilter" :options="pillarOptions" option-attribute="label" value-attribute="value" size="sm" />
+            </UFormGroup>
+          </div>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full">
             <thead class="bg-gray-50 dark:bg-gray-700/50">
               <tr>
-                <th class="th-l">Segment</th>
-                <th class="th-l">Niveau</th>
-                <th class="th-l">Emplacement</th>
                 <th class="th-l">Élément</th>
-                <th class="th-c">Requis</th>
+                <th v-for="niveau in NIVEAUX" :key="niveau" class="th-c">{{ niveau.toUpperCase() }}</th>
                 <th class="th-c">Optionnel</th>
                 <th v-if="canEdit" class="th-c">Action</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-              <tr v-for="row in filteredStandards" :key="`${row.segment}-${row.niveau_perfect_store}-${row.code}`">
-                <td class="px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-gray-100">{{ segmentLabel(row.segment) }}</td>
-                <td class="px-4 py-2.5"><UBadge size="xs" variant="soft" color="blue">{{ tierLabel(row.niveau_perfect_store) }}</UBadge></td>
-                <td class="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">{{ placementLabel(row.emplacement) }}</td>
+            <tbody v-for="group in matrixByEmplacement" :key="group.key" class="divide-y divide-gray-100 dark:divide-gray-700">
+              <tr class="bg-gray-50/70 dark:bg-gray-700/40">
+                <td :colspan="canEdit ? 7 : 6" class="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  {{ group.label }}
+                </td>
+              </tr>
+              <tr v-for="row in group.rows" :key="row.element_id">
                 <td class="px-4 py-2.5 text-sm text-gray-900 dark:text-gray-100">{{ row.nom }}</td>
-                <td class="px-4 py-2.5 text-center">
-                  <input v-if="canEdit" v-model="row.requis" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-fc-red" />
-                  <UBadge v-else-if="row.requis" size="xs" variant="soft" color="green">Oui</UBadge>
-                  <span v-else class="text-gray-300">Non</span>
+                <td v-for="niveau in NIVEAUX" :key="niveau" class="px-4 py-2.5 text-center">
+                  <input v-if="canEdit" v-model="row.requis[niveau]" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-fc-red" />
+                  <UIcon v-else-if="row.requis[niveau]" name="i-heroicons-check-circle-20-solid" class="h-4 w-4 text-emerald-500" />
+                  <span v-else class="text-gray-300 dark:text-gray-600">—</span>
                 </td>
                 <td class="px-4 py-2.5 text-center">
                   <input v-if="canEdit" v-model="row.optionnel" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-amber-500" />
                   <UBadge v-else-if="row.optionnel" size="xs" variant="soft" color="amber">Oui</UBadge>
-                  <span v-else class="text-gray-300">Non</span>
+                  <span v-else class="text-gray-300 dark:text-gray-600">—</span>
                 </td>
                 <td v-if="canEdit" class="px-4 py-2.5 text-center">
-                  <UButton size="xs" :loading="savingKey === `standard:${row.segment}:${row.niveau_perfect_store}:${row.code}`" @click="saveStandard(row)">Enregistrer</UButton>
+                  <UButton size="xs" :loading="savingKey === `standard:${row.element_id}`" @click="saveStandard(row)">Enregistrer</UButton>
                 </td>
               </tr>
-              <tr v-if="!filteredStandards.length">
-                <td :colspan="canEdit ? 8 : 7" class="px-4 py-8 text-center text-sm text-gray-400">Aucun standard correspondant.</td>
+            </tbody>
+            <tbody v-if="!matrixByEmplacement.length">
+              <tr>
+                <td :colspan="canEdit ? 7 : 6" class="px-4 py-8 text-center text-sm text-gray-400">Aucun élément pour ce segment.</td>
               </tr>
             </tbody>
           </table>
@@ -299,10 +300,9 @@ const savingKey = ref<string | null>(null)
 const niveaux = ref<any[]>([])
 const assortiments = ref<any[]>([])
 const tauxCibles = ref<any[]>([])
-const standards = ref<any[]>([])
+const matrixElements = ref<any[]>([])
 const typeMappings = ref<any[]>([])
-const segmentFilter = ref('all')
-const niveauFilter = ref('all')
+const segmentFilter = ref('boutique')
 const pillarFilter = ref('all')
 const canEdit = computed(() => authStore.isAdmin || authStore.isSuperviseur)
 
@@ -315,13 +315,8 @@ const segmentOptions = [
   { value: 'porridge', label: 'Porridge' },
   { value: 'kiosque_aboki', label: 'Kiosque / Aboki' },
 ]
-const niveauFilterOptions = [
-  { value: 'all', label: 'Tous les niveaux' },
-  { value: 'flagship', label: 'FLAGSHIP' },
-  { value: 'vip', label: 'VIP' },
-  { value: 'core', label: 'CORE' },
-  { value: 'basic', label: 'BASIC' },
-]
+const NIVEAUX = ['basic', 'core', 'vip', 'flagship']
+const matrixSegmentOptions = segmentOptions.filter(option => option.value !== 'all')
 const pillarOptions = [
   { value: 'all', label: 'Tous les piliers' },
   { value: 'visibilite', label: 'Visibilité' },
@@ -343,12 +338,20 @@ const gradeOptions = [
   { value: 'C', label: 'C' },
 ]
 
-const filteredStandards = computed(() => standards.value.filter(row =>
-  (segmentFilter.value === 'all' || row.segment === segmentFilter.value)
-  && (niveauFilter.value === 'all' || row.niveau_perfect_store === niveauFilter.value)
-  && (pillarFilter.value === 'all' || row.pilier === pillarFilter.value)
-  && (canEdit.value || row.requis || row.optionnel),
-))
+const EMPLACEMENTS = [
+  { key: 'exterieure', label: 'Extérieure' },
+  { key: 'interieure', label: 'Intérieure' },
+  { key: 'promotion', label: 'Promotion' },
+]
+const matrixByEmplacement = computed(() => {
+  const rows = matrixElements.value.filter(row =>
+    row.segment === segmentFilter.value
+    && (pillarFilter.value === 'all' || row.pilier === pillarFilter.value)
+    && (canEdit.value || NIVEAUX.some(niveau => row.requis[niveau]) || row.optionnel))
+  return EMPLACEMENTS
+    .map(group => ({ ...group, rows: rows.filter(row => row.emplacement === group.key) }))
+    .filter(group => group.rows.length)
+})
 
 const pct = (value: number | null) => value == null ? '—' : `${Number(value)} %`
 const pctFine = (value: number | null) => value == null ? '—' : `${Number(value).toFixed(1).replace(/\.0$/, '')} %`
@@ -368,12 +371,6 @@ const tauxCiblesParFamille = computed(() => familleOrder
   })
   .filter(famille => famille.rows.length))
 const segmentLabel = (value: string) => segmentOptions.find(option => option.value === value)?.label || value
-const tierLabel = (value: string) => value.toUpperCase()
-const placementLabel = (value: string) => ({
-  exterieure: 'Extérieure',
-  interieure: 'Intérieure',
-  promotion: 'Promotion',
-}[value] || value)
 const one = (value: any) => Array.isArray(value) ? value[0] : value
 
 function validPercent(value: unknown) {
@@ -465,23 +462,24 @@ async function saveTauxCible(row: any) {
 
 async function saveStandard(row: any) {
   if (!canEdit.value) return
-  savingKey.value = `standard:${row.segment}:${row.niveau_perfect_store}:${row.code}`
+  savingKey.value = `standard:${row.element_id}`
   try {
     const [standardResult, elementResult] = await Promise.all([
-      supabase.from('standard_visibilite')
-        .update({ requis: !!row.requis })
-        .eq('segment', row.segment)
-        .eq('niveau_perfect_store', row.niveau_perfect_store)
-        .eq('element_visibilite_id', row.element_id),
+      supabase.from('standard_visibilite').upsert(
+        NIVEAUX.map(niveau => ({
+          segment: row.segment,
+          niveau_perfect_store: niveau,
+          element_visibilite_id: row.element_id,
+          requis: !!row.requis[niveau],
+        })),
+        { onConflict: 'niveau_perfect_store,element_visibilite_id' },
+      ),
       supabase.from('element_visibilite')
         .update({ optionnel: !!row.optionnel })
         .eq('id', row.element_id),
     ])
     if (standardResult.error) throw standardResult.error
     if (elementResult.error) throw elementResult.error
-    standards.value.forEach(item => {
-      if (item.element_id === row.element_id) item.optionnel = !!row.optionnel
-    })
     toast.add({ title: 'Standard enregistré', description: 'Lancez le recalcul global pour actualiser les visites.', color: 'green' })
   }
   catch (error: any) {
@@ -549,6 +547,7 @@ async function loadData() {
     const [
       niveauResult,
       assortimentResult,
+      elementResult,
       standardResult,
       typeResult,
       visibilityMappingResult,
@@ -562,10 +561,11 @@ async function loadData() {
         .select('segment, grade, sku_cibles, min_sku_presents, heros_obligatoires')
         .order('segment')
         .order('grade'),
+      supabase.from('element_visibilite')
+        .select('id, code, nom, pilier, emplacement, optionnel, segment')
+        .order('nom'),
       supabase.from('standard_visibilite')
-        .select('segment, niveau_perfect_store, element_visibilite_id, requis, element_visibilite(id, code, nom, pilier, emplacement, optionnel)')
-        .order('segment')
-        .order('niveau_perfect_store'),
+        .select('niveau_perfect_store, element_visibilite_id, requis'),
       supabase.from('type_pdv').select('id, nom').order('nom'),
       supabase.from('segment_visibilite_type_pdv').select('type_pdv_id, segment'),
       supabase.from('segment_grade_type_pdv').select('type_pdv_id, segment, grade'),
@@ -575,6 +575,7 @@ async function loadData() {
     ])
     if (niveauResult.error) throw niveauResult.error
     if (assortimentResult.error) throw assortimentResult.error
+    if (elementResult.error) throw elementResult.error
     if (standardResult.error) throw standardResult.error
     if (typeResult.error) throw typeResult.error
     if (visibilityMappingResult.error) throw visibilityMappingResult.error
@@ -582,10 +583,19 @@ async function loadData() {
     if (tauxRevuResult.error) throw tauxRevuResult.error
     niveaux.value = niveauResult.data || []
     assortiments.value = assortimentResult.data || []
-    standards.value = (standardResult.data || []).map((row: any) => ({
-      ...row,
-      ...one(row.element_visibilite),
-      element_id: row.element_visibilite_id || one(row.element_visibilite)?.id,
+    const requisByElement = new Map<number, Record<string, boolean>>()
+    for (const row of (standardResult.data || []) as any[]) {
+      const entry = requisByElement.get(row.element_visibilite_id) || {}
+      entry[row.niveau_perfect_store] = !!row.requis
+      requisByElement.set(row.element_visibilite_id, entry)
+    }
+    matrixElements.value = (elementResult.data || []).map((element: any) => ({
+      ...element,
+      element_id: element.id,
+      requis: NIVEAUX.reduce((acc, niveau) => {
+        acc[niveau] = !!requisByElement.get(element.id)?.[niveau]
+        return acc
+      }, {} as Record<string, boolean>),
     }))
     const tauxByRef = new Map<number, any>()
     for (const row of (tauxRevuResult.data || []) as any[]) {
