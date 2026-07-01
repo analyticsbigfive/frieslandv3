@@ -4,7 +4,7 @@
 -- - modification des paramètres : admin et superviseur uniquement ;
 -- - recalcul global : admin et superviseur uniquement ;
 -- - section Perfect Store intégrée à la matrice RBAC du dashboard.
--- Dépend de 120300, 120500, 130000 et 130100.
+-- Dépend de 120000, 120100, 120200, 120300, 120500, 130000 et 130100.
 -- ============================================================================
 begin;
 
@@ -42,7 +42,16 @@ begin
     'niveau_perfect_store',
     'element_visibilite',
     'standard_visibilite',
-    'segment_visibilite_type_pdv'
+    'segment_visibilite_type_pdv',
+    'pays',
+    'region',
+    'sous_region',
+    'territoire',
+    'zone',
+    'distributeur',
+    'territoire_distributeur',
+    'categorie_pdv',
+    'type_pdv'
   ]
   loop
     execute format('alter table public.%I enable row level security', v_table);
