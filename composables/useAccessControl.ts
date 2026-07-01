@@ -8,23 +8,36 @@ export interface DashboardSection {
 }
 
 // Sections du dashboard (alignées sur les groupes de la sidebar).
+// Statistiques : pdv, visites, perfect-store, visibilite, concurrence, produits.
+// Paramétrage : parametres (standards, seuils, référentiels, utilisateurs, permissions, import/export).
 export const DASHBOARD_SECTIONS: DashboardSection[] = [
   { key: 'principal', title: 'Principal' },
-  { key: 'perfect-store', title: 'Perfect Store' },
-  { key: 'pdv', title: 'PDV' },
-  { key: 'visites', title: 'Visites' },
-  { key: 'visibilite', title: 'Visibilité' },
-  { key: 'concurrence', title: 'Concurrence' },
-  { key: 'produits', title: 'Produits' },
+  { key: 'pdv', title: 'Stats · PDV' },
+  { key: 'visites', title: 'Stats · Visites & commerciaux' },
+  { key: 'perfect-store', title: 'Stats · Perfect Store' },
+  { key: 'visibilite', title: 'Stats · Visibilité' },
+  { key: 'concurrence', title: 'Stats · Concurrence' },
+  { key: 'produits', title: 'Stats · Produits' },
   { key: 'actions', title: 'Actions' },
-  { key: 'administration', title: 'Administration' },
+  { key: 'parametres', title: 'Paramètres' },
 ]
 
 export const MANAGED_ROLES: UserRole[] = ['admin', 'superviseur', 'merchandiser', 'commercial']
 
 // Résout un chemin /admin/... vers une clé de section.
+// Les chemins de paramétrage priment sur leur section statistique parente
+// (ex. /admin/perfect-store/standards est un paramètre, pas une stat).
 export function sectionKeyForPath(path: string): string | null {
-  if (path === '/admin' || path.startsWith('/admin/routing')) return 'principal'
+  if (
+    path.startsWith('/admin/perfect-store/standards') ||
+    path.startsWith('/admin/produits/seuils') ||
+    path.startsWith('/admin/users') ||
+    path.startsWith('/admin/referentiels') ||
+    path.startsWith('/admin/import') ||
+    path.startsWith('/admin/permissions') ||
+    path.startsWith('/admin/profile')
+  ) return 'parametres'
+  if (path === '/admin' || path.startsWith('/admin/routing') || path.startsWith('/admin/map')) return 'principal'
   if (path.startsWith('/admin/perfect-store')) return 'perfect-store'
   if (path.startsWith('/admin/pdv')) return 'pdv'
   if (path.startsWith('/admin/visites')) return 'visites'
@@ -32,14 +45,6 @@ export function sectionKeyForPath(path: string): string | null {
   if (path.startsWith('/admin/concurrence')) return 'concurrence'
   if (path.startsWith('/admin/produits')) return 'produits'
   if (path.startsWith('/admin/actions')) return 'actions'
-  if (
-    path.startsWith('/admin/users') ||
-    path.startsWith('/admin/referentiels') ||
-    path.startsWith('/admin/import') ||
-    path.startsWith('/admin/map') ||
-    path.startsWith('/admin/permissions') ||
-    path.startsWith('/admin/profile')
-  ) return 'administration'
   return null
 }
 
@@ -62,8 +67,13 @@ export function useAccessControl() {
     }
     const map: Record<string, Record<string, boolean>> = {}
     for (const row of (data || []) as any[]) {
+      // Compat : les anciennes lignes 'administration' valent pour 'parametres',
+      // sans écraser une ligne 'parametres' explicite.
+      const section = row.section === 'administration' ? 'parametres' : row.section
       if (!map[row.role]) map[row.role] = {}
-      map[row.role][row.section] = row.can_access
+      if (row.section !== 'administration' || !(section in map[row.role])) {
+        map[row.role][section] = row.can_access
+      }
     }
     access.value = map
     loaded.value = true
@@ -77,7 +87,7 @@ export function useAccessControl() {
     // Matrice absente/incomplète : refus par défaut pour éviter un accès implicite.
     // Le superviseur garde seulement les sections opérationnelles historiques.
     if (!roleMap || Object.keys(roleMap).length === 0) {
-      return r === 'superviseur' && sectionKey !== 'administration'
+      return r === 'superviseur' && sectionKey !== 'parametres'
     }
     return !!roleMap[sectionKey]
   }

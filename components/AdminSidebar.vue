@@ -117,6 +117,10 @@ const route = useRoute()
 
 function isActive(path: string): boolean {
   if (path === '/admin') return route.path === '/admin'
+  // La page Standards vit sous /admin/perfect-store mais appartient aux Paramètres.
+  if (path === '/admin/perfect-store') {
+    return route.path.startsWith(path) && !route.path.startsWith('/admin/perfect-store/standards')
+  }
   return route.path.startsWith(path)
 }
 
@@ -127,19 +131,12 @@ const navSections = [
     items: [
       { label: 'Dashboard', to: '/admin', icon: LayoutDashboard },
       { label: 'Routing & Planning', to: '/admin/routing', icon: Route },
-    ],
-  },
-  {
-    key: 'perfect-store',
-    title: 'Perfect Store',
-    items: [
-      { label: 'Perfect Store', to: '/admin/perfect-store', icon: Trophy },
-      { label: 'Standards', to: '/admin/perfect-store/standards', icon: SlidersHorizontal },
+      { label: 'Carte', to: '/admin/map', icon: Map },
     ],
   },
   {
     key: 'pdv',
-    title: 'PDV',
+    title: 'Stats · PDV',
     items: [
       { label: 'Liste des PDV', to: '/admin/pdv', icon: MapPin },
       { label: 'Répartition', to: '/admin/pdv/repartition', icon: BarChart3 },
@@ -148,16 +145,24 @@ const navSections = [
   },
   {
     key: 'visites',
-    title: 'Visites',
+    title: 'Stats · Visites',
     items: [
       { label: 'Visites', to: '/admin/visites', icon: ClipboardList },
       { label: 'Visites : Évolution', to: '/admin/visites/evolution', icon: BarChart3 },
       { label: 'Évolution par catég.', to: '/admin/visites/categories', icon: ShoppingBag },
+      { label: 'Perf. commerciaux', to: '/admin/visites/commerciaux', icon: Users },
+    ],
+  },
+  {
+    key: 'perfect-store',
+    title: 'Stats · Perfect Store',
+    items: [
+      { label: 'Perfect Store', to: '/admin/perfect-store', icon: Trophy },
     ],
   },
   {
     key: 'visibilite',
-    title: 'Visibilité',
+    title: 'Stats · Visibilité',
     items: [
       { label: 'Visibilité extérieure', to: '/admin/visibilite', icon: Eye },
       { label: 'Extérieure : Récap.', to: '/admin/visibilite/exterieure-recap', icon: ClipboardList },
@@ -170,7 +175,7 @@ const navSections = [
   },
   {
     key: 'concurrence',
-    title: 'Concurrence',
+    title: 'Stats · Concurrence',
     items: [
       { label: 'Visibilité conc. : év.', to: '/admin/concurrence/visibilite-evolution', icon: Eye },
       { label: 'Visibilité conc. : Ré.', to: '/admin/concurrence/visibilite-recap', icon: ClipboardList },
@@ -179,10 +184,9 @@ const navSections = [
   },
   {
     key: 'produits',
-    title: 'Produits',
+    title: 'Stats · Produits',
     items: [
       { label: 'Inventaire SKU', to: '/admin/produits/inventaire', icon: Boxes },
-      { label: 'Seuils stock', to: '/admin/produits/seuils', icon: SlidersHorizontal },
       { label: 'Dispo. EVAP', to: '/admin/produits/evap', icon: Package },
       { label: 'Prix EVAP', to: '/admin/produits/evap?tab=prix', icon: Package },
       { label: 'Récap. EVAP', to: '/admin/produits/evap?tab=recap', icon: ClipboardList },
@@ -206,14 +210,15 @@ const navSections = [
     ],
   },
   {
-    key: 'administration',
-    title: 'Administration',
+    key: 'parametres',
+    title: 'Paramètres',
     items: [
-      { label: 'Utilisateurs', to: '/admin/users', icon: Users },
+      { label: 'Standards Perfect Store', to: '/admin/perfect-store/standards', icon: SlidersHorizontal },
+      { label: 'Seuils stock', to: '/admin/produits/seuils', icon: SlidersHorizontal },
       { label: 'Référentiels', to: '/admin/referentiels', icon: Database },
+      { label: 'Utilisateurs', to: '/admin/users', icon: Users },
       { label: 'Permissions', to: '/admin/permissions', icon: ShieldCheck },
       { label: 'Import / Export', to: '/admin/import-export', icon: Upload },
-      { label: 'Carte', to: '/admin/map', icon: Map },
     ],
   },
 ]

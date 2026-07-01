@@ -5,6 +5,8 @@
       <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Permissions & accès</h1>
       <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
         Autorise chaque rôle à accéder à une section du dashboard. L'admin a toujours accès à tout.
+        Les sections « Stats » couvrent la consultation ; « Paramètres » regroupe le paramétrage
+        (standards Perfect Store, seuils stock, référentiels, utilisateurs, permissions, import/export).
       </p>
     </div>
 

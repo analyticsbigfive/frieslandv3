@@ -50,5 +50,21 @@ export function useVisibilityAggregation() {
     return [...acc.values()].map(e => ({ ...e, absent: e.applicable - e.present }))
   }
 
-  return { fetchElements, forPdv, visibilitySegmentForPdv, standardsOf, hasPresence, applicable, columns, aggregate }
+  // Totaux éléments présents / applicables sur un ensemble de visites.
+  // Alimente les jauges « taux de présence » : contrairement à hasPresence
+  // (binaire par visite), ce ratio varie réellement selon le pilier.
+  function elementTotals(visites: any[], placement: VisibilityPlacement) {
+    let present = 0
+    let applicable = 0
+    for (const v of visites) {
+      const std = standardsOf(v)
+      for (const el of forPdv(v?.pdv?.sous_categorie_pdv, placement)) {
+        applicable += 1
+        if (std[el.code]) present += 1
+      }
+    }
+    return { present, applicable }
+  }
+
+  return { fetchElements, forPdv, visibilitySegmentForPdv, standardsOf, hasPresence, applicable, columns, aggregate, elementTotals }
 }
