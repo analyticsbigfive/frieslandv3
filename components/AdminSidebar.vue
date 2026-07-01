@@ -20,33 +20,48 @@
 
     <!-- Navigation -->
     <nav class="flex-1 overflow-y-auto py-4 px-2">
-      <div v-for="section in visibleSections" :key="section.title" class="mb-6">
-        <p
+      <div v-for="section in visibleSections" :key="section.title" class="mb-4">
+        <!-- Titre repliable (menu déployé uniquement) -->
+        <button
           v-if="!collapsed"
-          class="mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500"
+          type="button"
+          class="mb-2 flex w-full items-center justify-between rounded-lg px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+          :aria-expanded="isExpanded(section.key)"
+          @click="toggleSection(section.key)"
         >
-          {{ section.title }}
-        </p>
-
-        <NuxtLink
-          v-for="item in section.items"
-          :key="item.to"
-          :to="item.to"
-          class="group mb-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200"
-          :class="isActive(item.to) 
-            ? 'bg-red-50 text-fc-red font-semibold dark:bg-red-950/30'
-            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'"
-          @click="$emit('navigate')"
-        >
-          <component :is="item.icon" class="w-5 h-5 flex-shrink-0" />
-          <span v-if="!collapsed" class="truncate">{{ item.label }}</span>
-          <span
-            v-if="item.badge && !collapsed"
-            class="ml-auto bg-fc-red text-white text-xs px-2 py-0.5 rounded-full"
+          <span>{{ section.title }}</span>
+          <svg
+            class="h-3.5 w-3.5 flex-shrink-0 transition-transform duration-200"
+            :class="isExpanded(section.key) ? 'rotate-90' : ''"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
           >
-            {{ item.badge }}
-          </span>
-        </NuxtLink>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+
+        <div v-show="collapsed || isExpanded(section.key)">
+          <NuxtLink
+            v-for="item in section.items"
+            :key="item.to"
+            :to="item.to"
+            class="group mb-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200"
+            :class="isActive(item.to)
+              ? 'bg-red-50 text-fc-red font-semibold dark:bg-red-950/30'
+              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'"
+            @click="$emit('navigate')"
+          >
+            <component :is="item.icon" class="w-5 h-5 flex-shrink-0" />
+            <span v-if="!collapsed" class="truncate">{{ item.label }}</span>
+            <span
+              v-if="item.badge && !collapsed"
+              class="ml-auto bg-fc-red text-white text-xs px-2 py-0.5 rounded-full"
+            >
+              {{ item.badge }}
+            </span>
+          </NuxtLink>
+        </div>
       </div>
     </nav>
 
@@ -210,6 +225,17 @@ const mounted = ref(false)
 const visibleSections = computed(() =>
   mounted.value ? navSections.filter(s => canAccessSection(s.key)) : navSections
 )
+
+// Repliage des sections : seules les 2 premières sont dépliées par défaut.
+const expandedSections = ref<Set<string>>(new Set(navSections.slice(0, 2).map(s => s.key)))
+function isExpanded(key: string) {
+  return expandedSections.value.has(key)
+}
+function toggleSection(key: string) {
+  const next = new Set(expandedSections.value)
+  next.has(key) ? next.delete(key) : next.add(key)
+  expandedSections.value = next
+}
 
 onMounted(async () => {
   await fetchAccess()

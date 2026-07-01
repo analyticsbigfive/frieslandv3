@@ -339,15 +339,29 @@
     </template>
 
     <!-- ==================== CREATE ROUTING MODAL ==================== -->
-    <UModal v-model="showCreateModal" :ui="{ width: 'max-w-3xl' }">
-      <div class="p-6 space-y-5">
-        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">
-          {{ editingRoutingId ? 'Modifier le routing' : 'Nouveau routing' }}
-        </h2>
-
-        <div class="grid grid-cols-2 gap-4">
+    <AdminFormModal
+      v-model="showCreateModal"
+      :title="editingRoutingId ? 'Modifier le routing' : 'Nouveau routing'"
+      description="Planifiez la tournée, puis composez la liste ordonnée des points de vente."
+      icon="i-heroicons-map"
+      width="sm:max-w-4xl"
+      body-class="space-y-8"
+      required-note
+    >
+      <section aria-labelledby="routing-planning-title">
+        <div class="mb-4 flex items-center gap-3">
+          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+            <UIcon name="i-heroicons-calendar-days" class="h-4 w-4" />
+          </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Utilisateur *</label>
+            <h3 id="routing-planning-title" class="text-sm font-semibold text-slate-900 dark:text-white">
+              Planification
+            </h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Affectation, date et instructions destinées au terrain.</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <UFormGroup label="Utilisateur" required size="md">
             <USelectMenu
               v-model="newRouting.userId"
               :options="merchandiserOptions"
@@ -356,33 +370,44 @@
               value-attribute="value"
               searchable
               searchable-placeholder="Rechercher..."
-              size="lg"
+              size="md"
+              class="w-full"
             />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date *</label>
-            <UInput v-model="newRouting.date" type="date" size="lg" />
-          </div>
-          <div v-if="editingRoutingId">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Statut</label>
+          </UFormGroup>
+          <UFormGroup label="Date" required size="md">
+            <UInput v-model="newRouting.date" type="date" size="md" class="w-full" />
+          </UFormGroup>
+          <UFormGroup v-if="editingRoutingId" label="Statut" size="md">
             <USelectMenu
               v-model="newRouting.status"
               :options="editStatusOptions"
               option-attribute="label"
               value-attribute="value"
-              size="lg"
+              size="md"
+              class="w-full"
             />
+          </UFormGroup>
+        </div>
+
+        <UFormGroup label="Notes" class="mt-5" size="md">
+          <UTextarea v-model="newRouting.notes" placeholder="Instructions pour le terrain..." :rows="2" />
+        </UFormGroup>
+      </section>
+
+      <section aria-labelledby="routing-pdv-title" class="border-t border-slate-200 pt-7 dark:border-slate-700">
+        <div class="mb-4 flex items-center gap-3">
+          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+            <UIcon name="i-heroicons-building-storefront" class="h-4 w-4" />
+          </div>
+          <div>
+            <h3 id="routing-pdv-title" class="text-sm font-semibold text-slate-900 dark:text-white">
+              Points de vente à visiter
+            </h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Filtrez, ajoutez puis réordonnez les étapes de la tournée.</p>
           </div>
         </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes (optionnel)</label>
-          <UTextarea v-model="newRouting.notes" placeholder="Instructions pour le terrain..." :rows="2" />
-        </div>
-
-        <div>
           <div class="flex items-center justify-between mb-2">
-            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">PDV à visiter *</label>
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Sélection des PDV <span class="text-fc-red">*</span></span>
             <span class="text-xs text-gray-400">{{ newRouting.pdvItems.length }} PDV sélectionnés</span>
           </div>
 
@@ -497,27 +522,38 @@
               </button>
             </div>
           </div>
-        </div>
+      </section>
 
-        <div class="flex justify-end gap-3 pt-4 border-t">
-          <UButton variant="ghost" @click="closeRoutingModal">Annuler</UButton>
-          <UButton class="bg-fc-red hover:bg-fc-red/90" :loading="creating" :disabled="!canCreate" @click="handleSaveRouting">
-            {{ editingRoutingId ? 'Enregistrer' : 'Créer le routing' }}
-          </UButton>
-        </div>
-      </div>
-    </UModal>
+      <template #footer>
+        <UButton type="button" color="gray" variant="ghost" @click="closeRoutingModal">
+          Annuler
+        </UButton>
+        <UButton
+          icon="i-heroicons-check"
+          class="bg-fc-red text-white hover:bg-fc-red-600 focus-visible:outline-fc-red-500 dark:bg-fc-red dark:text-white dark:hover:bg-fc-red-600 dark:focus-visible:outline-fc-red-400"
+          :loading="creating"
+          :disabled="!canCreate"
+          @click="handleSaveRouting"
+        >
+          {{ editingRoutingId ? 'Mettre à jour' : 'Créer le routing' }}
+        </UButton>
+      </template>
+    </AdminFormModal>
 
     <!-- ==================== DUPLICATE ROUTING MODAL ==================== -->
-    <UModal v-model="showDuplicateModal">
-      <div class="p-6 space-y-4">
-        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Dupliquer le routing</h2>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nouvelle date *</label>
-          <UInput v-model="duplicateDate" type="date" size="lg" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Utilisateur (optionnel)</label>
+    <AdminFormModal
+      v-model="showDuplicateModal"
+      title="Dupliquer le routing"
+      description="Créez une nouvelle tournée à partir de la sélection actuelle."
+      icon="i-heroicons-document-duplicate"
+      width="sm:max-w-xl"
+      body-class="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2"
+      required-note
+    >
+        <UFormGroup label="Nouvelle date" required size="md">
+          <UInput v-model="duplicateDate" type="date" size="md" class="w-full" />
+        </UFormGroup>
+        <UFormGroup label="Utilisateur" help="Laissez vide pour conserver l’utilisateur actuel." size="md">
           <USelectMenu
             v-model="duplicateUserId"
             :options="merchandiserOptions"
@@ -525,25 +561,35 @@
             option-attribute="label"
             value-attribute="value"
             searchable
-            size="lg"
+            size="md"
+            class="w-full"
           />
-        </div>
-        <div class="flex justify-end gap-3">
-          <UButton variant="ghost" @click="showDuplicateModal = false">Annuler</UButton>
-          <UButton class="bg-fc-red hover:bg-fc-red/90" :disabled="!duplicateDate" @click="handleDuplicate">
+        </UFormGroup>
+
+      <template #footer>
+          <UButton type="button" color="gray" variant="ghost" @click="showDuplicateModal = false">Annuler</UButton>
+          <UButton
+            icon="i-heroicons-document-duplicate"
+            class="bg-fc-red text-white hover:bg-fc-red-600 focus-visible:outline-fc-red-500 dark:bg-fc-red dark:text-white dark:hover:bg-fc-red-600 dark:focus-visible:outline-fc-red-400"
+            :disabled="!duplicateDate"
+            @click="handleDuplicate"
+          >
             Dupliquer
           </UButton>
-        </div>
-      </div>
-    </UModal>
+      </template>
+    </AdminFormModal>
 
     <!-- ==================== CREATE TEMPLATE MODAL ==================== -->
-    <UModal v-model="showTemplateCreateModal">
-      <div class="p-6 space-y-4">
-        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Nouveau template permanent</h2>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Utilisateur *</label>
+    <AdminFormModal
+      v-model="showTemplateCreateModal"
+      title="Nouveau template permanent"
+      description="Créez une tournée récurrente associée à un utilisateur et un jour de la semaine."
+      icon="i-heroicons-calendar"
+      width="sm:max-w-2xl"
+      body-class="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2"
+      required-note
+    >
+        <UFormGroup label="Utilisateur" required size="md">
           <USelectMenu
             v-model="newTemplate.userId"
             :options="merchandiserOptions"
@@ -552,50 +598,53 @@
             value-attribute="value"
             searchable
             searchable-placeholder="Rechercher..."
-            size="lg"
+            size="md"
+            class="w-full"
           />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Jour de la semaine *</label>
+        </UFormGroup>
+        <UFormGroup label="Jour de la semaine" required size="md">
           <USelectMenu
             v-model="newTemplate.dayOfWeek"
             :options="dayOfWeekOptions"
             placeholder="Choisir le jour"
             option-attribute="label"
             value-attribute="value"
-            size="lg"
+            size="md"
+            class="w-full"
           />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nom du template</label>
-          <UInput v-model="newTemplate.label" placeholder="Ex: Tournée Appolo..." size="lg" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes (optionnel)</label>
+        </UFormGroup>
+        <UFormGroup label="Nom du template" size="md" class="sm:col-span-2">
+          <UInput v-model="newTemplate.label" placeholder="Ex. Tournée Appolo" size="md" class="w-full" />
+        </UFormGroup>
+        <UFormGroup label="Notes" size="md" class="sm:col-span-2">
           <UTextarea v-model="newTemplate.notes" placeholder="Instructions récurrentes..." :rows="2" />
-        </div>
-        <div class="flex justify-end gap-3 pt-4 border-t">
-          <UButton variant="ghost" @click="showTemplateCreateModal = false">Annuler</UButton>
+        </UFormGroup>
+
+      <template #footer>
+          <UButton type="button" color="gray" variant="ghost" @click="showTemplateCreateModal = false">Annuler</UButton>
           <UButton
-            class="bg-fc-red hover:bg-fc-red/90"
+            icon="i-heroicons-check"
+            class="bg-fc-red text-white hover:bg-fc-red-600 focus-visible:outline-fc-red-500 dark:bg-fc-red dark:text-white dark:hover:bg-fc-red-600 dark:focus-visible:outline-fc-red-400"
             :disabled="!newTemplate.userId || newTemplate.dayOfWeek === undefined"
             :loading="creating"
             @click="handleCreateTemplate"
           >
             Créer le template
           </UButton>
-        </div>
-      </div>
-    </UModal>
+      </template>
+    </AdminFormModal>
 
     <!-- ==================== GENERATE ROUTINGS MODAL ==================== -->
-    <UModal v-model="showGenerateModal">
-      <div class="p-6 space-y-4">
-        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Générer les routings depuis les templates</h2>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Crée automatiquement les routings quotidiens à partir des templates permanents pour la période sélectionnée.</p>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Utilisateur *</label>
+    <AdminFormModal
+      v-model="showGenerateModal"
+      title="Générer les routings"
+      description="Créez automatiquement les tournées quotidiennes depuis les templates permanents."
+      icon="i-heroicons-arrow-path-rounded-square"
+      width="sm:max-w-2xl"
+      body-class="space-y-5"
+      required-note
+    >
+        <UFormGroup label="Utilisateur" required size="md">
           <USelectMenu
             v-model="generateConfig.userId"
             :options="merchandiserOptions"
@@ -603,21 +652,20 @@
             option-attribute="label"
             value-attribute="value"
             searchable
-            size="lg"
+            size="md"
+            class="w-full"
           />
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Du *</label>
-            <UInput v-model="generateConfig.dateFrom" type="date" size="lg" />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Au *</label>
-            <UInput v-model="generateConfig.dateTo" type="date" size="lg" />
-          </div>
+        </UFormGroup>
+        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <UFormGroup label="Du" required size="md">
+            <UInput v-model="generateConfig.dateFrom" type="date" size="md" class="w-full" />
+          </UFormGroup>
+          <UFormGroup label="Au" required size="md">
+            <UInput v-model="generateConfig.dateTo" type="date" size="md" class="w-full" />
+          </UFormGroup>
         </div>
 
-        <div v-if="generateResults.length" class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 space-y-1 max-h-48 overflow-y-auto">
+        <div v-if="generateResults.length" class="max-h-48 space-y-1 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-700/50">
           <div v-for="r in generateResults" :key="r.date" class="flex items-center gap-2 text-sm">
             <UIcon
               :name="r.status === 'created' ? 'i-heroicons-check-circle' : r.status === 'exists' ? 'i-heroicons-exclamation-triangle' : 'i-heroicons-minus-circle'"
@@ -631,19 +679,19 @@
           </div>
         </div>
 
-        <div class="flex justify-end gap-3 pt-4 border-t">
-          <UButton variant="ghost" @click="showGenerateModal = false; generateResults = []">Fermer</UButton>
+      <template #footer>
+          <UButton type="button" color="gray" variant="ghost" @click="showGenerateModal = false; generateResults = []">Fermer</UButton>
           <UButton
-            class="bg-fc-red hover:bg-fc-red/90"
+            icon="i-heroicons-sparkles"
+            class="bg-fc-red text-white hover:bg-fc-red-600 focus-visible:outline-fc-red-500 dark:bg-fc-red dark:text-white dark:hover:bg-fc-red-600 dark:focus-visible:outline-fc-red-400"
             :disabled="!generateConfig.userId || !generateConfig.dateFrom || !generateConfig.dateTo"
             :loading="generating"
             @click="handleGenerate"
           >
             Générer
           </UButton>
-        </div>
-      </div>
-    </UModal>
+      </template>
+    </AdminFormModal>
 
     <!-- ==================== IMPORT CSV ROUTINGS MODAL ==================== -->
     <UModal v-model="showImportModal" :ui="{ width: 'max-w-xl' }">

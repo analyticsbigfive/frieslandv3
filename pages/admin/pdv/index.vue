@@ -134,118 +134,191 @@
     </div>
 
     <!-- Create/Edit Modal -->
-    <UModal v-model="showCreate" :ui="{ width: 'max-w-2xl' }">
-      <div class="p-6">
-        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-6">
-          {{ editingPDV ? 'Modifier le PDV' : 'Nouveau Point de Vente' }}
-        </h3>
+    <AdminFormModal
+      v-model="showCreate"
+      :title="editingPDV ? 'Modifier le point de vente' : 'Nouveau point de vente'"
+      description="Renseignez l’identité, la zone commerciale et les coordonnées du PDV."
+      icon="i-heroicons-map-pin"
+      width="sm:max-w-3xl"
+      body-class="space-y-8"
+      as-form
+      required-note
+      @submit="handleSavePDV"
+    >
+      <section aria-labelledby="pdv-identite-title">
+              <div class="mb-4 flex items-center gap-3">
+                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                  <UIcon name="i-heroicons-building-storefront" class="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 id="pdv-identite-title" class="text-sm font-semibold text-slate-900 dark:text-white">
+                    Identité commerciale
+                  </h4>
+                  <p class="text-xs text-slate-500 dark:text-slate-400">Informations utilisées dans les listes et les rapports.</p>
+                </div>
+              </div>
 
-        <form @submit.prevent="handleSavePDV" class="space-y-4">
-          <div class="grid grid-cols-2 gap-4">
-            <UFormGroup label="Nom du PDV" required>
-              <UInput v-model="pdvForm.nom_pdv" placeholder="Nom..." />
-            </UFormGroup>
-            <UFormGroup label="Canal">
-              <USelectMenu
-                v-model="pdvForm.canal"
-                :options="['General trade', 'Modern trade']"
-              />
-            </UFormGroup>
-            <UFormGroup label="Catégorie" hint="Groupe (niveau 3) du référentiel">
-              <USelectMenu
-                v-model="pdvForm.categorie_pdv"
-                :options="categorieOptions"
-                searchable
-                searchable-placeholder="Rechercher une catégorie..."
-                placeholder="Catégorie..."
-                @update:model-value="onCategorieChange"
-              />
-            </UFormGroup>
-            <UFormGroup label="Sous-catégorie" hint="Type de PDV (référentiel) — pilote le scoring Perfect Store">
-              <USelectMenu
-                v-model="pdvForm.sous_categorie_pdv"
-                :options="sousCategorieOptions"
-                :disabled="!pdvForm.categorie_pdv"
-                searchable
-                searchable-placeholder="Rechercher un type..."
-                placeholder="Type de PDV..."
-              />
-            </UFormGroup>
-            <UFormGroup label="Région (Region)">
-              <USelectMenu
-                v-model="pdvForm.region_code"
-                :options="regionCascadeOptions"
-                option-attribute="label"
-                value-attribute="value"
-                placeholder="Région..."
-                searchable
-                searchable-placeholder="Rechercher..."
-                @update:model-value="onRegionChange"
-              />
-            </UFormGroup>
-            <UFormGroup label="Territoire (Territory)">
-              <USelectMenu
-                v-model="pdvForm.territory_code"
-                :options="territoryCascadeOptions"
-                option-attribute="label"
-                value-attribute="value"
-                :disabled="!pdvForm.region_code"
-                placeholder="Territoire..."
-                searchable
-                searchable-placeholder="Rechercher..."
-                @update:model-value="onTerritoryChange"
-              />
-            </UFormGroup>
-            <UFormGroup label="Area / quartier (Area)">
-              <USelectMenu
-                v-model="pdvForm.area_code"
-                :options="areaCascadeOptions"
-                option-attribute="label"
-                value-attribute="value"
-                :disabled="!pdvForm.territory_code"
-                placeholder="Area..."
-                searchable
-                searchable-placeholder="Rechercher..."
-              />
-            </UFormGroup>
-            <UFormGroup label="Distributeur" hint="Nationaux + liés au territoire">
-              <USelectMenu
-                v-model="pdvForm.distributor_name"
-                :options="distributorOptions"
-                option-attribute="label"
-                value-attribute="value"
-                placeholder="Distributeur..."
-                searchable
-                searchable-placeholder="Rechercher..."
-              />
-            </UFormGroup>
-            <UFormGroup label="Objectif Perfect Store">
-              <USelectMenu
-                v-model="pdvForm.objectif_perfect_store"
-                :options="['', 'FLAGSHIP', 'VIP', 'CORE', 'BASIC']"
-                placeholder="Objectif..."
-              />
-            </UFormGroup>
-            <UFormGroup label="Adressage">
-              <UInput v-model="pdvForm.adressage" placeholder="Adresse..." />
-            </UFormGroup>
-            <UFormGroup label="Latitude">
-              <UInput v-model="pdvForm.geolocation_lat" type="number" step="any" />
-            </UFormGroup>
-            <UFormGroup label="Longitude">
-              <UInput v-model="pdvForm.geolocation_lng" type="number" step="any" />
-            </UFormGroup>
-          </div>
+              <div class="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2">
+                <UFormGroup label="Nom du PDV" required size="md">
+                  <UInput v-model="pdvForm.nom_pdv" placeholder="Ex. Pharmacie du Marché" size="md" class="w-full" />
+                </UFormGroup>
+                <UFormGroup label="Canal" size="md">
+                  <USelectMenu
+                    v-model="pdvForm.canal"
+                    :options="['General trade', 'Modern trade']"
+                    size="md"
+                    class="w-full"
+                  />
+                </UFormGroup>
+                <UFormGroup label="Catégorie" help="Groupe de niveau 3 du référentiel." size="md">
+                  <USelectMenu
+                    v-model="pdvForm.categorie_pdv"
+                    :options="categorieOptions"
+                    searchable
+                    searchable-placeholder="Rechercher une catégorie..."
+                    placeholder="Sélectionner une catégorie"
+                    size="md"
+                    class="w-full"
+                    @update:model-value="onCategorieChange"
+                  />
+                </UFormGroup>
+                <UFormGroup label="Sous-catégorie" help="Type de PDV utilisé pour le scoring Perfect Store." size="md">
+                  <USelectMenu
+                    v-model="pdvForm.sous_categorie_pdv"
+                    :options="sousCategorieOptions"
+                    :disabled="!pdvForm.categorie_pdv"
+                    searchable
+                    searchable-placeholder="Rechercher un type..."
+                    placeholder="Sélectionner un type de PDV"
+                    size="md"
+                    class="w-full"
+                  />
+                </UFormGroup>
+              </div>
+      </section>
 
-          <div class="flex justify-end gap-2 pt-4">
-            <UButton variant="ghost" @click="showCreate = false">Annuler</UButton>
-            <UButton type="submit" class="bg-fc-blue" :loading="saving">
-              {{ editingPDV ? 'Mettre à jour' : 'Créer' }}
-            </UButton>
-          </div>
-        </form>
-      </div>
-    </UModal>
+      <section aria-labelledby="pdv-zone-title" class="border-t border-slate-200 pt-7 dark:border-slate-700">
+              <div class="mb-4 flex items-center gap-3">
+                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                  <UIcon name="i-heroicons-map" class="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 id="pdv-zone-title" class="text-sm font-semibold text-slate-900 dark:text-white">
+                    Zone commerciale
+                  </h4>
+                  <p class="text-xs text-slate-500 dark:text-slate-400">Sélectionnez les niveaux dans l’ordre : région, territoire, puis quartier.</p>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2">
+                <UFormGroup label="Région" size="md">
+                  <USelectMenu
+                    v-model="pdvForm.region_code"
+                    :options="regionCascadeOptions"
+                    option-attribute="label"
+                    value-attribute="value"
+                    placeholder="Sélectionner une région"
+                    searchable
+                    searchable-placeholder="Rechercher..."
+                    size="md"
+                    class="w-full"
+                    @update:model-value="onRegionChange"
+                  />
+                </UFormGroup>
+                <UFormGroup label="Territoire" size="md">
+                  <USelectMenu
+                    v-model="pdvForm.territory_code"
+                    :options="territoryCascadeOptions"
+                    option-attribute="label"
+                    value-attribute="value"
+                    :disabled="!pdvForm.region_code"
+                    placeholder="Sélectionner un territoire"
+                    searchable
+                    searchable-placeholder="Rechercher..."
+                    size="md"
+                    class="w-full"
+                    @update:model-value="onTerritoryChange"
+                  />
+                </UFormGroup>
+                <UFormGroup label="Area / quartier" size="md">
+                  <USelectMenu
+                    v-model="pdvForm.area_code"
+                    :options="areaCascadeOptions"
+                    option-attribute="label"
+                    value-attribute="value"
+                    :disabled="!pdvForm.territory_code"
+                    placeholder="Sélectionner une area"
+                    searchable
+                    searchable-placeholder="Rechercher..."
+                    size="md"
+                    class="w-full"
+                  />
+                </UFormGroup>
+                <UFormGroup label="Distributeur" help="Distributeurs nationaux et liés au territoire." size="md">
+                  <USelectMenu
+                    v-model="pdvForm.distributor_name"
+                    :options="distributorOptions"
+                    option-attribute="label"
+                    value-attribute="value"
+                    placeholder="Sélectionner un distributeur"
+                    searchable
+                    searchable-placeholder="Rechercher..."
+                    size="md"
+                    class="w-full"
+                  />
+                </UFormGroup>
+              </div>
+      </section>
+
+      <section aria-labelledby="pdv-details-title" class="border-t border-slate-200 pt-7 dark:border-slate-700">
+              <div class="mb-4 flex items-center gap-3">
+                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                  <UIcon name="i-heroicons-map-pin" class="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 id="pdv-details-title" class="text-sm font-semibold text-slate-900 dark:text-white">
+                    Détails et coordonnées
+                  </h4>
+                  <p class="text-xs text-slate-500 dark:text-slate-400">Adresse terrain, objectif commercial et position GPS.</p>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2">
+                <UFormGroup label="Objectif Perfect Store" size="md">
+                  <USelectMenu
+                    v-model="pdvForm.objectif_perfect_store"
+                    :options="['', 'FLAGSHIP', 'VIP', 'CORE', 'BASIC']"
+                    placeholder="Sélectionner un objectif"
+                    size="md"
+                    class="w-full"
+                  />
+                </UFormGroup>
+                <UFormGroup label="Adressage" size="md">
+                  <UInput v-model="pdvForm.adressage" placeholder="Ex. Rue du Commerce, près du marché" size="md" class="w-full" />
+                </UFormGroup>
+                <UFormGroup label="Latitude" size="md">
+                  <UInput v-model="pdvForm.geolocation_lat" type="number" step="any" placeholder="Ex. 5.3472" size="md" class="w-full" />
+                </UFormGroup>
+                <UFormGroup label="Longitude" size="md">
+                  <UInput v-model="pdvForm.geolocation_lng" type="number" step="any" placeholder="Ex. -4.0268" size="md" class="w-full" />
+                </UFormGroup>
+              </div>
+      </section>
+
+      <template #footer>
+        <UButton type="button" color="gray" variant="ghost" @click="showCreate = false">
+          Annuler
+        </UButton>
+        <UButton
+          type="submit"
+          icon="i-heroicons-check"
+          class="bg-fc-blue text-white hover:bg-fc-blue-600 focus-visible:outline-fc-blue-500 dark:bg-fc-blue dark:text-white dark:hover:bg-fc-blue-600 dark:focus-visible:outline-fc-blue-400"
+          :loading="saving"
+        >
+          {{ editingPDV ? 'Mettre à jour' : 'Créer le PDV' }}
+        </UButton>
+      </template>
+    </AdminFormModal>
 
     <!-- Import Modal -->
     <UModal v-model="showImport">

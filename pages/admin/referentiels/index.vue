@@ -97,10 +97,23 @@
     </div>
 
     <!-- CRUD Modal -->
-    <UModal v-model="showModal">
-      <div class="space-y-4 p-6">
-        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">{{ editing ? 'Modifier' : 'Ajouter' }} — {{ activeDef.label }}</h3>
-        <UFormGroup v-for="f in activeDef.fields" :key="f.key" :label="f.label + (f.required ? ' *' : '')" :hint="f.hint">
+    <AdminFormModal
+      v-model="showModal"
+      :title="`${editing ? 'Modifier' : 'Ajouter'} — ${activeDef.label}`"
+      description="Renseignez les propriétés de cet élément de référentiel."
+      icon="i-heroicons-circle-stack"
+      width="sm:max-w-xl"
+      body-class="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2"
+      required-note
+    >
+        <UFormGroup
+          v-for="f in activeDef.fields"
+          :key="f.key"
+          :label="f.label"
+          :required="f.required"
+          :help="f.hint"
+          size="md"
+        >
           <USelectMenu
             v-if="f.type === 'select'"
             v-model="form[f.key]"
@@ -111,6 +124,8 @@
             searchable
             searchable-placeholder="Rechercher..."
             :placeholder="f.label"
+            size="md"
+            class="w-full"
           />
           <USelectMenu
             v-else-if="f.type === 'bool'"
@@ -118,6 +133,8 @@
             :options="[{ value: true, label: 'Oui' }, { value: false, label: 'Non' }]"
             option-attribute="label"
             value-attribute="value"
+            size="md"
+            class="w-full"
           />
           <UInput
             v-else-if="f.type === 'num'"
@@ -128,20 +145,34 @@
             :max="f.max"
             :disabled="editing && f.lockEdit"
             :placeholder="f.label"
+            size="md"
+            class="w-full"
           />
           <UInput
             v-else
             v-model="form[f.key]"
             :disabled="editing && f.lockEdit"
             :placeholder="f.label"
+            size="md"
+            class="w-full"
           />
         </UFormGroup>
-        <div class="flex justify-end gap-2 border-t border-gray-200 pt-3 dark:border-gray-700">
-          <UButton variant="ghost" @click="showModal = false">Annuler</UButton>
-          <UButton class="bg-fc-blue" :loading="saving" :disabled="!canSave" @click="save">Enregistrer</UButton>
-        </div>
-      </div>
-    </UModal>
+
+      <template #footer>
+        <UButton type="button" color="gray" variant="ghost" @click="showModal = false">
+          Annuler
+        </UButton>
+        <UButton
+          icon="i-heroicons-check"
+          class="bg-fc-blue text-white hover:bg-fc-blue-600 focus-visible:outline-fc-blue-500 dark:bg-fc-blue dark:text-white dark:hover:bg-fc-blue-600 dark:focus-visible:outline-fc-blue-400"
+          :loading="saving"
+          :disabled="!canSave"
+          @click="save"
+        >
+          {{ editing ? 'Mettre à jour' : 'Ajouter' }}
+        </UButton>
+      </template>
+    </AdminFormModal>
   </div>
 </template>
 

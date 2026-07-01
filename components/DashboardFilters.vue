@@ -19,23 +19,25 @@
         />
       </UFormGroup>
 
-      <!-- Catégorie de PDV -->
+      <!-- Catégorie de PDV (référentiel niveau 3) -->
       <UFormGroup v-if="showCategorie" label="Catégorie de PDV" size="sm">
         <USelectMenu
           v-model="model.categorie"
-          :options="['', 'Point de vente détail', 'Point de consommation']"
+          :options="categorieRefOptions"
           placeholder="Toutes"
           size="sm"
+          searchable
         />
       </UFormGroup>
 
-      <!-- Sous-catégorie -->
+      <!-- Sous-catégorie (référentiel niveau 4 / type de PDV) -->
       <UFormGroup v-if="showSousCategorie" label="Sous-catégorie" size="sm">
         <USelectMenu
           v-model="model.sousCategorie"
-          :options="['', 'Boutique A', 'Boutique B', 'Boutique C', 'Superette GT', 'Superette MT', 'Kiosque', 'Pushcart', 'Tabliers', 'Supermarché', 'Hypermarché']"
+          :options="sousCategorieRefOptions"
           placeholder="Toutes"
           size="sm"
+          searchable
         />
       </UFormGroup>
 
@@ -141,7 +143,16 @@ const emit = defineEmits(['update:modelValue', 'filter'])
 
 // Charger les commerciaux pour le dropdown
 const { users: cachedUsers, fetchUsers: fetchCachedUsers } = useUsersCache()
-onMounted(() => { fetchCachedUsers() })
+
+// Catégories/sous-catégories depuis le référentiel (pos_types) — plus de liste figée.
+const { posTypes, fetchReferentiels } = useReferentiels()
+const categorieRefOptions = computed(() => ['', ...new Set(posTypes.value.map(p => p.level3_group).filter(Boolean))].sort())
+const sousCategorieRefOptions = computed(() => {
+  const filtered = posTypes.value.filter(p => !model.value.categorie || p.level3_group === model.value.categorie)
+  return ['', ...new Set(filtered.map(p => p.level4_type).filter(Boolean))]
+})
+
+onMounted(() => { fetchCachedUsers(); fetchReferentiels() })
 
 const commercialOptions = computed(() => [
   { value: '', label: 'Tous' },
