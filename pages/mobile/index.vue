@@ -329,7 +329,7 @@ async function loadVisites() {
   }
 }
 
-onMounted(() => {
-  loadVisites()
-})
+watch(user, (value) => {
+  if (value?.id) loadVisites()
+}, { immediate: true })
 </script>

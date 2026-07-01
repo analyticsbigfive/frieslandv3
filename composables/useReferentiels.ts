@@ -10,6 +10,7 @@
 //   - poids : pas de `basis` en B -> exposé en dur 'taux_vente'.
 //   - type PDV : pas de `tier` en B (le grade vit dans segment_grade_type_pdv).
 export interface Distributeur { name: string; national: boolean }
+export interface GeoRegion { code: string; name: string; nom_affichage: string | null }
 export interface GeoSubRegion { code: string; name: string; nom_affichage: string | null; region_code: string | null }
 export interface GeoTerritory { code: string; name: string; sub_region_code: string | null }
 export interface GeoArea { id: number; code: string; name: string; territory_code: string }
@@ -23,6 +24,7 @@ export function useReferentiels() {
   const supabase = useSupabaseClient()
 
   const distributeurs = useState<Distributeur[]>('refb-distributeurs', () => [])
+  const regions = useState<GeoRegion[]>('refb-regions', () => [])
   const subRegions = useState<GeoSubRegion[]>('refb-subregions', () => [])
   const territories = useState<GeoTerritory[]>('refb-territories', () => [])
   const areas = useState<GeoArea[]>('refb-areas', () => [])
@@ -47,8 +49,9 @@ export function useReferentiels() {
     if (loaded.value && !force) return
     error.value = null
     try {
-      const [d, sr, t, z, tp, rp, pr, sd, td] = await Promise.all([
+      const [d, rg, sr, t, z, tp, rp, pr, sd, td] = await Promise.all([
         supabase.from('distributeur').select('nom, national').order('nom'),
+        supabase.from('region').select('code, nom, nom_affichage').order('nom'),
         supabase.from('sous_region').select('code, nom, nom_affichage, region_code').order('nom'),
         supabase.from('territoire').select('code, nom, sous_region_code').order('nom'),
         supabase.from('zone').select('id, code, nom, territoire_code').order('territoire_code').order('nom'),
@@ -58,10 +61,11 @@ export function useReferentiels() {
         supabase.from('seuil_disponibilite').select('segment, grade, quantite_min, reference_produit(nom, categorie_produit(code))'),
         supabase.from('territoire_distributeur').select('territoire(code, nom), distributeur(nom)'),
       ])
-      const firstErr = [d, sr, t, z, tp, rp, pr, sd, td].find(r => r.error)?.error
+      const firstErr = [d, rg, sr, t, z, tp, rp, pr, sd, td].find(r => r.error)?.error
       if (firstErr) throw firstErr
 
       distributeurs.value = (d.data || []).map((r: any) => ({ name: r.nom, national: !!r.national }))
+      regions.value = (rg.data || []).map((r: any) => ({ code: r.code, name: r.nom, nom_affichage: r.nom_affichage }))
       subRegions.value = (sr.data || []).map((r: any) => ({ code: r.code, name: r.nom, nom_affichage: r.nom_affichage, region_code: r.region_code }))
       territories.value = (t.data || []).map((r: any) => ({ code: r.code, name: r.nom, sub_region_code: r.sous_region_code }))
       areas.value = (z.data || []).map((r: any) => ({
@@ -107,7 +111,7 @@ export function useReferentiels() {
   }
 
   return {
-    distributeurs, subRegions, territories, areas, posTypes,
+    distributeurs, regions, subRegions, territories, areas, posTypes,
     availabilityWeights, availabilityStandards,
     references, categoriesPdv, territoireDistributeurs,
     loaded, error, fetchReferentiels,

@@ -1,0 +1,12 @@
+id,email,nom,telephone,role,zone_assignee,secteurs_assignes,region,avatar_url,is_active,created_at,updated_at
+"0d6e7fa2-5945-4ca3-8e65-f1f6e17a0a9e","admin@friesland.ci","",,"admin",,"[]",,,"true","2026-03-31T11:51:21.013525+00:00","2026-03-31T11:51:51.754997+00:00"
+"2d7e8626-e9ff-405f-aa14-9ca7738d7491","abidjannordfccocody1-2@gmail.com","MURIEL SIOTENE",,"merchandiser","COCODY 1","[]","ABIDJAN 2",,"true","2026-03-31T17:30:25.227563+00:00","2026-03-31T17:30:25.404306+00:00"
+"6a23d59e-82bc-4bf1-808e-9abd26f81851","abnordabobo2@gmail.com","SONIA AKON",,"commercial","PORT-BOUET","[]","ABIDJAN 1",,"true","2026-03-31T17:08:18.074633+00:00","2026-03-31T17:08:18.270824+00:00"
+"d5ac966f-be97-4ee0-872b-60f4aed6eca9","abidjansudfctreichville@gmail.com","N'GUESSAN OPHELIA",,"commercial","TREICHVILLE","[]","ABIDJAN 1",,"true","2026-03-31T17:08:19.401353+00:00","2026-03-31T17:08:19.605417+00:00"
+"896b817b-fa30-412d-b877-02fb3912c013","abidjanfcaboisso@gmail.com","FIOSSI KENA",,"merchandiser","ADIAKE","[]","ABIDJAN 1",,"true","2026-03-31T17:08:20.07401+00:00","2026-03-31T17:08:20.246038+00:00"
+"36fd06cb-ffae-4c83-827d-1db2cc8e6a25","cnofcsoubre@gmail.com","EBROTTIE MIAN CHRISTIAN INNOCENT",,"commercial","SOUBRE","[]","CNO",,"true","2026-03-31T17:08:26.184841+00:00","2026-03-31T17:08:26.448647+00:00"
+"17c42725-006e-4e89-846a-89e2b01dfd3b","annydivine49@gmail.com","AKUNDAH ANNE MARIE",,"commercial","ABOBO","[]","MODERN TRADE",,"true","2026-03-31T17:08:27.541259+00:00","2026-03-31T17:08:27.712301+00:00"
+"9a60de91-13b9-49fb-a5af-4d66b71315f1","abidjannordfcyopougon3-2@gmail.com","GAI KAMI",,"merchandiser","YOPOUGON 3","[]","ABIDJAN 2",,"true","2026-03-31T17:30:23.779782+00:00","2026-03-31T17:30:24.044665+00:00"
+"57de934a-86d2-4149-add0-b1349f1f001d","kouakouismael.pro+annemarie@gmail.com","AKUNDAH ANNE MARIE",,"commercial",,"[]",,,"true","2026-03-31T17:30:30.241857+00:00","2026-03-31T17:30:30.417416+00:00"
+"77bf9d68-40b7-4206-8bd6-e11ab1d459d4","abidjannordfcyopougon3+alida@gmail.com","KOUAKOUSSUI ALIDA",,"merchandiser","YOPOUGON 3","[]","ABIDJAN 2",,"true","2026-03-31T17:30:30.874039+00:00","2026-03-31T17:30:31.081566+00:00"
+"e256b890-5897-4ca2-8e72-f012e5a36f21","merchandiser@friesland.ci","Merchandiser Treichville",,"commercial","TREICHVILLE","[""TREICHVILLE"",""MARCORY TREICHVILLE""]","ABIDJAN 1",,"true","2026-03-31T11:51:38.647083+00:00","2026-07-01T16:33:48.034065+00:00"

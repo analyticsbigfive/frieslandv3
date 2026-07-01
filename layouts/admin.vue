@@ -109,7 +109,6 @@ const pageTitle = computed(() => {
     '/admin/permissions': 'Permissions & accès',
     '/admin/referentiels': 'Référentiels',
     '/admin/perfect-store': 'Perfect Store',
-    '/admin/perfect-store/visites': 'Perfect Store par visite',
     '/admin/perfect-store/standards': 'Standards Perfect Store',
     '/admin/produits/inventaire': 'Inventaire SKU',
     '/admin/produits/seuils': 'Seuils de stock',

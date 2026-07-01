@@ -85,6 +85,18 @@ export const useVisitesStore = defineStore('visites', () => {
     return data
   }
 
+  async function fetchVisiteByDatabaseId(id: string) {
+    const { data, error } = await supabase
+      .from('visites')
+      .select('*, pdv:pdv_id(pdv_id, nom_pdv, zone, secteur, region, canal, sous_categorie_pdv, image_url)')
+      .eq('id', id)
+      .single()
+
+    if (error) throw error
+    currentVisite.value = data as Visite
+    return data as Visite
+  }
+
   async function createVisite(visite: Partial<Visite>) {
     const { data, error } = await supabase
       .from('visites')
@@ -273,6 +285,7 @@ export const useVisitesStore = defineStore('visites', () => {
     filters,
     fetchVisites,
     fetchVisiteById,
+    fetchVisiteByDatabaseId,
     createVisite,
     updateVisite,
     deleteVisite,

@@ -1,16 +1,13 @@
 <template>
-  <div>
-    <!-- Filters -->
-    <div class="admin-toolbar mb-6">
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+  <div class="space-y-6">
+    <div class="admin-toolbar">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <UFormGroup label="Date début">
           <UInput v-model="filters.dateFrom" type="date" size="sm" />
         </UFormGroup>
-
         <UFormGroup label="Date fin">
           <UInput v-model="filters.dateTo" type="date" size="sm" />
         </UFormGroup>
-
         <UFormGroup label="Commercial">
           <USelectMenu
             v-model="filters.commercial"
@@ -24,7 +21,6 @@
             option-attribute="label"
           />
         </UFormGroup>
-
         <UFormGroup label="Email">
           <USelectMenu
             v-model="filters.email"
@@ -38,337 +34,159 @@
             option-attribute="label"
           />
         </UFormGroup>
-
         <div class="flex items-end gap-2">
-          <UButton size="sm" @click="loadVisites" icon="i-heroicons-magnifying-glass">
-            Filtrer
-          </UButton>
-          <UButton size="sm" variant="ghost" @click="resetFilters">
-            Réinitialiser
-          </UButton>
-          <UButton size="sm" variant="outline" @click="handleExport" icon="i-heroicons-arrow-down-tray">
-            Export
-          </UButton>
+          <UButton size="sm" icon="i-heroicons-magnifying-glass" @click="loadVisites">Filtrer</UButton>
+          <UButton size="sm" variant="ghost" @click="resetFilters">Réinitialiser</UButton>
+          <UButton size="sm" variant="outline" icon="i-heroicons-arrow-down-tray" @click="handleExport">Export</UButton>
         </div>
       </div>
     </div>
 
-    <!-- Table -->
     <div class="admin-surface overflow-hidden">
+      <div class="border-b border-slate-100 px-5 py-4 dark:border-slate-700">
+        <h2 class="font-semibold text-slate-900 dark:text-white">Visites et résultats Perfect Store</h2>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Cliquez sur une ligne pour consulter le relevé complet et son niveau.</p>
+      </div>
+
       <div class="overflow-x-auto">
-        <table class="admin-table w-full">
+        <table class="admin-table">
           <thead>
             <tr>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">ID</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Date</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Commercial</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">PDV</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">EVAP</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">IMP</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">SCM</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">UHT</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Concurrence</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">GPS</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">📷</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
+              <th>Date</th>
+              <th>Commercial</th>
+              <th>Point de vente</th>
+              <th class="text-center">Niveau</th>
+              <th class="text-center">Score</th>
+              <th class="text-center">EVAP</th>
+              <th class="text-center">IMP</th>
+              <th class="text-center">SCM</th>
+              <th class="text-center">UHT</th>
+              <th class="text-center">GPS</th>
+              <th class="text-center">Photos</th>
+              <th class="text-center">Actions</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100">
+          <tbody>
             <tr
               v-for="visite in visites"
-              :key="visite.visite_id"
-              class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+              :key="visite.id || visite.visite_id"
+              class="cursor-pointer"
+              tabindex="0"
               @click="viewVisite(visite)"
+              @keydown.enter="viewVisite(visite)"
             >
-              <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono">{{ visite.visite_id?.substring(0, 8) }}</td>
-              <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ formatDate(visite.date_visite) }}</td>
-              <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 font-medium">{{ visite.commercial }}</td>
-              <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                <div class="flex items-center gap-1">
-                  <span>{{ (visite as any).pdv?.nom_pdv || visite.pdv_id?.substring(0, 8) }}</span>
-                  <button
-                    v-if="visite.image_urls?.length"
-                    @click.stop="openPhotoGallery(visite)"
-                    class="inline-flex items-center justify-center w-6 h-6 rounded-md text-cyan-500 hover:text-cyan-700 hover:bg-cyan-50 dark:hover:bg-cyan-900/30 transition-colors"
-                    :title="`${visite.image_urls.length} photo(s) de visite`"
-                  >
-                    <UIcon name="i-heroicons-camera" class="w-4 h-4" />
-                  </button>
-                  <UIcon v-else name="i-heroicons-camera" class="w-4 h-4 text-gray-300" />
+              <td class="whitespace-nowrap">{{ formatDate(visite.date_visite) }}</td>
+              <td class="font-medium text-slate-900 dark:text-white">{{ visite.commercial }}</td>
+              <td>
+                <div class="min-w-40">
+                  <p class="font-medium text-slate-900 dark:text-white">{{ visite.pdv?.nom_pdv || visite.pdv_id?.substring(0, 8) }}</p>
+                  <p class="mt-0.5 text-xs text-slate-400">{{ visite.pdv?.sous_categorie_pdv || 'Type non renseigné' }}</p>
                 </div>
               </td>
-              <td class="px-4 py-3 text-center">
-                <span :class="visite.data?.produits?.evap?.present ? 'badge-disponible' : 'badge-rupture'">
-                  {{ visite.data?.produits?.evap?.present ? 'Oui' : 'Non' }}
-                </span>
+              <td class="text-center">
+                <UBadge
+                  v-if="scoreFor(visite)?.tierAtteint"
+                  :color="tierColor(scoreFor(visite)?.tierAtteint)"
+                  variant="soft"
+                  size="xs"
+                >
+                  {{ shortTier(scoreFor(visite)?.tierAtteint) }}
+                </UBadge>
+                <span v-else class="text-xs text-slate-400">Non conforme</span>
               </td>
-              <td class="px-4 py-3 text-center">
-                <span :class="visite.data?.produits?.imp?.present ? 'badge-disponible' : 'badge-rupture'">
-                  {{ visite.data?.produits?.imp?.present ? 'Oui' : 'Non' }}
-                </span>
-              </td>
-              <td class="px-4 py-3 text-center">
-                <span :class="visite.data?.produits?.scm?.present ? 'badge-disponible' : 'badge-rupture'">
-                  {{ visite.data?.produits?.scm?.present ? 'Oui' : 'Non' }}
-                </span>
-              </td>
-              <td class="px-4 py-3 text-center">
-                <span :class="visite.data?.produits?.uht?.present ? 'badge-disponible' : 'badge-rupture'">
-                  {{ visite.data?.produits?.uht?.present ? 'Oui' : 'Non' }}
-                </span>
-              </td>
-              <td class="px-4 py-3 text-center">
-                <span :class="visite.data?.concurrence?.presence_concurrents ? 'badge-rupture' : 'badge-disponible'">
-                  {{ visite.data?.concurrence?.presence_concurrents ? 'Oui' : 'Non' }}
-                </span>
-              </td>
-              <td class="px-4 py-3 text-center">
+              <td class="text-center font-semibold tabular-nums">{{ ratio(scoreFor(visite)?.scoreGlobal) }}</td>
+              <td v-for="category in tableProductCategories" :key="category" class="text-center">
                 <UIcon
-                  :name="visite.geofence_validated ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
-                  :class="visite.geofence_validated ? 'text-emerald-500' : 'text-gray-300'"
-                  class="w-5 h-5"
+                  :name="productPresent(visite, category) ? 'i-heroicons-check-circle-solid' : 'i-heroicons-minus-circle-solid'"
+                  class="h-5 w-5"
+                  :class="productPresent(visite, category) ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600'"
                 />
               </td>
-              <td class="px-4 py-3 text-center">
-                <button v-if="visite.image_urls?.length" @click.stop="openPhotoGallery(visite)" class="inline-flex">
-                  <UBadge variant="soft" color="cyan" size="xs" class="cursor-pointer hover:ring-2 hover:ring-cyan-300 transition">
-                    {{ visite.image_urls.length }} 📷
-                  </UBadge>
-                </button>
-                <span v-else class="text-gray-300 text-xs">—</span>
+              <td class="text-center">
+                <UIcon
+                  :name="visite.geofence_validated ? 'i-heroicons-check-circle-solid' : 'i-heroicons-x-circle'"
+                  class="h-5 w-5"
+                  :class="visite.geofence_validated ? 'text-emerald-500' : 'text-slate-300'"
+                />
               </td>
-              <td class="px-4 py-3 text-center">
-                <UDropdown :items="getVisiteActions(visite)" :popper="{ placement: 'bottom-end' }">
-                  <UButton variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" />
-                </UDropdown>
+              <td class="text-center">
+                <button
+                  v-if="visite.image_urls?.length"
+                  type="button"
+                  class="rounded-lg px-2 py-1 text-xs font-semibold text-cyan-600 transition hover:bg-cyan-50 dark:hover:bg-cyan-950/30"
+                  @click.stop="openPhotoGallery(visite)"
+                >
+                  {{ visite.image_urls.length }} photo(s)
+                </button>
+                <span v-else class="text-slate-300">—</span>
+              </td>
+              <td class="text-center">
+                <div @click.stop>
+                  <UDropdown :items="getVisiteActions(visite)" :popper="{ placement: 'bottom-end' }">
+                    <UButton variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" />
+                  </UDropdown>
+                </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <!-- Empty State -->
-      <div v-if="!loading && !visites.length" class="p-12 text-center text-gray-400">
-        <UIcon name="i-heroicons-clipboard-document-list" class="w-12 h-12 mx-auto mb-3 opacity-50" />
-        <p>Aucune visite trouvée</p>
+      <div v-if="!loading && !visites.length" class="px-6 py-14 text-center">
+        <UIcon name="i-heroicons-clipboard-document-list" class="mx-auto h-10 w-10 text-slate-300" />
+        <p class="mt-3 text-sm font-medium text-slate-500">Aucune visite trouvée</p>
       </div>
 
-      <!-- Loading -->
-      <div v-if="loading" class="p-12 text-center">
-        <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-fc-blue mx-auto" />
+      <div v-if="loading" class="space-y-2 px-5 py-6">
+        <div v-for="i in 5" :key="i" class="h-12 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-700/50" />
       </div>
 
-      <!-- Pagination -->
-      <div class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-        <p class="text-sm text-gray-500 dark:text-gray-400">
-          {{ total }} visite(s) trouvée(s)
-        </p>
+      <div class="flex items-center justify-between border-t border-slate-100 px-5 py-3 dark:border-slate-700">
+        <p class="text-sm text-slate-500 dark:text-slate-400">{{ total }} visite(s)</p>
         <div class="flex gap-2">
-          <UButton
-            size="xs"
-            variant="outline"
-            :disabled="filters.page <= 1"
-            @click="filters.page--; loadVisites()"
-          >
-            Précédent
-          </UButton>
-          <UButton
-            size="xs"
-            variant="outline"
-            :disabled="visites.length < filters.perPage"
-            @click="filters.page++; loadVisites()"
-          >
-            Suivant
-          </UButton>
+          <UButton size="xs" variant="outline" :disabled="filters.page <= 1" @click="filters.page--; loadVisites()">Précédent</UButton>
+          <UButton size="xs" variant="outline" :disabled="visites.length < filters.perPage" @click="filters.page++; loadVisites()">Suivant</UButton>
         </div>
       </div>
     </div>
 
-    <!-- Detail Modal -->
-    <UModal v-model="showDetail" :ui="{ width: 'max-w-4xl' }">
-      <div class="p-6 max-h-[85vh] overflow-y-auto" v-if="selectedVisite">
-        <div class="flex items-center justify-between mb-5">
-          <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">
-            Détail Visite
-          </h3>
-          <UButton variant="ghost" size="xs" icon="i-heroicons-x-mark" @click="showDetail = false" />
-        </div>
+    <VisitDetailModal
+      v-model="showDetail"
+      :visite="selectedVisite"
+      :perfect-store="selectedPerfectStore"
+      can-delete
+      @delete="handleDelete"
+    />
 
-        <!-- Info générale -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-          <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
-            <p class="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-medium">Commercial</p>
-            <p class="font-semibold text-sm text-gray-900 dark:text-gray-100 mt-0.5">{{ selectedVisite.commercial }}</p>
-          </div>
-          <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
-            <p class="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-medium">Date</p>
-            <p class="font-semibold text-sm text-gray-900 dark:text-gray-100 mt-0.5">{{ formatDate(selectedVisite.date_visite) }}</p>
-          </div>
-          <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
-            <p class="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-medium">PDV</p>
-            <p class="font-semibold text-sm text-gray-900 dark:text-gray-100 mt-0.5">{{ (selectedVisite as any).pdv?.nom_pdv || selectedVisite.pdv_id?.substring(0, 8) }}</p>
-          </div>
-          <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
-            <p class="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-medium">GPS Validé</p>
-            <p class="font-semibold text-sm mt-0.5" :class="selectedVisite.geofence_validated ? 'text-emerald-600' : 'text-red-500'">
-              {{ selectedVisite.geofence_validated ? '✓ Oui' : '✗ Non' }}
-            </p>
-          </div>
-        </div>
-
-        <!-- Produits -->
-        <div class="mb-5" v-if="selectedVisite.data?.produits">
-          <h4 class="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-fc-blue" /> Présence Produits
-          </h4>
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead class="bg-gray-50 dark:bg-gray-700/50">
-                <tr>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Catégorie</th>
-                  <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Présent</th>
-                  <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Prix respectés</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                <tr v-for="cat in productCategories" :key="cat.key">
-                  <td class="px-3 py-2 font-medium text-gray-900 dark:text-gray-100">{{ cat.label }}</td>
-                  <td class="px-3 py-2 text-center">
-                    <span class="inline-block w-5 h-5 rounded-full text-white text-[10px] font-bold leading-5"
-                      :class="selectedVisite.data.produits[cat.key]?.present ? 'bg-green-500' : 'bg-gray-300'">
-                      {{ selectedVisite.data.produits[cat.key]?.present ? '✓' : '—' }}
-                    </span>
-                  </td>
-                  <td class="px-3 py-2 text-center">
-                    <span class="inline-block w-5 h-5 rounded-full text-white text-[10px] font-bold leading-5"
-                      :class="selectedVisite.data.produits[cat.key]?.prix_respectes ? 'bg-green-500' : 'bg-gray-300'">
-                      {{ selectedVisite.data.produits[cat.key]?.prix_respectes ? '✓' : '—' }}
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Concurrence -->
-        <div class="mb-5" v-if="selectedVisite.data?.concurrence">
-          <h4 class="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-fc-red" /> Concurrence
-          </h4>
-          <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
-            <p class="text-sm">
-              Présence concurrents :
-              <span class="font-bold" :class="selectedVisite.data.concurrence.presence_concurrents ? 'text-red-500' : 'text-emerald-600'">
-                {{ selectedVisite.data.concurrence.presence_concurrents ? 'Oui' : 'Non' }}
-              </span>
-            </p>
-            <div v-if="selectedVisite.data.concurrence.presence_concurrents" class="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <div v-for="cat in concurrenceCategories" :key="cat.key" class="text-xs">
-                <span class="font-medium text-gray-700 dark:text-gray-300">{{ cat.label }}:</span>
-                <span :class="(selectedVisite.data.concurrence as any)[cat.key]?.present ? 'text-red-500 font-bold' : 'text-gray-400'">
-                  {{ (selectedVisite.data.concurrence as any)[cat.key]?.present ? ' Oui' : ' Non' }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Visibilité -->
-        <div class="mb-5" v-if="selectedVisite.data?.visibilite">
-          <h4 class="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-amber-500" /> Visibilité
-          </h4>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <!-- Extérieure -->
-            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
-              <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Extérieure</p>
-              <div class="space-y-1 text-xs">
-                <div v-for="item in extItems" :key="item.key" class="flex justify-between">
-                  <span class="text-gray-700 dark:text-gray-300">{{ item.label }}</span>
-                  <span :class="(selectedVisite.data.visibilite.exterieure as any)?.[item.key] ? 'text-green-600 font-medium' : 'text-gray-400'">
-                    {{ (selectedVisite.data.visibilite.exterieure as any)?.[item.key] ? 'Présent' : 'Absent' }}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <!-- Intérieure -->
-            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
-              <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Intérieure</p>
-              <div class="space-y-1 text-xs">
-                <div v-for="item in intItems" :key="item.key" class="flex justify-between">
-                  <span class="text-gray-700 dark:text-gray-300">{{ item.label }}</span>
-                  <span :class="(selectedVisite.data.visibilite.interieure as any)?.[item.key] ? 'text-green-600 font-medium' : 'text-gray-400'">
-                    {{ (selectedVisite.data.visibilite.interieure as any)?.[item.key] ? 'Présent' : 'Absent' }}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Actions -->
-        <div class="mb-5" v-if="selectedVisite.data?.actions">
-          <h4 class="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-purple-500" /> Actions réalisées
-          </h4>
-          <div class="flex flex-wrap gap-2">
-            <UBadge v-for="a in actionItems" :key="a.key"
-              :color="(selectedVisite.data.actions as any)[a.key] ? 'green' : 'gray'"
-              variant="soft" size="sm"
-            >
-              {{ (selectedVisite.data.actions as any)[a.key] ? '✓' : '—' }} {{ a.label }}
-            </UBadge>
-          </div>
-        </div>
-
-        <!-- Photos -->
-        <div class="mb-5" v-if="selectedVisite.image_urls?.length">
-          <h4 class="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-cyan-500" /> Photos ({{ selectedVisite.image_urls.length }})
-          </h4>
-          <div class="flex gap-2 overflow-x-auto">
-            <img v-for="(url, idx) in selectedVisite.image_urls" :key="idx"
-              :src="url" class="w-24 h-24 rounded-lg object-cover border border-gray-200 dark:border-gray-600" />
-          </div>
-        </div>
-
-        <div class="flex justify-end gap-2 pt-4 border-t border-gray-100 dark:border-gray-700">
-          <UButton variant="ghost" @click="showDetail = false">Fermer</UButton>
-          <UButton color="red" variant="soft" @click="handleDelete(selectedVisite)">Supprimer</UButton>
-        </div>
-      </div>
-    </UModal>
-    <!-- Photo Gallery Modal -->
     <UModal v-model="showPhotoGallery" :ui="{ width: 'max-w-2xl' }">
-      <div class="p-6" v-if="galleryVisite">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">
-            📷 Photos — {{ galleryVisite.commercial }} ({{ formatDate(galleryVisite.date_visite) }})
-          </h3>
-          <UButton variant="ghost" size="xs" icon="i-heroicons-x-mark" @click="showPhotoGallery = false" />
+      <div v-if="galleryVisite" class="p-6">
+        <div class="mb-4 flex items-center justify-between gap-4">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wide text-cyan-600">Photos de visite</p>
+            <h3 class="mt-1 text-lg font-semibold text-slate-900 dark:text-white">{{ galleryVisite.pdv?.nom_pdv || galleryVisite.commercial }}</h3>
+          </div>
+          <UButton aria-label="Fermer" variant="ghost" size="xs" icon="i-heroicons-x-mark" @click="showPhotoGallery = false" />
         </div>
         <div class="grid grid-cols-2 gap-3">
-          <div v-for="(url, idx) in galleryVisite.image_urls" :key="idx" class="relative group">
-            <img
-              :src="url"
-              :alt="`Photo ${idx + 1}`"
-              class="w-full h-48 object-cover rounded-lg border border-gray-200 dark:border-gray-600 cursor-pointer hover:opacity-90 transition"
-              @click="zoomedPhoto = url"
-            />
-            <span class="absolute top-2 left-2 bg-black/50 text-white text-[10px] px-1.5 py-0.5 rounded">{{ idx + 1 }}/{{ galleryVisite.image_urls!.length }}</span>
-          </div>
+          <button
+            v-for="(url, index) in galleryVisite.image_urls"
+            :key="url"
+            type="button"
+            class="group relative overflow-hidden rounded-xl"
+            @click="zoomedPhoto = url"
+          >
+            <img :src="url" :alt="`Photo ${index + 1}`" class="h-48 w-full object-cover transition duration-300 group-hover:scale-[1.02]" />
+          </button>
         </div>
       </div>
     </UModal>
 
-    <!-- Zoomed Photo Modal -->
     <UModal v-model="showZoomedPhoto" :ui="{ width: 'max-w-4xl' }">
       <div class="p-2">
-        <div class="flex justify-end mb-1">
-          <UButton variant="ghost" size="xs" icon="i-heroicons-x-mark" @click="showZoomedPhoto = false" />
+        <div class="mb-1 flex justify-end">
+          <UButton aria-label="Fermer" variant="ghost" size="xs" icon="i-heroicons-x-mark" @click="showZoomedPhoto = false" />
         </div>
-        <img v-if="zoomedPhoto" :src="zoomedPhoto" alt="Photo agrandie" class="w-full rounded-lg object-contain max-h-[80vh]" />
+        <img v-if="zoomedPhoto" :src="zoomedPhoto" alt="Photo agrandie" class="max-h-[80vh] w-full rounded-lg object-contain" />
       </div>
     </UModal>
   </div>
@@ -376,29 +194,14 @@
 
 <script setup lang="ts">
 import type { Visite } from '~/types'
+import type { PerfectStoreResultB } from '~/utils/perfectStore'
 
-definePageMeta({
-  middleware: ['auth', 'admin'],
-  layout: 'admin',
-})
+definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const visitesStore = useVisitesStore()
 const { exportVisitesToExcel } = useCsvExport()
 const { users: cachedUsers, fetchUsers: fetchCachedUsers } = useUsersCache()
-
-const commercialOptions = computed(() => [
-  { value: '', label: 'Tous' },
-  ...cachedUsers.value
-    .filter(u => u.is_active !== false)
-    .map(u => ({ value: u.nom || u.email || '', label: `${u.nom || '—'} (${u.email})` }))
-])
-
-const emailOptions = computed(() => [
-  { value: '', label: 'Tous' },
-  ...cachedUsers.value
-    .filter(u => u.is_active !== false && u.email)
-    .map(u => ({ value: u.email!, label: u.email! }))
-])
+const { refs, fetchRefs, scoreVisite } = usePerfectStore()
 
 const visites = computed(() => visitesStore.visites)
 const total = computed(() => visitesStore.total)
@@ -407,69 +210,71 @@ const filters = visitesStore.filters
 
 const showDetail = ref(false)
 const selectedVisite = ref<Visite | null>(null)
-
-// Photo gallery
 const showPhotoGallery = ref(false)
 const galleryVisite = ref<Visite | null>(null)
 const zoomedPhoto = ref<string | null>(null)
 const showZoomedPhoto = computed({
   get: () => !!zoomedPhoto.value,
-  set: (v) => { if (!v) zoomedPhoto.value = null },
+  set: value => { if (!value) zoomedPhoto.value = null },
 })
 
-function openPhotoGallery(visite: Visite) {
-  galleryVisite.value = visite
-  showPhotoGallery.value = true
+const tableProductCategories = ['evap', 'imp', 'scm', 'uht']
+
+const commercialOptions = computed(() => [
+  { value: '', label: 'Tous' },
+  ...cachedUsers.value
+    .filter(user => user.is_active !== false)
+    .map(user => ({ value: user.nom || user.email || '', label: `${user.nom || '—'} (${user.email})` })),
+])
+
+const emailOptions = computed(() => [
+  { value: '', label: 'Tous' },
+  ...cachedUsers.value
+    .filter(user => user.is_active !== false && user.email)
+    .map(user => ({ value: user.email!, label: user.email! })),
+])
+
+const perfectStoreScores = computed(() => {
+  const scores = new Map<string, PerfectStoreResultB | null>()
+  for (const visite of visites.value) {
+    const key = visite.id || visite.visite_id
+    scores.set(key, refs.value ? scoreVisite(visite.data, visite.pdv || {}) : null)
+  }
+  return scores
+})
+
+const selectedPerfectStore = computed(() => {
+  if (!selectedVisite.value || !refs.value) return null
+  return scoreVisite(selectedVisite.value.data, selectedVisite.value.pdv || {})
+})
+
+function scoreFor(visite: Visite): PerfectStoreResultB | null {
+  return perfectStoreScores.value.get(visite.id || visite.visite_id) || null
 }
 
-// Constantes modale structurée
-const productCategories = [
-  { key: 'evap', label: 'Lait Évaporé (EVAP)' },
-  { key: 'imp', label: 'Lait en Poudre (IMP)' },
-  { key: 'scm', label: 'Lait Concentré Sucré (SCM)' },
-  { key: 'uht', label: 'Lait UHT' },
-  { key: 'cereales', label: 'Céréales' },
-  { key: 'yaourt', label: 'Yaourt' },
-]
-const concurrenceCategories = [
-  { key: 'evap', label: 'EVAP' },
-  { key: 'imp', label: 'IMP' },
-  { key: 'scm', label: 'SCM' },
-  { key: 'uht', label: 'UHT' },
-]
-const extItems = [
-  { key: 'full_branding', label: 'Full Branding' },
-  { key: 'poster', label: 'Poster' },
-  { key: 'panneau_privilege', label: 'Panneau Privilège' },
-  { key: 'sign_board', label: 'Sign Board' },
-  { key: 'guirlande', label: 'Guirlande' },
-  { key: 'autre_branding', label: 'Autre' },
-]
-const intItems = [
-  { key: 'hanger', label: 'Hanger' },
-  { key: 'tete_gondole', label: 'Tête de gondole' },
-  { key: 'maison_bonnet_rouge', label: 'Maison Bonnet Rouge' },
-  { key: 'reglettes', label: 'Réglettes' },
-  { key: 'zone_chaude', label: 'Zone chaude' },
-  { key: 'produits_frigo', label: 'Produits frigo' },
-  { key: 'presentoirs', label: 'Présentoirs' },
-  { key: 'bacs_pouch', label: 'Bacs Pouch' },
-  { key: 'habillage_rayon', label: 'Habillage rayon' },
-  { key: 'merchandising', label: 'Merchandising' },
-]
-const actionItems = [
-  { key: 'referencement_produits', label: 'Référencement produits' },
-  { key: 'execution_activites_promotionnelles', label: 'Activités promotionnelles' },
-  { key: 'prospection_pdv', label: 'Prospection PDV' },
-  { key: 'verification_fifo', label: 'Vérification FIFO' },
-  { key: 'rangement_produits', label: 'Rangement produits' },
-  { key: 'pose_affiches', label: 'Pose affiches' },
-  { key: 'pose_materiel_visibilite', label: 'Pose matériel visibilité' },
-]
+function productPresent(visite: Visite, category: string): boolean {
+  return !!(visite.data?.produits as any)?.[category]?.present
+}
 
-function formatDate(date: string) {
-  if (!date) return '-'
-  return new Date(date).toLocaleDateString('fr-FR', {
+function ratio(value: number | null | undefined): string {
+  return value == null ? '—' : `${Math.round(value * 100)}%`
+}
+
+function shortTier(value: string | null | undefined): string {
+  if (!value) return '—'
+  return value.replace(' PERFECT STORE', '').replace(' STORE', '')
+}
+
+function tierColor(value: string | null | undefined): any {
+  if (value?.startsWith('FLAGSHIP')) return 'purple'
+  if (value?.startsWith('VIP')) return 'green'
+  if (value?.startsWith('CORE')) return 'blue'
+  return 'orange'
+}
+
+function formatDate(value: string): string {
+  if (!value) return '—'
+  return new Date(value).toLocaleDateString('fr-FR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -483,23 +288,20 @@ function viewVisite(visite: Visite) {
   showDetail.value = true
 }
 
+function openPhotoGallery(visite: Visite) {
+  galleryVisite.value = visite
+  showPhotoGallery.value = true
+}
+
 function getVisiteActions(visite: Visite) {
   return [[
-    {
-      label: 'Voir détails',
-      icon: 'i-heroicons-eye',
-      click: () => viewVisite(visite),
-    },
-    {
-      label: 'Supprimer',
-      icon: 'i-heroicons-trash',
-      click: () => handleDelete(visite),
-    },
+    { label: 'Voir le détail', icon: 'i-heroicons-eye', click: () => viewVisite(visite) },
+    { label: 'Supprimer', icon: 'i-heroicons-trash', click: () => handleDelete(visite) },
   ]]
 }
 
 async function handleDelete(visite: Visite) {
-  if (!confirm('Êtes-vous sûr de vouloir supprimer cette visite ?')) return
+  if (!confirm('Supprimer cette visite ?')) return
   await visitesStore.deleteVisite(visite.visite_id)
   showDetail.value = false
   await loadVisites()
@@ -524,6 +326,7 @@ async function loadVisites() {
 
 onMounted(() => {
   fetchCachedUsers()
+  fetchRefs()
   loadVisites()
 })
 </script>

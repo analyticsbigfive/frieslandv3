@@ -13,6 +13,7 @@ Ces migrations reprennent le fichier `BIG FIVE KPI UPDATE vf.xlsx` :
   Superette/MT, Table Top, Pushcart, Porridge et Kiosque/Aboki ;
 - calcul Perfect Store et couverture avec recalcul de l'historique.
 - administration sécurisée des paramètres depuis le dashboard (admin/superviseur).
+- liste paginée des PDV par niveau, basée sur la dernière visite scorée.
 
 Ordre d'exécution :
 

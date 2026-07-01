@@ -157,44 +157,53 @@
                 :options="['Point de vente détail', 'Point de consommation', 'Supermarché', 'Grossiste']"
               />
             </UFormGroup>
-            <UFormGroup label="Sous-catégorie">
+            <UFormGroup label="Sous-catégorie" hint="Type de PDV (référentiel) — pilote le scoring Perfect Store">
               <USelectMenu
                 v-model="pdvForm.sous_categorie_pdv"
-                :options="['Boutique A', 'Boutique B', 'Boutique C', 'Superette GT', 'Kiosque']"
+                :options="sousCategorieOptions"
+                searchable
+                searchable-placeholder="Rechercher un type..."
+                placeholder="Type de PDV..."
               />
             </UFormGroup>
-            <UFormGroup label="Zone">
-              <UInput v-model="pdvForm.zone" placeholder="Zone..." />
-            </UFormGroup>
-            <UFormGroup label="Secteur">
-              <UInput v-model="pdvForm.secteur" placeholder="Secteur..." />
-            </UFormGroup>
-            <UFormGroup label="Région">
-              <UInput v-model="pdvForm.region" placeholder="Région..." />
-            </UFormGroup>
-            <UFormGroup label="Territoire">
+            <UFormGroup label="Région (Region)">
               <USelectMenu
-                v-model="pdvForm.territory_code"
-                :options="territoryOptions"
+                v-model="pdvForm.region_code"
+                :options="regionCascadeOptions"
                 option-attribute="label"
                 value-attribute="value"
+                placeholder="Région..."
+                searchable
+                searchable-placeholder="Rechercher..."
+                @update:model-value="onRegionChange"
+              />
+            </UFormGroup>
+            <UFormGroup label="Territoire (Territory)">
+              <USelectMenu
+                v-model="pdvForm.territory_code"
+                :options="territoryCascadeOptions"
+                option-attribute="label"
+                value-attribute="value"
+                :disabled="!pdvForm.region_code"
                 placeholder="Territoire..."
                 searchable
                 searchable-placeholder="Rechercher..."
+                @update:model-value="onTerritoryChange"
               />
             </UFormGroup>
-            <UFormGroup label="Area / quartier">
+            <UFormGroup label="Area / quartier (Area)">
               <USelectMenu
                 v-model="pdvForm.area_code"
-                :options="areaOptions"
+                :options="areaCascadeOptions"
                 option-attribute="label"
                 value-attribute="value"
+                :disabled="!pdvForm.territory_code"
                 placeholder="Area..."
                 searchable
                 searchable-placeholder="Rechercher..."
               />
             </UFormGroup>
-            <UFormGroup label="Distributeur">
+            <UFormGroup label="Distributeur" hint="Nationaux + liés au territoire">
               <USelectMenu
                 v-model="pdvForm.distributor_name"
                 :options="distributorOptions"
@@ -212,17 +221,6 @@
                 placeholder="Objectif..."
               />
             </UFormGroup>
-            <div class="col-span-2">
-              <UButton
-                size="xs"
-                variant="soft"
-                icon="i-heroicons-arrow-down-on-square"
-                :disabled="!pdvForm.territory_code"
-                @click="deriveGeo"
-              >
-                Dériver zone / secteur / région depuis le territoire
-              </UButton>
-            </div>
             <UFormGroup label="Adressage">
               <UInput v-model="pdvForm.adressage" placeholder="Adresse..." />
             </UFormGroup>
@@ -319,6 +317,8 @@ const pdvForm = ref({
   zone: '',
   secteur: '',
   region: '',
+  region_code: '',
+  sub_region_code: '',
   adressage: '',
   geolocation_lat: null as number | null,
   geolocation_lng: null as number | null,
@@ -331,34 +331,65 @@ const pdvForm = ref({
 const zoneOptions = computed(() => ['', ...pdvStore.uniqueZones])
 const regionOptions = computed(() => ['', ...pdvStore.uniqueRegions])
 
-// Référentiels (migration 020) pour rattacher le PDV
-const { distributeurs, territories, areas, subRegions, fetchReferentiels } = useReferentiels()
+// Référentiels géo (Système B) : hiérarchie Region → Sous-région → Territoire → Area.
+const { distributeurs, regions, territories, areas, subRegions, posTypes, territoireDistributeurs, fetchReferentiels } = useReferentiels()
 
-// #2 Auto-dérivation : remplit zone/secteur/région depuis le territoire/area sélectionnés
-function deriveGeo() {
+const sousCategorieOptions = computed(() => posTypes.value.map(p => p.level4_type))
+
+// Cascade géographique simplifiée (CI uniquement) : Région → Territoire → Area.
+// La sous-région est intermédiaire, dérivée automatiquement du territoire.
+const subRegionCodesForRegion = computed(() => new Set(
+  subRegions.value.filter(s => s.region_code === pdvForm.value.region_code).map(s => s.code),
+))
+const regionCascadeOptions = computed(() => regions.value.map(r => ({ value: r.code, label: r.nom_affichage ? `${r.nom_affichage} · ${r.name}` : r.name })))
+const territoryCascadeOptions = computed(() => territories.value
+  .filter(t => !pdvForm.value.region_code || subRegionCodesForRegion.value.has(t.sub_region_code || ''))
+  .map(t => ({ value: t.code, label: t.name })))
+const areaCascadeOptions = computed(() => areas.value
+  .filter(a => !pdvForm.value.territory_code || a.territory_code === pdvForm.value.territory_code)
+  .map(a => ({ value: a.code, label: a.name || a.code })))
+
+// Reset des niveaux enfants quand un parent change.
+function onRegionChange() { pdvForm.value.territory_code = ''; pdvForm.value.area_code = ''; pdvForm.value.sub_region_code = '' }
+function onTerritoryChange() {
+  pdvForm.value.area_code = ''
+  // Dérive la sous-région du territoire choisi (interne, pour le save).
   const terr = territories.value.find(t => t.code === pdvForm.value.territory_code)
-  if (terr) {
-    pdvForm.value.zone = terr.name
-    const sr = subRegions.value.find(s => s.code === terr.sub_region_code)
-    if (sr) pdvForm.value.region = sr.name
+  pdvForm.value.sub_region_code = terr?.sub_region_code || ''
+  // Distributeur par défaut : premier lié au territoire, sinon premier national.
+  if (!pdvForm.value.distributor_name) {
+    pdvForm.value.distributor_name = territoryDistributors.value[0]?.name || nationalDistributors.value[0]?.name || ''
   }
-  const area = areas.value.find(a => a.territory_code === pdvForm.value.territory_code && a.area_code === pdvForm.value.area_code)
-  if (area?.area_name) pdvForm.value.secteur = area.area_name
 }
-const territoryOptions = computed(() => [
-  { value: '', label: '—' },
-  ...territories.value.map(t => ({ value: t.code, label: t.name })),
-])
-const areaOptions = computed(() => [
-  { value: '', label: '—' },
-  ...areas.value
-    .filter(a => !pdvForm.value.territory_code || a.territory_code === pdvForm.value.territory_code)
-    .map(a => ({ value: a.area_code, label: a.area_name || a.area_code })),
-])
-const distributorOptions = computed(() => [
-  { value: '', label: '—' },
-  ...distributeurs.value.map(d => ({ value: d.name, label: d.national ? `${d.name} (National)` : d.name })),
-])
+
+// Édition : reconstruit region_code/sub_region_code depuis le territory_code enregistré.
+function hydrateGeoCascade() {
+  const terr = territories.value.find(t => t.code === pdvForm.value.territory_code)
+  const sr = terr ? subRegions.value.find(s => s.code === terr.sub_region_code) : null
+  pdvForm.value.sub_region_code = sr?.code || ''
+  pdvForm.value.region_code = sr?.region_code || ''
+}
+
+// Distributeurs : nationaux (toujours) + ceux liés au territoire sélectionné.
+const nationalDistributors = computed(() => distributeurs.value.filter(d => d.national))
+const territoryDistributors = computed(() => {
+  if (!pdvForm.value.territory_code) return []
+  const linked = new Set(territoireDistributeurs.value
+    .filter(td => td.territory_code === pdvForm.value.territory_code)
+    .map(td => td.distributor_name))
+  return distributeurs.value.filter(d => linked.has(d.name) && !d.national)
+})
+const distributorOptions = computed(() => {
+  const seen = new Set<string>()
+  const out: { value: string; label: string }[] = [{ value: '', label: '—' }]
+  for (const d of territoryDistributors.value) { if (!seen.has(d.name)) { seen.add(d.name); out.push({ value: d.name, label: `${d.name} (Territoire)` }) } }
+  for (const d of nationalDistributors.value) { if (!seen.has(d.name)) { seen.add(d.name); out.push({ value: d.name, label: `${d.name} (National)` }) } }
+  // Conserve la valeur courante si hors liste (édition d'un ancien PDV).
+  if (pdvForm.value.distributor_name && !seen.has(pdvForm.value.distributor_name)) {
+    out.push({ value: pdvForm.value.distributor_name, label: pdvForm.value.distributor_name })
+  }
+  return out
+})
 
 let searchTimeout: any
 
@@ -394,6 +425,7 @@ function getPDVActions(pdv: PDV) {
             pdvForm.value.objectif_perfect_store = full.objectif_perfect_store || ''
           }
         } catch { /* colonnes absentes avant migration 020 — ignorer */ }
+        hydrateGeoCascade()
       },
     },
     {
@@ -425,6 +457,8 @@ function openCreatePDV() {
     zone: '',
     secteur: '',
     region: '',
+    region_code: '',
+    sub_region_code: '',
     adressage: '',
     geolocation_lat: null,
     geolocation_lng: null,
@@ -439,8 +473,18 @@ function openCreatePDV() {
 async function handleSavePDV() {
   saving.value = true
   try {
-    // Vides -> null (objectif_perfect_store a un CHECK : '' interdit)
+    // Dérive les colonnes legacy (region/zone/secteur) depuis la cascade géo,
+    // pour rester cohérent avec le scoping (matchesPDVScope lit zone/secteur).
+    const terr = territories.value.find(t => t.code === pdvForm.value.territory_code)
+    const sr = subRegions.value.find(s => s.code === pdvForm.value.sub_region_code)
+    const area = areas.value.find(a => a.code === pdvForm.value.area_code && a.territory_code === pdvForm.value.territory_code)
     const payload: any = { ...pdvForm.value }
+    if (terr) payload.zone = terr.name
+    if (sr) payload.region = sr.nom_affichage || sr.name
+    if (area) payload.secteur = area.name
+    // region_code/sub_region_code ne sont pas des colonnes pdv (cascade UI only).
+    delete payload.region_code
+    delete payload.sub_region_code
     payload.territory_code = payload.territory_code || null
     payload.area_code = payload.area_code || null
     payload.distributor_name = payload.distributor_name || null

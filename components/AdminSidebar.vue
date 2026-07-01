@@ -119,7 +119,6 @@ const navSections = [
     title: 'Perfect Store',
     items: [
       { label: 'Perfect Store', to: '/admin/perfect-store', icon: Trophy },
-      { label: 'Par visite', to: '/admin/perfect-store/visites', icon: ClipboardList },
       { label: 'Standards', to: '/admin/perfect-store/standards', icon: SlidersHorizontal },
     ],
   },

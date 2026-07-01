@@ -68,6 +68,18 @@
               placeholder="Région"
             />
           </UFormGroup>
+
+          <UFormGroup label="Distributeur" hint="Nationaux + liés au territoire" class="sm:col-span-2">
+            <USelectMenu
+              v-model="form.distributor_name"
+              :options="distributorOptions"
+              option-attribute="label"
+              value-attribute="value"
+              placeholder="Distributeur..."
+              searchable
+              searchable-placeholder="Rechercher..."
+            />
+          </UFormGroup>
         </div>
 
         <UFormGroup label="Adressage">

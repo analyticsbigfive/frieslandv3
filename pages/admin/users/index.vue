@@ -112,7 +112,24 @@
           </UFormGroup>
 
           <UFormGroup label="Zone assignée">
-            <UInput v-model="userForm.zone_assignee" placeholder="Zone..." />
+            <USelectMenu
+              v-model="userForm.zone_assignee"
+              :options="zoneOptions"
+              placeholder="Zone..."
+              searchable
+              searchable-placeholder="Rechercher..."
+            />
+          </UFormGroup>
+
+          <UFormGroup label="Secteurs assignés">
+            <USelectMenu
+              v-model="userForm.secteurs_assignes"
+              :options="secteurOptions"
+              multiple
+              placeholder="Secteurs..."
+              searchable
+              searchable-placeholder="Rechercher..."
+            />
           </UFormGroup>
 
           <UFormGroup label="Téléphone">
@@ -155,8 +172,15 @@ const userForm = ref({
   password: '',
   role: 'merchandiser' as UserRole,
   zone_assignee: '',
+  secteurs_assignes: [] as string[],
   telephone: '',
 })
+
+// Zone assignée = territoire (référentiel) ; secteurs = areas (référentiel).
+// Aligné sur le scoping pdv (pdv.zone = territoire.nom, pdv.secteur = area.nom).
+const { territories, areas, fetchReferentiels } = useReferentiels()
+const zoneOptions = computed(() => territories.value.map(t => t.name).sort())
+const secteurOptions = computed(() => [...new Set(areas.value.map(a => a.name).filter(Boolean))].sort())
 
 const filteredUsers = computed(() => {
   let result = users.value
@@ -242,6 +266,7 @@ async function handleSaveUser() {
           nom: userForm.value.nom,
           role: userForm.value.role,
           zone_assignee: userForm.value.zone_assignee,
+          secteurs_assignes: userForm.value.secteurs_assignes,
           telephone: userForm.value.telephone,
         })
         .eq('id', editingUser.value.id)
@@ -302,5 +327,6 @@ async function deleteUser(user: Profile) {
 
 onMounted(() => {
   fetchUsers()
+  fetchReferentiels()
 })
 </script>

@@ -38,6 +38,27 @@ export interface CoverageKpi {
   pdv_vus: number
 }
 
+export interface PerfectStoreListItem {
+  visite_id: string
+  pdv_id: string
+  nom_pdv: string
+  type_pdv: string
+  zone: string | null
+  date_visite: string
+  commercial: string | null
+  niveau: string
+  score_global: number | null
+  dispo_rayon: number | null
+  assortiment: number | null
+  visibilite: number | null
+  promotion: number | null
+}
+
+export interface PerfectStoreListPage {
+  items: PerfectStoreListItem[]
+  total: number
+}
+
 // Référentiels B + dérivé tierConfig (niveaux) pour l'affichage du tableau de seuils.
 export interface PerfectStoreDashboardRefs extends PerfectStoreRefsB {
   tierConfig: { ps_tier: string; osa_min: number; assort_min: number; visi_min: number; promo_min: number | null; rang: number }[]
@@ -171,5 +192,33 @@ export function usePerfectStore() {
     return data as CoverageKpi | null
   }
 
-  return { refs, fetchRefs, scoreVisite, fetchGlobalKpi, fetchKpiParType, fetchCoverage }
+  async function fetchStoresByTier(tier: string, page = 1, perPage = 5): Promise<PerfectStoreListPage> {
+    const from = (page - 1) * perPage
+    const to = from + perPage - 1
+    const { data, count, error } = await supabase
+      .from('v_perfect_store_liste')
+      .select(
+        'visite_id, pdv_id, nom_pdv, type_pdv, zone, date_visite, commercial, niveau, score_global, dispo_rayon, assortiment, visibilite, promotion',
+        { count: 'exact' },
+      )
+      .eq('niveau', tier)
+      .order('date_visite', { ascending: false })
+      .range(from, to)
+
+    if (error) throw error
+    return {
+      items: (data || []) as PerfectStoreListItem[],
+      total: count || 0,
+    }
+  }
+
+  return {
+    refs,
+    fetchRefs,
+    scoreVisite,
+    fetchGlobalKpi,
+    fetchKpiParType,
+    fetchCoverage,
+    fetchStoresByTier,
+  }
 }

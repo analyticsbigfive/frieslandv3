@@ -1,0 +1,7 @@
+id,nom,email,telephone,zone_assignee,secteurs_assignes,zone_geofence,actif,created_at,updated_at
+"1","COULIBALY PADIE","coulibaly@friesland.ci",,"ABIDJAN","[""TREICHVILLE"",""MARCORY""]",,"true","2026-03-30T17:21:40.446085+00:00","2026-03-30T17:21:40.446085+00:00"
+"2","EBROTTIE MIAN CHRISTIAN INNOCENT","ebrottie@friesland.ci",,"ABIDJAN","[""COCODY"",""PLATEAU""]",,"true","2026-03-30T17:21:40.446085+00:00","2026-03-30T17:21:40.446085+00:00"
+"3","GAI KAMY","gaikamy@friesland.ci",,"ABIDJAN","[""ABOBO"",""ADJAME""]",,"true","2026-03-30T17:21:40.446085+00:00","2026-03-30T17:21:40.446085+00:00"
+"4","OUATTARA ZANGA","ouattara@friesland.ci",,"KORHOGO","[""KORHOGO""]",,"true","2026-03-30T17:21:40.446085+00:00","2026-03-30T17:21:40.446085+00:00"
+"5","Guea Hermann","guea@friesland.ci",,"ABIDJAN","[""YOPOUGON""]",,"true","2026-03-30T17:21:40.446085+00:00","2026-03-30T17:21:40.446085+00:00"
+"6","MERCHANDISER TEST","test.treichville@friesland.ci",,"ABIDJAN SUD","[""TREICHVILLE"",""MARCORY""]",,"true","2026-03-30T17:21:40.446085+00:00","2026-03-30T17:21:40.446085+00:00"
