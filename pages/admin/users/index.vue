@@ -217,7 +217,7 @@
         <UButton
           type="submit"
           icon="i-heroicons-check"
-          class="bg-fc-blue text-white hover:bg-fc-blue-600 focus-visible:outline-fc-blue-500 dark:bg-fc-blue dark:text-white dark:hover:bg-fc-blue-600 dark:focus-visible:outline-fc-blue-400"
+          class="bg-fc-blue text-white hover:bg-fc-blue-600 disabled:bg-fc-blue-300 aria-disabled:bg-fc-blue-300 focus-visible:outline-fc-blue-500 dark:bg-fc-blue dark:text-white dark:hover:bg-fc-blue-600 dark:disabled:bg-fc-blue-700 dark:aria-disabled:bg-fc-blue-700 dark:focus-visible:outline-fc-blue-400"
           :loading="saving"
         >
           {{ editingUser ? 'Mettre à jour' : 'Créer l’utilisateur' }}

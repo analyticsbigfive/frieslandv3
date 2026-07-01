@@ -426,6 +426,7 @@
               </UButton>
               <UButton
                 size="xs"
+                color="red"
                 variant="soft"
                 icon="i-heroicons-plus-circle"
                 :disabled="!filteredAvailablePdv.length"
@@ -472,7 +473,13 @@
               size="sm"
               class="flex-1"
             />
-            <UButton size="sm" icon="i-heroicons-plus" :disabled="!selectedPdvToAdd" @click="addPDV">
+            <UButton
+              size="sm"
+              icon="i-heroicons-plus"
+              class="bg-fc-red text-white hover:bg-fc-red-600 disabled:bg-fc-red-300 aria-disabled:bg-fc-red-300 dark:bg-fc-red dark:text-white dark:hover:bg-fc-red-600 dark:disabled:bg-fc-red-700 dark:aria-disabled:bg-fc-red-700"
+              :disabled="!selectedPdvToAdd"
+              @click="addPDV"
+            >
               Ajouter
             </UButton>
           </div>
@@ -530,7 +537,7 @@
         </UButton>
         <UButton
           icon="i-heroicons-check"
-          class="bg-fc-red text-white hover:bg-fc-red-600 focus-visible:outline-fc-red-500 dark:bg-fc-red dark:text-white dark:hover:bg-fc-red-600 dark:focus-visible:outline-fc-red-400"
+          class="bg-fc-red text-white hover:bg-fc-red-600 disabled:bg-fc-red-300 aria-disabled:bg-fc-red-300 focus-visible:outline-fc-red-500 dark:bg-fc-red dark:text-white dark:hover:bg-fc-red-600 dark:disabled:bg-fc-red-700 dark:aria-disabled:bg-fc-red-700 dark:focus-visible:outline-fc-red-400"
           :loading="creating"
           :disabled="!canCreate"
           @click="handleSaveRouting"
@@ -570,7 +577,7 @@
           <UButton type="button" color="gray" variant="ghost" @click="showDuplicateModal = false">Annuler</UButton>
           <UButton
             icon="i-heroicons-document-duplicate"
-            class="bg-fc-red text-white hover:bg-fc-red-600 focus-visible:outline-fc-red-500 dark:bg-fc-red dark:text-white dark:hover:bg-fc-red-600 dark:focus-visible:outline-fc-red-400"
+            class="bg-fc-red text-white hover:bg-fc-red-600 disabled:bg-fc-red-300 aria-disabled:bg-fc-red-300 focus-visible:outline-fc-red-500 dark:bg-fc-red dark:text-white dark:hover:bg-fc-red-600 dark:disabled:bg-fc-red-700 dark:aria-disabled:bg-fc-red-700 dark:focus-visible:outline-fc-red-400"
             :disabled="!duplicateDate"
             @click="handleDuplicate"
           >
@@ -624,7 +631,7 @@
           <UButton type="button" color="gray" variant="ghost" @click="showTemplateCreateModal = false">Annuler</UButton>
           <UButton
             icon="i-heroicons-check"
-            class="bg-fc-red text-white hover:bg-fc-red-600 focus-visible:outline-fc-red-500 dark:bg-fc-red dark:text-white dark:hover:bg-fc-red-600 dark:focus-visible:outline-fc-red-400"
+            class="bg-fc-red text-white hover:bg-fc-red-600 disabled:bg-fc-red-300 aria-disabled:bg-fc-red-300 focus-visible:outline-fc-red-500 dark:bg-fc-red dark:text-white dark:hover:bg-fc-red-600 dark:disabled:bg-fc-red-700 dark:aria-disabled:bg-fc-red-700 dark:focus-visible:outline-fc-red-400"
             :disabled="!newTemplate.userId || newTemplate.dayOfWeek === undefined"
             :loading="creating"
             @click="handleCreateTemplate"
@@ -683,7 +690,7 @@
           <UButton type="button" color="gray" variant="ghost" @click="showGenerateModal = false; generateResults = []">Fermer</UButton>
           <UButton
             icon="i-heroicons-sparkles"
-            class="bg-fc-red text-white hover:bg-fc-red-600 focus-visible:outline-fc-red-500 dark:bg-fc-red dark:text-white dark:hover:bg-fc-red-600 dark:focus-visible:outline-fc-red-400"
+            class="bg-fc-red text-white hover:bg-fc-red-600 disabled:bg-fc-red-300 aria-disabled:bg-fc-red-300 focus-visible:outline-fc-red-500 dark:bg-fc-red dark:text-white dark:hover:bg-fc-red-600 dark:disabled:bg-fc-red-700 dark:aria-disabled:bg-fc-red-700 dark:focus-visible:outline-fc-red-400"
             :disabled="!generateConfig.userId || !generateConfig.dateFrom || !generateConfig.dateTo"
             :loading="generating"
             @click="handleGenerate"
