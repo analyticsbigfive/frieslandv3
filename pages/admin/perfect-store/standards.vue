@@ -110,6 +110,58 @@
         </div>
       </div>
 
+      <div class="admin-surface overflow-hidden">
+        <div class="border-b border-gray-100 px-5 py-3 dark:border-gray-700">
+          <h2 class="font-bold text-gray-900 dark:text-gray-100">Taux cibles de disponibilité par variante (taux revu)</h2>
+          <p class="mt-1 text-xs text-gray-400">
+            Poids de chaque variante dans la disponibilité pondérée, par canal (ligne TAUX REVU du fichier BIG FIVE).
+            La somme par famille et par canal doit faire 100 %.
+          </p>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-gray-50 dark:bg-gray-700/50">
+              <tr>
+                <th class="th-l">Famille</th>
+                <th class="th-l">Variante</th>
+                <th class="th-c">Cible GT</th>
+                <th class="th-c">Cible MT</th>
+                <th v-if="canEdit" class="th-c">Action</th>
+              </tr>
+            </thead>
+            <tbody v-for="famille in tauxCiblesParFamille" :key="famille.code" class="divide-y divide-gray-100 dark:divide-gray-700">
+              <tr v-for="(row, idx) in famille.rows" :key="row.reference_produit_id" class="border-t border-gray-100 dark:border-gray-700">
+                <td class="px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-gray-100">
+                  <span v-if="idx === 0">{{ famille.code }} <span class="text-xs font-normal text-gray-400">({{ famille.nom }})</span></span>
+                </td>
+                <td class="px-4 py-2.5 text-sm">{{ row.variante }}</td>
+                <td class="px-4 py-2.5 text-center text-sm tabular-nums">
+                  <UInput v-if="canEdit" v-model.number="row.gt" type="number" min="0" max="100" step="0.1" size="sm" class="mx-auto w-24" />
+                  <span v-else>{{ pctFine(row.gt) }}</span>
+                </td>
+                <td class="px-4 py-2.5 text-center text-sm tabular-nums">
+                  <UInput v-if="canEdit" v-model.number="row.mt" type="number" min="0" max="100" step="0.1" size="sm" class="mx-auto w-24" />
+                  <span v-else>{{ pctFine(row.mt) }}</span>
+                </td>
+                <td v-if="canEdit" class="px-4 py-2.5 text-center">
+                  <UButton size="xs" :loading="savingKey === `taux:${row.reference_produit_id}`" @click="saveTauxCible(row)">Enregistrer</UButton>
+                </td>
+              </tr>
+              <tr class="bg-gray-50/60 dark:bg-gray-700/30">
+                <td class="px-4 py-2 text-xs font-medium uppercase text-gray-400" colspan="2">Total {{ famille.code }}</td>
+                <td class="px-4 py-2 text-center">
+                  <UBadge size="xs" variant="soft" :color="sumOk(famille.sumGT) ? 'green' : 'red'">{{ famille.sumGT.toFixed(1) }} %</UBadge>
+                </td>
+                <td class="px-4 py-2 text-center">
+                  <UBadge size="xs" variant="soft" :color="sumOk(famille.sumMT) ? 'green' : 'red'">{{ famille.sumMT.toFixed(1) }} %</UBadge>
+                </td>
+                <td v-if="canEdit" />
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div class="admin-toolbar">
         <div class="grid gap-3 sm:grid-cols-3">
           <UFormGroup label="Segment">
@@ -246,6 +298,7 @@ const recalculating = ref(false)
 const savingKey = ref<string | null>(null)
 const niveaux = ref<any[]>([])
 const assortiments = ref<any[]>([])
+const tauxCibles = ref<any[]>([])
 const standards = ref<any[]>([])
 const typeMappings = ref<any[]>([])
 const segmentFilter = ref('all')
@@ -298,6 +351,22 @@ const filteredStandards = computed(() => standards.value.filter(row =>
 ))
 
 const pct = (value: number | null) => value == null ? '—' : `${Number(value)} %`
+const pctFine = (value: number | null) => value == null ? '—' : `${Number(value).toFixed(1).replace(/\.0$/, '')} %`
+const sumOk = (sum: number) => Math.abs(sum - 100) < 0.5
+
+const familleOrder = ['EVAP', 'IMP', 'SCM']
+const tauxCiblesParFamille = computed(() => familleOrder
+  .map((code) => {
+    const rows = tauxCibles.value.filter(row => row.famille === code)
+    return {
+      code,
+      nom: rows[0]?.famille_nom || '',
+      rows,
+      sumGT: rows.reduce((sum, row) => sum + (Number(row.gt) || 0), 0),
+      sumMT: rows.reduce((sum, row) => sum + (Number(row.mt) || 0), 0),
+    }
+  })
+  .filter(famille => famille.rows.length))
 const segmentLabel = (value: string) => segmentOptions.find(option => option.value === value)?.label || value
 const tierLabel = (value: string) => value.toUpperCase()
 const placementLabel = (value: string) => ({
@@ -353,6 +422,38 @@ async function saveAssortiment(row: any) {
     }).eq('segment', row.segment).eq('grade', row.grade)
     if (error) throw error
     toast.add({ title: 'Assortiment enregistré', description: 'Lancez le recalcul global pour actualiser les visites.', color: 'green' })
+  }
+  catch (error: any) {
+    toast.add({ title: 'Modification refusée', description: error.message, color: 'red' })
+  }
+  finally {
+    savingKey.value = null
+  }
+}
+
+async function saveTauxCible(row: any) {
+  if (!canEdit.value) return
+  if (![row.gt, row.mt].every(validPercent)) {
+    toast.add({ title: 'Valeur invalide', description: 'Les cibles doivent être comprises entre 0 et 100.', color: 'red' })
+    return
+  }
+  savingKey.value = `taux:${row.reference_produit_id}`
+  try {
+    const [gtResult, mtResult] = await Promise.all([
+      supabase.from('poids_reference')
+        .update({ poids: Number(row.gt) / 100 })
+        .eq('reference_produit_id', row.reference_produit_id)
+        .eq('canal', 'GT')
+        .eq('base_calcul', 'taux_revu'),
+      supabase.from('poids_reference')
+        .update({ poids: Number(row.mt) / 100 })
+        .eq('reference_produit_id', row.reference_produit_id)
+        .eq('canal', 'MT')
+        .eq('base_calcul', 'taux_revu'),
+    ])
+    if (gtResult.error) throw gtResult.error
+    if (mtResult.error) throw mtResult.error
+    toast.add({ title: 'Cibles enregistrées', description: 'Lancez le recalcul global pour actualiser les visites.', color: 'green' })
   }
   catch (error: any) {
     toast.add({ title: 'Modification refusée', description: error.message, color: 'red' })
@@ -452,6 +553,7 @@ async function loadData() {
       typeResult,
       visibilityMappingResult,
       availabilityMappingResult,
+      tauxRevuResult,
     ] = await Promise.all([
       supabase.from('niveau_perfect_store')
         .select('code, rang, dispo_rayon_min, visibilite_min, promotion_min')
@@ -467,6 +569,9 @@ async function loadData() {
       supabase.from('type_pdv').select('id, nom').order('nom'),
       supabase.from('segment_visibilite_type_pdv').select('type_pdv_id, segment'),
       supabase.from('segment_grade_type_pdv').select('type_pdv_id, segment, grade'),
+      supabase.from('poids_reference')
+        .select('reference_produit_id, canal, poids, reference_produit(id, nom, categorie_produit(code, nom))')
+        .eq('base_calcul', 'taux_revu'),
     ])
     if (niveauResult.error) throw niveauResult.error
     if (assortimentResult.error) throw assortimentResult.error
@@ -474,6 +579,7 @@ async function loadData() {
     if (typeResult.error) throw typeResult.error
     if (visibilityMappingResult.error) throw visibilityMappingResult.error
     if (availabilityMappingResult.error) throw availabilityMappingResult.error
+    if (tauxRevuResult.error) throw tauxRevuResult.error
     niveaux.value = niveauResult.data || []
     assortiments.value = assortimentResult.data || []
     standards.value = (standardResult.data || []).map((row: any) => ({
@@ -481,6 +587,25 @@ async function loadData() {
       ...one(row.element_visibilite),
       element_id: row.element_visibilite_id || one(row.element_visibilite)?.id,
     }))
+    const tauxByRef = new Map<number, any>()
+    for (const row of (tauxRevuResult.data || []) as any[]) {
+      const ref = one(row.reference_produit)
+      if (!ref) continue
+      const cat = one(ref.categorie_produit)
+      const entry = tauxByRef.get(row.reference_produit_id) || {
+        reference_produit_id: row.reference_produit_id,
+        variante: ref.nom,
+        famille: cat?.code || '',
+        famille_nom: cat?.nom || '',
+        gt: null,
+        mt: null,
+      }
+      entry[row.canal === 'MT' ? 'mt' : 'gt'] = Math.round(Number(row.poids) * 1000) / 10
+      tauxByRef.set(row.reference_produit_id, entry)
+    }
+    tauxCibles.value = [...tauxByRef.values()].sort((a, b) =>
+      familleOrder.indexOf(a.famille) - familleOrder.indexOf(b.famille)
+      || (Number(b.gt) || 0) - (Number(a.gt) || 0))
     const visibilityByType = new Map((visibilityMappingResult.data || []).map((row: any) => [row.type_pdv_id, row.segment]))
     const availabilityByType = new Map((availabilityMappingResult.data || []).map((row: any) => [row.type_pdv_id, row]))
     typeMappings.value = (typeResult.data || []).map((row: any) => ({

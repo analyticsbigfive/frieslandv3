@@ -1,6 +1,12 @@
 <template>
   <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">VISIBILITÉ INTÉRIEURE (MT) RÉCAPITULATIF</h1>
+    <header class="space-y-1">
+      <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-fc-red">Perfect Store · Visibilité</p>
+      <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Visibilité intérieure (MT) — récapitulatif</h1>
+      <p class="max-w-2xl text-sm text-slate-500 dark:text-slate-400">
+        Détail par PDV des éléments intérieurs mesurés (Modern trade · référentiel Perfect Store).
+      </p>
+    </header>
 
     <DashboardFilters
       v-model="dashboard.filters.value"
@@ -8,87 +14,82 @@
       @filter="dashboard.fetchVisites()"
     />
 
-    <!-- Column filters -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <UFormGroup v-for="item in mtItems" :key="item.key" :label="item.label" size="sm">
-          <USelectMenu v-model="colFilters[item.key]" :options="['', 'Présent', 'Absent']" placeholder="Tous" size="sm" />
-        </UFormGroup>
+    <!-- KPI -->
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div class="admin-metric-tile">
+        <p class="text-xs font-medium uppercase tracking-wide text-slate-400">PDV Modern trade</p>
+        <p class="mt-2 text-3xl font-bold tabular-nums text-slate-900 dark:text-white">{{ mtVisites.length }}</p>
       </div>
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-        <UFormGroup v-for="item in mtItems" :key="'e-'+item.key" label="État" size="sm">
-          <USelectMenu v-model="etatFs[item.key]" :options="['', 'Bon', 'À renouveler']" placeholder="Tous" size="sm" />
-        </UFormGroup>
+      <div class="admin-metric-tile">
+        <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Avec visibilité intérieure</p>
+        <p class="mt-2 text-3xl font-bold tabular-nums text-slate-900 dark:text-white">{{ presCount }}</p>
       </div>
+      <VisibilityPresenceTile :present="presCount" :total="mtVisites.length" />
     </div>
 
-    <!-- KPI -->
-    <div class="flex items-center gap-6">
-      <div>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Présence de visibilité intérieure</p>
-        <p class="text-3xl font-bold text-gray-900 dark:text-gray-100">{{ mtVisites.length }}</p>
+    <!-- Filtres par élément -->
+    <div class="admin-toolbar">
+      <p class="mb-3 text-xs font-medium uppercase tracking-wide text-slate-400">Filtrer par élément</p>
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <UFormGroup v-for="col in intColumns" :key="col.code" :label="col.label" size="sm">
+          <USelectMenu v-model="colFilters[col.code]" :options="['', 'Présent', 'Absent']" placeholder="Tous" size="sm" />
+        </UFormGroup>
       </div>
-      <ClientOnly>
-        <ChartsPieChart
-          :labels="['Présent', 'Absent']"
-          :values="[presCount, mtVisites.length - presCount]"
-          :colors="['#F59E0B', '#FB923C']"
-          height="sm"
-          class="w-44"
-        />
-      </ClientOnly>
+      <p v-if="!intColumns.length" class="text-sm text-slate-400">Aucun élément intérieur pour les segments MT chargés.</p>
     </div>
 
     <!-- Table -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <section class="admin-surface overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4">
+        <h2 class="text-base font-semibold text-slate-900 dark:text-white">Détail par PDV</h2>
+        <span class="text-xs tabular-nums text-slate-400">{{ filteredRows.length }} PDV</span>
+      </div>
       <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="bg-amber-50">
+        <table class="admin-table">
+          <thead>
             <tr>
-              <th class="px-3 py-2 text-left font-semibold text-amber-900">Nom du PDV</th>
-              <th class="px-3 py-2 text-left font-semibold text-amber-900">Région</th>
-              <th class="px-3 py-2 text-left font-semibold text-amber-900">Zone</th>
-              <th class="px-3 py-2 text-left font-semibold text-amber-900">Secteur</th>
-              <th v-for="item in mtItems" :key="item.key" class="px-3 py-2 text-center font-semibold text-amber-900">
-                {{ item.label }}
-              </th>
-              <th v-for="item in mtItems" :key="'e-'+item.key" class="px-3 py-2 text-center font-semibold text-amber-900">
-                État
-              </th>
+              <th>Nom du PDV</th>
+              <th>Région</th>
+              <th>Zone</th>
+              <th>Secteur</th>
+              <th>Sous-cat.</th>
+              <th v-for="col in intColumns" :key="col.code" class="text-center">{{ col.label }}</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100">
-            <tr v-for="(row, idx) in paginatedRows" :key="idx" class="hover:bg-gray-50 dark:hover:bg-gray-700">
-              <td class="px-3 py-2 font-medium text-gray-900 dark:text-gray-100 max-w-[180px]">
-                <div class="flex items-center gap-1">
-                  <span class="truncate">{{ row.nom }}</span>
+          <tbody>
+            <tr v-for="(row, idx) in paginatedRows" :key="idx">
+              <td class="font-medium text-slate-900 dark:text-slate-100">
+                <div class="flex items-center gap-1.5">
+                  <span class="max-w-[180px] truncate">{{ row.nom }}</span>
                   <PDVPhotoModal :pdv-id="row.pdv_id" :image-url="row.image_url" :pdv-name="row.nom" />
                 </div>
               </td>
-              <td class="px-3 py-2 text-gray-600">{{ row.region }}</td>
-              <td class="px-3 py-2 text-gray-600">{{ row.zone }}</td>
-              <td class="px-3 py-2 text-gray-600">{{ row.secteur }}</td>
-              <td v-for="item in mtItems" :key="item.key + idx" class="px-3 py-2 text-center">
-                <span :class="row[item.key] ? 'text-green-600 font-medium' : 'text-gray-400'">
-                  {{ row[item.key] ? 'Présent' : 'Absent' }}
-                </span>
-              </td>
-              <td v-for="item in mtItems" :key="'e'+item.key + idx" class="px-3 py-2 text-center text-gray-600 text-xs">
-                {{ row[item.etatKey] || '' }}
+              <td>{{ row.region }}</td>
+              <td>{{ row.zone }}</td>
+              <td>{{ row.secteur }}</td>
+              <td>{{ row.sousCategorie }}</td>
+              <td v-for="col in intColumns" :key="col.code + idx" class="text-center">
+                <span v-if="!row.applicable[col.code]" class="text-slate-300 dark:text-slate-600">—</span>
+                <UIcon
+                  v-else
+                  :name="row.standards[col.code] ? 'i-heroicons-check-circle-20-solid' : 'i-heroicons-x-mark-20-solid'"
+                  class="h-4 w-4"
+                  :class="row.standards[col.code] ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600'"
+                />
               </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <div class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-        <p class="text-sm text-gray-500 dark:text-gray-400">{{ (page - 1) * 100 + 1 }} - {{ Math.min(page * 100, filteredRows.length) }} / {{ filteredRows.length }}</p>
+      <div class="flex items-center justify-between border-t border-slate-100 px-5 py-3 dark:border-slate-700">
+        <p class="text-sm text-slate-500 dark:text-slate-400">{{ (page - 1) * 100 + 1 }} - {{ Math.min(page * 100, filteredRows.length) }} / {{ filteredRows.length }}</p>
         <div class="flex gap-2">
           <UButton size="xs" variant="outline" :disabled="page <= 1" @click="page--">‹</UButton>
           <UButton size="xs" variant="outline" :disabled="page * 100 >= filteredRows.length" @click="page++">›</UButton>
         </div>
       </div>
-    </div>
+    </section>
   </div>
 </template>
 
@@ -96,59 +97,39 @@
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const dashboard = useDashboardDirection()
+const { fetchElements, columns, applicable, standardsOf, hasPresence } = useVisibilityAggregation()
 const page = ref(1)
 
-const mtItems = [
-  { key: 'habillage_rayon', etatKey: 'etat_habillage', label: 'Habillage rayon' },
-  { key: 'merchandising', etatKey: 'etat_merchandising', label: 'Merchandising' },
-  { key: 'tete_gondole', etatKey: 'etat_tete_gondole', label: 'Tête de gondole' },
-  { key: 'autre_interieure', etatKey: 'etat_autre_int', label: 'Autres visibilité int.' },
-]
+const mtVisites = computed(() => dashboard.visites.value.filter(v => v.pdv?.canal === 'Modern trade'))
+const presCount = computed(() => mtVisites.value.filter(v => hasPresence(v, 'interieure')).length)
 
+const intColumns = computed(() => columns(mtVisites.value, 'interieure'))
 const colFilters = reactive<Record<string, string>>({})
-const etatFs = reactive<Record<string, string>>({})
 
-// Only Modern trade visites
-const mtVisites = computed(() =>
-  dashboard.visites.value.filter(v => v.pdv?.canal === 'Modern trade')
-)
+const allRows = computed(() => mtVisites.value.map(v => ({
+  nom: v.pdv?.nom_pdv || '',
+  pdv_id: v.pdv?.pdv_id || '',
+  image_url: (v.pdv as any)?.image_url || null,
+  region: v.pdv?.region || '',
+  zone: v.pdv?.zone || '',
+  secteur: v.pdv?.secteur || '',
+  sousCategorie: v.pdv?.sous_categorie_pdv || '',
+  standards: standardsOf(v),
+  applicable: applicable(v.pdv?.sous_categorie_pdv, 'interieure'),
+})))
 
-const presCount = computed(() =>
-  mtVisites.value.filter(v => v.data?.visibilite?.interieure?.presence_visibilite).length
-)
-
-const allRows = computed(() => {
-  return mtVisites.value.map(v => {
-    const int = v.data?.visibilite?.interieure || {} as any
-    return {
-      nom: v.pdv?.nom_pdv || '',
-      pdv_id: v.pdv?.pdv_id || '',
-      image_url: (v.pdv as any)?.image_url || null,
-      region: v.pdv?.region || '',
-      zone: v.pdv?.zone || '',
-      secteur: v.pdv?.secteur || '',
-      ...Object.fromEntries(mtItems.map(i => [i.key, int[i.key] || false])),
-      ...Object.fromEntries(mtItems.map(i => [i.etatKey, int[i.etatKey] || ''])),
-    }
-  })
-})
-
-const filteredRows = computed(() => {
-  return allRows.value.filter(row => {
-    for (const item of mtItems) {
-      const cf = colFilters[item.key]
-      if (cf === 'Présent' && !row[item.key]) return false
-      if (cf === 'Absent' && row[item.key]) return false
-      const ef = etatFs[item.key]
-      if (ef && row[item.etatKey] !== ef) return false
-    }
-    return true
-  })
-})
+const filteredRows = computed(() => allRows.value.filter(row => {
+  for (const col of intColumns.value) {
+    const cf = colFilters[col.code]
+    if (cf === 'Présent' && !row.standards[col.code]) return false
+    if (cf === 'Absent' && row.standards[col.code]) return false
+  }
+  return true
+}))
 
 const paginatedRows = computed(() => filteredRows.value.slice((page.value - 1) * 100, page.value * 100))
 
 onMounted(() => {
-  Promise.all([dashboard.fetchZones(), dashboard.fetchVisites()])
+  Promise.all([dashboard.fetchZones(), dashboard.fetchVisites(), fetchElements()])
 })
 </script>

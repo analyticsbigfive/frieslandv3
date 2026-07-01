@@ -1,5 +1,5 @@
 <template>
-  <div class="admin-surface p-6">
+  <div :class="bare ? '' : 'admin-surface p-6'">
     <h3 v-if="title" class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 text-center">{{ title }}</h3>
     <div :class="heightClass">
       <Doughnut v-if="chartData" :data="chartData" :options="mergedOptions" />
@@ -15,10 +15,11 @@ const props = withDefaults(defineProps<{
   labels: string[]
   values: number[]
   colors?: string[]
-  height?: 'sm' | 'md' | 'lg'
+  height?: 'xs' | 'sm' | 'md' | 'lg'
   showLegend?: boolean
   showPercentages?: boolean
   cutout?: string
+  bare?: boolean
 }>(), {
   height: 'md',
   showLegend: true,
@@ -31,7 +32,7 @@ const defaultColors = ['#F59E0B', '#FB923C', '#3B82F6', '#EF4444', '#10B981', '#
 const presenceColors = ['#F59E0B', '#FB923C'] // Jaune/Orange comme dans Looker Studio
 
 const heightClass = computed(() => {
-  const map = { sm: 'h-40', md: 'h-56', lg: 'h-72' }
+  const map = { xs: 'h-24', sm: 'h-40', md: 'h-56', lg: 'h-72' }
   return map[props.height]
 })
 

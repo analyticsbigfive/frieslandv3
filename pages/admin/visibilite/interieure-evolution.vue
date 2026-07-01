@@ -1,6 +1,12 @@
 <template>
   <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">VISIBILITÉ INTÉRIEURE — ÉVOLUTION</h1>
+    <header class="space-y-1">
+      <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-fc-red">Perfect Store · Visibilité</p>
+      <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Visibilité intérieure — évolution</h1>
+      <p class="max-w-2xl text-sm text-slate-500 dark:text-slate-400">
+        Présence par élément intérieur et tendance dans le temps (référentiel Perfect Store).
+      </p>
+    </header>
 
     <DashboardFilters
       v-model="dashboard.filters.value"
@@ -8,60 +14,51 @@
       @filter="dashboard.fetchVisites()"
     />
 
-    <!-- KPI + présence globale -->
-    <div class="flex flex-wrap items-center gap-6">
-      <div>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Présence de visibilité intérieure</p>
-        <p class="text-3xl font-bold text-gray-900 dark:text-gray-100">{{ visIntCount }}</p>
+    <!-- KPI -->
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div class="admin-metric-tile">
+        <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Visites analysées</p>
+        <p class="mt-2 text-3xl font-bold tabular-nums text-slate-900 dark:text-white">{{ totalVisites }}</p>
       </div>
+      <div class="admin-metric-tile">
+        <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Avec visibilité intérieure</p>
+        <p class="mt-2 text-3xl font-bold tabular-nums text-slate-900 dark:text-white">{{ visIntCount }}</p>
+      </div>
+      <VisibilityPresenceTile :present="visIntCount" :total="totalVisites" />
     </div>
 
-    <!-- GT Pie charts -->
-    <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100">General trade</h2>
-    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-      <ClientOnly>
-        <ChartsPieChart
-          v-for="item in gtItems"
-          :key="item.key"
-          :title="item.label"
-          :labels="['Absent', 'Présent']"
-          :values="[countAbsent(item.key), countPresent(item.key)]"
-          :colors="['#FB923C', '#F59E0B']"
-          height="sm"
-        />
-      </ClientOnly>
-    </div>
+    <section class="admin-surface p-5 sm:p-6">
+      <div class="mb-5 flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-700">
+        <h2 class="text-base font-semibold text-slate-900 dark:text-white">General trade</h2>
+        <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium tabular-nums text-slate-500 dark:bg-slate-700 dark:text-slate-300">{{ gtCount }} visites</span>
+      </div>
+      <div v-if="gtElements.length" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <VisibilityStatTile v-for="el in gtElements" :key="'gt-' + el.code" :label="el.label" :present="el.present" :total="el.applicable" />
+      </div>
+      <p v-else class="text-sm text-slate-400">Aucune visite General trade sur la période.</p>
+    </section>
 
-    <!-- MT Pie charts -->
-    <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100">Modern trade</h2>
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <ClientOnly>
-        <ChartsPieChart
-          v-for="item in mtItems"
-          :key="item.key"
-          :title="item.label"
-          :labels="['Absent', 'Présent']"
-          :values="[countAbsent(item.key), countPresent(item.key)]"
-          :colors="['#FB923C', '#EC4899']"
-          height="sm"
-        />
-      </ClientOnly>
-    </div>
+    <section class="admin-surface p-5 sm:p-6">
+      <div class="mb-5 flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-700">
+        <h2 class="text-base font-semibold text-slate-900 dark:text-white">Modern trade</h2>
+        <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium tabular-nums text-slate-500 dark:bg-slate-700 dark:text-slate-300">{{ mtCount }} visites</span>
+      </div>
+      <div v-if="mtElements.length" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <VisibilityStatTile v-for="el in mtElements" :key="'mt-' + el.code" :label="el.label" :present="el.present" :total="el.applicable" />
+      </div>
+      <p v-else class="text-sm text-slate-400">Aucune visite Modern trade sur la période.</p>
+    </section>
 
-    <!-- Evolution chart -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-      <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Évolution des visites avec visibilité intérieure</h3>
+    <section class="admin-surface p-5 sm:p-6">
+      <h3 class="mb-4 text-base font-semibold text-slate-900 dark:text-white">Évolution des visites avec visibilité intérieure</h3>
       <ClientOnly>
-        <ChartsVisitesLineChart
-          v-if="evolutionData.length"
-          title=""
-          :data="evolutionData"
-        />
+        <ChartsVisitesLineChart v-if="evolutionData.length" title="" :data="evolutionData" />
+        <p v-else class="text-sm text-slate-400">Pas assez de données pour tracer l'évolution.</p>
       </ClientOnly>
-    </div>
+    </section>
 
     <div v-if="dashboard.loading.value" class="flex items-center justify-center py-12">
-      <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-fc-blue" />
+      <UIcon name="i-heroicons-arrow-path" class="h-8 w-8 animate-spin text-fc-red" />
     </div>
   </div>
 </template>
@@ -70,43 +67,26 @@
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const dashboard = useDashboardDirection()
+const { fetchElements, aggregate, hasPresence } = useVisibilityAggregation()
 
-const visIntCount = computed(() =>
-  dashboard.countWhere(v => v.data?.visibilite?.interieure?.presence_visibilite)
-)
+const isModernTrade = (v: any) => (v.pdv?.canal || '').toLowerCase().includes('modern')
 
-const gtItems = [
-  { key: 'hanger', label: 'Hanger' },
-  { key: 'maison_bonnet_rouge', label: 'Maison BR' },
-  { key: 'reglettes', label: 'Réglettes' },
-  { key: 'zone_chaude', label: 'Zone chaude' },
-  { key: 'presentoirs', label: 'Présentoirs' },
-  { key: 'bacs_pouch', label: 'Bacs à Pouch' },
-  { key: 'produits_frigo', label: 'Prod. frigo' },
-]
+const totalVisites = computed(() => dashboard.visites.value.length)
+const visIntCount = computed(() => dashboard.visites.value.filter(v => hasPresence(v, 'interieure')).length)
 
-const mtItems = [
-  { key: 'habillage_rayon', label: 'Habillage rayon' },
-  { key: 'merchandising', label: 'Merchandising' },
-  { key: 'tete_gondole', label: 'Tête de gondole' },
-  { key: 'autre_interieure', label: 'Autre (MT)' },
-]
-
-function countPresent(key: string) {
-  return dashboard.countWhere(v => (v.data?.visibilite?.interieure as any)?.[key])
-}
-function countAbsent(key: string) {
-  return dashboard.totalVisites.value - countPresent(key)
-}
+const gtVisites = computed(() => dashboard.visites.value.filter(v => !isModernTrade(v)))
+const mtVisites = computed(() => dashboard.visites.value.filter(isModernTrade))
+const gtCount = computed(() => gtVisites.value.length)
+const mtCount = computed(() => mtVisites.value.length)
+const gtElements = computed(() => aggregate(gtVisites.value, 'interieure'))
+const mtElements = computed(() => aggregate(mtVisites.value, 'interieure'))
 
 const evolutionData = computed(() => {
-  const evo = dashboard.evolutionParSemaine(
-    v => v.data?.visibilite?.interieure?.presence_visibilite
-  )
-  return evo.labels.map((label, i) => ({ date: label, count: evo.counts[i] }))
+  const evo = dashboard.evolutionParSemaine(v => hasPresence(v, 'interieure'))
+  return evo.labels.map((label: string, i: number) => ({ date: label, count: evo.counts[i] }))
 })
 
 onMounted(() => {
-  Promise.all([dashboard.fetchZones(), dashboard.fetchVisites()])
+  Promise.all([dashboard.fetchZones(), dashboard.fetchVisites(), fetchElements()])
 })
 </script>

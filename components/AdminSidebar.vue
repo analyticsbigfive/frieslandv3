@@ -165,6 +165,7 @@ const navSections = [
       { label: 'Intérieure : évolution', to: '/admin/visibilite/interieure-evolution', icon: BarChart3 },
       { label: 'Intérieure (GT) : R.', to: '/admin/visibilite/interieure-gt-recap', icon: ClipboardList },
       { label: 'Intérieure (MT) : R.', to: '/admin/visibilite/interieure-mt-recap', icon: ClipboardList },
+      { label: 'Promotion : Récap.', to: '/admin/visibilite/promotion-recap', icon: ClipboardList },
     ],
   },
   {
