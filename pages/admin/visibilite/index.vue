@@ -27,7 +27,7 @@
         <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Avec visibilité extérieure</p>
         <p class="mt-2 text-3xl font-bold tabular-nums text-slate-900 dark:text-white">{{ visExtCount }}</p>
       </div>
-      <VisibilityPresenceTile :present="visExtCount" :total="totalVisites" />
+      <VisibilityPresenceTile :present="extTotals.present" :total="extTotals.applicable" />
     </div>
 
     <!-- Présence par élément -->
@@ -92,11 +92,12 @@
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const dashboard = useDashboardDirection()
-const { fetchElements, aggregate, hasPresence } = useVisibilityAggregation()
+const { fetchElements, aggregate, hasPresence, elementTotals } = useVisibilityAggregation()
 const { fetchConformity, byLevel } = useVisibilityConformity()
 
 const totalVisites = computed(() => dashboard.visites.value.length)
 const visExtCount = computed(() => dashboard.visites.value.filter(v => hasPresence(v, 'exterieure')).length)
+const extTotals = computed(() => elementTotals(dashboard.visites.value, 'exterieure'))
 
 const extElements = computed(() => aggregate(dashboard.visites.value, 'exterieure'))
 const extConformity = computed(() => byLevel(dashboard.visites.value, 'visibilite', 'exterieure'))

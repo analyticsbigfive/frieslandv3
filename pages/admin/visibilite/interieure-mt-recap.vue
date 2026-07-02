@@ -24,7 +24,7 @@
         <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Avec visibilité intérieure</p>
         <p class="mt-2 text-3xl font-bold tabular-nums text-slate-900 dark:text-white">{{ presCount }}</p>
       </div>
-      <VisibilityPresenceTile :present="presCount" :total="mtVisites.length" />
+      <VisibilityPresenceTile :present="intTotals.present" :total="intTotals.applicable" />
     </div>
 
     <!-- Filtres par élément -->
@@ -97,11 +97,12 @@
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const dashboard = useDashboardDirection()
-const { fetchElements, columns, applicable, standardsOf, hasPresence } = useVisibilityAggregation()
+const { fetchElements, columns, applicable, standardsOf, hasPresence, elementTotals } = useVisibilityAggregation()
 const page = ref(1)
 
-const mtVisites = computed(() => dashboard.visites.value.filter(v => v.pdv?.canal === 'Modern trade'))
+const mtVisites = computed(() => dashboard.visites.value.filter(v => isModernTrade(v.pdv?.canal)))
 const presCount = computed(() => mtVisites.value.filter(v => hasPresence(v, 'interieure')).length)
+const intTotals = computed(() => elementTotals(mtVisites.value, 'interieure'))
 
 const intColumns = computed(() => columns(mtVisites.value, 'interieure'))
 const colFilters = reactive<Record<string, string>>({})

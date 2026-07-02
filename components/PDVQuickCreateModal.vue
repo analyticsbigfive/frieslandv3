@@ -18,11 +18,8 @@
         </UFormGroup>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <UFormGroup label="Canal">
-            <USelectMenu
-              v-model="form.canal"
-              :options="canalOptions"
-            />
+          <UFormGroup label="Canal" help="Déduit de la catégorie choisie">
+            <UInput :model-value="derivedCanal" disabled />
           </UFormGroup>
 
           <UFormGroup label="Catégorie">
@@ -205,11 +202,16 @@ const distributorOptions = computed(() => {
   return out
 })
 
-const canalOptions = ['General trade', 'Modern trade']
 // Cascade Catégorie (level3 / groupe) → Sous-catégorie (level4 / type de PDV),
 // lues depuis posTypes (référentiel type_pdv) → uniquement des valeurs valides.
 // Le level4 pilote le scoring Perfect Store.
 const categorieOptions = computed(() => [...new Set(posTypes.value.map(p => p.level3_group).filter(Boolean))].sort())
+// Le canal se déduit de la catégorie (categorie_pdv.canal), comme dans le
+// calcul Perfect Store — il n'est plus saisi pour éviter toute divergence.
+const derivedCanal = computed(() => {
+  const pos = posTypes.value.find(p => p.level3_group === form.categorie_pdv)
+  return canalLabelFromCode((pos as any)?.canal)
+})
 const sousCategorieOptions = computed(() => posTypes.value
   .filter(p => !form.categorie_pdv || p.level3_group === form.categorie_pdv)
   .map(p => p.level4_type))
@@ -221,7 +223,6 @@ function onCategorieChange() {
 
 const form = reactive({
   nom_pdv: '',
-  canal: 'General trade',
   categorie_pdv: '' as string,
   sous_categorie_pdv: '' as string,
   zone: '',
@@ -239,7 +240,6 @@ const hasCoordinates = computed(() =>
 
 function resetForm() {
   form.nom_pdv = ''
-  form.canal = 'General trade'
   form.categorie_pdv = ''
   form.sous_categorie_pdv = ''
   form.zone = defaultZone.value
@@ -297,7 +297,7 @@ function buildPayload() {
     id: crypto.randomUUID(),
     pdv_id: pdvId,
     nom_pdv: form.nom_pdv.trim(),
-    canal: form.canal,
+    canal: derivedCanal.value,
     categorie_pdv: form.categorie_pdv,
     sous_categorie_pdv: form.sous_categorie_pdv,
     autre_sous_categorie: null,

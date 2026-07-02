@@ -24,7 +24,7 @@
         <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Avec visibilité intérieure</p>
         <p class="mt-2 text-3xl font-bold tabular-nums text-slate-900 dark:text-white">{{ visIntCount }}</p>
       </div>
-      <VisibilityPresenceTile :present="visIntCount" :total="totalVisites" />
+      <VisibilityPresenceTile :present="intTotals.present" :total="intTotals.applicable" />
     </div>
 
     <section class="admin-surface p-5 sm:p-6">
@@ -67,12 +67,15 @@
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const dashboard = useDashboardDirection()
-const { fetchElements, aggregate, hasPresence } = useVisibilityAggregation()
+const { fetchElements, aggregate, hasPresence, elementTotals } = useVisibilityAggregation()
 
-const isModernTrade = (v: any) => (v.pdv?.canal || '').toLowerCase().includes('modern')
+import { isModernTrade as isCanalModernTrade } from '~/utils/canal'
+
+const isModernTrade = (v: any) => isCanalModernTrade(v.pdv?.canal)
 
 const totalVisites = computed(() => dashboard.visites.value.length)
 const visIntCount = computed(() => dashboard.visites.value.filter(v => hasPresence(v, 'interieure')).length)
+const intTotals = computed(() => elementTotals(dashboard.visites.value, 'interieure'))
 
 const gtVisites = computed(() => dashboard.visites.value.filter(v => !isModernTrade(v)))
 const mtVisites = computed(() => dashboard.visites.value.filter(isModernTrade))

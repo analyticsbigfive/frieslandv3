@@ -24,7 +24,7 @@
         <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Au moins 1 élément présent</p>
         <p class="mt-2 text-3xl font-bold tabular-nums text-slate-900 dark:text-white">{{ presCount }}</p>
       </div>
-      <VisibilityPresenceTile :present="presCount" :total="filteredVisites.length" />
+      <VisibilityPresenceTile :present="extTotals.present" :total="extTotals.applicable" />
     </div>
 
     <!-- Filtres par élément -->
@@ -97,7 +97,7 @@
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const dashboard = useDashboardDirection()
-const { fetchElements, columns, applicable, standardsOf, hasPresence } = useVisibilityAggregation()
+const { fetchElements, columns, applicable, standardsOf, hasPresence, elementTotals } = useVisibilityAggregation()
 const page = ref(1)
 const sortBy = ref('nom')
 const sortAsc = ref(true)
@@ -116,6 +116,7 @@ const filteredVisites = computed(() => dashboard.visites.value.filter((v) => {
 }))
 
 const presCount = computed(() => filteredVisites.value.filter(v => hasPresence(v, 'exterieure')).length)
+const extTotals = computed(() => elementTotals(filteredVisites.value, 'exterieure'))
 
 const tableRows = computed(() => filteredVisites.value.map(v => ({
   nom: v.pdv?.nom_pdv || v.visite_id.substring(0, 8),

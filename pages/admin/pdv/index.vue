@@ -162,13 +162,8 @@
                 <UFormGroup label="Nom du PDV" required size="md">
                   <UInput v-model="pdvForm.nom_pdv" placeholder="Ex. Pharmacie du Marché" size="md" class="w-full" />
                 </UFormGroup>
-                <UFormGroup label="Canal" size="md">
-                  <USelectMenu
-                    v-model="pdvForm.canal"
-                    :options="['General trade', 'Modern trade']"
-                    size="md"
-                    class="w-full"
-                  />
+                <UFormGroup label="Canal" size="md" help="Déduit de la catégorie choisie">
+                  <UInput :model-value="derivedCanal" disabled size="md" class="w-full" />
                 </UFormGroup>
                 <UFormGroup label="Catégorie" help="Groupe de niveau 3 du référentiel." size="md">
                   <USelectMenu
@@ -414,6 +409,12 @@ const { distributeurs, regions, territories, areas, subRegions, posTypes, territ
 
 // Cascade Catégorie (level3 / groupe) → Sous-catégorie (level4 / type de PDV).
 const categorieOptions = computed(() => [...new Set(posTypes.value.map(p => p.level3_group).filter(Boolean))].sort())
+// Canal dérivé de la catégorie (categorie_pdv.canal), aligné sur le calcul
+// Perfect Store — plus de saisie manuelle.
+const derivedCanal = computed(() => {
+  const pos = posTypes.value.find(p => p.level3_group === pdvForm.value.categorie_pdv)
+  return canalLabelFromCode((pos as any)?.canal)
+})
 const sousCategorieOptions = computed(() => posTypes.value
   .filter(p => !pdvForm.value.categorie_pdv || p.level3_group === pdvForm.value.categorie_pdv)
   .map(p => p.level4_type))
@@ -566,7 +567,7 @@ async function handleSavePDV() {
     const terr = territories.value.find(t => t.code === pdvForm.value.territory_code)
     const sr = subRegions.value.find(s => s.code === pdvForm.value.sub_region_code)
     const area = areas.value.find(a => a.code === pdvForm.value.area_code && a.territory_code === pdvForm.value.territory_code)
-    const payload: any = { ...pdvForm.value }
+    const payload: any = { ...pdvForm.value, canal: derivedCanal.value }
     if (terr) payload.zone = terr.name
     if (sr) payload.region = sr.nom_affichage || sr.name
     if (area) payload.secteur = area.name

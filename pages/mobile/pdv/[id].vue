@@ -98,11 +98,8 @@
               <UInput v-model="form.nom_pdv" placeholder="Nom..." />
             </UFormGroup>
 
-            <UFormGroup label="Canal">
-              <USelectMenu
-                v-model="form.canal"
-                :options="['General trade', 'Modern trade']"
-              />
+            <UFormGroup label="Canal" help="Déduit de la catégorie choisie">
+              <UInput :model-value="derivedCanal" disabled />
             </UFormGroup>
 
             <UFormGroup label="Catégorie">
@@ -209,6 +206,12 @@ const toast = useToast()
 // Cascade Catégorie (level3) → Sous-catégorie (level4), depuis le référentiel type_pdv.
 const { posTypes, fetchReferentiels } = useReferentiels()
 const categorieOptions = computed(() => [...new Set(posTypes.value.map(p => p.level3_group).filter(Boolean))].sort())
+// Canal dérivé de la catégorie (categorie_pdv.canal), aligné sur le calcul
+// Perfect Store — plus de saisie manuelle.
+const derivedCanal = computed(() => {
+  const pos = posTypes.value.find(p => p.level3_group === form.value.categorie_pdv)
+  return canalLabelFromCode((pos as any)?.canal)
+})
 const sousCategorieOptions = computed(() => posTypes.value
   .filter(p => !form.value.categorie_pdv || p.level3_group === form.value.categorie_pdv)
   .map(p => p.level4_type))
@@ -298,7 +301,7 @@ async function handleSave() {
   requestAnimationFrame(tick)
 
   try {
-    await pdvStore.updatePDV(pdv.value.pdv_id, form.value)
+    await pdvStore.updatePDV(pdv.value.pdv_id, { ...form.value, canal: derivedCanal.value } as any)
     const updated = await pdvStore.fetchPDVById(pdv.value.pdv_id)
     pdv.value = updated as PDV
     editing.value = false

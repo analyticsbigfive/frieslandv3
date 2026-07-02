@@ -24,7 +24,7 @@
         <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Au moins 1 élément présent</p>
         <p class="mt-2 text-3xl font-bold tabular-nums text-slate-900 dark:text-white">{{ promoPresenceCount }}</p>
       </div>
-      <VisibilityPresenceTile :present="promoPresenceCount" :total="totalVisites" />
+      <VisibilityPresenceTile :present="promoTotals.present" :total="promoTotals.applicable" />
     </div>
 
     <section class="admin-surface p-5 sm:p-6">
@@ -139,11 +139,13 @@
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const dashboard = useDashboardDirection()
-const { fetchElements, aggregate, columns, applicable, standardsOf, hasPresence } = useVisibilityAggregation()
+const { fetchElements, aggregate, columns, applicable, standardsOf, hasPresence, elementTotals } = useVisibilityAggregation()
 const { fetchConformity, byLevel } = useVisibilityConformity()
 const page = ref(1)
 
-const isModernTrade = (v: any) => (v.pdv?.canal || '').toLowerCase().includes('modern')
+import { isModernTrade as isCanalModernTrade } from '~/utils/canal'
+
+const isModernTrade = (v: any) => isCanalModernTrade(v.pdv?.canal)
 const promoApplicable = (v: any) => (v?.data?.visibilite?.promotion_applicable) !== false
 
 const promoConformity = computed(() => byLevel(dashboard.visites.value.filter(promoApplicable), 'promotion'))
@@ -151,6 +153,7 @@ const promoConformity = computed(() => byLevel(dashboard.visites.value.filter(pr
 const totalVisites = computed(() => dashboard.visites.value.length)
 const promoApplicableCount = computed(() => dashboard.visites.value.filter(promoApplicable).length)
 const promoPresenceCount = computed(() => dashboard.visites.value.filter(v => hasPresence(v, 'promotion')).length)
+const promoTotals = computed(() => elementTotals(dashboard.visites.value, 'promotion'))
 
 const gtVisites = computed(() => dashboard.visites.value.filter(v => !isModernTrade(v)))
 const mtVisites = computed(() => dashboard.visites.value.filter(isModernTrade))
