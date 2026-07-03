@@ -51,8 +51,20 @@ const trackingError = ref<string | null>(null)
 
 let watcherId: string | null = null
 let flushTimer: ReturnType<typeof setInterval> | null = null
+let pollTimer: ReturnType<typeof setInterval> | null = null
 let lastCapturedAt = 0
+let lastLat: number | null = null
+let lastLng: number | null = null
 let bufferChain: Promise<void> = Promise.resolve()
+
+function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000
+  const dLat = (lat2 - lat1) * (Math.PI / 180)
+  const dLng = (lng2 - lng1) * (Math.PI / 180)
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
 
 // Les écritures IndexedDB sont sérialisées pour éviter qu'un flush et une
 // capture simultanés se marchent dessus (lecture-modification-écriture).
@@ -67,8 +79,8 @@ export function useTournee() {
   const { addToQueue } = useOfflineSync()
   const geo = useGeoProvider()
 
-  const intervalMs = Number(config.public.trackingIntervalMs) || 60_000
-  const distanceM = Number(config.public.trackingDistanceM) || 25
+  const minIntervalMs = Number(config.public.trackingIntervalMs) || 30_000
+  const distanceM = Number(config.public.trackingDistanceM) || 15
   const flushMs = Number(config.public.trackingFlushMs) || 5 * 60_000
   const batchMax = Number(config.public.trackingBatchMax) || 200
 
@@ -105,65 +117,74 @@ export function useTournee() {
     })
   }
 
-  function handleLocation(location: BgLocation) {
-    const now = Date.now()
-    if (now - lastCapturedAt < intervalMs) {
-      return
-    }
-    lastCapturedAt = now
-
+  // Enregistre un point si le mouvement dépasse le filtre distance (ou si
+  // c'est le premier), avec un intervalle minimal pour ne pas saturer.
+  // Alimenté à la fois par le watcher background et le polling GPS fusionné.
+  function recordPoint(lat: number, lng: number, accuracy: number | null, speed: number | null, force = false) {
     const active = tourneeId.value
     const userId = user.value?.id
     if (!active || !userId) {
       return
     }
+
+    const now = Date.now()
+    const movedEnough = lastLat === null || haversine(lastLat, lastLng!, lat, lng) >= distanceM
+    if (!force && (!movedEnough || now - lastCapturedAt < minIntervalMs)) {
+      return
+    }
+
+    lastCapturedAt = now
+    lastLat = lat
+    lastLng = lng
 
     void appendPoint({
       id: crypto.randomUUID(),
       user_id: userId,
       tournee_id: active,
-      lat: location.latitude,
-      lng: location.longitude,
-      accuracy: location.accuracy ?? null,
-      speed: location.speed ?? null,
-      captured_at: new Date(location.time ?? now).toISOString(),
+      lat,
+      lng,
+      accuracy,
+      speed,
+      captured_at: new Date(now).toISOString(),
     })
   }
 
-  // Premier point garanti : capté immédiatement au démarrage et envoyé
-  // sans attendre le batch de 5 min ni un déplacement (distanceFilter).
-  // Plusieurs tentatives car le GPS peut mettre quelques secondes à donner
-  // un premier fix (warm-up).
-  async function captureInitialPoint() {
-    const active = tourneeId.value
-    const userId = user.value?.id
-    if (!active || !userId) {
+  function handleLocation(location: BgLocation) {
+    recordPoint(location.latitude, location.longitude, location.accuracy ?? null, location.speed ?? null)
+  }
+
+  // Polling GPS fusionné (fiable même quand le provider du plugin background
+  // ne délivre rien). Premier point forcé, puis échantillonnage régulier.
+  async function pollOnce(force = false) {
+    if (!tourneeId.value || !user.value?.id) {
       return
     }
 
-    for (let attempt = 0; attempt < 4; attempt++) {
-      try {
-        const position = await geo.getCurrentPosition({ timeout: 20000, maximumAge: 30000 })
-        lastCapturedAt = Date.now()
+    try {
+      const position = await geo.getCurrentPosition({ timeout: 20000, maximumAge: 0 })
+      recordPoint(
+        position.coords.latitude,
+        position.coords.longitude,
+        position.coords.accuracy ?? null,
+        position.coords.speed ?? null,
+        force,
+      )
+      await flushBuffer()
+    }
+    catch {
+      // Fix pas encore disponible : nouvelle tentative au prochain tick.
+    }
+  }
 
-        await appendPoint({
-          id: crypto.randomUUID(),
-          user_id: userId,
-          tournee_id: active,
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-          accuracy: position.coords.accuracy ?? null,
-          speed: position.coords.speed ?? null,
-          captured_at: new Date().toISOString(),
-        })
-        await flushBuffer()
+  // Premier point garanti : plusieurs tentatives le temps du warm-up GPS.
+  async function captureInitialPoint() {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const before = pointCount.value
+      await pollOnce(true)
+      if (pointCount.value > before) {
         return
       }
-      catch {
-        // GPS pas encore prêt : nouvelle tentative dans 5 s ; sinon le
-        // watcher background prendra le relais.
-        await new Promise(resolve => setTimeout(resolve, 5000))
-      }
+      await new Promise(resolve => setTimeout(resolve, 5000))
     }
   }
 
@@ -197,6 +218,12 @@ export function useTournee() {
       void flushBuffer()
     }, flushMs)
 
+    // Échantillonnage GPS fusionné régulier, indépendant du provider du
+    // plugin background (fiable en avant-plan et service au premier plan).
+    pollTimer = setInterval(() => {
+      void pollOnce()
+    }, minIntervalMs)
+
     isTracking.value = true
 
     void captureInitialPoint()
@@ -227,6 +254,8 @@ export function useTournee() {
     startedAt.value = new Date().toISOString()
     pointCount.value = 0
     lastCapturedAt = 0
+    lastLat = null
+    lastLng = null
 
     await Preferences.set({
       key: ACTIVE_KEY,
@@ -244,6 +273,11 @@ export function useTournee() {
     if (flushTimer) {
       clearInterval(flushTimer)
       flushTimer = null
+    }
+
+    if (pollTimer) {
+      clearInterval(pollTimer)
+      pollTimer = null
     }
 
     if (watcherId) {

@@ -129,10 +129,10 @@ export default defineNuxtConfig({
     public: {
       geofenceRadius: 200, // TODO confirmer client (valeur réunion : 200 m)
       gpsMinAccuracy: 10,
-      // Tracking de tournée (app native) : 1 point max par intervalle,
-      // filtre distance natif, envoi groupé par batch.
-      trackingIntervalMs: 60_000,
-      trackingDistanceM: 25,
+      // Tracking de tournée (app native) : échantillonnage GPS régulier,
+      // filtre distance mini entre points, envoi groupé par batch.
+      trackingIntervalMs: 30_000,
+      trackingDistanceM: 15,
       trackingFlushMs: 5 * 60_000,
       trackingBatchMax: 200,
     },
