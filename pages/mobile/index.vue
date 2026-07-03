@@ -67,6 +67,12 @@
           </UButton>
         </div>
       </section>
+
+      <TourneeOnboardingModal
+        v-model="showTourneeOnboarding"
+        @start="startTourneeNow"
+        @open-settings="tournee.openLocationSettings()"
+      />
     </div>
 
     <!-- Search & Filter -->
@@ -237,16 +243,42 @@ const { cacheVisites, getCachedVisitesFallback } = useOfflineData()
 
 const tournee = useTournee()
 const tourneeBusy = ref(false)
+const showTourneeOnboarding = ref(false)
+const geoProvider = useGeoProvider()
+const { isExempt: isBatteryExempt } = useBatteryOptimization()
 
 async function toggleTournee() {
-  tourneeBusy.value = true
-  try {
-    if (tournee.isTracking.value) {
+  if (tournee.isTracking.value) {
+    tourneeBusy.value = true
+    try {
       await tournee.stopTournee()
     }
-    else {
-      await tournee.startTournee()
+    finally {
+      tourneeBusy.value = false
     }
+    return
+  }
+
+  // Premier démarrage ou autorisations incomplètes : passage par
+  // l'onboarding (localisation « tout le temps », batterie, aide OEM).
+  const [permission, batteryOk] = await Promise.all([
+    geoProvider.checkPermission(),
+    isBatteryExempt(),
+  ])
+
+  if (permission !== 'granted' || !batteryOk) {
+    showTourneeOnboarding.value = true
+    return
+  }
+
+  await startTourneeNow()
+}
+
+async function startTourneeNow() {
+  showTourneeOnboarding.value = false
+  tourneeBusy.value = true
+  try {
+    await tournee.startTournee()
   }
   finally {
     tourneeBusy.value = false
