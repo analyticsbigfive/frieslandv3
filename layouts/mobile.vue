@@ -101,12 +101,19 @@
 const route = useRoute()
 const { isOnline, pendingCount } = useOfflineSync()
 const { currentPosition, isLocating, positionError, requestPosition } = useUserGeolocation()
-const { isTracking: isTrackingTournee, pointCount: tourneePointCount, resumeIfActive } = useTournee()
+const { isTracking: isTrackingTournee, pointCount: tourneePointCount, autoStart, stopTournee } = useTournee()
+const tourneeUser = useSupabaseUser()
 
-// Reprend la tournée du jour si l'app a été tuée pendant le suivi (natif).
-onMounted(() => {
-  void resumeIfActive()
-})
+// Tournée automatique (natif) : démarre ou reprend dès que l'utilisateur
+// est connecté, s'arrête au logout.
+watch(tourneeUser, (u) => {
+  if (u) {
+    void autoStart()
+  }
+  else if (isTrackingTournee.value) {
+    void stopTournee()
+  }
+}, { immediate: true })
 
 const gpsIconClass = computed(() => {
   if (isLocating.value) return 'text-amber-300 animate-pulse'

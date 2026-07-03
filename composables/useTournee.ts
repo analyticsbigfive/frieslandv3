@@ -246,6 +246,24 @@ export function useTournee() {
     }
   }
 
+  // Démarrage automatique au lancement de l'app (demande client) :
+  // reprend la tournée du jour si elle existe, sinon en démarre une
+  // nouvelle. La permission localisation est demandée au premier
+  // lancement par le service lui-même.
+  async function autoStart() {
+    if (!isNative || isTracking.value) {
+      return
+    }
+
+    await resumeIfActive()
+
+    if (isTracking.value || !user.value?.id) {
+      return
+    }
+
+    await startTournee()
+  }
+
   function openLocationSettings() {
     if (isNative) {
       void BackgroundGeolocation.openSettings()
@@ -263,6 +281,7 @@ export function useTournee() {
     startTournee,
     stopTournee,
     resumeIfActive,
+    autoStart,
     flushBuffer,
     openLocationSettings,
   }

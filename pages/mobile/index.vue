@@ -50,7 +50,7 @@
               Suivi actif — {{ tournee.pointCount.value }} point(s)
             </p>
             <p v-else class="text-sm text-gray-500 dark:text-gray-400">
-              Suivi GPS arrêté
+              Suivi GPS arrêté — reprend au prochain lancement
             </p>
             <p v-if="tournee.trackingError.value" class="mt-1 text-xs font-medium text-red-600">
               {{ tournee.trackingError.value }}
