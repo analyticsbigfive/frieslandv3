@@ -48,6 +48,17 @@
           />
         </button>
 
+        <!-- Tournée en cours (app native) -->
+        <span
+          v-if="isTrackingTournee"
+          class="inline-flex min-h-8 items-center gap-1.5 rounded-full bg-white/10 px-2 text-[11px] font-semibold"
+          :title="`Tournée en cours — ${tourneePointCount} point(s) capté(s)`"
+          aria-label="Tournée en cours"
+        >
+          <span class="h-2 w-2 rounded-full bg-emerald-300 animate-pulse" aria-hidden="true" />
+          <span>Tournée</span>
+        </span>
+
         <!-- Online status -->
         <span
           class="inline-flex min-h-8 items-center gap-1.5 rounded-full px-2 text-[11px] font-semibold"
@@ -90,6 +101,12 @@
 const route = useRoute()
 const { isOnline, pendingCount } = useOfflineSync()
 const { currentPosition, isLocating, positionError, requestPosition } = useUserGeolocation()
+const { isTracking: isTrackingTournee, pointCount: tourneePointCount, resumeIfActive } = useTournee()
+
+// Reprend la tournée du jour si l'app a été tuée pendant le suivi (natif).
+onMounted(() => {
+  void resumeIfActive()
+})
 
 const gpsIconClass = computed(() => {
   if (isLocating.value) return 'text-amber-300 animate-pulse'

@@ -1,3 +1,5 @@
+import type { GeoError, GeoPositionLike } from '~/composables/useGeoProvider'
+
 export interface UserPosition {
   lat: number
   lng: number
@@ -32,7 +34,7 @@ function persistPosition(position: UserPosition) {
   }
 }
 
-function buildPosition(coords: GeolocationCoordinates): UserPosition {
+function buildPosition(coords: GeoPositionLike['coords']): UserPosition {
   return {
     lat: coords.latitude,
     lng: coords.longitude,
@@ -42,8 +44,21 @@ function buildPosition(coords: GeolocationCoordinates): UserPosition {
 }
 
 export function useUserGeolocation() {
+  const geo = useGeoProvider()
+
   async function bindPermissionQuery(): Promise<PermissionStatus | null> {
-    if (!import.meta.client || !navigator.permissions?.query) {
+    if (!import.meta.client) {
+      return null
+    }
+
+    // Natif : pas d'API Permissions observable — lecture ponctuelle
+    // via le plugin, l'état est posé directement dans permissionStatus.
+    if (geo.isNative) {
+      permissionStatus.value = await geo.checkPermission()
+      return null
+    }
+
+    if (!navigator.permissions?.query) {
       return null
     }
 
@@ -78,11 +93,6 @@ export function useUserGeolocation() {
       return null
     }
 
-    if (!navigator.geolocation) {
-      positionError.value = 'La geolocalisation n\'est pas supportee par votre navigateur'
-      return null
-    }
-
     if (!force && currentPosition.value && Date.now() - currentPosition.value.timestamp < POSITION_CACHE_MS) {
       return currentPosition.value
     }
@@ -94,42 +104,40 @@ export function useUserGeolocation() {
     isLocating.value = true
     positionError.value = null
 
-    locateRequest = new Promise<UserPosition | null>((resolve) => {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const nextPosition = buildPosition(position.coords)
-          currentPosition.value = nextPosition
-          positionError.value = null
-          persistPosition(nextPosition)
-          resolve(nextPosition)
-        },
-        (err: GeolocationPositionError) => {
-          let message = 'Erreur de geolocalisation'
-          if (err.code === 1) message = 'Acces a la geolocalisation refuse. Veuillez activer le GPS dans les parametres.'
-          else if (err.code === 2) message = 'Position indisponible. Verifiez que le GPS est active.'
-          else if (err.code === 3) message = 'Delai d\'attente GPS depasse. Reessayez.'
-
-          positionError.value = message
-          console.warn('[Geolocation]', message)
-          resolve(null)
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: POSITION_CACHE_MS,
-        },
-      )
-    }).finally(() => {
-      isLocating.value = false
-      locateRequest = null
+    locateRequest = geo.getCurrentPosition({
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: POSITION_CACHE_MS,
     })
+      .then((position) => {
+        const nextPosition = buildPosition(position.coords)
+        currentPosition.value = nextPosition
+        positionError.value = null
+        persistPosition(nextPosition)
+        return nextPosition as UserPosition | null
+      })
+      .catch((err: GeoError) => {
+        let message = 'Erreur de geolocalisation'
+        if (err.code === 1) message = 'Acces a la geolocalisation refuse. Veuillez activer le GPS dans les parametres.'
+        else if (err.code === 2) message = 'Position indisponible. Verifiez que le GPS est active.'
+        else if (err.code === 3) message = 'Delai d\'attente GPS depasse. Reessayez.'
+
+        positionError.value = message
+        console.warn('[Geolocation]', message)
+        return null
+      })
+      .finally(() => {
+        isLocating.value = false
+        locateRequest = null
+      })
 
     return locateRequest
   }
 
   async function checkPermission(): Promise<PermissionState | null> {
     const result = await bindPermissionQuery()
-    return result?.state ?? null
+    // Web : état porté par le PermissionStatus ; natif : posé par bindPermissionQuery.
+    return result?.state ?? permissionStatus.value ?? null
   }
 
   function restoreLastKnownPosition(): UserPosition | null {

@@ -119,6 +119,17 @@ export function useOfflineSync() {
             throw error
           }
         }
+        else if (item.type === 'positions_batch') {
+          // Ids générés côté client : le rejeu d'un batch déjà reçu est
+          // ignoré (on conflict do nothing), le renvoi est donc sans risque.
+          const { error } = await supabase
+            .from('position_tournee')
+            .upsert(item.data, { onConflict: 'id', ignoreDuplicates: true })
+
+          if (error) {
+            throw error
+          }
+        }
 
         queue.value = queue.value.filter(queuedItem => queuedItem.id !== item.id)
       }

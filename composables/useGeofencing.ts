@@ -1,15 +1,21 @@
 // composables/useGeofencing.ts
 import type { GeofenceResult } from '~/types'
+import type { GeoPositionLike } from '~/composables/useGeoProvider'
 
 export function useGeofencing() {
   const config = useRuntimeConfig()
   const maxRadius = config.public.geofenceRadius as number || 200 // TODO confirmer client (valeur réunion : 200 m)
   const minAccuracy = config.public.gpsMinAccuracy as number || 10
 
+  const geo = useGeoProvider()
+
   const isChecking = ref(false)
   const lastResult = ref<GeofenceResult | null>(null)
   const error = ref<string | null>(null)
-  const watchId = ref<number | null>(null)
+  const stopWatcher = ref<(() => void) | null>(null)
+  // Le watch natif s'installe de façon asynchrone : la génération évite
+  // qu'un stopWatching() appelé entre-temps laisse fuiter le watcher.
+  let watchGeneration = 0
 
   /**
    * Calculate distance between two GPS points using Haversine formula
@@ -31,20 +37,13 @@ export function useGeofencing() {
   }
 
   /**
-   * Get current position with promise wrapper
+   * Get current position with promise wrapper (natif ou web via useGeoProvider)
    */
-  function getCurrentPosition(): Promise<GeolocationPosition> {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(new Error('La géolocalisation n\'est pas supportée par votre navigateur'))
-        return
-      }
-
-      navigator.geolocation.getCurrentPosition(resolve, reject, {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0,
-      })
+  function getCurrentPosition(): Promise<GeoPositionLike> {
+    return geo.getCurrentPosition({
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0,
     })
   }
 
@@ -101,9 +100,10 @@ export function useGeofencing() {
     pdvLng: number,
     callback?: (result: GeofenceResult) => void
   ) {
-    if (!navigator.geolocation) return
+    stopWatching()
+    const generation = watchGeneration
 
-    watchId.value = navigator.geolocation.watchPosition(
+    void geo.watchPosition(
       (position) => {
         const distance = haversineDistance(
           position.coords.latitude,
@@ -131,16 +131,23 @@ export function useGeofencing() {
         timeout: 10000,
         maximumAge: 5000,
       }
-    )
+    ).then((cleanup) => {
+      if (generation !== watchGeneration) {
+        cleanup()
+        return
+      }
+      stopWatcher.value = cleanup
+    })
   }
 
   /**
    * Stop watching position
    */
   function stopWatching() {
-    if (watchId.value !== null) {
-      navigator.geolocation.clearWatch(watchId.value)
-      watchId.value = null
+    watchGeneration++
+    if (stopWatcher.value) {
+      stopWatcher.value()
+      stopWatcher.value = null
     }
   }
 

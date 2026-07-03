@@ -448,11 +448,31 @@ export interface CouvertureLigne {
 // ---- Offline Queue ----
 export interface OfflineQueueItem {
   id: string
-  type: 'visite' | 'pdv' | 'image'
+  type: 'visite' | 'pdv' | 'image' | 'positions_batch'
   data: any
   timestamp: number
   retries: number
   status: 'pending' | 'processing' | 'error'
+}
+
+// ---- Tracking de tournée (app native) ----
+// Ligne de la table position_tournee ; id généré côté client pour
+// l'idempotence des renvois (upsert ignoreDuplicates).
+export interface PositionPoint {
+  id: string
+  user_id: string
+  tournee_id: string
+  lat: number
+  lng: number
+  accuracy: number | null
+  speed: number | null
+  captured_at: string
+}
+
+export interface TourneeActive {
+  tourneeId: string
+  userId: string
+  startedAt: string
 }
 
 // ---- CSV Import/Export ----

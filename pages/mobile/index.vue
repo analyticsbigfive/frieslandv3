@@ -40,6 +40,33 @@
           {{ progressPercent >= 100 ? 'Objectif atteint' : `${Math.round(progressPercent)}% de l'objectif` }}
         </p>
       </section>
+
+      <!-- Tournée GPS (app native uniquement) -->
+      <section v-if="tournee.isNative" class="mobile-card mt-3 p-4" aria-label="Suivi GPS de tournée">
+        <div class="flex items-center justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-xs text-gray-400 uppercase tracking-wide">Tournée</p>
+            <p v-if="tournee.isTracking.value" class="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              Suivi actif — {{ tournee.pointCount.value }} point(s)
+            </p>
+            <p v-else class="text-sm text-gray-500 dark:text-gray-400">
+              Suivi GPS arrêté
+            </p>
+            <p v-if="tournee.trackingError.value" class="mt-1 text-xs font-medium text-red-600">
+              {{ tournee.trackingError.value }}
+            </p>
+          </div>
+          <UButton
+            :color="tournee.isTracking.value ? 'gray' : 'red'"
+            :icon="tournee.isTracking.value ? 'i-heroicons-stop-circle' : 'i-heroicons-play-circle'"
+            :loading="tourneeBusy"
+            size="sm"
+            @click="toggleTournee"
+          >
+            {{ tournee.isTracking.value ? 'Fin de tournée' : 'Début de tournée' }}
+          </UButton>
+        </div>
+      </section>
     </div>
 
     <!-- Search & Filter -->
@@ -207,6 +234,24 @@ const supabase = useSupabaseClient()
 const user = useSupabaseUser()
 const authStore = useAuthStore()
 const { cacheVisites, getCachedVisitesFallback } = useOfflineData()
+
+const tournee = useTournee()
+const tourneeBusy = ref(false)
+
+async function toggleTournee() {
+  tourneeBusy.value = true
+  try {
+    if (tournee.isTracking.value) {
+      await tournee.stopTournee()
+    }
+    else {
+      await tournee.startTournee()
+    }
+  }
+  finally {
+    tourneeBusy.value = false
+  }
+}
 
 const visites = ref<Visite[]>([])
 const loading = ref(true)
