@@ -65,6 +65,7 @@ export function useTournee() {
   const config = useRuntimeConfig()
   const user = useSupabaseUser()
   const { addToQueue } = useOfflineSync()
+  const geo = useGeoProvider()
 
   const intervalMs = Number(config.public.trackingIntervalMs) || 60_000
   const distanceM = Number(config.public.trackingDistanceM) || 25
@@ -129,6 +130,36 @@ export function useTournee() {
     })
   }
 
+  // Premier point garanti : capté immédiatement au démarrage et envoyé
+  // sans attendre le batch de 5 min ni un déplacement (distanceFilter).
+  async function captureInitialPoint() {
+    const active = tourneeId.value
+    const userId = user.value?.id
+    if (!active || !userId) {
+      return
+    }
+
+    try {
+      const position = await geo.getCurrentPosition({ timeout: 20000 })
+      lastCapturedAt = Date.now()
+
+      await appendPoint({
+        id: crypto.randomUUID(),
+        user_id: userId,
+        tournee_id: active,
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+        accuracy: position.coords.accuracy ?? null,
+        speed: position.coords.speed ?? null,
+        captured_at: new Date().toISOString(),
+      })
+      await flushBuffer()
+    }
+    catch {
+      // GPS pas encore prêt : le watcher prendra le relais.
+    }
+  }
+
   async function startWatcher() {
     watcherId = await BackgroundGeolocation.addWatcher(
       {
@@ -160,6 +191,8 @@ export function useTournee() {
     }, flushMs)
 
     isTracking.value = true
+
+    void captureInitialPoint()
   }
 
   async function startTournee() {
