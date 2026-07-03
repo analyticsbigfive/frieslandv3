@@ -57,3 +57,4 @@ nul
 *.keystore
 *.jks
 android/keystore.properties
+.nuxt-native

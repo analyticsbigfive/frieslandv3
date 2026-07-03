@@ -8,6 +8,10 @@ const isCapacitor = process.env.CAPACITOR_BUILD === '1'
 export default defineNuxtConfig({
   ssr: !isCapacitor,
 
+  // buildDir isolé pour le build natif : évite d'écraser le .nuxt du
+  // serveur `nuxt dev` (schéma corrompu si un build APK tourne en parallèle).
+  ...(isCapacitor ? { buildDir: '.nuxt-native' } : {}),
+
   devtools: { enabled: devtoolsEnabled },
 
   modules: [
