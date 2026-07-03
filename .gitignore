@@ -52,3 +52,9 @@ coverage
 .vercel
 .netlify
 nul
+
+# Android signing (jamais committer)
+*.keystore
+*.jks
+android/keystore.properties
+.nuxt-native

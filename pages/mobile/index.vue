@@ -40,6 +40,10 @@
           {{ progressPercent >= 100 ? 'Objectif atteint' : `${Math.round(progressPercent)}% de l'objectif` }}
         </p>
       </section>
+
+      <!-- Tournée GPS (app native uniquement) -->
+      <TourneeCard :visit-count="todayCount" :daily-target="dailyTarget" />
+      <TourneeMiniMap v-if="tournee.isTracking.value" />
     </div>
 
     <!-- Search & Filter -->
@@ -207,6 +211,8 @@ const supabase = useSupabaseClient()
 const user = useSupabaseUser()
 const authStore = useAuthStore()
 const { cacheVisites, getCachedVisitesFallback } = useOfflineData()
+
+const tournee = useTournee()
 
 const visites = ref<Visite[]>([])
 const loading = ref(true)

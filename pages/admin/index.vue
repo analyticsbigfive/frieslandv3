@@ -29,6 +29,8 @@
         </div>
       </header>
 
+      <CommerciauxEnTournee class="print:hidden" />
+
       <section v-if="psGlobal" aria-labelledby="performance-heading" class="grid gap-5 lg:grid-cols-12">
         <NuxtLink
           to="/admin/perfect-store"

@@ -115,6 +115,7 @@ const pageTitle = computed(() => {
     '/admin/produits': 'Produits',
     '/admin/import-export': 'Import / Export',
     '/admin/map': 'Carte',
+    '/admin/trajets': 'Suivi commerciaux',
   }
   return titles[route.path] || 'Dashboard'
 })

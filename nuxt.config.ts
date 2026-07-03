@@ -1,15 +1,24 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 const isProduction = process.env.NODE_ENV === 'production'
 const devtoolsEnabled = process.env.NUXT_DEVTOOLS === 'true'
+// Build natif Capacitor : SPA statique, sans service worker PWA
+// (un SW dans la WebView provoque des caches fantômes après mise à jour d'APK).
+const isCapacitor = process.env.CAPACITOR_BUILD === '1'
 
 export default defineNuxtConfig({
+  ssr: !isCapacitor,
+
+  // buildDir isolé pour le build natif : évite d'écraser le .nuxt du
+  // serveur `nuxt dev` (schéma corrompu si un build APK tourne en parallèle).
+  ...(isCapacitor ? { buildDir: '.nuxt-native' } : {}),
+
   devtools: { enabled: devtoolsEnabled },
 
   modules: [
     '@nuxt/ui',
     '@nuxtjs/supabase',
     '@pinia/nuxt',
-    ...(isProduction ? ['@vite-pwa/nuxt'] : []),
+    ...(isProduction && !isCapacitor ? ['@vite-pwa/nuxt'] : []),
   ],
 
   css: ['~/assets/css/main.css'],
@@ -124,6 +133,13 @@ export default defineNuxtConfig({
     public: {
       geofenceRadius: 200, // TODO confirmer client (valeur réunion : 200 m)
       gpsMinAccuracy: 10,
+      // Tracking de tournée (app native) : échantillonnage GPS régulier,
+      // filtre distance mini entre points, envoi groupé par batch.
+      // Intervalle à 2 min = compromis autonomie batterie / finesse du trajet.
+      trackingIntervalMs: 120_000,
+      trackingDistanceM: 15,
+      trackingFlushMs: 5 * 60_000,
+      trackingBatchMax: 200,
     },
   },
 

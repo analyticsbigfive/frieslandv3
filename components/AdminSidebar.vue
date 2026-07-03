@@ -103,6 +103,7 @@ import {
   Zap,
   ShoppingBag,
   Route,
+  Navigation,
   ShieldCheck,
   Boxes,
   SlidersHorizontal,
@@ -132,6 +133,7 @@ const navSections = [
       { label: 'Dashboard', to: '/admin', icon: LayoutDashboard },
       { label: 'Routing & Planning', to: '/admin/routing', icon: Route },
       { label: 'Carte', to: '/admin/map', icon: Map },
+      { label: 'Suivi commerciaux', to: '/admin/trajets', icon: Navigation },
     ],
   },
   {
