@@ -58,3 +58,6 @@ nul
 *.jks
 android/keystore.properties
 .nuxt-native
+
+# APK livrables (build local)
+dist-apk/
