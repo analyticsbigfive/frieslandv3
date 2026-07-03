@@ -175,16 +175,27 @@ function drawTrails() {
       trailGroup.addLayer(line)
     }
 
-    // Départ (vert) et arrivée (couleur de la tournée).
-    const startMarker = L.circleMarker([first.lat, first.lng], {
-      radius: 7, fillColor: '#0E9F6E', color: '#fff', weight: 2, fillOpacity: 1,
-    }).bindPopup(el)
-    trailGroup.addLayer(startMarker)
+    // Un point cliquable par relevé : infobulle au survol avec l'heure et
+    // les coordonnées.
+    points.forEach((point, i) => {
+      const isStart = i === 0
+      const isEnd = i === points.length - 1
+      const dot = L.circleMarker([point.lat, point.lng], {
+        radius: isStart || isEnd ? 7 : 4,
+        fillColor: isStart ? '#0E9F6E' : color,
+        color: '#fff',
+        weight: isStart || isEnd ? 2 : 1,
+        fillOpacity: 1,
+      })
 
-    const endMarker = L.circleMarker([last.lat, last.lng], {
-      radius: 7, fillColor: color, color: '#fff', weight: 2, fillOpacity: 1,
-    }).bindPopup(el)
-    trailGroup.addLayer(endMarker)
+      const label = isStart ? 'Départ' : isEnd ? 'Arrivée' : `Point ${i + 1}`
+      dot.bindTooltip(
+        `${label} · ${formatTime(point.captured_at)}<br>${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}`,
+        { direction: 'top', offset: [0, -4] },
+      )
+      dot.bindPopup(el)
+      trailGroup.addLayer(dot)
+    })
   })
 
   const bounds = trailGroup.getBounds?.()
