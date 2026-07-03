@@ -133,7 +133,7 @@ const navSections = [
       { label: 'Dashboard', to: '/admin', icon: LayoutDashboard },
       { label: 'Routing & Planning', to: '/admin/routing', icon: Route },
       { label: 'Carte', to: '/admin/map', icon: Map },
-      { label: 'Trajets', to: '/admin/trajets', icon: Navigation },
+      { label: 'Contrôle commerciaux', to: '/admin/trajets', icon: Navigation },
     ],
   },
   {
