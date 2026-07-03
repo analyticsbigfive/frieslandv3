@@ -55,6 +55,34 @@
         </div>
       </div>
 
+      <!-- Recherche position à une heure donnée -->
+      <div class="flex flex-wrap items-center gap-2 border-b border-gray-100 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800/50">
+        <UIcon name="i-heroicons-magnifying-glass" class="h-4 w-4 text-gray-400" />
+        <USelectMenu
+          v-model="searchUser"
+          :options="searchUserOptions"
+          value-attribute="value"
+          option-attribute="label"
+          placeholder="Commercial"
+          size="xs"
+          class="w-44"
+        />
+        <UInput v-model="searchTime" type="time" size="xs" class="w-28" />
+        <USelect
+          v-model.number="searchRadius"
+          :options="radiusOptions"
+          value-attribute="value"
+          option-attribute="label"
+          size="xs"
+          class="w-28"
+        />
+        <UButton size="xs" color="red" icon="i-heroicons-map-pin" :disabled="!searchUser || !searchTime" @click="locateAtTime">
+          Localiser
+        </UButton>
+        <UButton v-if="searchInfo" size="xs" variant="ghost" icon="i-heroicons-x-mark" @click="clearSearch">Effacer</UButton>
+        <span v-if="searchInfo" class="text-xs" :class="searchFound ? 'text-gray-600 dark:text-gray-300' : 'text-amber-600'">{{ searchInfo }}</span>
+      </div>
+
       <ClientOnly>
         <div ref="mapContainer" class="w-full flex-1" />
       </ClientOnly>
@@ -121,8 +149,24 @@ const cursorTime = ref<number | null>(null)
 const playing = ref(false)
 let playTimer: ReturnType<typeof setInterval> | null = null
 
+// Recherche « position à une heure »
+const searchUser = ref('')
+const searchTime = ref('')
+const searchRadius = ref(500)
+const searchInfo = ref('')
+const searchFound = ref(false)
+const radiusOptions = [
+  { label: '200 m', value: 200 },
+  { label: '500 m', value: 500 },
+  { label: '1 km', value: 1000 },
+  { label: '2 km', value: 2000 },
+]
+interface PdvGeo { pdv_id: string, nom_pdv: string, lat: number, lng: number }
+const allPdv = ref<PdvGeo[]>([])
+
 let map: any = null
 let trailGroup: any = null
+let searchGroup: any = null
 
 const PALETTE = ['#C8102E', '#003DA5', '#0E9F6E', '#7C3AED', '#D97706', '#DB2777', '#0891B2', '#4D7C0F']
 const LIVE_WINDOW_MS = 15 * 60_000
@@ -251,6 +295,10 @@ const reps = computed<RepSummary[]>(() => {
   })
 })
 
+const searchUserOptions = computed(() =>
+  commerciaux.value.map(c => ({ value: c.id, label: c.nom || c.email || c.id.slice(0, 8) })),
+)
+
 function statusDotClass(rep: RepSummary): string {
   if (rep.live) return 'bg-emerald-500 animate-pulse'
   if (rep.pointCount > 0) return 'bg-gray-400'
@@ -313,6 +361,86 @@ async function loadCommerciaux() {
   if (!error) {
     commerciaux.value = (data ?? []).map((p: any) => ({ id: p.id, nom: p.nom, email: p.email }))
   }
+}
+
+async function loadPdv() {
+  const { data, error } = await supabase
+    .from('pdv')
+    .select('pdv_id, nom_pdv, geolocation_lat, geolocation_lng')
+    .not('geolocation_lat', 'is', null)
+    .not('geolocation_lng', 'is', null)
+    .limit(20000)
+
+  if (!error) {
+    allPdv.value = (data ?? [])
+      .filter((p: any) => p.geolocation_lat && p.geolocation_lng)
+      .map((p: any) => ({ pdv_id: p.pdv_id, nom_pdv: p.nom_pdv, lat: p.geolocation_lat, lng: p.geolocation_lng }))
+  }
+}
+
+// Position du commercial à l'heure demandée (point le plus proche dans le
+// temps sur la date sélectionnée) + PDV dans le rayon autour.
+function locateAtTime() {
+  if (!map || !searchGroup || !searchUser.value || !searchTime.value) return
+  // @ts-ignore
+  const L = window.L
+  if (!L) return
+
+  searchGroup.clearLayers()
+
+  const target = new Date(`${selectedDate.value}T${searchTime.value}:00`).getTime()
+  const userPoints = allPoints.value
+    .filter(p => p.user_id === searchUser.value)
+    .map(p => ({ ...p, t: new Date(p.captured_at).getTime() }))
+
+  if (userPoints.length === 0) {
+    searchFound.value = false
+    searchInfo.value = 'Aucune position ce jour pour ce commercial.'
+    return
+  }
+
+  const nearest = userPoints.reduce((best, p) =>
+    Math.abs(p.t - target) < Math.abs(best.t - target) ? p : best,
+  )
+  const gapMin = Math.round(Math.abs(nearest.t - target) / 60000)
+
+  // Marqueur position + cercle de rayon.
+  const posMarker = L.circleMarker([nearest.lat, nearest.lng], {
+    radius: 9, fillColor: '#C8102E', color: '#fff', weight: 3, fillOpacity: 1,
+  }).bindPopup(
+    `<b>${nearest.profiles?.nom || 'Commercial'}</b><br>Position à ${formatTime(nearest.captured_at)}<br>${nearest.lat.toFixed(5)}, ${nearest.lng.toFixed(5)}`,
+  )
+  searchGroup.addLayer(posMarker)
+  searchGroup.addLayer(L.circle([nearest.lat, nearest.lng], {
+    radius: searchRadius.value, color: '#C8102E', weight: 1, fillOpacity: 0.06,
+  }))
+
+  // PDV dans le rayon.
+  let nearby = 0
+  for (const pdv of allPdv.value) {
+    const d = haversine(nearest.lat, nearest.lng, pdv.lat, pdv.lng)
+    if (d <= searchRadius.value) {
+      nearby++
+      searchGroup.addLayer(
+        L.circleMarker([pdv.lat, pdv.lng], {
+          radius: 5, fillColor: '#003DA5', color: '#fff', weight: 1, fillOpacity: 0.9,
+        }).bindTooltip(`${pdv.nom_pdv} · ${Math.round(d)} m`, { direction: 'top' }),
+      )
+    }
+  }
+
+  searchFound.value = true
+  searchInfo.value = `Position à ${formatTime(nearest.captured_at)} (±${gapMin} min) · ${nearby} PDV à ≤ ${searchRadius.value >= 1000 ? searchRadius.value / 1000 + ' km' : searchRadius.value + ' m'}`
+
+  map.setView([nearest.lat, nearest.lng], searchRadius.value <= 500 ? 16 : 15)
+}
+
+function clearSearch() {
+  searchGroup?.clearLayers()
+  searchInfo.value = ''
+  searchFound.value = false
+  searchUser.value = ''
+  searchTime.value = ''
 }
 
 function resetCursor() {
@@ -436,8 +564,9 @@ async function initMap() {
     maxZoom: 19,
   }).addTo(map)
   trailGroup = L.featureGroup().addTo(map)
+  searchGroup = L.layerGroup().addTo(map)
 
-  await loadCommerciaux()
+  await Promise.all([loadCommerciaux(), loadPdv()])
   await loadPositions()
 }
 
