@@ -12,6 +12,23 @@ function isValid<T>(cached: CachedData<T> | undefined): cached is CachedData<T> 
   return !!cached && Date.now() - cached.timestamp < CACHE_TTL
 }
 
+// Déroule récursivement les proxies reactive Vue en objets/arrays simples
+// clonables par IndexedDB, sans toucher aux File/Blob.
+function toPlain<T>(value: T): T {
+  const raw = toRaw(value) as any
+  if (Array.isArray(raw)) {
+    return raw.map(toPlain) as unknown as T
+  }
+  if (raw && typeof raw === 'object' && !(raw instanceof File) && !(raw instanceof Blob)) {
+    const out: Record<string, any> = {}
+    for (const key in raw) {
+      out[key] = toPlain(raw[key])
+    }
+    return out as T
+  }
+  return raw
+}
+
 export function useOfflineData() {
   // --- PDV List ---
   async function cachePDVList(pdvList: PDV[]) {
@@ -75,7 +92,10 @@ export function useOfflineData() {
 
   // --- Queue sync ---
   async function saveQueue(items: OfflineQueueItem[]) {
-    await set('offline:queue', items)
+    // IndexedDB (WebView Android) refuse de cloner un proxy reactive Vue
+    // (DataCloneError). On déroule en objets simples, en préservant les
+    // File/Blob des images.
+    await set('offline:queue', toPlain(items))
   }
 
   async function loadQueue(): Promise<OfflineQueueItem[]> {

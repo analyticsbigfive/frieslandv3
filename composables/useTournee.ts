@@ -132,6 +132,8 @@ export function useTournee() {
 
   // Premier point garanti : capté immédiatement au démarrage et envoyé
   // sans attendre le batch de 5 min ni un déplacement (distanceFilter).
+  // Plusieurs tentatives car le GPS peut mettre quelques secondes à donner
+  // un premier fix (warm-up).
   async function captureInitialPoint() {
     const active = tourneeId.value
     const userId = user.value?.id
@@ -139,24 +141,29 @@ export function useTournee() {
       return
     }
 
-    try {
-      const position = await geo.getCurrentPosition({ timeout: 20000 })
-      lastCapturedAt = Date.now()
+    for (let attempt = 0; attempt < 4; attempt++) {
+      try {
+        const position = await geo.getCurrentPosition({ timeout: 20000, maximumAge: 30000 })
+        lastCapturedAt = Date.now()
 
-      await appendPoint({
-        id: crypto.randomUUID(),
-        user_id: userId,
-        tournee_id: active,
-        lat: position.coords.latitude,
-        lng: position.coords.longitude,
-        accuracy: position.coords.accuracy ?? null,
-        speed: position.coords.speed ?? null,
-        captured_at: new Date().toISOString(),
-      })
-      await flushBuffer()
-    }
-    catch {
-      // GPS pas encore prêt : le watcher prendra le relais.
+        await appendPoint({
+          id: crypto.randomUUID(),
+          user_id: userId,
+          tournee_id: active,
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy ?? null,
+          speed: position.coords.speed ?? null,
+          captured_at: new Date().toISOString(),
+        })
+        await flushBuffer()
+        return
+      }
+      catch {
+        // GPS pas encore prêt : nouvelle tentative dans 5 s ; sinon le
+        // watcher background prendra le relais.
+        await new Promise(resolve => setTimeout(resolve, 5000))
+      }
     }
   }
 
@@ -209,6 +216,11 @@ export function useTournee() {
       trackingError.value = 'Utilisateur non connecté.'
       return
     }
+
+    // Demande la permission localisation avant toute capture : évite le
+    // « permission denied » du premier getCurrentPosition au tout premier
+    // lancement.
+    await geo.requestPermission()
 
     trackingError.value = null
     tourneeId.value = crypto.randomUUID()
