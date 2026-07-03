@@ -42,37 +42,8 @@
       </section>
 
       <!-- Tournée GPS (app native uniquement) -->
-      <section v-if="tournee.isNative" class="mobile-card mt-3 p-4" aria-label="Suivi GPS de tournée">
-        <div class="flex items-center justify-between gap-3">
-          <div class="min-w-0">
-            <p class="text-xs text-gray-400 uppercase tracking-wide">Tournée</p>
-            <p v-if="tournee.isTracking.value" class="text-sm font-semibold text-gray-900 dark:text-gray-100">
-              Suivi actif — {{ tournee.pointCount.value }} point(s)
-            </p>
-            <p v-else class="text-sm text-gray-500 dark:text-gray-400">
-              Suivi GPS arrêté — reprend au prochain lancement
-            </p>
-            <p v-if="tournee.trackingError.value" class="mt-1 text-xs font-medium text-red-600">
-              {{ tournee.trackingError.value }}
-            </p>
-          </div>
-          <UButton
-            :color="tournee.isTracking.value ? 'gray' : 'red'"
-            :icon="tournee.isTracking.value ? 'i-heroicons-stop-circle' : 'i-heroicons-play-circle'"
-            :loading="tourneeBusy"
-            size="sm"
-            @click="toggleTournee"
-          >
-            {{ tournee.isTracking.value ? 'Fin de tournée' : 'Début de tournée' }}
-          </UButton>
-        </div>
-      </section>
-
-      <TourneeOnboardingModal
-        v-model="showTourneeOnboarding"
-        @start="startTourneeNow"
-        @open-settings="tournee.openLocationSettings()"
-      />
+      <TourneeCard :visit-count="todayCount" :daily-target="dailyTarget" />
+      <TourneeMiniMap v-if="tournee.isTracking.value" />
     </div>
 
     <!-- Search & Filter -->
@@ -242,48 +213,6 @@ const authStore = useAuthStore()
 const { cacheVisites, getCachedVisitesFallback } = useOfflineData()
 
 const tournee = useTournee()
-const tourneeBusy = ref(false)
-const showTourneeOnboarding = ref(false)
-const geoProvider = useGeoProvider()
-const { isExempt: isBatteryExempt } = useBatteryOptimization()
-
-async function toggleTournee() {
-  if (tournee.isTracking.value) {
-    tourneeBusy.value = true
-    try {
-      await tournee.stopTournee()
-    }
-    finally {
-      tourneeBusy.value = false
-    }
-    return
-  }
-
-  // Premier démarrage ou autorisations incomplètes : passage par
-  // l'onboarding (localisation « tout le temps », batterie, aide OEM).
-  const [permission, batteryOk] = await Promise.all([
-    geoProvider.checkPermission(),
-    isBatteryExempt(),
-  ])
-
-  if (permission !== 'granted' || !batteryOk) {
-    showTourneeOnboarding.value = true
-    return
-  }
-
-  await startTourneeNow()
-}
-
-async function startTourneeNow() {
-  showTourneeOnboarding.value = false
-  tourneeBusy.value = true
-  try {
-    await tournee.startTournee()
-  }
-  finally {
-    tourneeBusy.value = false
-  }
-}
 
 const visites = ref<Visite[]>([])
 const loading = ref(true)

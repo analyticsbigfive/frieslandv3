@@ -46,6 +46,7 @@ const isTracking = ref(false)
 const tourneeId = ref<string | null>(null)
 const startedAt = ref<string | null>(null)
 const pointCount = ref(0)
+const totalDistanceM = ref(0)
 const lastPoint = ref<PositionPoint | null>(null)
 const trackingError = ref<string | null>(null)
 
@@ -128,9 +129,15 @@ export function useTournee() {
     }
 
     const now = Date.now()
-    const movedEnough = lastLat === null || haversine(lastLat, lastLng!, lat, lng) >= distanceM
+    const step = lastLat === null ? Infinity : haversine(lastLat, lastLng!, lat, lng)
+    const movedEnough = step >= distanceM
     if (!force && (!movedEnough || now - lastCapturedAt < minIntervalMs)) {
       return
+    }
+
+    // Cumule la distance parcourue (ignore le tout premier point).
+    if (lastLat !== null && Number.isFinite(step)) {
+      totalDistanceM.value += step
     }
 
     lastCapturedAt = now
@@ -253,6 +260,7 @@ export function useTournee() {
     tourneeId.value = crypto.randomUUID()
     startedAt.value = new Date().toISOString()
     pointCount.value = 0
+    totalDistanceM.value = 0
     lastCapturedAt = 0
     lastLat = null
     lastLng = null
@@ -355,6 +363,7 @@ export function useTournee() {
     tourneeId: readonly(tourneeId),
     startedAt: readonly(startedAt),
     pointCount: readonly(pointCount),
+    distanceKm: computed(() => totalDistanceM.value / 1000),
     lastPoint: readonly(lastPoint),
     trackingError: readonly(trackingError),
     startTournee,
