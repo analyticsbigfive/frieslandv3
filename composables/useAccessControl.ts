@@ -37,7 +37,7 @@ export function sectionKeyForPath(path: string): string | null {
     path.startsWith('/admin/permissions') ||
     path.startsWith('/admin/profile')
   ) return 'parametres'
-  if (path === '/admin' || path.startsWith('/admin/routing') || path.startsWith('/admin/map')) return 'principal'
+  if (path === '/admin' || path.startsWith('/admin/routing') || path.startsWith('/admin/map') || path.startsWith('/admin/trajets')) return 'principal'
   if (path.startsWith('/admin/perfect-store')) return 'perfect-store'
   if (path.startsWith('/admin/pdv')) return 'pdv'
   if (path.startsWith('/admin/visites')) return 'visites'
