@@ -131,7 +131,8 @@ export default defineNuxtConfig({
       gpsMinAccuracy: 10,
       // Tracking de tournée (app native) : échantillonnage GPS régulier,
       // filtre distance mini entre points, envoi groupé par batch.
-      trackingIntervalMs: 30_000,
+      // Intervalle à 2 min = compromis autonomie batterie / finesse du trajet.
+      trackingIntervalMs: 120_000,
       trackingDistanceM: 15,
       trackingFlushMs: 5 * 60_000,
       trackingBatchMax: 200,
