@@ -34,13 +34,13 @@ const chartData = computed(() => {
     datasets: [{
       label: 'Visites',
       data: sorted.map(d => d.count),
-      borderColor: '#C8102E',
+      borderColor: '#0F172A',
       backgroundColor: 'rgba(200, 16, 46, 0.08)',
       fill: true,
       tension: 0.4,
       pointRadius: 3,
       pointHoverRadius: 6,
-      pointBackgroundColor: '#C8102E',
+      pointBackgroundColor: '#0F172A',
     }],
   }
 })

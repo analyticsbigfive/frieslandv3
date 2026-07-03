@@ -9,13 +9,13 @@
     <!-- Logo -->
     <div class="h-16 flex items-center justify-center border-b border-gray-100 dark:border-gray-700 px-4">
       <div v-if="!collapsed" class="flex items-center gap-3">
-        <img src="~/assets/logo.png" alt="Friesland" class="w-8 h-8 rounded-lg object-contain" />
+        <img src="~/assets/logo.png" alt="FieldTrack" class="w-8 h-8 rounded-lg object-contain" />
         <div>
-          <h2 class="text-sm font-bold text-fc-red leading-none">Friesland</h2>
-          <p class="text-[10px] text-gray-400 leading-none mt-0.5">Bonnet Rouge</p>
+          <h2 class="text-sm font-bold text-fc-red leading-none">FieldTrack</h2>
+          <p class="text-[10px] text-gray-400 leading-none mt-0.5">Suivi terrain</p>
         </div>
       </div>
-      <img v-else src="~/assets/logo.png" alt="FC" class="w-8 h-8 rounded-lg object-contain" />
+      <img v-else src="~/assets/logo.png" alt="FieldTrack" class="w-8 h-8 rounded-lg object-contain" />
     </div>
 
     <!-- Navigation -->

@@ -22,7 +22,7 @@ export default defineNuxtPlugin(() => {
   })
 
   void StatusBar.setOverlaysWebView({ overlay: false })
-  void StatusBar.setBackgroundColor({ color: '#C8102E' })
+  void StatusBar.setBackgroundColor({ color: '#0F172A' })
   // Style.Dark = fond sombre, icônes claires (lisible sur le rouge Friesland).
   void StatusBar.setStyle({ style: Style.Dark })
 })

@@ -58,10 +58,10 @@ export default defineNuxtConfig({
   pwa: {
     registerType: 'autoUpdate',
     manifest: {
-      name: 'Friesland Bonnet Rouge',
-      short_name: 'Friesland',
-      description: 'Application de collecte terrain Friesland Bonnet Rouge',
-      theme_color: '#C8102E',
+      name: 'FieldTrack',
+      short_name: 'FieldTrack',
+      description: 'Application de collecte terrain et de suivi commercial',
+      theme_color: '#0F172A',
       background_color: '#ffffff',
       display: 'standalone',
       orientation: 'portrait',
@@ -112,10 +112,10 @@ export default defineNuxtConfig({
 
   app: {
     head: {
-      title: 'Friesland Bonnet Rouge',
+      title: 'FieldTrack',
       meta: [
-        { name: 'description', content: 'Application de collecte terrain Friesland Bonnet Rouge' },
-        { name: 'theme-color', content: '#C8102E' },
+        { name: 'description', content: 'Application de collecte terrain et de suivi commercial' },
+        { name: 'theme-color', content: '#0F172A' },
         { name: 'mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },

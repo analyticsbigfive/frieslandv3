@@ -168,7 +168,7 @@ let map: any = null
 let trailGroup: any = null
 let searchGroup: any = null
 
-const PALETTE = ['#C8102E', '#003DA5', '#0E9F6E', '#7C3AED', '#D97706', '#DB2777', '#0891B2', '#4D7C0F']
+const PALETTE = ['#0F172A', '#003DA5', '#0E9F6E', '#7C3AED', '#D97706', '#DB2777', '#0891B2', '#4D7C0F']
 const LIVE_WINDOW_MS = 15 * 60_000
 const STALE_MS = 30 * 60_000
 
@@ -406,13 +406,13 @@ function locateAtTime() {
 
   // Marqueur position + cercle de rayon.
   const posMarker = L.circleMarker([nearest.lat, nearest.lng], {
-    radius: 9, fillColor: '#C8102E', color: '#fff', weight: 3, fillOpacity: 1,
+    radius: 9, fillColor: '#0F172A', color: '#fff', weight: 3, fillOpacity: 1,
   }).bindPopup(
     `<b>${nearest.profiles?.nom || 'Commercial'}</b><br>Position à ${formatTime(nearest.captured_at)}<br>${nearest.lat.toFixed(5)}, ${nearest.lng.toFixed(5)}`,
   )
   searchGroup.addLayer(posMarker)
   searchGroup.addLayer(L.circle([nearest.lat, nearest.lng], {
-    radius: searchRadius.value, color: '#C8102E', weight: 1, fillOpacity: 0.06,
+    radius: searchRadius.value, color: '#0F172A', weight: 1, fillOpacity: 0.06,
   }))
 
   // PDV dans le rayon.

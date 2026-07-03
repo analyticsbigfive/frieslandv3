@@ -80,18 +80,18 @@
           <ul class="space-y-2 px-1 pb-2 text-xs text-gray-600 dark:text-gray-300">
             <li>
               <strong>Tecno / Infinix / itel (HiOS, XOS)</strong> : ouvrez <em>Phone Master</em> →
-              gestion auto / nettoyage automatique → retirez Friesland de la liste, puis
+              gestion auto / nettoyage automatique → retirez FieldTrack de la liste, puis
               Paramètres → Batterie → autorisez le démarrage en arrière-plan.
             </li>
             <li>
-              <strong>Xiaomi / Redmi (MIUI)</strong> : Paramètres → Applications → Friesland →
+              <strong>Xiaomi / Redmi (MIUI)</strong> : Paramètres → Applications → FieldTrack →
               activez <em>Démarrage automatique</em> et réglez Économiseur de batterie sur
               <em>« Aucune restriction »</em>. Dans les applications récentes, verrouillez
-              Friesland (icône cadenas).
+              FieldTrack (icône cadenas).
             </li>
             <li>
               <strong>Samsung</strong> : Paramètres → Entretien de l'appareil → Batterie →
-              ajoutez Friesland aux <em>applications jamais mises en veille</em>.
+              ajoutez FieldTrack aux <em>applications jamais mises en veille</em>.
             </li>
           </ul>
         </template>

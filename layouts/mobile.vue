@@ -141,7 +141,7 @@ const canGoBack = computed(() => {
 
 const pageTitle = computed(() => {
   const titles: Record<string, string> = {
-    '/mobile': 'Friesland',
+    '/mobile': 'FieldTrack',
     '/mobile/visites': 'Mes Visites',
     '/mobile/visites/new': 'Nouvelle Visite',
     '/mobile/pdv': 'Points de Vente',
@@ -153,6 +153,6 @@ const pageTitle = computed(() => {
   if (titles[route.path]) return titles[route.path]
   if (route.path.startsWith('/mobile/pdv/')) return 'Détail PDV'
   if (route.path.startsWith('/mobile/visites/')) return 'Détail Visite'
-  return 'Friesland'
+  return 'FieldTrack'
 })
 </script>

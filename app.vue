@@ -6,7 +6,7 @@
 
 <script setup lang="ts">
 useHead({
-  title: 'Friesland Bonnet Rouge',
+  title: 'FieldTrack',
   htmlAttrs: { lang: 'fr' },
 })
 </script>

@@ -13,7 +13,7 @@ android {
     namespace "com.friesland.bonnetrouge"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.friesland.bonnetrouge"
+        applicationId "com.fieldtrack.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

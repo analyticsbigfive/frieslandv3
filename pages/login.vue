@@ -8,12 +8,12 @@
       </div>
       <div class="relative z-10 flex flex-col items-center justify-center w-full px-12">
         <div class="w-24 h-24 bg-white dark:bg-gray-800 rounded-2xl flex items-center justify-center mb-8 shadow-xl p-2">
-          <img src="~/assets/logo.png" alt="Friesland" class="w-full h-full object-contain" />
+          <img src="~/assets/logo.png" alt="FieldTrack" class="w-full h-full object-contain" />
         </div>
-        <h1 class="text-4xl font-bold text-white mb-3">Friesland</h1>
-        <h2 class="text-xl text-red-200 mb-6">Bonnet Rouge</h2>
-        <p class="text-red-100 text-center max-w-sm leading-relaxed">
-          Application de collecte de données terrain et de pilotage pour FrieslandCampina Côte d'Ivoire.
+        <h1 class="text-4xl font-bold text-white mb-3">FieldTrack</h1>
+        <h2 class="text-xl text-slate-300 mb-6">Suivi terrain</h2>
+        <p class="text-slate-200 text-center max-w-sm leading-relaxed">
+          Application de collecte de données terrain et de pilotage commercial.
         </p>
       </div>
     </div>
@@ -24,10 +24,10 @@
         <!-- Mobile logo -->
         <div class="lg:hidden flex flex-col items-center mb-10">
           <div class="w-16 h-16 bg-white dark:bg-gray-800 rounded-xl flex items-center justify-center mb-4 shadow-sm p-1">
-            <img src="~/assets/logo.png" alt="Friesland" class="w-full h-full object-contain" />
+            <img src="~/assets/logo.png" alt="FieldTrack" class="w-full h-full object-contain" />
           </div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Friesland</h1>
-          <p class="text-gray-500 dark:text-gray-400 text-sm">Bonnet Rouge</p>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">FieldTrack</h1>
+          <p class="text-gray-500 dark:text-gray-400 text-sm">Suivi terrain</p>
         </div>
 
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8">
@@ -92,7 +92,7 @@
         </div>
 
         <p class="text-center text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400 mt-6">
-          FrieslandCampina © {{ new Date().getFullYear() }} — Bonnet Rouge
+          FieldTrack © {{ new Date().getFullYear() }} — Suivi terrain
         </p>
       </div>
     </div>

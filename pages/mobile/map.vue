@@ -27,7 +27,7 @@
       <div class="rounded-xl bg-white/95 p-3 shadow-lg backdrop-blur dark:bg-gray-800/95 space-y-1.5">
         <p class="text-[10px] font-medium text-gray-400 uppercase">Légende</p>
         <div class="flex items-center gap-2">
-          <span class="w-3 h-3 rounded-full bg-[#C8102E]" />
+          <span class="w-3 h-3 rounded-full bg-[#0F172A]" />
           <span class="text-xs text-gray-600">Ma position</span>
         </div>
         <div class="flex items-center gap-2">
@@ -132,8 +132,8 @@ async function updateMarkers() {
   if (radiusCircle) map.removeLayer(radiusCircle)
   radiusCircle = L.circle([userPosition.lat, userPosition.lng], {
     radius: radius.value,
-    color: '#C8102E',
-    fillColor: '#C8102E',
+    color: '#0F172A',
+    fillColor: '#0F172A',
     fillOpacity: 0.05,
     weight: 1,
     dashArray: '5 5',
@@ -247,7 +247,7 @@ onMounted(async () => {
         // User marker
         L.circleMarker([userPosition.lat, userPosition.lng], {
           radius: 10,
-          fillColor: '#C8102E',
+          fillColor: '#0F172A',
           color: '#fff',
           weight: 3,
           fillOpacity: 1,
