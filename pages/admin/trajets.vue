@@ -2,7 +2,7 @@
   <div>
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden" style="height: calc(100vh - 180px);">
       <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex flex-wrap items-center justify-between gap-2">
-        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Contrôle commerciaux — déplacements</h3>
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Suivi commerciaux — déplacements</h3>
         <div class="flex flex-wrap items-center gap-2">
           <span class="text-xs text-gray-400">
             {{ tournees.length }} tournée(s) · {{ filteredPoints.length }} point(s)
