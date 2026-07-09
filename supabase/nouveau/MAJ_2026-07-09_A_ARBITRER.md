@@ -25,13 +25,21 @@ DISPONIBILITE SCM MT). Sans seuil, le moteur les compterait « indisponibles » 
 **En attendant, SCM MT reste à 2 SKU (poids d'origine).**
 **Décision :** fournir les seuils de `397 R` et `BRB 1Kg` (par segment), ou confirmer SCM MT à 2 SKU.
 
-### 2. Segmentation des PDV Modern Trade (pour activer le standard MT)
-Les quantités min + facings MT sont **chargées** (`seuil_disponibilite_mt`), mais l'app ne classe pas
-encore les PDV MT en **Hyper / Moyen / Petit supermarché**. Le calcul utilise donc toujours le repli
-Minimarket pour le MT.
-**Décision :** règle de classement des supermarchés (depuis `sous_categorie_pdv` ? nouvelle donnée
-terrain ?). Une fois définie → on ajoute la colonne segment sur `pdv` et on branche
-`calculer_perfect_store` sur `seuil_disponibilite_mt`.
+### 2. Segmentation des PDV Modern Trade — la classification vient de l'onglet TYPE DE POINT DE VENTE
+Le classement des supermarchés existe déjà dans le fichier (onglet TYPE DE POINT DE VENTE → table
+`type_pdv`) : `Hypermarket`, `Supermarket A` (Premium), `Supermarket B` / `Supermarket C` (Value),
+tous canal MT. Le grade A/B/C = la taille (cohérent avec Boutique A/B/C, Superette A/B/C…).
+
+Correspondance proposée avec les 3 paliers de STANDARD DISPO MT :
+- `Hypermarket` + `Supermarket A` → « Hypermarchés / Grands Supermarchés » (`Hypermarche`)
+- `Supermarket B` → « Moyens Supermarchés » (`MoyenSuper`)
+- `Supermarket C` → « Petits Supermarchés » (`PetitSuper`)
+
+**Confirmation Friesland (rapide) :** valider cette correspondance A/B/C → Grand/Moyen/Petit.
+**Travail app (nous, après confirmation) :** (a) permettre d'affecter un type `Supermarket A/B/C` /
+`Hypermarket` à un PDV — le formulaire n'offre aujourd'hui que 5 types GT ; (b) brancher
+`calculer_perfect_store` sur `seuil_disponibilite_mt` via `segment_grade_type_pdv` (mapping
+type_pdv → segment MT).
 
 ### 3. Adzope & Agboville — distributeur manquant
 Dans la colonne `dist`, ces 2 territoires répètent leur propre nom (placeholder) → restent **sans
