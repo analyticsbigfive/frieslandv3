@@ -35,11 +35,15 @@ Correspondance proposée avec les 3 paliers de STANDARD DISPO MT :
 - `Supermarket B` → « Moyens Supermarchés » (`MoyenSuper`)
 - `Supermarket C` → « Petits Supermarchés » (`PetitSuper`)
 
-**Confirmation Friesland (rapide) :** valider cette correspondance A/B/C → Grand/Moyen/Petit.
-**Travail app (nous, après confirmation) :** (a) permettre d'affecter un type `Supermarket A/B/C` /
-`Hypermarket` à un PDV — le formulaire n'offre aujourd'hui que 5 types GT ; (b) brancher
-`calculer_perfect_store` sur `seuil_disponibilite_mt` via `segment_grade_type_pdv` (mapping
-type_pdv → segment MT).
+**✅ CÂBLÉ** (migration `20260709150000`, en assumant A=Grand/B=Moyen/C=Petit) :
+- les supermarchés sont scorés sur le vrai standard MT (segment `SupermarcheMT`, grade A/B/C),
+  au lieu du repli Minimarket. Aucune modification du moteur de calcul.
+- (a) déjà en place : les formulaires PDV proposent les types Supermarket A/B/C / Hypermarket
+  (source = référentiel `type_pdv`) ; la visibilité MT est mappée (`superette`) ; `canal='MT'`.
+
+**Reste juste la confirmation Friesland :** valider la correspondance A/B/C → Grand/Moyen/Petit
+(Hypermarket + Supermarket A = Grand ; B = Moyen ; C = Petit). Si Friesland corrige, il suffit
+d'ajuster les grades dans la migration `20260709150000` — pas de refonte.
 
 ### 3. Adzope & Agboville — distributeur manquant
 Dans la colonne `dist`, ces 2 territoires répètent leur propre nom (placeholder) → restent **sans
