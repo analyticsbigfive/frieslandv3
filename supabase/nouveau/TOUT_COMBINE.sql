@@ -1965,3 +1965,142 @@ where p.reference_produit_id = d.rid
 select calculer_perfect_store(id, 'taux_vente') from visites;
 
 commit;
+
+-- ####### 20260709130000_friesland_dist_canonique.sql #######
+
+-- ============================================================================
+-- MAJ 2026-07-09 : la colonne `dist` de l'onglet TERRITORY devient CANONIQUE
+-- (décision Friesland). Elle était cassée (#REF!) et non reprise en migration 1 ;
+-- elle est désormais renseignée et remplace l'onglet Mapping comme source du
+-- rattachement territoire -> distributeur.
+--
+-- Changements vs mapping précédent :
+--   + LKA SERVICES (nouveau distributeur) : Bassam, Aboisso, Abobo 2, Anyama
+--   ~ DYNAMYS -> DYNAMIS (Bingerville) · Cocody 1 -> PRODISMA · koumassi -> SIDECOM
+--     Port bouet -> SDHPA · Bouna -> ABDI · Dabou -> NOUVEAUX DISTRIBUTEURS ASSOCIES
+--     Dimbokro -> UP GROUND SALES & MARKETING
+--   = 5 des 7 territoires jadis non assignés sont désormais couverts.
+--
+-- ⚠️ Adzope et Agboville : la cellule `dist` répète le nom du territoire
+--    (placeholder) -> restent NON assignés. À arbitrer Friesland.
+--
+-- Idempotent (DELETE + réinsertion déterministe). À exécuter après 20260630120200.
+-- N'impacte pas le scoring (référentiel d'affectation, pas de recalcul requis).
+-- ============================================================================
+begin;
+
+insert into distributeur(nom, national) values ('LKA SERVICES', false)
+on conflict (nom) do nothing;
+
+-- Remplacement complet du mapping par la colonne `dist` (valeur unique par territoire,
+-- cohérente sur toutes les areas). Adzope/Agboville exclus (placeholder).
+delete from territoire_distributeur;
+
+insert into territoire_distributeur(territoire_id, distributeur_id)
+select t.id, d.id from (values
+  ('Bingerville','DYNAMIS'),
+  ('Cocody 1','PRODISMA'),
+  ('Cocody 2','PRODISMA'),
+  ('Treichville','SIDECOM'),
+  ('Marcory','SIDECOM'),
+  ('koumassi','SIDECOM'),
+  ('Port bouet','SDHPA'),
+  ('Bassam','LKA SERVICES'),
+  ('Aboisso','LKA SERVICES'),
+  ('Plateau','BOUSSOURA SARL'),
+  ('Yopougon 1','SODICOM-CI'),
+  ('Yopougon 2','SODICOM-CI'),
+  ('Yopougon 3','NOUVEAUX DISTRIBUTEURS ASSOCIES'),
+  ('Yopougon 4','NOUVEAUX DISTRIBUTEURS ASSOCIES'),
+  ('Dabou','NOUVEAUX DISTRIBUTEURS ASSOCIES'),
+  ('Abobo 1','ETABLISSEMENT NIARE & FRERES'),
+  ('Abobo 2','LKA SERVICES'),
+  ('Anyama','LKA SERVICES'),
+  ('Adjame','BOUSSOURA SARL'),
+  ('Abengourou','RIZKALLAH MICHEL'),
+  ('Yamoussoukro','UP GROUND SALES & MARKETING'),
+  ('Dimbokro','UP GROUND SALES & MARKETING'),
+  ('Bouake 1','SODIAMA'),
+  ('Bouake 2','IVOIRE DISTRIBUTION MARCHANDISES C.I'),
+  ('Katiola','IDMCI'),
+  ('Korhogo','ESF KORHOGO'),
+  ('Ferke','ESF KORHOGO'),
+  ('Bondoukou','TAHIROU'),
+  ('Bouna','ABDI'),
+  ('Daloa','BON MARCHE'),
+  ('Divo','RIDACOM'),
+  ('Gagnoa 1','SOMALI-CI'),
+  ('Gagnoa 2','SOCOCE INTERIEUR'),
+  ('Guiglo 1','ETABLISSEMENT EL VALAH SARL'),
+  ('Guiglo 2','SODISMAF'),
+  ('Man','ALI BABA CI'),
+  ('Mankono','KAZA DISTRIBUTION'),
+  ('Odienne','BALDE IBRAHIMA'),
+  ('San Pedro','ETABLISSEMENT LEMRABOTT & FRÈRES'),
+  ('Soubre','SOCOCE INTERIEUR')
+) as v(terr, distr)
+join territoire t on t.nom = v.terr
+join distributeur d on d.nom = v.distr
+on conflict do nothing;
+
+commit;
+
+-- ####### 20260709140000_friesland_standard_mt_facings.sql #######
+
+-- ============================================================================
+-- MAJ 2026-07-09 : STANDARD DE DISPONIBILITÉ MODERN TRADE (+ facings)
+-- Source : onglet STANDARD DISPO MT (nouveau contenu réel du fichier).
+-- Quantité minimale + nombre de facings par SKU × format supermarché.
+--
+-- ⚠️ TABLE DE RÉFÉRENCE — PAS ENCORE BRANCHÉE AU CALCUL.
+--    Le moteur (calculer_perfect_store) utilise aujourd'hui le repli Minimarket
+--    pour le MT. Pour l'activer il faut d'abord une règle métier de classement
+--    des PDV MT en Hyper / Moyen / Petit supermarché (colonne segment MT sur pdv)
+--    -> à arbitrer Friesland (voir MAJ_2026-07-09_A_ARBITRER.md).
+--    Cette migration CHARGE les données du fichier pour qu'elles soient prêtes.
+--
+-- Idempotent. À exécuter après 20260630120300 (reference_produit).
+-- ============================================================================
+begin;
+
+create table if not exists seuil_disponibilite_mt (
+  reference_produit_id bigint  not null references reference_produit(id) on delete cascade,
+  segment_mt           text    not null check (segment_mt in ('Hypermarche','MoyenSuper','PetitSuper')),
+  quantite_min         integer not null,
+  facings              integer not null,
+  primary key (reference_produit_id, segment_mt)
+);
+alter table seuil_disponibilite_mt enable row level security;
+drop policy if exists seuil_mt_read on seuil_disponibilite_mt;
+create policy seuil_mt_read on seuil_disponibilite_mt for select to authenticated using (true);
+drop policy if exists seuil_mt_write on seuil_disponibilite_mt;
+create policy seuil_mt_write on seuil_disponibilite_mt for all
+  using (exists (select 1 from profiles where profiles.id = auth.uid() and profiles.role in ('admin','superviseur')))
+  with check (exists (select 1 from profiles where profiles.id = auth.uid() and profiles.role in ('admin','superviseur')));
+
+-- (nom SKU fichier -> reference_produit.nom) ; qty/facing par segment
+insert into seuil_disponibilite_mt(reference_produit_id, segment_mt, quantite_min, facings)
+select rp.id, v.segment_mt, v.qte, v.fac from (values
+  -- EVAP
+  ('BR Gold 160g','Hypermarche',96,13),('BR Gold 160g','MoyenSuper',48,8),('BR Gold 160g','PetitSuper',24,6),
+  ('BR 150g','Hypermarche',144,13),('BR 150g','MoyenSuper',96,8),('BR 150g','PetitSuper',48,6),
+  ('BRB 150g','Hypermarche',96,13),('BRB 150g','MoyenSuper',48,8),('BRB 150g','PetitSuper',24,6),
+  ('BR 380g','Hypermarche',48,11),('BR 380g','MoyenSuper',24,7),('BR 380g','PetitSuper',24,5),
+  ('Pearl 380g','Hypermarche',48,11),('Pearl 380g','MoyenSuper',48,7),('Pearl 380g','PetitSuper',24,5),
+  -- IMP
+  ('BR tin 400g','Hypermarche',24,7),('BR tin 400g','MoyenSuper',12,4),('BR tin 400g','PetitSuper',12,5),
+  ('BR tin 900g','Hypermarche',12,5),('BR tin 900g','MoyenSuper',6,3),('BR tin 900g','PetitSuper',6,3),
+  ('BR tin 2500g','Hypermarche',6,3),('BR tin 2500g','MoyenSuper',4,2),('BR tin 2500g','PetitSuper',2,2),
+  ('BR Pouch 360g','Hypermarche',30,5),('BR Pouch 360g','MoyenSuper',12,2),('BR Pouch 360g','PetitSuper',6,3),
+  ('BR Delice Pouch 350g','Hypermarche',30,5),('BR Delice Pouch 350g','MoyenSuper',12,2),('BR Delice Pouch 350g','PetitSuper',6,3),
+  ('BR Délice 15g','Hypermarche',24,2),('BR Délice 15g','MoyenSuper',12,2),('BR Délice 15g','PetitSuper',12,2),
+  ('BR 15g','Hypermarche',24,2),('BR 15g','MoyenSuper',12,2),('BR 15g','PetitSuper',12,2),
+  -- SCM
+  ('BR 1kg','Hypermarche',24,6),('BR 1kg','MoyenSuper',24,4),('BR 1kg','PetitSuper',24,5),
+  ('Pearl 1kg','Hypermarche',24,6),('Pearl 1kg','MoyenSuper',24,4),('Pearl 1kg','PetitSuper',24,5)
+) as v(nom, segment_mt, qte, fac)
+join reference_produit rp on rp.nom = v.nom
+on conflict (reference_produit_id, segment_mt) do update
+  set quantite_min = excluded.quantite_min, facings = excluded.facings;
+
+commit;
