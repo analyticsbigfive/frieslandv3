@@ -1,12 +1,13 @@
 <template>
   <div
-    class="admin-surface group p-5 transition duration-300 hover:-translate-y-0.5 hover:border-slate-300 dark:hover:border-slate-600"
+    class="admin-surface group overflow-hidden p-5 transition duration-300 hover:-translate-y-0.5 hover:border-slate-300 dark:hover:border-slate-600"
     :class="cardClass"
   >
+    <div class="absolute inset-x-0 top-0 h-1" :class="accentClass" />
     <div class="flex items-start justify-between gap-4">
       <div class="min-w-0">
-        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">{{ title }}</p>
-        <p class="mt-2 text-3xl font-semibold tracking-tight tabular-nums" :class="valueClass">
+        <p class="text-xs font-semibold uppercase tracking-normal text-slate-400 dark:text-slate-500">{{ title }}</p>
+        <p class="mt-2 text-3xl font-semibold leading-none tracking-tight tabular-nums" :class="valueClass">
           {{ formattedValue }}
         </p>
         <p v-if="subtitle" class="mt-1.5 text-xs leading-5 text-slate-400 dark:text-slate-500">{{ subtitle }}</p>
@@ -15,7 +16,8 @@
         class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105"
         :class="iconBgClass"
       >
-        <component :is="icon" class="h-5 w-5" :class="iconColorClass" />
+        <UIcon v-if="typeof icon === 'string'" :name="icon" class="h-5 w-5" :class="iconColorClass" />
+        <component :is="icon" v-else class="h-5 w-5" :class="iconColorClass" />
       </div>
     </div>
 
@@ -64,30 +66,35 @@ const colorMap = {
   blue: {
     card: '',
     value: 'text-slate-950 dark:text-white',
+    accent: 'bg-slate-500',
     iconBg: 'bg-slate-100 dark:bg-slate-700',
     iconColor: 'text-slate-600 dark:text-slate-200',
   },
   red: {
     card: '',
     value: 'text-slate-950 dark:text-white',
+    accent: 'bg-fc-red',
     iconBg: 'bg-fc-red-50 dark:bg-fc-red-900/30',
     iconColor: 'text-fc-red',
   },
   green: {
     card: '',
     value: 'text-slate-950 dark:text-white',
+    accent: 'bg-emerald-500',
     iconBg: 'bg-emerald-50 dark:bg-emerald-900/30',
     iconColor: 'text-emerald-600',
   },
   orange: {
     card: '',
     value: 'text-slate-950 dark:text-white',
+    accent: 'bg-amber-500',
     iconBg: 'bg-amber-50 dark:bg-amber-900/30',
     iconColor: 'text-amber-600',
   },
   purple: {
     card: '',
     value: 'text-slate-950 dark:text-white',
+    accent: 'bg-slate-400',
     iconBg: 'bg-slate-100 dark:bg-slate-700',
     iconColor: 'text-slate-600 dark:text-slate-200',
   },
@@ -95,6 +102,7 @@ const colorMap = {
 
 const cardClass = computed(() => colorMap[props.color].card)
 const valueClass = computed(() => colorMap[props.color].value)
+const accentClass = computed(() => colorMap[props.color].accent)
 const iconBgClass = computed(() => colorMap[props.color].iconBg)
 const iconColorClass = computed(() => colorMap[props.color].iconColor)
 </script>

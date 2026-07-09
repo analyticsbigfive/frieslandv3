@@ -3,6 +3,16 @@
 @tailwind utilities;
 
 :root {
+  --admin-bg: #f3f5f2;
+  --admin-ink: #172018;
+  --admin-muted: #687466;
+  --admin-line: #dfe5dc;
+  --admin-panel: #ffffff;
+  --admin-panel-soft: #f8faf6;
+  --admin-accent: #C8102E;
+  --admin-accent-dark: #9B0D23;
+  --admin-green: #2f7d52;
+  --admin-amber: #b36b16;
   --fc-blue: #C8102E;
   --fc-blue-dark: #9B0D23;
   --fc-blue-light: #FDE8EC;
@@ -28,8 +38,10 @@
   }
 
   body {
-    background: #f6f7f9;
-    color: #0f172a;
+    background:
+      radial-gradient(circle at top left, rgb(200 16 46 / 8%), transparent 34rem),
+      linear-gradient(180deg, #f8faf6 0%, var(--admin-bg) 100%);
+    color: var(--admin-ink);
     touch-action: manipulation;
     text-rendering: optimizeLegibility;
     font-variant-numeric: tabular-nums;
@@ -88,15 +100,15 @@
   }
 
   .admin-surface {
-    @apply rounded-2xl border border-slate-200/80 bg-white shadow-[0_14px_40px_-32px_rgba(15,23,42,0.55)] dark:border-slate-700 dark:bg-slate-800;
+    @apply rounded-xl border border-slate-200/80 bg-white shadow-[0_18px_48px_-38px_rgba(23,32,24,0.65)] dark:border-slate-700 dark:bg-slate-800;
   }
 
   .admin-metric-tile {
-    @apply rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_12px_32px_-28px_rgba(15,23,42,0.5)] transition duration-300 hover:-translate-y-0.5 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600;
+    @apply rounded-xl border border-slate-200/80 bg-white p-5 shadow-[0_12px_34px_-30px_rgba(23,32,24,0.6)] transition duration-300 hover:-translate-y-0.5 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600;
   }
 
   .admin-toolbar {
-    @apply rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_12px_32px_-30px_rgba(15,23,42,0.5)] dark:border-slate-700 dark:bg-slate-800;
+    @apply rounded-xl border border-slate-200/80 bg-white p-4 shadow-[0_12px_34px_-30px_rgba(23,32,24,0.55)] dark:border-slate-700 dark:bg-slate-800;
   }
 
   .admin-table thead {
@@ -122,12 +134,56 @@
   .admin-table tbody tr {
     @apply transition-colors hover:bg-slate-50/70 dark:hover:bg-slate-700/40;
   }
+
+  .admin-kpi-chip {
+    @apply rounded-xl border border-white/70 bg-white/75 px-3 py-2 shadow-[0_10px_26px_-24px_rgba(23,32,24,0.9)] backdrop-blur dark:border-slate-700 dark:bg-slate-800/75;
+  }
 }
 
 body {
   font-family: 'Avenir Next', Avenir, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+#admin-main-content h1 {
+  color: #172018;
+  font-size: clamp(1.55rem, 1.1rem + 1.1vw, 2.2rem);
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.12;
+  text-wrap: balance;
+}
+
+.dark #admin-main-content h1 {
+  color: #f8fafc;
+}
+
+#admin-main-content h1 + p,
+#admin-main-content h2 + p,
+#admin-main-content h3 + p {
+  text-wrap: pretty;
+}
+
+#admin-main-content table {
+  font-variant-numeric: tabular-nums;
+}
+
+#admin-main-content .admin-surface,
+#admin-main-content .admin-metric-tile,
+#admin-main-content .admin-toolbar {
+  position: relative;
+}
+
+#admin-main-content .admin-surface::before,
+#admin-main-content .admin-metric-tile::before,
+#admin-main-content .admin-toolbar::before {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 70%);
 }
 
 /* Custom scrollbar */

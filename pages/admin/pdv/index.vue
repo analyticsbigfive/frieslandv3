@@ -54,6 +54,7 @@
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Zone</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Secteur</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Région</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Perfect Store</th>
               <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">GPS</th>
               <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
             </tr>
@@ -83,6 +84,14 @@
               <td class="px-4 py-3 text-sm text-gray-600">{{ pdv.zone }}</td>
               <td class="px-4 py-3 text-sm text-gray-600">{{ pdv.secteur }}</td>
               <td class="px-4 py-3 text-sm text-gray-600">{{ pdv.region }}</td>
+              <td class="px-4 py-3 text-center">
+                <div v-if="perfectStoreByPdv[pdv.pdv_id]" class="flex items-center justify-center gap-1.5">
+                  <span class="h-2 w-2 rounded-full" :class="tierDotClass(perfectStoreByPdv[pdv.pdv_id].niveau)" />
+                  <span class="text-xs font-medium text-gray-700 dark:text-gray-300">{{ perfectStoreByPdv[pdv.pdv_id].niveau }}</span>
+                  <span class="text-xs text-gray-400">({{ perfectStoreByPdv[pdv.pdv_id].score_global }}%)</span>
+                </div>
+                <span v-else class="text-xs text-gray-300">—</span>
+              </td>
               <td class="px-4 py-3 text-center">
                 <UIcon
                   :name="pdv.geolocation_lat ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
@@ -367,6 +376,7 @@ definePageMeta({
 const pdvStore = usePDVStore()
 const { exportPDVToExcel, parseCsv } = useCsvExport()
 const toast = useToast()
+const supabase = useSupabaseClient()
 
 const pdvList = computed(() => pdvStore.pdvList)
 const total = computed(() => pdvStore.total)
@@ -630,10 +640,38 @@ async function handleImport() {
   }
 }
 
+// Dernier niveau Perfect Store connu par PDV (vue v_perfect_store_liste : 1 ligne/PDV, visite la plus récente).
+const perfectStoreByPdv = ref<Record<string, { niveau: string; score_global: number | null }>>({})
+
+function tierDotClass(tier: string): string {
+  if (tier?.startsWith('FLAGSHIP')) return 'bg-violet-500'
+  if (tier?.startsWith('VIP')) return 'bg-emerald-500'
+  if (tier?.startsWith('CORE')) return 'bg-blue-500'
+  return 'bg-amber-500'
+}
+
+async function loadPerfectStoreForList() {
+  const pdvIds = pdvList.value.map(p => p.pdv_id)
+  if (!pdvIds.length) {
+    perfectStoreByPdv.value = {}
+    return
+  }
+  const { data, error } = await supabase
+    .from('v_perfect_store_liste')
+    .select('pdv_id, niveau, score_global')
+    .in('pdv_id', pdvIds)
+  if (error) {
+    console.warn('v_perfect_store_liste indisponible', error.message)
+    return
+  }
+  perfectStoreByPdv.value = Object.fromEntries((data || []).map((r: any) => [r.pdv_id, { niveau: r.niveau, score_global: r.score_global }]))
+}
+
 async function loadPDV() {
   pdvStore.filters.zone = selectedZone.value
   pdvStore.filters.region = selectedRegion.value
   await pdvStore.fetchPDV()
+  await loadPerfectStoreForList()
 }
 
 onMounted(() => {

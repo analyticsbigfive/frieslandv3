@@ -1,5 +1,5 @@
 <template>
-  <div class="flex min-h-dvh bg-[#f6f7f9] transition-colors dark:bg-slate-950">
+  <div class="flex min-h-dvh bg-[var(--admin-bg)] transition-colors dark:bg-slate-950">
     <a href="#admin-main-content" class="sr-only z-[60] rounded-lg bg-white px-4 py-2 text-sm font-semibold text-fc-red focus:not-sr-only focus:fixed focus:left-4 focus:top-4">
       Aller au contenu
     </a>
@@ -25,24 +25,34 @@
       :class="sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'"
     >
       <!-- Top Header -->
-      <header class="sticky top-0 z-30 flex min-h-16 items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90 sm:px-6 lg:px-8">
-        <div class="flex items-center gap-4">
+      <header class="sticky top-0 z-30 border-b border-slate-200/80 bg-white/[0.82] px-4 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90 sm:px-6 lg:px-8">
+        <div class="flex min-h-20 flex-col gap-3 py-3 lg:flex-row lg:items-center lg:justify-between">
+          <div class="flex min-w-0 items-center gap-4">
           <button
             type="button"
             aria-label="Ouvrir le menu"
-            class="rounded-lg p-2 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 lg:hidden"
+            class="rounded-lg p-2 text-slate-600 transition hover:bg-slate-100 hover:text-slate-950 dark:text-gray-300 dark:hover:bg-gray-700 lg:hidden"
             @click="mobileSidebarOpen = true"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <h1 class="text-lg font-semibold text-gray-800 dark:text-gray-100">{{ pageTitle }}</h1>
-        </div>
+            <div class="min-w-0">
+              <p class="text-[11px] font-semibold uppercase tracking-normal text-fc-red">Administration</p>
+              <h1 class="truncate text-xl font-semibold leading-tight text-slate-950 dark:text-gray-100">{{ pageTitle }}</h1>
+            </div>
+          </div>
 
-        <div class="flex items-center gap-4">
+          <div class="flex flex-wrap items-center gap-2 lg:justify-end">
+            <div class="hidden items-center gap-2 xl:flex">
+              <div v-for="metric in headerMetrics" :key="metric.label" class="admin-kpi-chip min-w-28">
+                <p class="text-[10px] font-semibold uppercase tracking-normal text-slate-400">{{ metric.label }}</p>
+                <p class="mt-0.5 text-sm font-semibold tabular-nums text-slate-950 dark:text-white">{{ metric.value }}</p>
+              </div>
+            </div>
           <!-- Online/Offline indicator -->
-          <div class="flex items-center gap-2 text-sm">
+          <div class="flex h-10 items-center gap-2 rounded-xl border border-slate-200/80 bg-white/70 px-3 text-sm shadow-[0_10px_24px_-22px_rgba(15,23,42,0.7)] dark:border-slate-700 dark:bg-slate-800/70">
             <span
               class="w-2.5 h-2.5 rounded-full"
               :class="isOnline ? 'bg-emerald-500' : 'bg-red-500'"
@@ -53,7 +63,7 @@
           </div>
 
           <!-- Sync pending -->
-          <div v-if="pendingCount > 0" class="flex items-center gap-1 text-amber-600 text-sm">
+          <div v-if="pendingCount > 0" class="flex h-10 items-center gap-1 rounded-xl border border-amber-200 bg-amber-50 px-3 text-sm font-medium text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
             <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -69,8 +79,8 @@
             :items="userMenuItems"
             :popper="{ placement: 'bottom-end' }"
           >
-            <button class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-              <div class="w-8 h-8 rounded-full bg-fc-red flex items-center justify-center">
+            <button class="flex h-10 items-center gap-2 rounded-xl border border-slate-200/80 bg-white/70 px-2.5 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.7)] transition hover:bg-white dark:border-slate-700 dark:bg-slate-800/70 dark:hover:bg-slate-800">
+              <div class="w-8 h-8 rounded-lg bg-fc-red flex items-center justify-center">
                 <span class="text-white text-sm font-medium">
                   {{ userInitials }}
                 </span>
@@ -78,6 +88,7 @@
               <span class="text-sm text-gray-700 dark:text-gray-300 hidden md:inline">{{ authStore.profile?.nom || authStore.profile?.email }}</span>
             </button>
           </UDropdown>
+          </div>
         </div>
       </header>
 
@@ -95,9 +106,11 @@
 const route = useRoute()
 const authStore = useAuthStore()
 const { isOnline, pendingCount } = useOfflineSync()
+const visitesStore = useVisitesStore()
 
 const sidebarCollapsed = ref(false)
 const mobileSidebarOpen = ref(false)
+const numberFormatter = new Intl.NumberFormat('fr-FR')
 
 const pageTitle = computed(() => {
   const titles: Record<string, string> = {
@@ -146,7 +159,20 @@ const userMenuItems = [
   }],
 ]
 
+const headerMetrics = computed(() => {
+  const stats = visitesStore.stats
+  return [
+    { label: 'Visites mois', value: numberFormatter.format(stats?.visites_month ?? 0) },
+    { label: 'PDV actifs', value: numberFormatter.format(stats?.total_pdv ?? 0) },
+    { label: 'Commerciaux', value: numberFormatter.format(stats?.total_commerciaux ?? 0) },
+  ]
+})
+
 watch(mobileSidebarOpen, (opened) => {
   if (opened) sidebarCollapsed.value = false
+})
+
+onMounted(() => {
+  visitesStore.fetchStats().catch(() => {})
 })
 </script>
