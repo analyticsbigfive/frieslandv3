@@ -2104,3 +2104,244 @@ on conflict (reference_produit_id, segment_mt) do update
   set quantite_min = excluded.quantite_min, facings = excluded.facings;
 
 commit;
+
+-- ####### 20260709150000_friesland_cablage_mt_supermarches.sql #######
+
+-- ============================================================================
+-- MAJ 2026-07-09 : CÂBLAGE du standard Modern Trade sur le calcul Perfect Store
+-- (point 2 de MAJ_2026-07-09_A_ARBITRER — en assumant A=Grand / B=Moyen / C=Petit).
+--
+-- Le classement des supermarchés vient de l'onglet TYPE DE POINT DE VENTE :
+--   Hypermarket / Supermarket A -> Grands · Supermarket B -> Moyens · Supermarket C -> Petits
+--
+-- On modélise ça comme un segment 'SupermarcheMT' + grade A/B/C, réutilisé TEL QUEL par
+-- calculer_perfect_store (AUCUNE modification de la fonction). Remplace le repli provisoire
+-- Minimarket de 20260630120560.
+--
+-- Déjà en place (rien à faire) : les formulaires PDV proposent ces types (source =
+-- référentiel type_pdv), la visibilité MT est mappée (segment 'superette'), et
+-- categorie_pdv.canal='MT' pour Hypermarkets/Premium/Value Supermarkets.
+--
+-- ⚠️ Correspondance A/B/C -> Grand/Moyen/Petit À CONFIRMER par Friesland.
+-- Idempotent. À exécuter après 20260709140000. Recalcule l'historique.
+-- ============================================================================
+begin;
+
+-- 1. Autoriser le segment 'SupermarcheMT' dans seuil_disponibilite (CHECK étendu).
+do $$
+declare c text;
+begin
+  select conname into c from pg_constraint
+  where conrelid = 'seuil_disponibilite'::regclass and contype = 'c'
+    and pg_get_constraintdef(oid) ilike '%segment%';
+  if c is not null then execute format('alter table seuil_disponibilite drop constraint %I', c); end if;
+end $$;
+alter table seuil_disponibilite add constraint seuil_disponibilite_segment_check
+  check (segment in ('Boutique','Minimarket','Kiosque','Aboki','Pushcart','TableTop','Porridge','SupermarcheMT'));
+
+-- 2. Quantités minimales MT -> seuil_disponibilite (grade A=Grand/Hyper, B=Moyen, C=Petit),
+--    dérivées de seuil_disponibilite_mt (chargé en 20260709140000).
+insert into seuil_disponibilite(reference_produit_id, segment, grade, quantite_min)
+select reference_produit_id, 'SupermarcheMT',
+  case segment_mt
+    when 'Hypermarche' then 'A'
+    when 'MoyenSuper'  then 'B'
+    when 'PetitSuper'  then 'C'
+  end,
+  quantite_min
+from seuil_disponibilite_mt
+on conflict (reference_produit_id, segment, grade) do update
+  set quantite_min = excluded.quantite_min;
+
+-- 3. Rattacher les types supermarché à (SupermarcheMT, grade) — écrase le repli Minimarket (120560).
+insert into segment_grade_type_pdv(type_pdv_id, segment, grade)
+select tp.id, 'SupermarcheMT',
+  case tp.nom
+    when 'Hypermarket'   then 'A'
+    when 'Supermarket A' then 'A'
+    when 'Supermarket B' then 'B'
+    when 'Supermarket C' then 'C'
+  end
+from type_pdv tp
+where tp.nom in ('Hypermarket','Supermarket A','Supermarket B','Supermarket C')
+on conflict (type_pdv_id) do update
+  set segment = excluded.segment, grade = excluded.grade;
+
+-- 4. Recalcul de l'historique : les PDV supermarchés sont désormais scorés
+--    sur le vrai standard MT (au lieu du repli Minimarket).
+select calculer_perfect_store(id, 'taux_vente') from visites;
+
+commit;
+
+-- ####### 20260701170000_friesland_rbac_parametres.sql (complété — manquait à TOUT_COMBINE) #######
+
+-- ============================================================================
+-- RBAC : la section 'administration' devient 'parametres'.
+-- Réorganisation du dashboard : les pages de statistiques (pdv, visites,
+-- perfect-store, visibilite, concurrence, produits) restent des sections
+-- dédiées ; tout le paramétrage (standards Perfect Store, seuils stock,
+-- référentiels, utilisateurs, permissions, import/export) est regroupé sous
+-- la clé 'parametres'. La carte rejoint 'principal'.
+-- ============================================================================
+begin;
+
+-- Reprend la valeur de l'ancienne ligne sans écraser une ligne 'parametres'
+-- déjà présente.
+insert into public.role_section_access(role, section, can_access, updated_at)
+select role, 'parametres', can_access, now()
+from public.role_section_access
+where section = 'administration'
+on conflict (role, section) do nothing;
+
+delete from public.role_section_access where section = 'administration';
+
+commit;
+
+-- ####### 20260701180000_friesland_fix_canal_pdv.sql (complété — manquait à TOUT_COMBINE) #######
+
+-- ============================================================================
+-- FIX : réaligne pdv.canal sur le canal du référentiel (categorie_pdv.canal).
+-- Le canal était saisi librement dans les formulaires (mobile + admin) et
+-- pouvait diverger du type de PDV — cas constaté : « Abouakar », canal
+-- 'Modern trade' avec type 'Supérette A' (catégorie GT). Le scoring Perfect
+-- Store dérive le canal du type ; les pages admin filtrent sur pdv.canal.
+-- Les formulaires dérivent désormais le canal de la catégorie ; ce script
+-- corrige le stock existant. Idempotent.
+-- ============================================================================
+begin;
+
+update pdv p
+set canal = case cp.canal when 'MT' then 'Modern trade' else 'General trade' end
+from type_pdv tp
+join categorie_pdv cp on cp.id = tp.categorie_pdv_id
+where regexp_replace(trim(tp.nom), '\s+', ' ', 'g')
+    = regexp_replace(trim(p.sous_categorie_pdv), '\s+', ' ', 'g')
+  and p.canal is distinct from
+    (case cp.canal when 'MT' then 'Modern trade' else 'General trade' end);
+
+commit;
+
+-- ####### 20260703120000_friesland_position_tournee.sql (complété — manquait à TOUT_COMBINE) #######
+
+-- ============================================================================
+-- Positions GPS des tournées terrain (application mobile native).
+-- - un point ≈ toutes les 1 à 2 minutes pendant une tournée (début/fin
+--   déclenchés par le commercial), envoyé par batch depuis l'app ;
+-- - id généré côté client : le renvoi d'un batch après coupure réseau est
+--   idempotent (upsert ignoreDuplicates → on conflict do nothing) ;
+-- - insertion par le propriétaire uniquement, lecture par le propriétaire
+--   et les gestionnaires (admin/superviseur), trace immuable (pas
+--   d'update/delete pour les rôles terrain).
+-- Dépend de 20260630120000 (profiles) et réutilise
+-- public.est_gestionnaire_perfect_store() (20260630130200).
+-- ============================================================================
+begin;
+
+create table if not exists public.position_tournee (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references public.profiles(id) on delete cascade,
+  tournee_id  uuid not null,
+  lat         double precision not null,
+  lng         double precision not null,
+  accuracy    double precision,
+  speed       double precision,
+  captured_at timestamptz not null,
+  -- horodatage serveur : référence fiable si l'horloge du téléphone dérive
+  created_at  timestamptz not null default now()
+);
+
+comment on table public.position_tournee is
+  'Points GPS captés par l''app mobile native pendant les tournées terrain.';
+
+create index if not exists idx_position_tournee_user_date
+  on public.position_tournee (user_id, captured_at desc);
+
+create index if not exists idx_position_tournee_tournee
+  on public.position_tournee (tournee_id, captured_at);
+
+alter table public.position_tournee enable row level security;
+
+drop policy if exists "position_tournee_insert_own" on public.position_tournee;
+create policy "position_tournee_insert_own" on public.position_tournee
+  for insert to authenticated
+  with check (auth.uid() = user_id);
+
+drop policy if exists "position_tournee_select" on public.position_tournee;
+create policy "position_tournee_select" on public.position_tournee
+  for select to authenticated
+  using (auth.uid() = user_id or public.est_gestionnaire_perfect_store());
+
+commit;
+
+-- ####### 20260709160000_friesland_dedupe_referentiels.sql #######
+
+-- ============================================================================
+-- MAJ 2026-07-09 : DÉDUPLICATION des référentiels + contraintes uniques
+--
+-- Problème : `categorie_pdv`, `type_pdv` et `zone` ont accumulé des doublons
+-- lorsqu'un import (TOUT_COMBINE) a été rejoué : leur `on conflict do nothing`
+-- n'avait pas de contrainte unique effective sur la clé naturelle, donc chaque
+-- réexécution ré-insérait toutes les lignes.
+--
+-- Cette migration : (1) supprime les doublons en gardant la plus ancienne ligne,
+-- (2) ajoute les contraintes uniques manquantes -> les futures réexécutions
+-- deviennent idempotentes (le `on conflict do nothing` fonctionne enfin),
+-- (3) recalcule les scores (la résolution type_pdv redevient univoque).
+--
+-- Idempotent. À exécuter en DERNIER (après toutes les autres migrations).
+-- ============================================================================
+begin;
+
+-- 1) categorie_pdv : repointer les enfants vers le keeper, puis supprimer les doublons
+update type_pdv tp
+set categorie_pdv_id = k.kid
+from categorie_pdv c
+join (select nom, min(id) kid from categorie_pdv group by nom) k on k.nom = c.nom
+where tp.categorie_pdv_id = c.id and c.id <> k.kid;
+
+delete from categorie_pdv c
+using (select nom, min(id) kid from categorie_pdv group by nom) k
+where c.nom = k.nom and c.id <> k.kid;
+
+-- 2) type_pdv : supprimer les enfants rattachés aux doublons (le keeper garde les siens),
+--    puis supprimer les doublons de type_pdv
+delete from segment_grade_type_pdv sg
+using type_pdv t
+join (select nom, min(id) kid from type_pdv group by nom) k on k.nom = t.nom
+where sg.type_pdv_id = t.id and t.id <> k.kid;
+
+delete from segment_visibilite_type_pdv sv
+using type_pdv t
+join (select nom, min(id) kid from type_pdv group by nom) k on k.nom = t.nom
+where sv.type_pdv_id = t.id and t.id <> k.kid;
+
+delete from type_pdv t
+using (select nom, min(id) kid from type_pdv group by nom) k
+where t.nom = k.nom and t.id <> k.kid;
+
+-- 3) zone : supprimer les doublons exacts (territoire_code, code, nom)
+delete from zone z
+using zone z2
+where z.id > z2.id
+  and z.territoire_code = z2.territoire_code
+  and coalesce(z.code,'') = coalesce(z2.code,'')
+  and z.nom = z2.nom;
+
+-- 4) Contraintes uniques (rendent les futures réexécutions idempotentes)
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'categorie_pdv_nom_uk') then
+    alter table categorie_pdv add constraint categorie_pdv_nom_uk unique (nom);
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'type_pdv_nom_uk') then
+    alter table type_pdv add constraint type_pdv_nom_uk unique (nom);
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'zone_nat_uk') then
+    alter table zone add constraint zone_nat_uk unique (territoire_code, code, nom);
+  end if;
+end $$;
+
+-- 5) Recalcul (type_pdv redevient univoque -> segment/grade correctement résolus)
+select calculer_perfect_store(id, 'taux_vente') from visites;
+
+commit;

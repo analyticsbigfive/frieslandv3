@@ -25,13 +25,25 @@ DISPONIBILITE SCM MT). Sans seuil, le moteur les compterait « indisponibles » 
 **En attendant, SCM MT reste à 2 SKU (poids d'origine).**
 **Décision :** fournir les seuils de `397 R` et `BRB 1Kg` (par segment), ou confirmer SCM MT à 2 SKU.
 
-### 2. Segmentation des PDV Modern Trade (pour activer le standard MT)
-Les quantités min + facings MT sont **chargées** (`seuil_disponibilite_mt`), mais l'app ne classe pas
-encore les PDV MT en **Hyper / Moyen / Petit supermarché**. Le calcul utilise donc toujours le repli
-Minimarket pour le MT.
-**Décision :** règle de classement des supermarchés (depuis `sous_categorie_pdv` ? nouvelle donnée
-terrain ?). Une fois définie → on ajoute la colonne segment sur `pdv` et on branche
-`calculer_perfect_store` sur `seuil_disponibilite_mt`.
+### 2. Segmentation des PDV Modern Trade — la classification vient de l'onglet TYPE DE POINT DE VENTE
+Le classement des supermarchés existe déjà dans le fichier (onglet TYPE DE POINT DE VENTE → table
+`type_pdv`) : `Hypermarket`, `Supermarket A` (Premium), `Supermarket B` / `Supermarket C` (Value),
+tous canal MT. Le grade A/B/C = la taille (cohérent avec Boutique A/B/C, Superette A/B/C…).
+
+Correspondance proposée avec les 3 paliers de STANDARD DISPO MT :
+- `Hypermarket` + `Supermarket A` → « Hypermarchés / Grands Supermarchés » (`Hypermarche`)
+- `Supermarket B` → « Moyens Supermarchés » (`MoyenSuper`)
+- `Supermarket C` → « Petits Supermarchés » (`PetitSuper`)
+
+**✅ CÂBLÉ** (migration `20260709150000`, en assumant A=Grand/B=Moyen/C=Petit) :
+- les supermarchés sont scorés sur le vrai standard MT (segment `SupermarcheMT`, grade A/B/C),
+  au lieu du repli Minimarket. Aucune modification du moteur de calcul.
+- (a) déjà en place : les formulaires PDV proposent les types Supermarket A/B/C / Hypermarket
+  (source = référentiel `type_pdv`) ; la visibilité MT est mappée (`superette`) ; `canal='MT'`.
+
+**Reste juste la confirmation Friesland :** valider la correspondance A/B/C → Grand/Moyen/Petit
+(Hypermarket + Supermarket A = Grand ; B = Moyen ; C = Petit). Si Friesland corrige, il suffit
+d'ajuster les grades dans la migration `20260709150000` — pas de refonte.
 
 ### 3. Adzope & Agboville — distributeur manquant
 Dans la colonne `dist`, ces 2 territoires répètent leur propre nom (placeholder) → restent **sans
