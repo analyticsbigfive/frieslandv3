@@ -23,6 +23,9 @@ MIGRATIONS=(
   20260630130100_friesland_perfect_store_calcul.sql
   20260630130200_friesland_perfect_store_admin.sql
   20260701160000_friesland_perfect_store_liste.sql
+  20260701170000_friesland_rbac_parametres.sql
+  20260701180000_friesland_fix_canal_pdv.sql
+  20260703120000_friesland_position_tournee.sql
   20260709120000_friesland_maj_poids_mt_taux_vente.sql
   20260709130000_friesland_dist_canonique.sql
   20260709140000_friesland_standard_mt_facings.sql
