@@ -23,6 +23,7 @@ MIGRATIONS=(
   20260630130100_friesland_perfect_store_calcul.sql
   20260630130200_friesland_perfect_store_admin.sql
   20260701160000_friesland_perfect_store_liste.sql
+  20260709120000_friesland_maj_poids_mt_taux_vente.sql
 )
 
 for migration in "${MIGRATIONS[@]}"; do
