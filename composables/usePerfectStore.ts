@@ -212,6 +212,33 @@ export function usePerfectStore() {
     }
   }
 
+  /** Liste plate filtrable (tous niveaux + non conformes) depuis v_perfect_store_liste_full. */
+  async function fetchPerfectStoreListe(opts: {
+    niveau?: string
+    search?: string
+    page?: number
+    perPage?: number
+  } = {}): Promise<PerfectStoreListPage> {
+    const page = opts.page && opts.page > 0 ? opts.page : 1
+    const perPage = opts.perPage || 20
+    const from = (page - 1) * perPage
+    const to = from + perPage - 1
+    let query = supabase
+      .from('v_perfect_store_liste_full')
+      .select(
+        'visite_id, pdv_id, nom_pdv, type_pdv, zone, date_visite, commercial, niveau, score_global, dispo_rayon, assortiment, visibilite, promotion',
+        { count: 'exact' },
+      )
+    if (opts.niveau && opts.niveau !== 'TOUS') query = query.eq('niveau', opts.niveau)
+    const search = opts.search?.trim()
+    if (search) query = query.or(`nom_pdv.ilike.%${search}%,pdv_id.ilike.%${search}%,zone.ilike.%${search}%`)
+    query = query.order('score_global', { ascending: false, nullsFirst: false }).range(from, to)
+
+    const { data, count, error } = await query
+    if (error) throw error
+    return { items: (data || []) as PerfectStoreListItem[], total: count || 0 }
+  }
+
   return {
     refs,
     fetchRefs,
@@ -220,5 +247,6 @@ export function usePerfectStore() {
     fetchKpiParType,
     fetchCoverage,
     fetchStoresByTier,
+    fetchPerfectStoreListe,
   }
 }
