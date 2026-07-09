@@ -58,3 +58,4 @@ nul
 *.jks
 android/keystore.properties
 .nuxt-native
+.env*.local
