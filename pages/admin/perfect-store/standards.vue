@@ -26,7 +26,24 @@
     </div>
 
     <template v-else>
-      <div class="admin-surface overflow-hidden">
+      <!-- Onglets : une seule section visible à la fois (plus lisible) -->
+      <div class="admin-surface px-4 py-3">
+        <div class="flex flex-wrap gap-2">
+          <button
+            v-for="t in tabs"
+            :key="t.key"
+            type="button"
+            class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+            :class="activeTab === t.key ? 'bg-fc-red text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300'"
+            @click="activeTab = t.key"
+          >
+            {{ t.label }}
+          </button>
+        </div>
+        <p class="mt-2.5 text-sm text-gray-500 dark:text-gray-400">{{ activeHelp }}</p>
+      </div>
+
+      <div v-show="activeTab === 'niveaux'" class="admin-surface overflow-hidden">
         <div class="border-b border-gray-100 px-5 py-3 dark:border-gray-700">
           <h2 class="font-bold text-gray-900 dark:text-gray-100">Seuils des niveaux</h2>
           <p class="mt-1 text-xs text-gray-400">La visibilité parfaite est exigée à 100 %. La promotion est contrôlée uniquement lorsqu’elle est applicable.</p>
@@ -66,7 +83,7 @@
         </div>
       </div>
 
-      <div class="admin-surface overflow-hidden">
+      <div v-show="activeTab === 'assortiment'" class="admin-surface overflow-hidden">
         <div class="border-b border-gray-100 px-5 py-3 dark:border-gray-700">
           <h2 class="font-bold text-gray-900 dark:text-gray-100">Standards d’assortiment</h2>
           <p class="mt-1 text-xs text-gray-400">Minimum de SKU présents et contrôle obligatoire des Hero SKU, selon le type et le grade du PDV.</p>
@@ -110,7 +127,7 @@
         </div>
       </div>
 
-      <div class="admin-surface overflow-hidden">
+      <div v-show="activeTab === 'disponibilite'" class="admin-surface overflow-hidden">
         <div class="border-b border-gray-100 px-5 py-3 dark:border-gray-700">
           <h2 class="font-bold text-gray-900 dark:text-gray-100">Taux cibles de disponibilité par variante (taux revu)</h2>
           <p class="mt-1 text-xs text-gray-400">
@@ -162,7 +179,7 @@
         </div>
       </div>
 
-      <div class="admin-surface overflow-hidden">
+      <div v-show="activeTab === 'visibilite'" class="admin-surface overflow-hidden">
         <div class="border-b border-gray-100 px-5 py-3 dark:border-gray-700">
           <h2 class="font-bold text-gray-900 dark:text-gray-100">Matrice des standards de visibilité</h2>
           <p class="mt-1 text-xs text-gray-400">
@@ -222,7 +239,7 @@
         </div>
       </div>
 
-      <div class="admin-surface overflow-hidden">
+      <div v-show="activeTab === 'types'" class="admin-surface overflow-hidden">
         <div class="border-b border-gray-100 px-5 py-3 dark:border-gray-700">
           <h2 class="font-bold text-gray-900 dark:text-gray-100">Affectation des types de PDV</h2>
           <p class="mt-1 text-xs text-gray-400">
@@ -305,6 +322,17 @@ const typeMappings = ref<any[]>([])
 const segmentFilter = ref('boutique')
 const pillarFilter = ref('all')
 const canEdit = computed(() => authStore.isAdmin || authStore.isSuperviseur)
+
+// Onglets : découpe l'écran en sections simples, une à la fois.
+const tabs = [
+  { key: 'niveaux', label: 'Niveaux', help: 'Les seuils de disponibilité, visibilité et promotion pour qu’un magasin soit classé FLAGSHIP, VIP, CORE ou BASIC.' },
+  { key: 'assortiment', label: 'Assortiment', help: 'Le nombre de produits minimum à présenter selon le type et le grade du point de vente.' },
+  { key: 'disponibilite', label: 'Disponibilité', help: 'Le poids de chaque variante produit dans le score. Le total par famille doit faire 100 %.' },
+  { key: 'visibilite', label: 'Visibilité', help: 'Les éléments PLV exigés à chaque niveau, par type de magasin. Une coche = exigé.' },
+  { key: 'types', label: 'Types de PDV', help: 'Relier chaque type de point de vente à sa grille de standards (visibilité et disponibilité).' },
+]
+const activeTab = ref('niveaux')
+const activeHelp = computed(() => tabs.find(t => t.key === activeTab.value)?.help || '')
 
 const segmentOptions = [
   { value: 'all', label: 'Tous les segments' },
