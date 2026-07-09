@@ -2172,3 +2172,103 @@ on conflict (type_pdv_id) do update
 select calculer_perfect_store(id, 'taux_vente') from visites;
 
 commit;
+
+-- ####### 20260701170000_friesland_rbac_parametres.sql (complété — manquait à TOUT_COMBINE) #######
+
+-- ============================================================================
+-- RBAC : la section 'administration' devient 'parametres'.
+-- Réorganisation du dashboard : les pages de statistiques (pdv, visites,
+-- perfect-store, visibilite, concurrence, produits) restent des sections
+-- dédiées ; tout le paramétrage (standards Perfect Store, seuils stock,
+-- référentiels, utilisateurs, permissions, import/export) est regroupé sous
+-- la clé 'parametres'. La carte rejoint 'principal'.
+-- ============================================================================
+begin;
+
+-- Reprend la valeur de l'ancienne ligne sans écraser une ligne 'parametres'
+-- déjà présente.
+insert into public.role_section_access(role, section, can_access, updated_at)
+select role, 'parametres', can_access, now()
+from public.role_section_access
+where section = 'administration'
+on conflict (role, section) do nothing;
+
+delete from public.role_section_access where section = 'administration';
+
+commit;
+
+-- ####### 20260701180000_friesland_fix_canal_pdv.sql (complété — manquait à TOUT_COMBINE) #######
+
+-- ============================================================================
+-- FIX : réaligne pdv.canal sur le canal du référentiel (categorie_pdv.canal).
+-- Le canal était saisi librement dans les formulaires (mobile + admin) et
+-- pouvait diverger du type de PDV — cas constaté : « Abouakar », canal
+-- 'Modern trade' avec type 'Supérette A' (catégorie GT). Le scoring Perfect
+-- Store dérive le canal du type ; les pages admin filtrent sur pdv.canal.
+-- Les formulaires dérivent désormais le canal de la catégorie ; ce script
+-- corrige le stock existant. Idempotent.
+-- ============================================================================
+begin;
+
+update pdv p
+set canal = case cp.canal when 'MT' then 'Modern trade' else 'General trade' end
+from type_pdv tp
+join categorie_pdv cp on cp.id = tp.categorie_pdv_id
+where regexp_replace(trim(tp.nom), '\s+', ' ', 'g')
+    = regexp_replace(trim(p.sous_categorie_pdv), '\s+', ' ', 'g')
+  and p.canal is distinct from
+    (case cp.canal when 'MT' then 'Modern trade' else 'General trade' end);
+
+commit;
+
+-- ####### 20260703120000_friesland_position_tournee.sql (complété — manquait à TOUT_COMBINE) #######
+
+-- ============================================================================
+-- Positions GPS des tournées terrain (application mobile native).
+-- - un point ≈ toutes les 1 à 2 minutes pendant une tournée (début/fin
+--   déclenchés par le commercial), envoyé par batch depuis l'app ;
+-- - id généré côté client : le renvoi d'un batch après coupure réseau est
+--   idempotent (upsert ignoreDuplicates → on conflict do nothing) ;
+-- - insertion par le propriétaire uniquement, lecture par le propriétaire
+--   et les gestionnaires (admin/superviseur), trace immuable (pas
+--   d'update/delete pour les rôles terrain).
+-- Dépend de 20260630120000 (profiles) et réutilise
+-- public.est_gestionnaire_perfect_store() (20260630130200).
+-- ============================================================================
+begin;
+
+create table if not exists public.position_tournee (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references public.profiles(id) on delete cascade,
+  tournee_id  uuid not null,
+  lat         double precision not null,
+  lng         double precision not null,
+  accuracy    double precision,
+  speed       double precision,
+  captured_at timestamptz not null,
+  -- horodatage serveur : référence fiable si l'horloge du téléphone dérive
+  created_at  timestamptz not null default now()
+);
+
+comment on table public.position_tournee is
+  'Points GPS captés par l''app mobile native pendant les tournées terrain.';
+
+create index if not exists idx_position_tournee_user_date
+  on public.position_tournee (user_id, captured_at desc);
+
+create index if not exists idx_position_tournee_tournee
+  on public.position_tournee (tournee_id, captured_at);
+
+alter table public.position_tournee enable row level security;
+
+drop policy if exists "position_tournee_insert_own" on public.position_tournee;
+create policy "position_tournee_insert_own" on public.position_tournee
+  for insert to authenticated
+  with check (auth.uid() = user_id);
+
+drop policy if exists "position_tournee_select" on public.position_tournee;
+create policy "position_tournee_select" on public.position_tournee
+  for select to authenticated
+  using (auth.uid() = user_id or public.est_gestionnaire_perfect_store());
+
+commit;
