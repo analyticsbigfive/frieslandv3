@@ -4,7 +4,11 @@
 
 // ---- Enums & Constantes ----
 export type UserRole = 'admin' | 'superviseur' | 'merchandiser' | 'commercial'
+// Deux axes distincts : SyncStatus = transport device -> serveur ;
+// VisitStatus = cycle de vie métier (validation). Une visite peut être
+// status='soumis' et sync_status='pending'. Le brouillon reste local.
 export type SyncStatus = 'synced' | 'pending' | 'error'
+export type VisitStatus = 'soumis' | 'validé' | 'rejeté'
 export type ProductStatus = 'En rupture' | 'Disponible , Prix respecté' | 'Présent , Prix respecté' | 'Présent'
 export type BrandingState = 'Bon' | 'Moyen' | 'Mauvais' | ''
 export type CanalType = 'General trade' | 'Modern trade' | 'GT' | 'MT' | 'GT et MT'
@@ -192,9 +196,6 @@ export interface VisiteProduits {
   scm: {
     present: boolean
     br_1kg: ProductStatus
-    brb_1kg: ProductStatus
-    brb_397g: ProductStatus
-    br_397g: ProductStatus
     pearl_1kg: ProductStatus
     prix_respectes: boolean
     quantites?: SkuQuantites
@@ -352,6 +353,8 @@ export interface Visite {
   data: VisiteData
   image_urls: string[]
   sync_status: SyncStatus
+  status: VisitStatus
+  synced_at?: string
   created_at: string
   updated_at: string
   // Joined
@@ -497,7 +500,7 @@ export function getDefaultVisiteData(): VisiteData {
     produits: {
       evap: { present: false, br_gold: 'En rupture', br_160g: 'En rupture', brb_160g: 'En rupture', br_400g: 'En rupture', brb_400g: 'En rupture', pearl_400g: 'En rupture', prix_respectes: false, quantites: {} },
       imp: { present: false, br_400g: 'En rupture', br_900g: 'En rupture', br_2_5kg: 'En rupture', br_375g: 'En rupture', brb_400g: 'En rupture', br_20g: 'En rupture', brb_25g: 'En rupture', brd_15g: 'En rupture', brd_350g: 'En rupture', prix_respectes: false, quantites: {} },
-      scm: { present: false, br_1kg: 'En rupture', brb_1kg: 'En rupture', brb_397g: 'En rupture', br_397g: 'En rupture', pearl_1kg: 'En rupture', prix_respectes: false, quantites: {} },
+      scm: { present: false, br_1kg: 'En rupture', pearl_1kg: 'En rupture', prix_respectes: false, quantites: {} },
       uht: { present: false, demi_ecreme: 'En rupture', elopack_500ml: 'En rupture', brique_1l: 'En rupture', prix_respectes: false, quantites: {} },
       cereales: { present: false, brcv: 'En rupture', brcc: 'En rupture', prix_respectes: false, quantites: {} },
       yaourt: { present: false, br_yogoo_fraise_mini_90ml: 'En rupture', br_yogoo_fraise_maxi_318ml: 'En rupture', br_yogoo_nature_mini_90ml: 'En rupture', br_yogoo_nature_maxi_318ml: 'En rupture', prix_respectes: false, quantites: {} },

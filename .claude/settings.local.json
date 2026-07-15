@@ -30,7 +30,9 @@
       "Bash(node *)",
       "Bash(npx eslint *)",
       "Bash(npm run *)",
-      "Bash(disown)"
+      "Bash(disown)",
+      "Bash(CAPACITOR_BUILD=1 npx nuxt generate)",
+      "Bash(npx cap *)"
     ]
   }
 }

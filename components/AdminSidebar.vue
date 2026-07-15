@@ -27,11 +27,11 @@
         <button
           v-if="!collapsed"
           type="button"
-          class="mb-1.5 grid w-full grid-cols-[1fr_2rem_1rem] items-center gap-2 rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-normal text-slate-600 transition-colors hover:bg-white hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+          class="mb-1.5 grid w-full grid-cols-[1fr_2rem_1rem] items-center gap-2 rounded-lg px-3 py-1.5 text-left text-[11px] font-semibold uppercase tracking-normal text-slate-600 transition-colors hover:bg-white hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
           :aria-expanded="isExpanded(section.key)"
           @click="toggleSection(section.key)"
         >
-          <span class="truncate">{{ section.title }}</span>
+          <span class="truncate text-left">{{ section.title }}</span>
           <span class="justify-self-center rounded-md bg-slate-100 px-1.5 py-0.5 text-center text-[10px] font-semibold tracking-normal text-slate-500 tabular-nums dark:bg-slate-800 dark:text-slate-300">{{ section.items.length }}</span>
           <svg
             class="h-3.5 w-3.5 justify-self-end text-slate-500 transition-transform duration-200 dark:text-slate-400"
@@ -124,6 +124,13 @@ defineEmits(['toggle', 'navigate'])
 
 const route = useRoute()
 
+type AdminNavItem = {
+  label: string
+  to: string
+  icon: any
+  badge?: string | number
+}
+
 function isActive(path: string): boolean {
   const targetPath = path.split('?')[0]
   if (targetPath === '/admin') return route.path === '/admin'
@@ -134,7 +141,7 @@ function isActive(path: string): boolean {
   return route.path.startsWith(targetPath)
 }
 
-const navSections = [
+const navSections: Array<{ key: string; title: string; items: AdminNavItem[] }> = [
   {
     key: 'principal',
     title: 'Principal',

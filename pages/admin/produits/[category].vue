@@ -236,9 +236,6 @@ const productDefs: Record<string, { key: string; name: string }[]> = {
   scm: [
     { key: 'pearl_1kg', name: 'Pearl 1Kg' },
     { key: 'br_1kg', name: 'BR 1Kg' },
-    { key: 'brb_1kg', name: 'BRB 1Kg' },
-    { key: 'br_397g', name: 'BR 397g' },
-    { key: 'brb_397g', name: 'BRB 397g' },
   ],
   uht: [
     { key: 'demi_ecreme', name: 'BR 516ml' },

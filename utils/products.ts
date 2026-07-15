@@ -47,12 +47,10 @@ export const PRODUCT_CATALOG: ProductCategoryDef[] = [
     ],
   },
   {
+    // SCM = 2 produits seulement (confirmé Friesland 2026-07-15).
     key: 'scm', label: 'SCM', color: '#F59E0B', skus: [
       { key: 'pearl_1kg', label: 'Pearl 1Kg', seuilBasDefaut: DEFAULT_SEUIL_BAS },
       { key: 'br_1kg', label: 'BR 1Kg', seuilBasDefaut: DEFAULT_SEUIL_BAS },
-      { key: 'brb_1kg', label: 'BRB 1Kg', seuilBasDefaut: DEFAULT_SEUIL_BAS },
-      { key: 'br_397g', label: 'BR 397g', seuilBasDefaut: DEFAULT_SEUIL_BAS },
-      { key: 'brb_397g', label: 'BRB 397g', seuilBasDefaut: DEFAULT_SEUIL_BAS },
     ],
   },
   {

@@ -1981,8 +1981,9 @@ commit;
 --     Dimbokro -> UP GROUND SALES & MARKETING
 --   = 5 des 7 territoires jadis non assignés sont désormais couverts.
 --
--- ⚠️ Adzope et Agboville : la cellule `dist` répète le nom du territoire
---    (placeholder) -> restent NON assignés. À arbitrer Friesland.
+-- ✅ Adzope et Agboville : la cellule `dist` répète le nom du territoire
+--    (placeholder) -> exclus ici. Arbitré Friesland 2026-07-15 : conserver le
+--    nom de localité comme distributeur placeholder -> voir 20260715120000.
 --
 -- Idempotent (DELETE + réinsertion déterministe). À exécuter après 20260630120200.
 -- N'impacte pas le scoring (référentiel d'affectation, pas de recalcul requis).
@@ -2109,7 +2110,7 @@ commit;
 
 -- ============================================================================
 -- MAJ 2026-07-09 : CÂBLAGE du standard Modern Trade sur le calcul Perfect Store
--- (point 2 de MAJ_2026-07-09_A_ARBITRER — en assumant A=Grand / B=Moyen / C=Petit).
+-- (point 2 de MAJ_2026-07-09_A_ARBITRER — A=Grand / B=Moyen / C=Petit).
 --
 -- Le classement des supermarchés vient de l'onglet TYPE DE POINT DE VENTE :
 --   Hypermarket / Supermarket A -> Grands · Supermarket B -> Moyens · Supermarket C -> Petits
@@ -2122,7 +2123,8 @@ commit;
 -- référentiel type_pdv), la visibilité MT est mappée (segment 'superette'), et
 -- categorie_pdv.canal='MT' pour Hypermarkets/Premium/Value Supermarkets.
 --
--- ⚠️ Correspondance A/B/C -> Grand/Moyen/Petit À CONFIRMER par Friesland.
+-- ✅ Correspondance A/B/C -> Grand/Moyen/Petit CONFIRMÉE par Friesland le 2026-07-15
+-- (Hypermarket + Supermarket A -> Grands · B -> Moyens · C -> Petits).
 -- Idempotent. À exécuter après 20260709140000. Recalcule l'historique.
 -- ============================================================================
 begin;
@@ -2395,5 +2397,41 @@ from (
 
 revoke all on public.v_perfect_store_liste_full from public, anon;
 grant select on public.v_perfect_store_liste_full to authenticated;
+
+commit;
+
+-- ####### 20260715120000_friesland_dist_placeholder_adzope_agboville.sql #######
+
+-- ============================================================================
+-- MAJ 2026-07-15 : distributeurs PLACEHOLDER pour Adzope & Agboville
+-- (point 3 de MAJ_2026-07-09_A_ARBITRER — réponse Friesland du 2026-07-15).
+--
+-- Pas de distributeur sur ces localités : le fichier conserve le nom de la
+-- localité dans la colonne `dist`, et Friesland demande de garder ce nom en
+-- attendant qu'un vrai distributeur couvre la zone (ils feront la modification
+-- à ce moment-là). On crée donc 2 distributeurs placeholder du même nom et on
+-- les rattache à leur territoire — plus aucun territoire non assigné.
+--
+-- ⚠️ Quand Friesland communiquera le vrai distributeur : réaffecter le
+-- territoire puis supprimer le placeholder devenu orphelin.
+--
+-- Idempotent. À exécuter après 20260709130000 (qui vide et réinsère
+-- territoire_distributeur). Référentiel d'affectation : aucun recalcul requis.
+-- ============================================================================
+begin;
+
+insert into distributeur(nom, national) values
+  ('ADZOPE', false),
+  ('AGBOVILLE', false)
+on conflict (nom) do nothing;
+
+insert into territoire_distributeur(territoire_id, distributeur_id)
+select t.id, d.id from (values
+  ('Adzope','ADZOPE'),
+  ('Agboville','AGBOVILLE')
+) as v(terr, distr)
+join territoire t on t.nom = v.terr
+join distributeur d on d.nom = v.distr
+on conflict do nothing;
 
 commit;

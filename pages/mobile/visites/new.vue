@@ -1,8 +1,33 @@
 <template>
   <div class="mobile-page">
+    <div v-if="draftSavedAt" class="mx-4 mt-3 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200" role="status" aria-live="polite">
+      <UIcon name="i-heroicons-cloud-arrow-down" class="h-4 w-4 shrink-0" aria-hidden="true" />
+      <span class="truncate">Brouillon sauvegardé automatiquement{{ draftSavedLabel ? ` à ${draftSavedLabel}` : '' }}</span>
+    </div>
+    <div v-if="preselectionLabel" class="mx-4 mt-3 flex items-center justify-between gap-3 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-100">
+      <span class="min-w-0 truncate"><strong>Présélectionné :</strong> {{ preselectionLabel }}</span>
+      <button type="button" class="shrink-0 font-semibold underline underline-offset-2" @click="clearPreselection">Modifier</button>
+    </div>
+    <div v-if="previousVisit" class="mx-4 mt-3 flex items-center justify-between gap-3 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs text-violet-900 dark:border-violet-900/60 dark:bg-violet-950/30 dark:text-violet-100">
+      <span class="min-w-0 truncate">Dernière visite disponible pour ce PDV ({{ previousVisitDateLabel }}).</span>
+      <button type="button" class="shrink-0 font-semibold underline underline-offset-2" @click="showPreviousVisitConfirm = true">Reprendre</button>
+    </div>
+    <p v-else-if="previousVisitLoading" class="mx-4 mt-2 text-xs text-gray-400">Recherche de la dernière visite…</p>
+    <div v-if="quickCategory" class="mx-4 mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
+      <span class="mr-auto"><strong>{{ quickCategoryLabel }}</strong> · actions rapides (aucune donnée n’est modifiée sans clic).</span>
+      <button type="button" class="rounded-md border border-amber-300 px-2 py-1 font-semibold transition hover:bg-amber-100 active:scale-[0.98]" @click="setCategoryPreset(quickCategory, 'zero')">Tout à 0</button>
+      <button type="button" class="rounded-md bg-amber-500 px-2 py-1 font-semibold text-white transition hover:bg-amber-600 active:scale-[0.98]" @click="setCategoryPreset(quickCategory, 'threshold')">Seuils respectés</button>
+    </div>
+    <div v-if="visitWarnings.length" class="mx-4 mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200" role="status">
+      <p class="font-semibold">Points à vérifier avant l’enregistrement</p>
+      <ul class="mt-1 list-inside list-disc space-y-0.5">
+        <li v-for="warning in visitWarnings" :key="warning">{{ warning }}</li>
+      </ul>
+    </div>
     <FormWizard
       v-model="currentTab"
       :steps="wizardSteps"
+      :step-states="stepStates"
       :saving="saving"
       submit-label="Enregistrer la visite"
       @submit="handleSave"
@@ -24,6 +49,12 @@
               value-attribute="value"
               size="lg"
             />
+            <div class="mt-2 flex items-center justify-between gap-2">
+              <p class="text-xs text-gray-400">Les suggestions ne remplacent jamais votre choix.</p>
+              <button type="button" class="shrink-0 text-xs font-semibold text-fc-red underline underline-offset-2 disabled:opacity-50" :disabled="nearestPdvLoading" @click="suggestNearestPdv">
+                {{ nearestPdvLoading ? 'Recherche GPS…' : 'PDV le plus proche' }}
+              </button>
+            </div>
             <p v-if="formError" class="mt-2 text-sm font-medium text-red-600" role="alert">
               {{ formError }}
             </p>
@@ -45,8 +76,9 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email *</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email du compte *</label>
             <UInput :model-value="userEmail" disabled size="lg" />
+            <p class="mt-1 text-xs text-gray-400">Enregistré automatiquement avec la visite.</p>
           </div>
         </div>
       </template>
@@ -540,7 +572,7 @@
       success-message="Les données ont été sauvegardées avec succès."
       @update:visible="showSaveOverlay = $event"
       @closed="onSaveComplete"
-      @retry="handleSave"
+      @retry="persistVisit"
     />
 
     <!-- Modals -->
@@ -584,6 +616,39 @@
         </div>
       </div>
     </UModal>
+
+    <UModal v-model="showPreviousVisitConfirm">
+      <div class="space-y-4 p-6">
+        <div>
+          <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Reprendre la dernière visite ?</h3>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Les produits, la concurrence, la visibilité et les actions seront préremplis. Le PDV, la date et les photos actuelles sont conservés.</p>
+        </div>
+        <div class="flex justify-end gap-3">
+          <UButton variant="ghost" @click="showPreviousVisitConfirm = false">Annuler</UButton>
+          <UButton color="purple" @click="applyPreviousVisit">Reprendre les valeurs</UButton>
+        </div>
+      </div>
+    </UModal>
+
+    <UModal v-model="showReview">
+      <div class="space-y-4 p-6">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wide text-fc-red">Dernière vérification</p>
+          <h3 class="mt-1 text-lg font-bold text-gray-900 dark:text-gray-100">Prêt à enregistrer la visite ?</h3>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Toutes les sections restent dans la visite. Vérifiez les éléments essentiels ci-dessous.</p>
+        </div>
+        <dl class="grid grid-cols-2 gap-2 text-sm">
+          <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800"><dt class="text-gray-500">PDV</dt><dd class="mt-1 font-semibold text-gray-900 dark:text-gray-100">{{ selectedPDV?.nom_pdv || 'Non sélectionné' }}</dd></div>
+          <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800"><dt class="text-gray-500">Produits renseignés</dt><dd class="mt-1 font-semibold text-gray-900 dark:text-gray-100">{{ reviewSummary.productCategories }} / 6 catégories</dd></div>
+          <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800"><dt class="text-gray-500">SKU avec quantité</dt><dd class="mt-1 font-semibold text-gray-900 dark:text-gray-100">{{ reviewSummary.skus }}</dd></div>
+          <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800"><dt class="text-gray-500">Photos</dt><dd class="mt-1 font-semibold text-gray-900 dark:text-gray-100">{{ form.images.length }}</dd></div>
+        </dl>
+        <div class="flex justify-end gap-3">
+          <UButton variant="ghost" @click="showReview = false">Revenir au formulaire</UButton>
+          <UButton color="red" :loading="saving" @click="confirmReview">Confirmer et enregistrer</UButton>
+        </div>
+      </div>
+    </UModal>
   </div>
 </template>
 
@@ -606,10 +671,10 @@ const user = useSupabaseUser()
 const authStore = useAuthStore()
 const pdvStore = usePDVStore()
 const routingStore = useRoutingStore()
-const { validateGeofence, grabPosition } = useGeofencing()
+const { validateGeofence, grabPosition, haversineDistance, error: geolocationError } = useGeofencing()
 const { completeMission } = useRouting()
 const { addToQueue, isOnline } = useOfflineSync()
-const { uploadImages } = useImageUpload()
+const { uploadImages, compressImage } = useImageUpload()
 const toast = useToast()
 const router = useRouter()
 const route = useRoute()
@@ -628,6 +693,16 @@ const geofenceDistance = ref(0)
 const showCreatePDV = ref(false)
 const showCancelConfirm = ref(false)
 const formError = ref('')
+const draftSavedAt = ref<Date | null>(null)
+const draftReady = ref(false)
+const preferredPdvSource = ref<'routing' | 'url' | 'draft' | 'last' | 'recent' | 'nearest' | ''>('')
+const nearestPdvLoading = ref(false)
+const previousVisit = ref<any | null>(null)
+const previousVisitLoading = ref(false)
+const showPreviousVisitConfirm = ref(false)
+const showReview = ref(false)
+// Keep the client id across save retries so a lost response cannot create duplicates.
+const activeVisiteId = ref<string | null>(null)
 
 // Save overlay state
 const showSaveOverlay = ref(false)
@@ -660,6 +735,120 @@ const form = reactive({
   actions: defaultData.actions,
   images: [] as File[],
 })
+
+const draftKey = computed(() => `visit-draft:${user.value?.id || 'anonymous'}:${routingPdvId.value || 'new'}`)
+const lastPdvKey = computed(() => `visit-last-pdv:${user.value?.id || 'anonymous'}`)
+const recentPdvKey = computed(() => `visit-recent-pdvs:${user.value?.id || 'anonymous'}`)
+const draftSavedLabel = computed(() => draftSavedAt.value
+  ? draftSavedAt.value.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  : '')
+
+function saveDraft() {
+  if (!import.meta.client || !draftReady.value || !user.value?.id) return
+  try {
+    localStorage.setItem(draftKey.value, JSON.stringify({
+      currentTab: currentTab.value,
+      pdv_id: form.pdv_id,
+      date_visite: form.date_visite,
+      produits: form.produits,
+      concurrence: form.concurrence,
+      visibilite: form.visibilite,
+      actions: form.actions,
+      savedAt: Date.now(),
+    }))
+    draftSavedAt.value = new Date()
+  }
+  catch {
+    // Le parcours reste utilisable si le stockage local est indisponible.
+  }
+}
+
+function restoreDraft() {
+  if (!import.meta.client || !user.value?.id) return
+  try {
+    const raw = localStorage.getItem(draftKey.value)
+    if (!raw) return
+    const draft = JSON.parse(raw)
+    if (!draft || typeof draft !== 'object') return
+    if (draft.pdv_id) {
+      form.pdv_id = draft.pdv_id
+      preferredPdvSource.value = 'draft'
+    }
+    if (draft.date_visite) form.date_visite = draft.date_visite
+    if (draft.produits) form.produits = draft.produits
+    if (draft.concurrence) form.concurrence = draft.concurrence
+    if (draft.visibilite) form.visibilite = draft.visibilite
+    if (draft.actions) form.actions = draft.actions
+    if (Number.isInteger(draft.currentTab)) currentTab.value = Math.max(0, Math.min(wizardSteps.length - 1, draft.currentTab))
+    draftSavedAt.value = draft.savedAt ? new Date(draft.savedAt) : new Date()
+    toast.add({ title: 'Brouillon repris', description: 'Votre saisie précédente a été restaurée.', color: 'green', timeout: 3500 })
+  }
+  catch {
+    localStorage.removeItem(draftKey.value)
+  }
+}
+
+const preselectionLabel = computed(() => {
+  if (!form.pdv_id || !preferredPdvSource.value) return ''
+  const labels: Record<string, string> = {
+    routing: 'PDV du parcours de tournée',
+    url: 'PDV transmis par le lien',
+    draft: 'PDV du brouillon sauvegardé',
+    last: 'dernier PDV utilisé',
+    recent: 'PDV récemment visité',
+    nearest: 'PDV le plus proche selon le GPS',
+  }
+  return labels[preferredPdvSource.value] || ''
+})
+
+function clearPreselection() {
+  preferredPdvSource.value = ''
+  form.pdv_id = ''
+}
+
+async function suggestNearestPdv() {
+  nearestPdvLoading.value = true
+  try {
+    const position = await grabPosition()
+    if (!position) {
+      toast.add({ title: 'Position indisponible', description: 'Autorisez le GPS pour rechercher le PDV le plus proche.', color: 'amber' })
+      return
+    }
+    const nearest = filteredPdvList.value
+      .filter(pdv => Number.isFinite(Number(pdv.geolocation_lat)) && Number.isFinite(Number(pdv.geolocation_lng)))
+      .map(pdv => ({ pdv, distance: haversineDistance(position.lat, position.lng, Number(pdv.geolocation_lat), Number(pdv.geolocation_lng)) }))
+      .sort((a, b) => a.distance - b.distance)[0]
+    if (!nearest) {
+      toast.add({ title: 'Aucun PDV géolocalisé', description: 'Sélectionnez un PDV dans la liste.', color: 'amber' })
+      return
+    }
+    form.pdv_id = nearest.pdv.pdv_id
+    preferredPdvSource.value = 'nearest'
+    toast.add({ title: 'PDV le plus proche sélectionné', description: `${nearest.pdv.nom_pdv} · ${Math.round(nearest.distance)} m`, color: 'green', timeout: 3000 })
+  }
+  finally {
+    nearestPdvLoading.value = false
+  }
+}
+
+function rememberPdv(pdvId: string) {
+  if (!import.meta.client || !pdvId || !user.value?.id) return
+  try {
+    localStorage.setItem(lastPdvKey.value, pdvId)
+    const recent = JSON.parse(localStorage.getItem(recentPdvKey.value) || '[]')
+    const next = [pdvId, ...(Array.isArray(recent) ? recent.filter((id: string) => id !== pdvId) : [])].slice(0, 5)
+    localStorage.setItem(recentPdvKey.value, JSON.stringify(next))
+  }
+  catch {
+    // Le choix du PDV reste fonctionnel sans stockage local.
+  }
+}
+
+function clearDraft() {
+  if (!import.meta.client) return
+  localStorage.removeItem(draftKey.value)
+  draftSavedAt.value = null
+}
 
 // PDV list (filtered by user's zone/secteurs)
 const pdvList = ref<any[]>([])
@@ -717,9 +906,6 @@ const impProducts: { key: ProductKey<VisiteProduits['imp']>; label: string }[] =
 const scmProducts: { key: ProductKey<VisiteProduits['scm']>; label: string }[] = [
   { key: 'pearl_1kg', label: 'Pearl 1Kg' },
   { key: 'br_1kg', label: 'BR 1Kg' },
-  { key: 'brb_1kg', label: 'BRB 1Kg' },
-  { key: 'br_397g', label: 'BR 397g' },
-  { key: 'brb_397g', label: 'BRB 397g' },
 ]
 
 const uhtProducts: { key: ProductKey<VisiteProduits['uht']>; label: string }[] = [
@@ -769,14 +955,15 @@ const actionItems: { key: keyof VisiteActions; label: string }[] = [
 const { fetchElements: fetchVisibilityElements, forPdv, visibilitySegmentForPdv } = useVisibilityStandards()
 const selectedPDV = computed(() => pdvList.value.find(p => p.pdv_id === form.pdv_id) || null)
 const visibilitySegment = computed(() => visibilitySegmentForPdv(selectedPDV.value?.sous_categorie_pdv))
-const visibilitySegmentLabel = computed(() => ({
+const visibilitySegmentLabels: Record<string, string> = {
   boutique: 'Boutique',
   superette: 'Superette / commerce moderne',
   table_top: 'Table Top',
   pushcart: 'Pushcart',
   porridge: 'Porridge',
   kiosque_aboki: 'Kiosque / Aboki',
-}[visibilitySegment.value || ''] || '—'))
+}
+const visibilitySegmentLabel = computed(() => visibilitySegmentLabels[visibilitySegment.value || ''] || '—')
 const exteriorVisibilityElements = computed(() => forPdv(selectedPDV.value?.sous_categorie_pdv, 'exterieure'))
 const interiorVisibilityElements = computed(() => forPdv(selectedPDV.value?.sous_categorie_pdv, 'interieure'))
 const promotionElements = computed(() => forPdv(selectedPDV.value?.sous_categorie_pdv, 'promotion'))
@@ -784,6 +971,56 @@ const visibilitySections = computed(() => [
   { key: 'exterieure', label: 'Visibilité extérieure', icon: 'i-heroicons-building-storefront', items: exteriorVisibilityElements.value },
   { key: 'interieure', label: 'Visibilité intérieure', icon: 'i-heroicons-view-columns', items: interiorVisibilityElements.value },
 ].filter(section => section.items.length > 0))
+
+const productCategoryKeys: (keyof VisiteProduits)[] = ['evap', 'imp', 'scm', 'uht', 'yaourt', 'cereales']
+const productCategoryLabels: Record<string, string> = { evap: 'EVAP', imp: 'IMP', scm: 'SCM', uht: 'UHT', yaourt: 'Yaourt', cereales: 'Céréales' }
+const quickCategory = computed<keyof VisiteProduits | null>(() => productCategoryKeys[currentTab.value - 1] || null)
+const quickCategoryLabel = computed(() => quickCategory.value ? productCategoryLabels[quickCategory.value] : '')
+
+function categoryHasQuantities(category: keyof VisiteProduits) {
+  const quantities = (form.produits[category] as any)?.quantites || {}
+  return Object.values(quantities).some(value => Number(value) > 0)
+}
+
+function setCategoryPreset(category: keyof VisiteProduits | null, preset: 'zero' | 'threshold') {
+  if (!category) return
+  for (const product of getSkus(category)) setQty(category, product.key, preset === 'zero' ? 0 : Math.max(1, getSeuil(category, product.key) || 1))
+  if (preset === 'threshold') (form.produits[category] as any).prix_respectes = true
+  toast.add({ title: `${productCategoryLabels[category]} mis à jour`, description: preset === 'zero' ? 'Toutes les quantités sont à 0.' : 'Les quantités ont été positionnées aux seuils.', color: 'green', timeout: 2200 })
+}
+
+const stepStates = computed<Record<string, 'empty' | 'partial' | 'complete' | 'warning'>>(() => {
+  const states: Record<string, 'empty' | 'partial' | 'complete' | 'warning'> = {}
+  states.general = form.pdv_id && form.date_visite ? 'complete' : 'warning'
+  for (const category of productCategoryKeys) states[category] = categoryHasQuantities(category) ? 'complete' : 'partial'
+  states.concurrence = Object.values((form.concurrence || {}) as any).some(Boolean) ? 'complete' : 'partial'
+  states.visibilite = Object.values((form.visibilite?.standards || {}) as any).some(Boolean) ? 'complete' : 'partial'
+  states.actions = Object.values((form.actions || {}) as any).some(Boolean) ? 'complete' : 'partial'
+  states.photos = form.images.length > 0 ? 'complete' : 'partial'
+  return states
+})
+
+const visitWarnings = computed(() => {
+  const warnings: string[] = []
+  if (!form.pdv_id) warnings.push('Le PDV est obligatoire.')
+  if (!form.date_visite) warnings.push('La date de visite est obligatoire.')
+  if (productCategoryKeys.every(category => !categoryHasQuantities(category))) warnings.push('Aucune quantité produit n’a encore été renseignée.')
+  const routingPdv = routingStore.routingPDVList.find(item => item.id === routingPdvId.value)
+  if (routingPdv?.objectifs?.photos && form.images.length === 0) warnings.push('La tournée recommande au moins une photo pour ce PDV.')
+  return warnings
+})
+
+const reviewSummary = computed(() => ({
+  productCategories: productCategoryKeys.filter(categoryHasQuantities).length,
+  skus: productCategoryKeys.reduce((total, category) => {
+    const quantities = ((form.produits[category] as any)?.quantites || {}) as Record<string, number>
+    return total + Object.values(quantities).filter(value => Number(value) > 0).length
+  }, 0),
+}))
+
+const previousVisitDateLabel = computed(() => previousVisit.value?.date_visite
+  ? new Date(previousVisit.value.date_visite).toLocaleDateString('fr-FR')
+  : 'date inconnue')
 
 watch([selectedPDV, () => visibilitySegment.value], () => {
   const allElements = [
@@ -800,6 +1037,39 @@ watch([selectedPDV, () => visibilitySegment.value], () => {
 
 function onStepChange(_step: number) {
   // Hook for step-specific validation
+}
+
+async function loadPreviousVisit(pdvId: string) {
+  previousVisit.value = null
+  if (!pdvId || !isOnline.value) return
+  previousVisitLoading.value = true
+  try {
+    const { data } = await supabase
+      .from('visites')
+      .select('date_visite, data')
+      .eq('pdv_id', pdvId)
+      .order('date_visite', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    previousVisit.value = data || null
+  }
+  catch {
+    previousVisit.value = null
+  }
+  finally {
+    previousVisitLoading.value = false
+  }
+}
+
+function applyPreviousVisit() {
+  const data = previousVisit.value?.data
+  if (!data) return
+  if (data.produits) form.produits = JSON.parse(JSON.stringify(data.produits))
+  if (data.concurrence) form.concurrence = JSON.parse(JSON.stringify(data.concurrence))
+  if (data.visibilite) form.visibilite = JSON.parse(JSON.stringify(data.visibilite))
+  if (data.actions) form.actions = JSON.parse(JSON.stringify(data.actions))
+  showPreviousVisitConfirm.value = false
+  toast.add({ title: 'Valeurs reprises', description: 'Les champs métier de la dernière visite ont été préremplis.', color: 'green', timeout: 2800 })
 }
 
 // --- Photo handling ---
@@ -836,6 +1106,7 @@ function handleCancel() {
 
 function confirmCancel() {
   showCancelConfirm.value = false
+  clearDraft()
   router.push('/mobile')
 }
 
@@ -867,12 +1138,29 @@ function animateProgress(targetPercent: number, durationMs: number) {
   requestAnimationFrame(tick)
 }
 
-async function handleSave() {
+function handleSave() {
   formError.value = ''
 
   if (!form.pdv_id) {
     formError.value = 'Sélectionnez un PDV avant d’enregistrer la visite.'
     toast.add({ title: 'Sélectionnez un PDV', color: 'red' })
+    currentTab.value = 0
+    return
+  }
+
+  showReview.value = true
+}
+
+function confirmReview() {
+  showReview.value = false
+  void persistVisit()
+}
+
+async function persistVisit() {
+  formError.value = ''
+
+  if (!form.pdv_id) {
+    formError.value = 'Sélectionnez un PDV avant d’enregistrer la visite.'
     currentTab.value = 0
     return
   }
@@ -886,6 +1174,7 @@ async function handleSave() {
     // Phase 1: Grab GPS (0→30%)
     animateProgress(30, 800)
     const position = await grabPosition()
+    if (!position && isOnline.value) throw new Error(geolocationError.value || 'Position GPS indisponible. Activez la localisation puis réessayez.')
 
     // Phase 2: Check geofence (30→50%)
     animateProgress(50, 400)
@@ -934,6 +1223,7 @@ async function forceSubmit() {
   try {
     animateProgress(50, 600)
     const position = await grabPosition()
+    if (!position && isOnline.value) throw new Error(geolocationError.value || 'Position GPS indisponible. Activez la localisation puis réessayez.')
     animateProgress(90, 600)
     await submitVisite(position, false)
     saveProgress.value = 100
@@ -956,7 +1246,8 @@ async function submitVisite(
   position: { lat: number; lng: number; accuracy: number } | null,
   geofenceOk: boolean
 ) {
-  const visiteId = crypto.randomUUID().substring(0, 8)
+  const visiteId = activeVisiteId.value || crypto.randomUUID().replace(/-/g, '').slice(0, 24)
+  activeVisiteId.value = visiteId
 
   const visiteData: VisiteData = {
     produits: JSON.parse(JSON.stringify(form.produits)),
@@ -1015,12 +1306,26 @@ async function submitVisite(
   }
 
   if (isOnline.value) {
-    const { error } = await supabase.from('visites').insert(visite as any)
+    const { error } = await supabase.from('visites').upsert(visite as any, { onConflict: 'visite_id' })
     if (error) throw error
   }
   else {
     addToQueue({ type: 'visite', data: { ...visite, sync_status: 'pending' } })
+    for (const [index, file] of form.images.entries()) {
+      const compressed = await compressImage(file)
+      addToQueue({
+        type: 'image',
+        data: {
+          visiteId,
+          path: `visites/${visiteId}/${index}.jpg`,
+          file: compressed,
+        },
+      })
+    }
   }
+
+  clearDraft()
+  rememberPdv(form.pdv_id)
 
   // Complete routing PDV if from routing context
   if (routingPdvId.value) {
@@ -1029,6 +1334,7 @@ async function submitVisite(
       await completeMission(routingPdvItem, visiteId)
     }
   }
+  activeVisiteId.value = null
 }
 
 onMounted(async () => {
@@ -1038,6 +1344,7 @@ onMounted(async () => {
   void fetchThresholds()
   void fetchVisibilityElements()
   pdvList.value = await pdvStore.fetchScopedPDV(authStore.profile)
+  restoreDraft()
 
   // Pre-select PDV from routing context
   if (preselectedPdvId.value) {
@@ -1056,6 +1363,7 @@ onMounted(async () => {
       }
     }
     form.pdv_id = preselectedPdvId.value
+    preferredPdvSource.value = routingPdvId.value ? 'routing' : 'url'
 
     // Passer automatiquement à l'étape suivante si PDV pré-sélectionné
     toast.add({
@@ -1066,11 +1374,31 @@ onMounted(async () => {
       timeout: 3000,
     })
   }
+  else if (!form.pdv_id && import.meta.client) {
+    const recentIds = JSON.parse(localStorage.getItem(recentPdvKey.value) || '[]')
+    const lastId = localStorage.getItem(lastPdvKey.value)
+    const candidate = [lastId, ...(Array.isArray(recentIds) ? recentIds : [])].find(id => id && filteredPdvList.value.some(p => p.pdv_id === id))
+    if (candidate) {
+      form.pdv_id = candidate
+      preferredPdvSource.value = candidate === lastId ? 'last' : 'recent'
+      toast.add({ title: 'PDV suggéré', description: 'Le dernier PDV utilisé est présélectionné. Vous pouvez le modifier.', color: 'sky', timeout: 3500 })
+    }
+  }
+  draftReady.value = true
+  saveDraft()
 })
 
-watch(() => form.pdv_id, () => {
+watch(() => form.pdv_id, (pdvId, previousPdvId) => {
   if (form.pdv_id) formError.value = ''
+  if (draftReady.value && pdvId && pdvId !== previousPdvId) {
+    preferredPdvSource.value = ''
+    rememberPdv(pdvId)
+  }
+  void loadPreviousVisit(pdvId)
 })
+
+watch(form, saveDraft, { deep: true })
+watch(currentTab, saveDraft)
 
 onUnmounted(() => {
   photoThumbnails.value.forEach(url => URL.revokeObjectURL(url))

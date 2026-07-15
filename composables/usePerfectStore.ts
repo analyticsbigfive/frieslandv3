@@ -215,6 +215,7 @@ export function usePerfectStore() {
   /** Liste plate filtrable (tous niveaux + non conformes) depuis v_perfect_store_liste_full. */
   async function fetchPerfectStoreListe(opts: {
     niveau?: string
+    type?: string
     search?: string
     page?: number
     perPage?: number
@@ -230,6 +231,7 @@ export function usePerfectStore() {
         { count: 'exact' },
       )
     if (opts.niveau && opts.niveau !== 'TOUS') query = query.eq('niveau', opts.niveau)
+    if (opts.type) query = query.eq('type_pdv', opts.type)
     const search = opts.search?.trim()
     if (search) query = query.or(`nom_pdv.ilike.%${search}%,pdv_id.ilike.%${search}%,zone.ilike.%${search}%`)
     query = query.order('score_global', { ascending: false, nullsFirst: false }).range(from, to)

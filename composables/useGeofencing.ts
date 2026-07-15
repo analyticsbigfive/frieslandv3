@@ -64,6 +64,10 @@ export function useGeofencing() {
       const userLng = position.coords.longitude
       const accuracy = position.coords.accuracy
 
+      if (minAccuracy > 0 && accuracy > minAccuracy) {
+        throw new Error(`Précision GPS insuffisante (${Math.round(accuracy)} m). Attendez une meilleure précision.`)
+      }
+
       const distance = haversineDistance(userLat, userLng, pdvLat, pdvLng)
       const effectiveRadius = radius || maxRadius
 
@@ -157,6 +161,9 @@ export function useGeofencing() {
   async function grabPosition() {
     try {
       const position = await getCurrentPosition()
+      if (minAccuracy > 0 && position.coords.accuracy > minAccuracy) {
+        error.value = `Précision GPS insuffisante (${Math.round(position.coords.accuracy)} m).`
+      }
       return {
         lat: position.coords.latitude,
         lng: position.coords.longitude,

@@ -9,6 +9,7 @@ export default defineNuxtPlugin(() => {
   }
 
   const router = useRouter()
+  const { processQueue } = useOfflineSync()
 
   void App.addListener('backButton', ({ canGoBack }) => {
     const path = router.currentRoute.value.path
@@ -19,6 +20,11 @@ export default defineNuxtPlugin(() => {
     else {
       router.back()
     }
+  })
+
+  // Reprendre automatiquement les envois suspendus quand l’application revient au premier plan.
+  void App.addListener('appStateChange', ({ isActive }) => {
+    if (isActive) void processQueue()
   })
 
   void StatusBar.setOverlaysWebView({ overlay: false })

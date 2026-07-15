@@ -1,6 +1,6 @@
 -- ============================================================================
 -- MAJ 2026-07-09 : CÂBLAGE du standard Modern Trade sur le calcul Perfect Store
--- (point 2 de MAJ_2026-07-09_A_ARBITRER — en assumant A=Grand / B=Moyen / C=Petit).
+-- (point 2 de MAJ_2026-07-09_A_ARBITRER — A=Grand / B=Moyen / C=Petit).
 --
 -- Le classement des supermarchés vient de l'onglet TYPE DE POINT DE VENTE :
 --   Hypermarket / Supermarket A -> Grands · Supermarket B -> Moyens · Supermarket C -> Petits
@@ -13,7 +13,8 @@
 -- référentiel type_pdv), la visibilité MT est mappée (segment 'superette'), et
 -- categorie_pdv.canal='MT' pour Hypermarkets/Premium/Value Supermarkets.
 --
--- ⚠️ Correspondance A/B/C -> Grand/Moyen/Petit À CONFIRMER par Friesland.
+-- ✅ Correspondance A/B/C -> Grand/Moyen/Petit CONFIRMÉE par Friesland le 2026-07-15
+-- (Hypermarket + Supermarket A -> Grands · B -> Moyens · C -> Petits).
 -- Idempotent. À exécuter après 20260709140000. Recalcule l'historique.
 -- ============================================================================
 begin;

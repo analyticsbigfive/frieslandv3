@@ -15,7 +15,7 @@ Seule la partie **MT (Modern Trade)** + le **mapping distributeurs** ont changé
 
 ---
 
-## ⏳ À ARBITRER FRIESLAND (irrésolvable depuis le fichier)
+## ✅ ARBITRÉ FRIESLAND — réponses client du 2026-07-15
 
 ### 1. SCM Modern Trade — 2 SKU sans seuil
 Le fichier veut passer SCM MT à 4 SKU (`Pearl 1kg`, `BR 1kg`, **`397 R`**, **`BRB 1Kg`**). Mais `397 R` et
@@ -23,7 +23,10 @@ Le fichier veut passer SCM MT à 4 SKU (`Pearl 1kg`, `BR 1kg`, **`397 R`**, **`B
 STANDARD DISPO MT et des tables GT — ils n'existent que comme entrées de calcul dans l'onglet
 DISPONIBILITE SCM MT). Sans seuil, le moteur les compterait « indisponibles » → OSA SCM MT faussé.
 **En attendant, SCM MT reste à 2 SKU (poids d'origine).**
-**Décision :** fournir les seuils de `397 R` et `BRB 1Kg` (par segment), ou confirmer SCM MT à 2 SKU.
+**✅ Réponse client (2026-07-15) :** « Au niveau du SCM nous n'avons que 2 produits : le Pearl 1kg et
+le BR 1kg. Ce sont ces deux produits à considérer pour la catégorie SCM. » → SCM reste à 2 SKU
+(déjà le cas côté moteur/référentiel). Le catalogue app (`utils/products.ts`, formulaire visite,
+admin produits) a été ramené de 5 à 2 SKU SCM (retrait de `brb_1kg`, `br_397g`, `brb_397g`).
 
 ### 2. Segmentation des PDV Modern Trade — la classification vient de l'onglet TYPE DE POINT DE VENTE
 Le classement des supermarchés existe déjà dans le fichier (onglet TYPE DE POINT DE VENTE → table
@@ -41,11 +44,14 @@ Correspondance proposée avec les 3 paliers de STANDARD DISPO MT :
 - (a) déjà en place : les formulaires PDV proposent les types Supermarket A/B/C / Hypermarket
   (source = référentiel `type_pdv`) ; la visibilité MT est mappée (`superette`) ; `canal='MT'`.
 
-**Reste juste la confirmation Friesland :** valider la correspondance A/B/C → Grand/Moyen/Petit
-(Hypermarket + Supermarket A = Grand ; B = Moyen ; C = Petit). Si Friesland corrige, il suffit
-d'ajuster les grades dans la migration `20260709150000` — pas de refonte.
+**✅ Réponse client (2026-07-15) :** correspondance confirmée telle quelle —
+Hypermarket + Supermarket A → Grands supermarchés ; Supermarket B → Moyens ; Supermarket C → Petits.
+La migration `20260709150000` est donc définitive, aucun ajustement nécessaire.
 
 ### 3. Adzope & Agboville — distributeur manquant
 Dans la colonne `dist`, ces 2 territoires répètent leur propre nom (placeholder) → restent **sans
 distributeur** après la mise à jour.
-**Décision :** quel distributeur pour Adzope et Agboville ?
+**✅ Réponse client (2026-07-15) :** pas de distributeur sur ces localités — conserver le nom de la
+localité dans la colonne distributeur ; Friesland fera la modification quand un distributeur
+couvrira la zone. → Migration `20260715120000_friesland_dist_placeholder_adzope_agboville.sql` :
+distributeurs placeholder `ADZOPE` / `AGBOVILLE` créés et rattachés à leur territoire.

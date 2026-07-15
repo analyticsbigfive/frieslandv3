@@ -32,6 +32,8 @@ MIGRATIONS=(
   20260709150000_friesland_cablage_mt_supermarches.sql
   20260709160000_friesland_dedupe_referentiels.sql
   20260709170000_friesland_perfect_store_liste_full.sql
+  20260715120000_friesland_dist_placeholder_adzope_agboville.sql
+  20260715130000_friesland_visite_statut.sql
 )
 
 for migration in "${MIGRATIONS[@]}"; do

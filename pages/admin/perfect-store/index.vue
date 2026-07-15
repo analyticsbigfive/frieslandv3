@@ -40,46 +40,103 @@
         <StatsCard title="Promotion effective" :value="fmtPct(global.promotion_moyenne_pct)" format="none" :icon="BadgePercent" color="red" />
       </div>
 
-      <!-- Ventilation par type de PDV -->
+      <!-- Ventilation par type de PDV (accordéons) -->
       <div class="admin-surface overflow-hidden">
-        <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
+        <div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-gray-100 dark:border-gray-700">
           <h2 class="font-bold text-gray-900 dark:text-gray-100">Perfect Store par type de magasin</h2>
+          <span class="text-xs text-gray-400">{{ parType.length }} type(s) · cliquez pour dérouler</span>
         </div>
-        <div class="overflow-x-auto">
-          <table class="admin-table">
-            <thead class="bg-gray-50 dark:bg-gray-700/50">
-              <tr>
-                <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Type</th>
-                <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Visites</th>
-                <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Perfect</th>
-                <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-56">% Perfect Store</th>
-                <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Score moyen</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-              <tr v-for="row in parType" :key="row.type_pdv" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                <td class="px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-gray-100">{{ row.type_pdv }}</td>
-                <td class="px-4 py-2.5 text-center text-sm text-gray-500 dark:text-gray-400">{{ row.visites_scorees }}</td>
-                <td class="px-4 py-2.5 text-center text-sm font-medium text-emerald-600">{{ row.perfect_stores }}</td>
-                <td class="px-4 py-2.5">
-                  <div class="flex items-center gap-2">
-                    <div class="flex-1 h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
-                      <div
-                        class="h-full rounded-full"
-                        :class="(row.perfect_store_pct ?? 0) >= 50 ? 'bg-emerald-500' : (row.perfect_store_pct ?? 0) > 0 ? 'bg-amber-500' : 'bg-red-500'"
-                        :style="{ width: (row.perfect_store_pct ?? 0) + '%' }"
-                      />
-                    </div>
-                    <span class="text-xs text-gray-500 dark:text-gray-400 w-12 text-right">{{ fmtPct(row.perfect_store_pct) }}</span>
-                  </div>
-                </td>
-                <td class="px-4 py-2.5 text-center text-sm text-gray-600 dark:text-gray-300">{{ fmtPct(row.score_global_moyen_pct) }}</td>
-              </tr>
-              <tr v-if="!parType.length">
-                <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-400">Aucune visite scorée.</td>
-              </tr>
-            </tbody>
-          </table>
+
+        <div v-if="!parType.length" class="px-4 py-8 text-center text-sm text-gray-400">Aucune visite scorée.</div>
+
+        <div v-else class="divide-y divide-gray-100 dark:divide-gray-700">
+          <div v-for="row in parType" :key="row.type_pdv">
+            <!-- En-tête accordéon -->
+            <button
+              type="button"
+              class="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-gray-50 dark:hover:bg-gray-700/40"
+              :aria-expanded="isTypeOpen(row.type_pdv)"
+              @click="toggleType(row.type_pdv)"
+            >
+              <UIcon
+                name="i-heroicons-chevron-right"
+                class="h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200"
+                :class="isTypeOpen(row.type_pdv) ? 'rotate-90 text-fc-red' : ''"
+              />
+              <span class="min-w-0 flex-1">
+                <span class="block truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{{ row.type_pdv }}</span>
+                <span class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
+                  {{ row.visites_scorees }} visite(s) · <span class="text-emerald-600 font-medium">{{ row.perfect_stores }} perfect</span>
+                </span>
+              </span>
+              <span class="hidden w-44 items-center gap-2 sm:flex">
+                <span class="h-2 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
+                  <span
+                    class="block h-full rounded-full transition-all"
+                    :class="(row.perfect_store_pct ?? 0) >= 50 ? 'bg-emerald-500' : (row.perfect_store_pct ?? 0) > 0 ? 'bg-amber-500' : 'bg-red-500'"
+                    :style="{ width: (row.perfect_store_pct ?? 0) + '%' }"
+                  />
+                </span>
+                <span class="w-10 text-right text-xs text-gray-500 dark:text-gray-400">{{ fmtPct(row.perfect_store_pct) }}</span>
+              </span>
+              <span class="w-16 shrink-0 text-right text-sm font-medium tabular-nums text-gray-600 dark:text-gray-300">{{ fmtPct(row.score_global_moyen_pct) }}</span>
+            </button>
+
+            <!-- Panneau : liste paginée (client, sans rechargement) -->
+            <div v-show="isTypeOpen(row.type_pdv)" class="bg-gray-50/60 px-4 pb-4 dark:bg-gray-900/20">
+              <div v-if="typeState(row.type_pdv).loading" class="space-y-2 pt-3">
+                <div v-for="i in 3" :key="i" class="h-14 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-700/60" />
+              </div>
+
+              <ul v-else-if="typeState(row.type_pdv).items.length" class="divide-y divide-gray-100 dark:divide-gray-700">
+                <li v-for="store in typeState(row.type_pdv).items" :key="store.visite_id">
+                  <button
+                    type="button"
+                    class="flex w-full items-center justify-between gap-4 rounded-lg px-2 py-3 text-left transition hover:bg-white focus-visible:bg-white dark:hover:bg-gray-700/40 dark:focus-visible:bg-gray-700/40"
+                    @click="openStoreDetail(store)"
+                  >
+                    <span class="min-w-0 flex-1">
+                      <span class="flex items-center gap-2">
+                        <span class="h-2 w-2 shrink-0 rounded-full" :class="tierDotClass(store.niveau)" />
+                        <span class="truncate text-sm font-semibold text-gray-900 dark:text-white">{{ store.nom_pdv || store.pdv_id }}</span>
+                      </span>
+                      <span class="mt-1 block truncate pl-4 text-xs text-gray-500 dark:text-gray-400">
+                        {{ store.niveau }}<template v-if="store.zone"> · {{ store.zone }}</template><template v-if="store.commercial"> · {{ store.commercial }}</template>
+                      </span>
+                    </span>
+                    <span class="shrink-0 text-right">
+                      <span class="block text-sm font-semibold tabular-nums text-gray-900 dark:text-white">{{ fmtPct(store.score_global) }}</span>
+                      <span class="mt-1 block text-xs text-gray-400">{{ formatDate(store.date_visite) }}</span>
+                    </span>
+                  </button>
+                </li>
+              </ul>
+
+              <div v-else class="pt-6 pb-2 text-center text-sm text-gray-400">Aucun magasin dans ce type.</div>
+
+              <div v-if="typeState(row.type_pdv).total > typePerPage" class="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-700">
+                <span class="text-xs text-gray-400">Page {{ typeState(row.type_pdv).page }} / {{ typePageCount(typeState(row.type_pdv).total) }} · {{ typeState(row.type_pdv).total }} au total</span>
+                <div class="flex gap-2">
+                  <UButton
+                    size="xs"
+                    variant="outline"
+                    :disabled="typeState(row.type_pdv).page <= 1 || typeState(row.type_pdv).loading"
+                    @click="changeTypePage(row.type_pdv, typeState(row.type_pdv).page - 1)"
+                  >
+                    Précédent
+                  </UButton>
+                  <UButton
+                    size="xs"
+                    variant="outline"
+                    :disabled="typeState(row.type_pdv).page >= typePageCount(typeState(row.type_pdv).total) || typeState(row.type_pdv).loading"
+                    @click="changeTypePage(row.type_pdv, typeState(row.type_pdv).page + 1)"
+                  >
+                    Suivant
+                  </UButton>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -254,6 +311,7 @@ const {
   fetchKpiParType,
   fetchCoverage,
   fetchStoresByTier,
+  fetchPerfectStoreListe,
 } = usePerfectStore()
 
 const loading = ref(true)
@@ -323,6 +381,55 @@ async function loadTierStores(tier: string, page = 1) {
 
 function changeTierPage(tier: string, page: number) {
   loadTierStores(tier, page)
+}
+
+// ---- Accordéons "par type de magasin" : liste paginée par 10, client-side ----
+const typePerPage = 10
+type TypeStore = { items: PerfectStoreListItem[]; total: number; page: number; loading: boolean }
+const EMPTY_TYPE_STATE: TypeStore = { items: [], total: 0, page: 1, loading: false }
+const openTypes = reactive(new Set<string>())
+const typeStoreState = reactive<Record<string, TypeStore>>({})
+
+function typeState(type: string): TypeStore {
+  return typeStoreState[type] || EMPTY_TYPE_STATE
+}
+function isTypeOpen(type: string): boolean {
+  return openTypes.has(type)
+}
+function typePageCount(total: number): number {
+  return Math.max(1, Math.ceil(total / typePerPage))
+}
+
+async function loadTypeStores(type: string, page = 1) {
+  if (!typeStoreState[type]) typeStoreState[type] = { items: [], total: 0, page: 1, loading: false }
+  const state = typeStoreState[type]
+  state.loading = true
+  try {
+    const result = await fetchPerfectStoreListe({ type, page, perPage: typePerPage })
+    state.items = result.items
+    state.total = result.total
+    state.page = page
+  }
+  catch {
+    state.items = []
+    state.total = 0
+  }
+  finally {
+    state.loading = false
+  }
+}
+
+function toggleType(type: string) {
+  if (openTypes.has(type)) {
+    openTypes.delete(type)
+    return
+  }
+  openTypes.add(type)
+  if (!typeStoreState[type]) loadTypeStores(type, 1)
+}
+
+function changeTypePage(type: string, page: number) {
+  loadTypeStores(type, page)
 }
 
 async function openStoreDetail(store: PerfectStoreListItem) {

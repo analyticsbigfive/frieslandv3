@@ -11,8 +11,9 @@
 --     Dimbokro -> UP GROUND SALES & MARKETING
 --   = 5 des 7 territoires jadis non assignés sont désormais couverts.
 --
--- ⚠️ Adzope et Agboville : la cellule `dist` répète le nom du territoire
---    (placeholder) -> restent NON assignés. À arbitrer Friesland.
+-- ✅ Adzope et Agboville : la cellule `dist` répète le nom du territoire
+--    (placeholder) -> exclus ici. Arbitré Friesland 2026-07-15 : conserver le
+--    nom de localité comme distributeur placeholder -> voir 20260715120000.
 --
 -- Idempotent (DELETE + réinsertion déterministe). À exécuter après 20260630120200.
 -- N'impacte pas le scoring (référentiel d'affectation, pas de recalcul requis).

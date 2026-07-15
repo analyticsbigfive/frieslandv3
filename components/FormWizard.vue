@@ -21,13 +21,28 @@
         </div>
       </div>
 
+      <!-- Compact section picker on small screens: all sections remain reachable. -->
+      <div class="px-4 pb-2 sm:hidden">
+        <label for="wizard-section" class="sr-only">Section de la visite</label>
+        <select
+          id="wizard-section"
+          :value="currentStep"
+          class="min-h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm font-semibold text-gray-700 outline-none transition focus:border-fc-red focus:ring-2 focus:ring-fc-red/20 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+          @change="selectStep"
+        >
+          <option v-for="(step, idx) in steps" :key="step.key" :value="idx">
+            {{ idx + 1 }} · {{ step.label }}{{ stepStateLabel(step.key) }}
+          </option>
+        </select>
+      </div>
+
       <!-- Step tabs (scrollable) -->
-      <div class="flex overflow-x-auto scrollbar-hide" role="tablist" aria-label="Étapes de la visite">
+      <div class="hidden overflow-x-auto scrollbar-hide sm:flex" role="tablist" aria-label="Étapes de la visite">
         <button
           v-for="(step, idx) in steps"
           :key="step.key"
           type="button"
-          class="relative min-h-11 min-w-[96px] flex-1 whitespace-nowrap border-b-2 px-2 py-2.5 text-center text-[11px] font-semibold transition-all duration-300"
+          class="relative min-h-11 min-w-[88px] flex-none whitespace-nowrap border-b-2 px-2 py-2.5 text-center text-[11px] font-semibold transition-all duration-300 sm:min-w-[96px] sm:flex-1"
           role="tab"
           :aria-selected="idx === currentStep"
           :aria-current="idx === currentStep ? 'step' : undefined"
@@ -65,14 +80,10 @@
 
     <!-- Bottom Navigation -->
     <div class="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/95 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur dark:border-gray-600 dark:bg-gray-900/95 safe-area-bottom">
-      <!-- Mini progress dots -->
-      <div class="flex justify-center gap-1.5 pt-2 pb-1">
-        <span
-          v-for="(step, idx) in steps"
-          :key="'dot-' + step.key"
-          class="w-2 h-2 rounded-full transition-all duration-300"
-          :class="idx === currentStep ? 'bg-fc-red w-6' : idx < currentStep ? 'bg-fc-red-200' : 'bg-gray-200'"
-        />
+      <div class="flex items-center justify-between px-4 pt-2 text-[11px] font-medium text-gray-500 dark:text-gray-400">
+        <span>{{ currentStep + 1 }} / {{ steps.length }} · {{ steps[currentStep]?.label }}</span>
+        <span v-if="currentStep < steps.length - 1">Faites défiler ou utilisez la liste</span>
+        <span v-else>Dernière vérification</span>
       </div>
 
       <div class="grid grid-cols-[auto_1fr] items-center gap-3 px-4 pb-3">
@@ -139,15 +150,19 @@ export interface WizardStep {
   validate?: () => boolean
 }
 
+export type WizardStepState = 'empty' | 'partial' | 'complete' | 'warning'
+
 const props = withDefaults(defineProps<{
   steps: WizardStep[]
   modelValue?: number
   saving?: boolean
   submitLabel?: string
+  stepStates?: Record<string, WizardStepState>
 }>(), {
   modelValue: 0,
   saving: false,
   submitLabel: 'Enregistrer',
+  stepStates: () => ({}),
 })
 
 const emit = defineEmits<{
@@ -159,7 +174,6 @@ const emit = defineEmits<{
 
 const currentStep = ref(props.modelValue)
 const direction = ref<'forward' | 'backward'>('forward')
-const visitedSteps = ref(new Set<number>([0]))
 
 watch(() => props.modelValue, (v) => {
   currentStep.value = v
@@ -175,7 +189,16 @@ const progressPercent = computed(() =>
 
 function isStepCompleted(idx: number) {
   if (idx >= currentStep.value) return false
-  return visitedSteps.value.has(idx)
+  const key = props.steps[idx]?.key
+  return !!key && props.stepStates[key] === 'complete'
+}
+
+function stepStateLabel(key: string) {
+  const state = props.stepStates[key]
+  if (state === 'complete') return ' · terminé'
+  if (state === 'partial') return ' · en cours'
+  if (state === 'warning') return ' · à vérifier'
+  return ''
 }
 
 function getStepClass(idx: number) {
@@ -185,6 +208,10 @@ function getStepClass(idx: number) {
   if (isStepCompleted(idx)) {
     return 'border-transparent text-fc-red-300'
   }
+  const key = props.steps[idx]?.key
+  const state = key ? props.stepStates[key] : undefined
+  if (state === 'warning') return 'border-transparent text-red-500'
+  if (state === 'partial') return 'border-transparent text-amber-600'
   return 'border-transparent text-gray-400'
 }
 
@@ -195,14 +222,23 @@ function getStepBadgeClass(idx: number) {
   if (isStepCompleted(idx)) {
     return 'bg-fc-red-100 text-fc-red'
   }
+  const key = props.steps[idx]?.key
+  const state = key ? props.stepStates[key] : undefined
+  if (state === 'warning') return 'bg-red-100 text-red-600'
+  if (state === 'partial') return 'bg-amber-100 text-amber-700'
+  if (state === 'complete') return 'bg-emerald-100 text-emerald-700'
   return 'bg-gray-100 text-gray-400'
+}
+
+function selectStep(event: Event) {
+  const value = Number((event.target as HTMLSelectElement).value)
+  if (Number.isInteger(value)) goToStep(value)
 }
 
 function goToStep(idx: number) {
   if (idx === currentStep.value) return
   direction.value = idx > currentStep.value ? 'forward' : 'backward'
   currentStep.value = idx
-  visitedSteps.value.add(idx)
   emit('update:modelValue', idx)
   emit('step-change', idx)
 }

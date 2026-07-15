@@ -68,8 +68,18 @@
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
-            {{ pendingCount }} en attente
+            {{ pendingCount }} en attente sur cet appareil
           </div>
+
+          <NuxtLink
+            v-if="errorCount > 0"
+            to="/admin/visites"
+            class="flex h-10 items-center gap-1 rounded-xl border border-red-200 bg-red-50 px-3 text-sm font-medium text-red-700 transition hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-950/50"
+            :aria-label="`${errorCount} synchronisation(s) en erreur sur cet appareil, ouvrir les visites`"
+          >
+            <UIcon name="i-heroicons-exclamation-triangle" class="h-4 w-4" aria-hidden="true" />
+            {{ errorCount }} erreur{{ errorCount > 1 ? 's' : '' }} sur cet appareil
+          </NuxtLink>
 
           <!-- Dark mode toggle -->
           <DarkModeToggle />
@@ -95,9 +105,37 @@
       <!-- Page content -->
       <main id="admin-main-content" class="flex-1 px-4 py-6 dark:text-slate-200 sm:px-6 lg:px-8 lg:py-8">
         <div class="mx-auto w-full max-w-[1600px]">
-          <slot />
+          <AdminTableEnhancer>
+            <slot />
+          </AdminTableEnhancer>
         </div>
       </main>
+
+      <!-- Footer -->
+      <footer class="border-t border-slate-200/80 px-4 py-4 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400 sm:px-6 lg:px-8">
+        <div class="mx-auto flex w-full max-w-[1600px] flex-col items-center gap-2 sm:flex-row sm:justify-between">
+          <p>
+            Développé par
+            <a
+              href="https://bigfive.solutions"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="font-semibold text-fc-red hover:underline"
+            >Big Five</a>
+          </p>
+          <div class="flex items-center gap-3">
+            <a
+              href="mailto:jeanluc@bigfiveabidjan.com"
+              class="inline-flex items-center gap-1 transition hover:text-fc-red"
+            >
+              <UIcon name="i-heroicons-envelope" class="h-3.5 w-3.5" aria-hidden="true" />
+              Contacter le support
+            </a>
+            <span class="text-slate-300 dark:text-slate-600">·</span>
+            <span class="tabular-nums">Version 3.0</span>
+          </div>
+        </div>
+      </footer>
     </div>
   </div>
 </template>
@@ -105,7 +143,7 @@
 <script setup lang="ts">
 const route = useRoute()
 const authStore = useAuthStore()
-const { isOnline, pendingCount } = useOfflineSync()
+const { isOnline, pendingCount, errorCount } = useOfflineSync()
 const visitesStore = useVisitesStore()
 
 const sidebarCollapsed = ref(false)

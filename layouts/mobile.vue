@@ -77,7 +77,8 @@
         <span
           v-if="pendingCount > 0"
           class="rounded-full bg-amber-400 px-2 py-1 text-xs font-bold text-amber-950"
-          :aria-label="`${pendingCount} synchronisation(s) en attente`"
+          :title="syncTooltip"
+          :aria-label="syncTooltip"
         >
           {{ pendingCount }}
         </span>
@@ -99,7 +100,7 @@
 
 <script setup lang="ts">
 const route = useRoute()
-const { isOnline, pendingCount } = useOfflineSync()
+const { isOnline, pendingCount, lastSyncAt } = useOfflineSync()
 const { currentPosition, isLocating, positionError, requestPosition } = useUserGeolocation()
 const { isTracking: isTrackingTournee, pointCount: tourneePointCount, autoStart, stopTournee } = useTournee()
 const tourneeUser = useSupabaseUser()
@@ -129,6 +130,12 @@ const gpsTooltip = computed(() => {
   }
   if (positionError.value) return positionError.value
   return 'Position GPS non disponible'
+})
+
+const syncTooltip = computed(() => {
+  if (pendingCount.value > 0) return `${pendingCount.value} synchronisation(s) en attente`
+  if (lastSyncAt.value) return `Dernière synchronisation : ${new Date(lastSyncAt.value).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+  return isOnline.value ? 'Données synchronisées' : 'Mode hors ligne'
 })
 
 function refreshGps() {
