@@ -82,6 +82,17 @@
         >
           {{ pendingCount }}
         </span>
+
+        <!-- Account / logout menu -->
+        <UDropdown :items="userMenuItems" :popper="{ placement: 'bottom-end' }">
+          <button
+            type="button"
+            class="touch-target inline-flex items-center justify-center rounded-xl transition-colors hover:bg-white/10 active:bg-white/15"
+            aria-label="Compte et déconnexion"
+          >
+            <UIcon name="i-heroicons-user-circle" class="w-6 h-6" />
+          </button>
+        </UDropdown>
       </div>
     </header>
 
@@ -100,10 +111,41 @@
 
 <script setup lang="ts">
 const route = useRoute()
+<<<<<<< HEAD
 const { isOnline, pendingCount, lastSyncAt } = useOfflineSync()
+=======
+const authStore = useAuthStore()
+const { isOnline, pendingCount } = useOfflineSync()
+>>>>>>> 8bce61d (feat: ajout du menu utilisateur avec option de déconnexion et confirmation pour les visites non synchronisées)
 const { currentPosition, isLocating, positionError, requestPosition } = useUserGeolocation()
 const { isTracking: isTrackingTournee, pointCount: tourneePointCount, autoStart, stopTournee } = useTournee()
 const tourneeUser = useSupabaseUser()
+
+// Déconnexion : logout() purge le cache offline (dont la file d'attente des
+// visites non synchronisées), d'où le garde-fou si pendingCount > 0.
+async function handleLogout() {
+  if (pendingCount.value > 0) {
+    const ok = window.confirm(
+      `${pendingCount.value} visite(s) non synchronisée(s) seront perdues à la déconnexion. Se déconnecter quand même ?`,
+    )
+    if (!ok) return
+  }
+  await authStore.logout()
+  await navigateTo('/login')
+}
+
+const userMenuItems = computed(() => [
+  [{
+    label: authStore.profile?.nom || authStore.profile?.email || 'Mon compte',
+    icon: 'i-heroicons-user-circle',
+    disabled: true,
+  }],
+  [{
+    label: 'Déconnexion',
+    icon: 'i-heroicons-arrow-right-on-rectangle',
+    click: handleLogout,
+  }],
+])
 
 // Tournée automatique (natif) : démarre ou reprend dès que l'utilisateur
 // est connecté, s'arrête au logout.
