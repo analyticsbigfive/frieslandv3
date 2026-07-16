@@ -105,6 +105,7 @@
       <!-- Page content -->
       <main id="admin-main-content" class="flex-1 px-4 py-6 dark:text-slate-200 sm:px-6 lg:px-8 lg:py-8">
         <div class="mx-auto w-full max-w-[1600px]">
+          <AdminSectionTabs class="mb-6" />
           <AdminTableEnhancer>
             <slot />
           </AdminTableEnhancer>

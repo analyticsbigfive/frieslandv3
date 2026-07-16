@@ -1,6 +1,5 @@
 <template>
   <div class="space-y-6">
-    <AdminSectionTabs section="visibilite" />
     <header class="space-y-1">
       <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-fc-red">Perfect Store · Visibilité</p>
       <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Visibilité extérieure — récapitulatif</h1>
