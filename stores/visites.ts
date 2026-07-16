@@ -36,7 +36,7 @@ export const useVisitesStore = defineStore('visites', () => {
     try {
       let query = supabase
         .from('visites')
-        .select('*, pdv:pdv_id(pdv_id, nom_pdv, zone, secteur, region, canal, sous_categorie_pdv, image_url)', { count: 'exact' })
+        .select('*, pdv:pdv_id(pdv_id, nom_pdv, zone, quartier, region, canal, sous_categorie_pdv, image_url)', { count: 'exact' })
         .order('date_visite', { ascending: false })
 
       if (filters.value.dateFrom) {
@@ -76,7 +76,7 @@ export const useVisitesStore = defineStore('visites', () => {
   async function fetchVisiteById(id: string) {
     const { data, error } = await supabase
       .from('visites')
-      .select('*, pdv:pdv_id(nom_pdv, zone, secteur, region)')
+      .select('*, pdv:pdv_id(nom_pdv, zone, quartier, region)')
       .eq('visite_id', id)
       .single()
 
@@ -88,7 +88,7 @@ export const useVisitesStore = defineStore('visites', () => {
   async function fetchVisiteByDatabaseId(id: string) {
     const { data, error } = await supabase
       .from('visites')
-      .select('*, pdv:pdv_id(pdv_id, nom_pdv, zone, secteur, region, canal, sous_categorie_pdv, image_url)')
+      .select('*, pdv:pdv_id(pdv_id, nom_pdv, zone, quartier, region, canal, sous_categorie_pdv, image_url)')
       .eq('id', id)
       .single()
 

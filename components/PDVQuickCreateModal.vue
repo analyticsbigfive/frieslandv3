@@ -42,17 +42,17 @@
             />
           </UFormGroup>
 
-          <UFormGroup label="Secteur" :required="secteurOptions.length > 0">
+          <UFormGroup label="Quartier" :required="quartierOptions.length > 0">
             <USelectMenu
-              v-if="secteurOptions.length > 0"
-              v-model="form.secteur"
-              :options="secteurOptions"
-              placeholder="Choisir un secteur"
+              v-if="quartierOptions.length > 0"
+              v-model="form.quartier"
+              :options="quartierOptions"
+              placeholder="Choisir un quartier"
             />
             <UInput
               v-else
-              v-model="form.secteur"
-              placeholder="Secteur"
+              v-model="form.quartier"
+              placeholder="Quartier"
             />
           </UFormGroup>
 
@@ -166,17 +166,25 @@ const isOpen = computed({
 const isMerchandiser = computed(() => authStore.profile?.role === 'merchandiser')
 const defaultZone = computed(() => authStore.profile?.zone_assignee || '')
 const defaultRegion = computed(() => authStore.profile?.region || '')
-const secteurOptions = computed(() => authStore.profile?.secteurs_assignes?.filter(Boolean) || [])
+const quartierOptions = computed(() => authStore.profile?.quartiers_assignes?.filter(Boolean) || [])
 
-// Nouvelle organisation géo : zone = territoire (name), secteur = area (name).
-// Le distributeur découle de l'area sélectionnée (zone_distributeur), avec repli
-// sur le territoire ; les nationaux sont toujours proposés (« sur tous les territoires »).
-const { distributeurs, territories, areas, territoireDistributeurs, zoneDistributeurs, posTypes, fetchReferentiels } = useReferentiels()
+// Géo Système B : zone = territoire (name), quartier = quartier.nom. L'area est
+// résolue depuis le quartier choisi (quartier -> zone_id -> zone.code) ; le
+// distributeur découle de cette area (zone_distributeur), repli territoire ;
+// les nationaux sont toujours proposés.
+const { distributeurs, territories, areas, quartiers, territoireDistributeurs, zoneDistributeurs, posTypes, fetchReferentiels } = useReferentiels()
 
 const currentTerritory = computed(() => territories.value.find(t => t.name === form.zone))
 const territoryCode = computed(() => currentTerritory.value?.code || '')
+const scopedAreas = computed(() => areas.value.filter(a => !territoryCode.value || a.territory_code === territoryCode.value))
+const selectedQuartier = computed(() => {
+  const zoneIds = new Set(scopedAreas.value.map(a => a.id))
+  return quartiers.value.find(q => q.nom === form.quartier && zoneIds.has(q.zone_id))
+})
 const selectedArea = computed(() =>
-  areas.value.find(a => a.name === form.secteur && (!territoryCode.value || a.territory_code === territoryCode.value))
+  scopedAreas.value.find(a => a.id === selectedQuartier.value?.zone_id)
+  // Repli legacy : profil dont quartiers_assignes contient encore un nom d'area.
+  || scopedAreas.value.find(a => a.name === form.quartier)
 )
 
 const nationalDistributors = computed(() => distributeurs.value.filter(d => d.national))
@@ -243,7 +251,7 @@ const form = reactive({
   categorie_pdv: '' as string,
   sous_categorie_pdv: '' as string,
   zone: '',
-  secteur: '',
+  quartier: '',
   region: '',
   distributor_name: '',
   adressage: '',
@@ -260,7 +268,7 @@ function resetForm() {
   form.categorie_pdv = ''
   form.sous_categorie_pdv = ''
   form.zone = defaultZone.value
-  form.secteur = secteurOptions.value[0] || ''
+  form.quartier = quartierOptions.value[0] || ''
   form.region = defaultRegion.value
   form.distributor_name = scopedDistributors.value[0]?.name || nationalDistributors.value[0]?.name || ''
   form.adressage = ''
@@ -320,7 +328,7 @@ function buildPayload() {
     autre_sous_categorie: null,
     region: form.region.trim(),
     zone: form.zone.trim(),
-    secteur: form.secteur.trim(),
+    quartier: form.quartier.trim(),
     territory_code: territoryCode.value || null,
     area_code: selectedArea.value?.code || null,
     distributor_name: form.distributor_name || null,
@@ -359,10 +367,10 @@ async function handleSave() {
     return
   }
 
-  if (secteurOptions.value.length > 0 && !form.secteur.trim()) {
+  if (quartierOptions.value.length > 0 && !form.quartier.trim()) {
     toast.add({
-      title: 'Secteur requis',
-      description: 'Choisissez un secteur pour que le PDV soit rattaché à votre zone.',
+      title: 'Quartier requis',
+      description: 'Choisissez un quartier pour que le PDV soit rattaché à votre zone.',
       color: 'red',
     })
     return

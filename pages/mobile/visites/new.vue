@@ -880,8 +880,8 @@ const filteredPdvList = computed(() => {
   if (profile.zone_assignee) {
     list = list.filter(p => p.zone === profile.zone_assignee)
   }
-  if (profile.secteurs_assignes && profile.secteurs_assignes.length > 0) {
-    list = list.filter(p => profile.secteurs_assignes!.includes(p.secteur))
+  if (profile.quartiers_assignes && profile.quartiers_assignes.length > 0) {
+    list = list.filter(p => profile.quartiers_assignes!.includes(p.quartier))
   }
   // Toujours inclure le PDV pré-sélectionné via routing
   if (preselectedPdvId.value && !list.some(p => p.pdv_id === preselectedPdvId.value)) {

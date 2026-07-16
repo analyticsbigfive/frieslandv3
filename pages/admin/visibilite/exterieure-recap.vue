@@ -53,7 +53,7 @@
               </th>
               <th>Type</th>
               <th>Zone</th>
-              <th>Secteur</th>
+              <th>Quartier</th>
               <th v-for="col in extColumns" :key="col.code" class="text-center">{{ col.label }}</th>
             </tr>
           </thead>
@@ -67,7 +67,7 @@
               </td>
               <td>{{ row.type }}</td>
               <td>{{ row.zone }}</td>
-              <td>{{ row.secteur }}</td>
+              <td>{{ row.quartier }}</td>
               <td v-for="col in extColumns" :key="col.code + idx" class="text-center">
                 <span v-if="!row.applicable[col.code]" class="text-slate-300 dark:text-slate-600">—</span>
                 <UIcon
@@ -124,7 +124,7 @@ const tableRows = computed(() => filteredVisites.value.map(v => ({
   image_url: (v.pdv as any)?.image_url || null,
   type: v.pdv?.sous_categorie_pdv || '',
   zone: v.pdv?.zone || '',
-  secteur: v.pdv?.secteur || '',
+  quartier: v.pdv?.quartier || '',
   standards: standardsOf(v),
   applicable: applicable(v.pdv?.sous_categorie_pdv, 'exterieure'),
 })).sort((a, b) => {

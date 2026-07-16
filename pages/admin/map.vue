@@ -106,7 +106,7 @@ function addMarkers() {
 
     const zoneP = document.createElement('p')
     zoneP.className = 'text-gray-500'
-    zoneP.textContent = `${pdv.zone || ''} - ${pdv.secteur || ''}`
+    zoneP.textContent = `${pdv.zone || ''} - ${pdv.quartier || ''}`
     el.appendChild(zoneP)
 
     const canalP = document.createElement('p')

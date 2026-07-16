@@ -137,7 +137,7 @@
                 </div>
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ rp.pdv?.nom_pdv || rp.pdv_id }}</p>
-                  <p class="text-xs text-gray-400">{{ rp.pdv?.zone || '' }} {{ rp.pdv?.secteur ? `— ${rp.pdv.secteur}` : '' }}</p>
+                  <p class="text-xs text-gray-400">{{ rp.pdv?.zone || '' }} {{ rp.pdv?.quartier ? `— ${rp.pdv.quartier}` : '' }}</p>
                 </div>
                 <div class="flex items-center gap-2">
                   <template v-for="(val, key) in rp.objectifs" :key="key">
@@ -280,7 +280,7 @@
 
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ tp.pdv?.nom_pdv || tp.pdv_id }}</p>
-                  <p class="text-xs text-gray-400">{{ tp.pdv?.zone || '' }} {{ tp.pdv?.secteur ? `— ${tp.pdv.secteur}` : '' }}</p>
+                  <p class="text-xs text-gray-400">{{ tp.pdv?.zone || '' }} {{ tp.pdv?.quartier ? `— ${tp.pdv.quartier}` : '' }}</p>
                 </div>
 
                 <!-- Objectifs badges -->
@@ -416,7 +416,7 @@
             <USelectMenu v-model="pdvFilter.canal" :options="pdvFilterCanalOptions" option-attribute="label" value-attribute="value" placeholder="Canal" size="sm" />
             <USelectMenu v-model="pdvFilter.region" :options="pdvFilterRegionOptions" option-attribute="label" value-attribute="value" placeholder="Région" size="sm" />
             <USelectMenu v-model="pdvFilter.zone" :options="pdvFilterZoneOptions" option-attribute="label" value-attribute="value" placeholder="Zone" size="sm" />
-            <USelectMenu v-model="pdvFilter.secteur" :options="pdvFilterSecteurOptions" option-attribute="label" value-attribute="value" placeholder="Secteur" size="sm" />
+            <USelectMenu v-model="pdvFilter.quartier" :options="pdvFilterQuartierOptions" option-attribute="label" value-attribute="value" placeholder="Quartier" size="sm" />
           </div>
           <div class="flex items-center justify-between mb-2">
             <span class="text-xs text-gray-400">{{ filteredAvailablePdv.length }} PDV disponibles</span>
@@ -454,7 +454,7 @@
                 @change="togglePdvSelection(p.pdv_id)"
               />
               <span class="text-sm text-gray-900 dark:text-gray-100 flex-1 min-w-0 truncate">{{ p.nom_pdv }}</span>
-              <span class="text-xs text-gray-400 shrink-0">{{ [p.zone, p.secteur].filter(Boolean).join(' / ') }}</span>
+              <span class="text-xs text-gray-400 shrink-0">{{ [p.zone, p.quartier].filter(Boolean).join(' / ') }}</span>
             </label>
             <p v-if="!filteredPdvForSelection.length" class="px-3 py-4 text-center text-xs text-gray-400">
               Aucun PDV pour ces filtres
@@ -914,8 +914,8 @@ const merchandiserOptions = computed(() =>
     .map(u => ({ value: u.id, label: `${u.nom || u.email} (${u.zone_assignee || 'N/A'})` }))
 )
 
-// ---- Préselection PDV par colonnes (canal / région / zone / secteur) ----
-const pdvFilter = reactive({ canal: '', region: '', zone: '', secteur: '' })
+// ---- Préselection PDV par colonnes (canal / région / zone / quartier) ----
+const pdvFilter = reactive({ canal: '', region: '', zone: '', quartier: '' })
 
 function filterOpts(values: (string | null | undefined)[]) {
   return [
@@ -933,10 +933,10 @@ const pdvFilterZoneOptions = computed(() =>
     .filter(p => (!pdvFilter.canal || p.canal === pdvFilter.canal) && (!pdvFilter.region || p.region === pdvFilter.region))
     .map(p => p.zone))
 )
-const pdvFilterSecteurOptions = computed(() =>
+const pdvFilterQuartierOptions = computed(() =>
   filterOpts(pdvList.value
     .filter(p => (!pdvFilter.canal || p.canal === pdvFilter.canal) && (!pdvFilter.region || p.region === pdvFilter.region) && (!pdvFilter.zone || p.zone === pdvFilter.zone))
-    .map(p => p.secteur))
+    .map(p => p.quartier))
 )
 
 const filteredAvailablePdv = computed(() => {
@@ -946,30 +946,30 @@ const filteredAvailablePdv = computed(() => {
     (!pdvFilter.canal || p.canal === pdvFilter.canal) &&
     (!pdvFilter.region || p.region === pdvFilter.region) &&
     (!pdvFilter.zone || p.zone === pdvFilter.zone) &&
-    (!pdvFilter.secteur || p.secteur === pdvFilter.secteur)
+    (!pdvFilter.quartier || p.quartier === pdvFilter.quartier)
   )
 })
 
 const filteredAvailablePdvOptions = computed(() =>
   filteredAvailablePdv.value.map(p => ({
     value: p.pdv_id,
-    label: `${p.nom_pdv} — ${[p.zone, p.secteur].filter(Boolean).join(' / ') || p.region || ''}`,
+    label: `${p.nom_pdv} — ${[p.zone, p.quartier].filter(Boolean).join(' / ') || p.region || ''}`,
   }))
 )
 
-const hasPdvFilter = computed(() => !!(pdvFilter.canal || pdvFilter.region || pdvFilter.zone || pdvFilter.secteur))
+const hasPdvFilter = computed(() => !!(pdvFilter.canal || pdvFilter.region || pdvFilter.zone || pdvFilter.quartier))
 
 function clearPdvFilter() {
   pdvFilter.canal = ''
   pdvFilter.region = ''
   pdvFilter.zone = ''
-  pdvFilter.secteur = ''
+  pdvFilter.quartier = ''
 }
 
 // Reset filtres enfants quand un filtre parent change
-watch(() => pdvFilter.canal, () => { pdvFilter.region = ''; pdvFilter.zone = ''; pdvFilter.secteur = '' })
-watch(() => pdvFilter.region, () => { pdvFilter.zone = ''; pdvFilter.secteur = '' })
-watch(() => pdvFilter.zone, () => { pdvFilter.secteur = '' })
+watch(() => pdvFilter.canal, () => { pdvFilter.region = ''; pdvFilter.zone = ''; pdvFilter.quartier = '' })
+watch(() => pdvFilter.region, () => { pdvFilter.zone = ''; pdvFilter.quartier = '' })
+watch(() => pdvFilter.zone, () => { pdvFilter.quartier = '' })
 
 function addFilteredPDV() {
   const usedIds = new Set(newRouting.pdvItems.map(i => i.pdv_id))
@@ -986,7 +986,7 @@ const filteredPdvForSelection = computed(() =>
     (!pdvFilter.canal || p.canal === pdvFilter.canal) &&
     (!pdvFilter.region || p.region === pdvFilter.region) &&
     (!pdvFilter.zone || p.zone === pdvFilter.zone) &&
-    (!pdvFilter.secteur || p.secteur === pdvFilter.secteur)
+    (!pdvFilter.quartier || p.quartier === pdvFilter.quartier)
   )
 )
 
@@ -1380,7 +1380,7 @@ onMounted(async () => {
   const { fetchUsers: fetchCachedUsers } = useUsersCache()
   const [cachedUsers, pdvResult] = await Promise.all([
     fetchCachedUsers(),
-    supabase.from('pdv').select('pdv_id, nom_pdv, canal, region, zone, secteur, geolocation_lat, geolocation_lng').eq('is_active', true).order('nom_pdv'),
+    supabase.from('pdv').select('pdv_id, nom_pdv, canal, region, zone, quartier, geolocation_lat, geolocation_lng').eq('is_active', true).order('nom_pdv'),
   ])
   users.value = cachedUsers.filter(u => u.is_active !== false)
   pdvList.value = pdvResult.data || []

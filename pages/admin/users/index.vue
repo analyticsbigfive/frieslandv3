@@ -142,7 +142,7 @@
             <h3 id="user-scope-title" class="text-sm font-semibold text-slate-900 dark:text-white">
               Périmètre terrain
             </h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400">Définissez la zone et les secteurs accessibles à l’utilisateur.</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Définissez le territoire et les quartiers accessibles à l’utilisateur.</p>
           </div>
         </div>
 
@@ -194,13 +194,13 @@
             />
           </UFormGroup>
 
-          <UFormGroup label="Secteurs assignés" help="Laissez vide pour autoriser tout le territoire." size="md">
+          <UFormGroup label="Quartiers assignés" help="Laissez vide pour autoriser tout le territoire." size="md">
             <USelectMenu
-              v-model="userForm.secteurs_assignes"
-              :options="secteurOptions"
+              v-model="userForm.quartiers_assignes"
+              :options="quartierOptions"
               multiple
               :disabled="!userForm.territory_code"
-              placeholder="Sélectionner les secteurs"
+              placeholder="Sélectionner les quartiers"
               searchable
               searchable-placeholder="Rechercher..."
               size="md"
@@ -254,7 +254,7 @@ const userForm = ref({
   role: 'merchandiser' as UserRole,
   zone_assignee: '',
   region: '',
-  secteurs_assignes: [] as string[],
+  quartiers_assignes: [] as string[],
   telephone: '',
   // Cascade géo (UI) — non stockées telles quelles ; on dérive zone_assignee/region au save.
   region_code: '',
@@ -262,9 +262,10 @@ const userForm = ref({
   territory_code: '',
 })
 
-// Cascade géo Région → Sous-région → Territoire → Secteurs (areas), comme le formulaire PDV.
-// Scoping pdv : pdv.zone = territoire.nom, pdv.secteur = area.nom, pdv.region = sous_region.nom_affichage.
-const { regions, subRegions, territories, areas, fetchReferentiels } = useReferentiels()
+// Cascade géo Division → Sous-région → Territoire → Quartiers, alignée sur la
+// hiérarchie référentiel. Scoping pdv : pdv.zone = territoire.nom,
+// pdv.quartier = quartier.nom, pdv.region = sous_region.nom_affichage.
+const { regions, subRegions, territories, areas, quartiers, fetchReferentiels } = useReferentiels()
 const regionOptions = computed(() => regions.value.map(r => ({ value: r.code, label: r.nom_affichage ? `${r.nom_affichage} · ${r.name}` : r.name })))
 const subRegionOptions = computed(() => subRegions.value
   .filter(s => s.region_code === userForm.value.region_code)
@@ -272,27 +273,29 @@ const subRegionOptions = computed(() => subRegions.value
 const territoryOptions = computed(() => territories.value
   .filter(t => t.sub_region_code === userForm.value.sub_region_code)
   .map(t => ({ value: t.code, label: t.name })))
-const secteurOptions = computed(() => [...new Set(areas.value
-  .filter(a => a.territory_code === userForm.value.territory_code)
-  .map(a => a.name).filter(Boolean))].sort())
+// Quartiers du territoire sélectionné (via les areas -> zone_id), triés, dédupliqués.
+const quartierOptions = computed(() => {
+  const zoneIds = new Set(areas.value.filter(a => a.territory_code === userForm.value.territory_code).map(a => a.id))
+  return [...new Set(quartiers.value.filter(q => zoneIds.has(q.zone_id)).map(q => q.nom).filter(Boolean))].sort()
+})
 
 function onRegionChange() {
   userForm.value.sub_region_code = ''
   userForm.value.territory_code = ''
   userForm.value.zone_assignee = ''
-  userForm.value.secteurs_assignes = []
+  userForm.value.quartiers_assignes = []
 }
 function onSubRegionChange() {
   userForm.value.territory_code = ''
   userForm.value.zone_assignee = ''
-  userForm.value.secteurs_assignes = []
+  userForm.value.quartiers_assignes = []
 }
 function onTerritoryChange() {
   const terr = territories.value.find(t => t.code === userForm.value.territory_code)
   const sr = subRegions.value.find(s => s.code === userForm.value.sub_region_code)
   userForm.value.zone_assignee = terr?.name || ''
   userForm.value.region = sr?.nom_affichage || sr?.name || userForm.value.region || ''
-  userForm.value.secteurs_assignes = []
+  userForm.value.quartiers_assignes = []
 }
 // Édition : reconstruit region_code/sub_region_code/territory_code depuis zone_assignee (nom territoire).
 function hydrateUserGeo() {
@@ -307,7 +310,7 @@ function openCreateUser() {
   editingUser.value = null
   userForm.value = {
     nom: '', email: '', password: '', role: 'merchandiser',
-    zone_assignee: '', region: '', secteurs_assignes: [], telephone: '',
+    zone_assignee: '', region: '', quartiers_assignes: [], telephone: '',
     region_code: '', sub_region_code: '', territory_code: '',
   }
   showCreate.value = true
@@ -356,7 +359,7 @@ function getUserActions(user: Profile) {
         editingUser.value = user
         userForm.value.password = ''
         Object.assign(userForm.value, user)
-        userForm.value.secteurs_assignes = (user.secteurs_assignes || []).filter(Boolean)
+        userForm.value.quartiers_assignes = (user.quartiers_assignes || []).filter(Boolean)
         hydrateUserGeo()
         showCreate.value = true
       },
@@ -398,7 +401,7 @@ async function handleSaveUser() {
     const sr = subRegions.value.find(s => s.code === userForm.value.sub_region_code)
     const zoneAssignee = terr?.name || userForm.value.zone_assignee || null
     const region = sr?.nom_affichage || sr?.name || userForm.value.region || null
-    const secteurs = (userForm.value.secteurs_assignes || []).filter(Boolean)
+    const quartiers = (userForm.value.quartiers_assignes || []).filter(Boolean)
 
     if (editingUser.value) {
       const { error } = await supabase
@@ -408,7 +411,7 @@ async function handleSaveUser() {
           role: userForm.value.role,
           zone_assignee: zoneAssignee,
           region,
-          secteurs_assignes: secteurs,
+          quartiers_assignes: quartiers,
           telephone: userForm.value.telephone,
         })
         .eq('id', editingUser.value.id)
@@ -426,7 +429,7 @@ async function handleSaveUser() {
       // register ne pose pas la géo : on complète le profil créé (repéré par email).
       const { error: geoErr } = await supabase
         .from('profiles')
-        .update({ zone_assignee: zoneAssignee, region, secteurs_assignes: secteurs, telephone: userForm.value.telephone })
+        .update({ zone_assignee: zoneAssignee, region, quartiers_assignes: quartiers, telephone: userForm.value.telephone })
         .eq('email', userForm.value.email)
       if (geoErr) throw geoErr
       toast.add({ title: 'Utilisateur créé' })

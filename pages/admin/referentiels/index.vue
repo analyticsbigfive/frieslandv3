@@ -102,7 +102,7 @@
       :title="`${editing ? 'Modifier' : 'Ajouter'} — ${activeDef.label}`"
       description="Renseignez les propriétés de cet élément de référentiel."
       icon="i-heroicons-circle-stack"
-      width="sm:max-w-xl"
+      width="sm:max-w-3xl"
       body-class="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2"
       required-note
     >
@@ -219,6 +219,8 @@ function rebuildMaps() {
   maps.categorie_produit = byKey('categorie_produit', 'id')
   maps.reference_produit = byKey('reference_produit', 'id')
   maps.element_visibilite = byKey('element_visibilite', 'id')
+  maps.zoneDistrib = new Map((store.zone_distributeur || []).map((r: any) => [r.zone_id, r.distributeur_id]))
+  maps.quartierCount = (store.quartier || []).reduce((m: Map<any, number>, q: any) => m.set(q.zone_id, (m.get(q.zone_id) || 0) + 1), new Map())
 }
 
 // Option builders ----------------------------------------------------------
@@ -229,7 +231,7 @@ const sousRegionOpts = () => opt(store.sous_region || [], r => r.code, r => `${r
 const territoireOpts = () => opt(store.territoire || [], r => r.code, r => `${r.nom} · ${r.code}`)
 const territoireIdOpts = () => opt(store.territoire || [], r => r.id, r => `${r.nom} · ${r.code}`)
 const distributeurIdOpts = () => opt(store.distributeur || [], r => r.id, r => r.nom)
-const zoneIdOpts = () => opt(store.zone || [], r => r.id, r => `${r.nom} · ${r.territoire_code}`)
+const zoneIdOpts = () => opt(store.zone || [], r => r.id, r => `${r.code} · ${maps.territoire_code?.get(r.territoire_code)?.nom || r.territoire_code}`)
 const categoriePdvOpts = () => opt(store.categorie_pdv || [], r => r.id, r => `${r.nom}${r.canal ? ' · ' + r.canal : ''}`)
 const typePdvOpts = () => opt(store.type_pdv || [], r => r.id, r => r.nom)
 const categorieProduitOpts = () => opt(store.categorie_produit || [], r => r.id, r => `${r.nom} (${r.code})`)
@@ -241,7 +243,14 @@ const refNameOf = (id: number) => maps.reference_produit?.get(id)?.nom || `#${id
 const typePdvNameOf = (id: number) => maps.type_pdv?.get(id)?.nom || `#${id}`
 const territoireNameOf = (id: number) => maps.territoire_id?.get(id)?.nom || `#${id}`
 const distributeurNameOf = (id: number) => maps.distributeur_id?.get(id)?.nom || `#${id}`
-const zoneNameOf = (id: number) => { const z = maps.zone_id?.get(id); return z ? `${z.nom} · ${z.territoire_code}` : `#${id}` }
+// Une area (`zone`) n'est plus rendue via son `nom` (bloc de quartiers collés) :
+// on l'affiche par code + territoire, et les quartiers vivent dans leur propre
+// référentiel « Quartiers ». zoneNameOf reste pour le picker (options).
+const zoneOf = (id: number) => maps.zone_id?.get(id)
+const zoneCodeOf = (id: number) => zoneOf(id)?.code || `#${id}`
+const zoneTerrLabelOf = (id: number) => { const z = zoneOf(id); return z ? (maps.territoire_code?.get(z.territoire_code)?.nom || z.territoire_code) : '—' }
+const zoneDistribOf = (id: number) => { const did = maps.zoneDistrib?.get(id); return did ? distributeurNameOf(did) : '—' }
+const quartierCountOf = (id: number) => maps.quartierCount?.get(id) || 0
 const elementVisNameOf = (id: number) => { const e = maps.element_visibilite?.get(id); return e ? `${e.nom} (${e.segment})` : `#${id}` }
 
 const tierColor = (v: string) => v === 'MT' ? 'purple' : 'blue'
@@ -337,25 +346,49 @@ const defs: Def[] = [
   },
   {
     id: 'zone', section: 'geo', label: 'Zones / Areas', table: 'zone',
-    select: 'id, code, nom, territoire_code', order: q => q.order('territoire_code').order('nom'),
+    select: 'id, code, nom, territoire_code', order: q => q.order('territoire_code').order('code'),
     columns: [
-      { label: 'Code', cell: r => r.code || '—', kind: 'mono' },
-      { label: 'Zone / Area', cell: r => r.nom },
+      { label: 'Code area', cell: r => r.code || '—', kind: 'mono' },
       { label: 'Territoire', cell: r => maps.territoire_code?.get(r.territoire_code)?.nom || r.territoire_code, muted: true },
+      { label: 'Distributeur', cell: r => zoneDistribOf(r.id), muted: true },
+      { label: 'Quartiers', cell: r => quartierCountOf(r.id), align: 'c', kind: 'num' },
     ],
     fields: [
-      { key: 'code', label: 'Code Area', type: 'text' },
-      { key: 'nom', label: 'Nom de la zone', type: 'text', required: true },
+      { key: 'code', label: 'Code Area', type: 'text', required: true },
+      { key: 'nom', label: 'Libellé area (legacy)', type: 'text', hint: 'Ancien libellé collé — les quartiers se gèrent dans le référentiel « Quartiers ».' },
       { key: 'territoire_code', label: 'Territoire', type: 'select', opts: territoireOpts, required: true },
     ],
     blank: () => ({ code: '', nom: '', territoire_code: '' }),
     fill: r => ({ ...r }),
-    rowKey: r => String(r.id), search: r => `${r.code} ${r.nom} ${r.territoire_code}`.toLowerCase(),
-    valid: f => !!f.nom && !!f.territoire_code,
+    rowKey: r => String(r.id), search: r => `${r.code} ${maps.territoire_code?.get(r.territoire_code)?.nom || r.territoire_code}`.toLowerCase(),
+    valid: f => !!f.code && !!f.territoire_code,
     save: (f, e) => e
-      ? supabase.from('zone').update({ code: f.code || null, nom: f.nom, territoire_code: f.territoire_code }).eq('id', f.id)
-      : supabase.from('zone').insert({ code: f.code || null, nom: f.nom, territoire_code: f.territoire_code }),
+      ? supabase.from('zone').update({ code: f.code || null, nom: f.nom || f.code, territoire_code: f.territoire_code }).eq('id', f.id)
+      : supabase.from('zone').insert({ code: f.code || null, nom: f.nom || f.code, territoire_code: f.territoire_code }),
     del: r => supabase.from('zone').delete().eq('id', r.id),
+  },
+  {
+    id: 'quartier', section: 'geo', label: 'Quartiers', table: 'quartier',
+    select: 'id, zone_id, nom, ordre', order: q => q.order('zone_id').order('ordre'),
+    columns: [
+      { label: 'Territoire', cell: r => zoneTerrLabelOf(r.zone_id), muted: true },
+      { label: 'Code area', cell: r => zoneCodeOf(r.zone_id), kind: 'mono' },
+      { label: 'Quartier', cell: r => r.nom },
+      { label: 'Distributeur', cell: r => zoneDistribOf(r.zone_id), muted: true },
+    ],
+    fields: [
+      { key: 'zone_id', label: 'Area (zone)', type: 'select', opts: zoneIdOpts, required: true, lockEdit: true },
+      { key: 'nom', label: 'Quartier', type: 'text', required: true },
+      { key: 'ordre', label: 'Ordre', type: 'num', min: 1 },
+    ],
+    blank: () => ({ zone_id: null, nom: '', ordre: 1 }),
+    fill: r => ({ ...r }),
+    rowKey: r => String(r.id), search: r => `${zoneCodeOf(r.zone_id)} ${r.nom} ${zoneTerrLabelOf(r.zone_id)}`.toLowerCase(),
+    valid: f => !!f.zone_id && !!f.nom,
+    save: (f, e) => e
+      ? supabase.from('quartier').update({ nom: f.nom, ordre: f.ordre ?? 1 }).eq('id', f.id)
+      : supabase.from('quartier').insert({ zone_id: f.zone_id, nom: f.nom, ordre: f.ordre ?? 1 }),
+    del: r => supabase.from('quartier').delete().eq('id', r.id),
   },
   // ===== DISTRIBUTION =====
   {
@@ -401,7 +434,8 @@ const defs: Def[] = [
     id: 'zone_distributeur', section: 'distrib', label: 'Distrib ↔ Areas', table: 'zone_distributeur',
     select: 'zone_id, distributeur_id',
     columns: [
-      { label: 'Area (zone)', cell: r => zoneNameOf(r.zone_id) },
+      { label: 'Code area', cell: r => zoneCodeOf(r.zone_id), kind: 'mono' },
+      { label: 'Territoire', cell: r => zoneTerrLabelOf(r.zone_id), muted: true },
       { label: 'Distributeur', cell: r => distributeurNameOf(r.distributeur_id) },
     ],
     fields: [
@@ -411,7 +445,7 @@ const defs: Def[] = [
     blank: () => ({ zone_id: null, distributeur_id: null }),
     fill: r => ({ ...r }),
     rowKey: r => `${r.zone_id}-${r.distributeur_id}`,
-    search: r => `${zoneNameOf(r.zone_id)} ${distributeurNameOf(r.distributeur_id)}`.toLowerCase(),
+    search: r => `${zoneCodeOf(r.zone_id)} ${zoneTerrLabelOf(r.zone_id)} ${distributeurNameOf(r.distributeur_id)}`.toLowerCase(),
     valid: f => !!f.zone_id && !!f.distributeur_id,
     save: (f, _e) => supabase.from('zone_distributeur').upsert({ zone_id: f.zone_id, distributeur_id: f.distributeur_id }, { onConflict: 'zone_id,distributeur_id' }),
     del: r => supabase.from('zone_distributeur').delete().eq('zone_id', r.zone_id).eq('distributeur_id', r.distributeur_id),

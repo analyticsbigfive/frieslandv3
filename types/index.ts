@@ -23,7 +23,7 @@ export interface Profile {
   telephone?: string
   role: UserRole
   zone_assignee?: string
-  secteurs_assignes?: string[]
+  quartiers_assignes?: string[]
   region?: string
   avatar_url?: string
   is_active: boolean
@@ -41,7 +41,7 @@ export interface PDV {
   autre_sous_categorie?: string
   region: string
   zone: string
-  secteur: string
+  quartier: string
   geolocation_lat: number
   geolocation_lng: number
   rayon_geofence: number

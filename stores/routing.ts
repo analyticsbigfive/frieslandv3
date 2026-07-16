@@ -23,7 +23,7 @@ export const useRoutingStore = defineStore('routing', () => {
           user:user_id(id, nom, email),
           routing_pdv(
             *,
-            pdv:pdv_id(pdv_id, nom_pdv, zone, secteur, geolocation_lat, geolocation_lng, rayon_geofence, canal, adressage, image_url)
+            pdv:pdv_id(pdv_id, nom_pdv, zone, quartier, geolocation_lat, geolocation_lng, rayon_geofence, canal, adressage, image_url)
           )
         `)
         .eq('user_id', userId)
@@ -129,7 +129,7 @@ export const useRoutingStore = defineStore('routing', () => {
           creator:created_by(id, nom),
           routing_pdv(
             id, pdv_id, position_order, objectifs, status, geofence_validated, arrived_at, completed_at, visite_id,
-            pdv:pdv_id(pdv_id, nom_pdv, zone, secteur)
+            pdv:pdv_id(pdv_id, nom_pdv, zone, quartier)
           )
         `)
         .order('date_routing', { ascending: false })
@@ -447,7 +447,7 @@ export const useRoutingStore = defineStore('routing', () => {
           creator:created_by(id, nom),
           routing_template_pdv(
             id, pdv_id, position_order, objectifs,
-            pdv:pdv_id(pdv_id, nom_pdv, zone, secteur)
+            pdv:pdv_id(pdv_id, nom_pdv, zone, quartier)
           )
         `)
         .eq('is_active', true)
@@ -527,7 +527,7 @@ export const useRoutingStore = defineStore('routing', () => {
         position_order: maxPos + 1,
         objectifs,
       })
-      .select('*, pdv:pdv_id(pdv_id, nom_pdv, zone, secteur)')
+      .select('*, pdv:pdv_id(pdv_id, nom_pdv, zone, quartier)')
       .single()
 
     if (error) throw error

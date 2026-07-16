@@ -48,8 +48,8 @@
               <p class="text-sm text-gray-900 dark:text-gray-100">{{ pdv.zone || '—' }}</p>
             </div>
             <div>
-              <p class="text-xs text-gray-400">Secteur</p>
-              <p class="text-sm text-gray-900 dark:text-gray-100">{{ pdv.secteur || '—' }}</p>
+              <p class="text-xs text-gray-400">Quartier</p>
+              <p class="text-sm text-gray-900 dark:text-gray-100">{{ pdv.quartier || '—' }}</p>
             </div>
             <div>
               <p class="text-xs text-gray-400">Région</p>
@@ -130,8 +130,8 @@
               <UInput v-model="form.zone" placeholder="Zone..." />
             </UFormGroup>
 
-            <UFormGroup label="Secteur">
-              <UInput v-model="form.secteur" placeholder="Secteur..." />
+            <UFormGroup label="Quartier">
+              <UInput v-model="form.quartier" placeholder="Quartier..." />
             </UFormGroup>
 
             <UFormGroup label="Région">
@@ -237,7 +237,7 @@ const form = ref({
   categorie_pdv: 'Point de vente détail',
   sous_categorie_pdv: 'Boutique C',
   zone: '',
-  secteur: '',
+  quartier: '',
   region: '',
   adressage: '',
   geolocation_lat: null as number | null,
@@ -270,7 +270,7 @@ function startEditing() {
     categorie_pdv: pdv.value.categorie_pdv,
     sous_categorie_pdv: pdv.value.sous_categorie_pdv,
     zone: pdv.value.zone,
-    secteur: pdv.value.secteur,
+    quartier: pdv.value.quartier,
     region: pdv.value.region,
     adressage: pdv.value.adressage || '',
     geolocation_lat: pdv.value.geolocation_lat,

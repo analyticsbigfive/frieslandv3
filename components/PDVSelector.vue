@@ -40,7 +40,7 @@ const options = computed(() =>
   props.pdvList.map(p => ({
     label: p.nom_pdv,
     value: p.pdv_id,
-    detail: `${p.zone || ''} - ${p.secteur || ''}`,
+    detail: `${p.zone || ''} - ${p.quartier || ''}`,
   }))
 )
 </script>

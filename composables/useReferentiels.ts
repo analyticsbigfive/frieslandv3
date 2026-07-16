@@ -14,6 +14,7 @@ export interface GeoRegion { code: string; name: string; nom_affichage: string |
 export interface GeoSubRegion { code: string; name: string; nom_affichage: string | null; region_code: string | null }
 export interface GeoTerritory { code: string; name: string; sub_region_code: string | null }
 export interface GeoArea { id: number; code: string; name: string; territory_code: string }
+export interface GeoQuartier { id: number; zone_id: number; nom: string; ordre: number }
 export interface PosType { level4_type: string; level3_group: string; tier: string | null; canal: 'GT' | 'MT' | null }
 export interface ReferenceProduit { id: number; nom: string; category: string }
 export interface CategoriePdvRef { id: number; nom: string; canal: 'GT' | 'MT' | null }
@@ -29,6 +30,7 @@ export function useReferentiels() {
   const subRegions = useState<GeoSubRegion[]>('refb-subregions', () => [])
   const territories = useState<GeoTerritory[]>('refb-territories', () => [])
   const areas = useState<GeoArea[]>('refb-areas', () => [])
+  const quartiers = useState<GeoQuartier[]>('refb-quartiers', () => [])
   const posTypes = useState<PosType[]>('refb-postypes', () => [])
   const availabilityWeights = useState<AvailabilityWeight[]>('refb-avweights', () => [])
   const availabilityStandards = useState<AvailabilityStandard[]>('refb-avstandards', () => [])
@@ -53,12 +55,13 @@ export function useReferentiels() {
     if (loaded.value && !force) return
     error.value = null
     try {
-      const [d, rg, sr, t, z, tp, rp, pr, sd, td, zd] = await Promise.all([
+      const [d, rg, sr, t, z, qt, tp, rp, pr, sd, td, zd] = await Promise.all([
         supabase.from('distributeur').select('nom, national').order('nom'),
         supabase.from('region').select('code, nom, nom_affichage').order('nom'),
         supabase.from('sous_region').select('code, nom, nom_affichage, region_code').order('nom'),
         supabase.from('territoire').select('code, nom, sous_region_code').order('nom'),
         supabase.from('zone').select('id, code, nom, territoire_code').order('territoire_code').order('nom'),
+        supabase.from('quartier').select('id, zone_id, nom, ordre').order('zone_id').order('ordre'),
         supabase.from('type_pdv').select('nom, categorie_pdv(id, nom, canal)').order('nom'),
         supabase.from('reference_produit').select('id, nom, categorie_produit(code)').order('nom'),
         supabase.from('poids_reference').select('canal, base_calcul, poids, reference_produit(nom, categorie_produit(code))'),
@@ -66,7 +69,7 @@ export function useReferentiels() {
         supabase.from('territoire_distributeur').select('territoire(code, nom), distributeur(nom)'),
         supabase.from('zone_distributeur').select('zone_id, distributeur(nom)'),
       ])
-      const firstErr = [d, rg, sr, t, z, tp, rp, pr, sd, td, zd].find(r => r.error)?.error
+      const firstErr = [d, rg, sr, t, z, qt, tp, rp, pr, sd, td, zd].find(r => r.error)?.error
       if (firstErr) throw firstErr
 
       distributeurs.value = (d.data || []).map((r: any) => ({ name: r.nom, national: !!r.national }))
@@ -78,6 +81,13 @@ export function useReferentiels() {
         code: r.code || '',
         name: r.nom,
         territory_code: r.territoire_code,
+      }))
+
+      quartiers.value = (qt.data || []).map((r: any) => ({
+        id: r.id,
+        zone_id: Number(r.zone_id),
+        nom: r.nom,
+        ordre: Number(r.ordre) || 1,
       }))
 
       posTypes.value = (tp.data || []).map((r: any) => {
@@ -121,7 +131,7 @@ export function useReferentiels() {
   }
 
   return {
-    distributeurs, regions, subRegions, territories, areas, posTypes,
+    distributeurs, regions, subRegions, territories, areas, quartiers, posTypes,
     availabilityWeights, availabilityStandards,
     references, categoriesPdv, territoireDistributeurs, zoneDistributeurs,
     loaded, error, fetchReferentiels,

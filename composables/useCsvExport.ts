@@ -113,7 +113,7 @@ export function useCsvExport() {
       { header: 'Sous-catégorie', key: 'sous_categorie_pdv', width: 20 },
       { header: 'Région', key: 'region', width: 15 },
       { header: 'Zone', key: 'zone', width: 15 },
-      { header: 'Secteur', key: 'secteur', width: 20 },
+      { header: 'Quartier', key: 'quartier', width: 20 },
       { header: 'Latitude', key: 'geolocation_lat', width: 15 },
       { header: 'Longitude', key: 'geolocation_lng', width: 15 },
       { header: 'Adressage', key: 'adressage', width: 30 },

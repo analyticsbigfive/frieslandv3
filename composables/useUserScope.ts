@@ -24,8 +24,8 @@ export function useUserScope() {
       return false
     }
 
-    const secteurs = profile.secteurs_assignes?.filter(Boolean) || []
-    if (secteurs.length > 0 && !secteurs.includes(pdv.secteur || '')) {
+    const quartiers = profile.quartiers_assignes?.filter(Boolean) || []
+    if (quartiers.length > 0 && !quartiers.includes(pdv.quartier || '')) {
       return false
     }
 

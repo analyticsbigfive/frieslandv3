@@ -54,7 +54,7 @@ export interface PerfectStoreManqueItem {
   type_pdv: string
   division: string | null
   zone: string | null
-  secteur: string | null
+  quartier: string | null
   distributor_name: string | null
   niveau_actuel: string | null
   niveau_cible: string
@@ -303,7 +303,7 @@ export function usePerfectStore() {
   async function fetchPerfectStoreManques(limit = 50): Promise<PerfectStoreManqueItem[]> {
     const { data, error } = await supabase
       .from('v_perfect_store_manques')
-      .select('visite_id, pdv_id, nom_pdv, type_pdv, division, zone, secteur, distributor_name, niveau_actuel, niveau_cible, dispo_manque, dispo_rayon, dispo_rayon_min, assortiment_manque, visibilite_manques, promotion_manques')
+      .select('visite_id, pdv_id, nom_pdv, type_pdv, division, zone, quartier, distributor_name, niveau_actuel, niveau_cible, dispo_manque, dispo_rayon, dispo_rayon_min, assortiment_manque, visibilite_manques, promotion_manques')
       // Les moins conformes d'abord : non conformes (niveau_actuel null), puis dispo manquante.
       .order('niveau_actuel', { ascending: true, nullsFirst: true })
       .order('dispo_manque', { ascending: false })

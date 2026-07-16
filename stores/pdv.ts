@@ -5,7 +5,7 @@ import type { PDV, Profile, ZoneSecteur } from '~/types'
 
 // Colonnes nécessaires aux listes (admin table + mobile).
 // Évite select('*') qui tire 24 colonnes inutiles (mdm, routing, dates…).
-const LIST_COLUMNS = 'id,pdv_id,nom_pdv,canal,categorie_pdv,sous_categorie_pdv,autre_sous_categorie,zone,secteur,region,adressage,image_url,geolocation_lat,geolocation_lng'
+const LIST_COLUMNS = 'id,pdv_id,nom_pdv,canal,categorie_pdv,sous_categorie_pdv,autre_sous_categorie,zone,quartier,region,territory_code,area_code,distributor_name,adressage,image_url,geolocation_lat,geolocation_lng'
 
 export const usePDVStore = defineStore('pdv', () => {
   const supabase = skipHydrate(markRaw(useSupabaseClient()))
@@ -44,13 +44,13 @@ export const usePDVStore = defineStore('pdv', () => {
       return `privileged:${profile.id}`
     }
 
-    const secteurs = (profile.secteurs_assignes || []).filter(Boolean).sort().join('|')
+    const quartiers = (profile.quartiers_assignes || []).filter(Boolean).sort().join('|')
     return [
       profile.id,
       profile.role,
       profile.zone_assignee || '',
       profile.region || '',
-      secteurs,
+      quartiers,
     ].join(':')
   }
 
@@ -69,12 +69,12 @@ export const usePDVStore = defineStore('pdv', () => {
       query = query.eq('zone', profile.zone_assignee)
     }
 
-    const secteurs = (profile.secteurs_assignes || []).filter(Boolean)
-    if (secteurs.length === 1) {
-      query = query.eq('secteur', secteurs[0])
+    const quartiers = (profile.quartiers_assignes || []).filter(Boolean)
+    if (quartiers.length === 1) {
+      query = query.eq('quartier', quartiers[0])
     }
-    else if (secteurs.length > 1) {
-      query = query.in('secteur', secteurs)
+    else if (quartiers.length > 1) {
+      query = query.in('quartier', quartiers)
     }
 
     return query
@@ -269,7 +269,7 @@ export const usePDVStore = defineStore('pdv', () => {
       autre_sous_categorie: r['Autre sous-catégorie de pdv'] || null,
       region: r['Région'] || null,
       zone: r['Zone'] || null,
-      secteur: r['Secteur'] || null,
+      quartier: r['Quartier'] || r['Secteur'] || null,
       geolocation_lat: r['Geolocation'] ? parseFloat(r['Geolocation'].split(',')[0]?.trim()) : null,
       geolocation_lng: r['Geolocation'] ? parseFloat(r['Geolocation'].split(',')[1]?.trim()) : null,
       adressage: r['Adressage'] || null,

@@ -77,9 +77,9 @@
         />
       </UFormGroup>
 
-      <!-- Secteur -->
-      <UFormGroup v-if="showSecteur" label="Secteur" size="sm">
-        <UInput v-model="model.secteur" placeholder="Secteur..." size="sm" />
+      <!-- Quartier -->
+      <UFormGroup v-if="showQuartier" label="Quartier" size="sm">
+        <UInput v-model="model.quartier" placeholder="Quartier..." size="sm" />
       </UFormGroup>
 
       <!-- Nom du PDV -->
@@ -110,7 +110,7 @@ export interface DashboardFilterValues {
   commercial: string
   region: string
   zone: string
-  secteur: string
+  quartier: string
   nomPdv: string
 }
 
@@ -122,7 +122,7 @@ const props = withDefaults(defineProps<{
   showCommercial?: boolean
   showRegion?: boolean
   showZone?: boolean
-  showSecteur?: boolean
+  showQuartier?: boolean
   showNomPdv?: boolean
   regionOptions?: string[]
   zoneOptions?: string[]
@@ -133,7 +133,7 @@ const props = withDefaults(defineProps<{
   showCommercial: true,
   showRegion: true,
   showZone: true,
-  showSecteur: true,
+  showQuartier: true,
   showNomPdv: true,
   regionOptions: () => ['', 'ABIDJAN 1', 'ABIDJAN 2', 'CNE', 'CNO', 'MODERN TRADE'],
   zoneOptions: () => [''],
@@ -180,7 +180,7 @@ function reset() {
     commercial: '',
     region: '',
     zone: '',
-    secteur: '',
+    quartier: '',
     nomPdv: '',
   })
   emit('filter')

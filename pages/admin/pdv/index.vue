@@ -14,7 +14,7 @@
         <USelectMenu
           v-model="selectedZone"
           :options="zoneOptions"
-          placeholder="Zone"
+          placeholder="Territoire"
           size="sm"
           class="w-40"
           @update:model-value="loadPDV"
@@ -22,7 +22,7 @@
         <USelectMenu
           v-model="selectedRegion"
           :options="regionOptions"
-          placeholder="Région"
+          placeholder="Sous-région"
           size="sm"
           class="w-40"
           @update:model-value="loadPDV"
@@ -51,9 +51,11 @@
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Nom</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Canal</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Catégorie</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Zone</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Secteur</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Région</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Sous-région</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Territoire</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Code area</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Quartier</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Distributeur</th>
               <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Perfect Store</th>
               <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">GPS</th>
               <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
@@ -81,9 +83,11 @@
               </td>
               <td class="px-4 py-3 text-sm text-gray-600">{{ pdv.canal }}</td>
               <td class="px-4 py-3 text-sm text-gray-600">{{ pdv.sous_categorie_pdv }}</td>
-              <td class="px-4 py-3 text-sm text-gray-600">{{ pdv.zone }}</td>
-              <td class="px-4 py-3 text-sm text-gray-600">{{ pdv.secteur }}</td>
               <td class="px-4 py-3 text-sm text-gray-600">{{ pdv.region }}</td>
+              <td class="px-4 py-3 text-sm text-gray-600">{{ pdv.zone }}</td>
+              <td class="px-4 py-3 font-mono text-xs text-gray-500">{{ pdv.area_code || '—' }}</td>
+              <td class="px-4 py-3 text-sm text-gray-600">{{ pdv.quartier }}</td>
+              <td class="px-4 py-3 text-sm text-gray-600">{{ pdv.distributor_name || '—' }}</td>
               <td class="px-4 py-3 text-center">
                 <div v-if="perfectStoreByPdv[pdv.pdv_id]" class="flex items-center justify-center gap-1.5">
                   <span class="h-2 w-2 rounded-full" :class="tierDotClass(perfectStoreByPdv[pdv.pdv_id].niveau)" />
@@ -215,18 +219,33 @@
               </div>
 
               <div class="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2">
-                <UFormGroup label="Région" size="md">
+                <UFormGroup label="Division" size="md">
                   <USelectMenu
                     v-model="pdvForm.region_code"
                     :options="regionCascadeOptions"
                     option-attribute="label"
                     value-attribute="value"
-                    placeholder="Sélectionner une région"
+                    placeholder="Sélectionner une division"
                     searchable
                     searchable-placeholder="Rechercher..."
                     size="md"
                     class="w-full"
                     @update:model-value="onRegionChange"
+                  />
+                </UFormGroup>
+                <UFormGroup label="Sous-région" size="md">
+                  <USelectMenu
+                    v-model="pdvForm.sub_region_code"
+                    :options="subRegionCascadeOptions"
+                    option-attribute="label"
+                    value-attribute="value"
+                    :disabled="!pdvForm.region_code"
+                    placeholder="Sélectionner une sous-région"
+                    searchable
+                    searchable-placeholder="Rechercher..."
+                    size="md"
+                    class="w-full"
+                    @update:model-value="onSousRegionChange"
                   />
                 </UFormGroup>
                 <UFormGroup label="Territoire" size="md">
@@ -244,7 +263,7 @@
                     @update:model-value="onTerritoryChange"
                   />
                 </UFormGroup>
-                <UFormGroup label="Area / quartier" size="md">
+                <UFormGroup label="Code area" size="md">
                   <USelectMenu
                     v-model="pdvForm.area_code"
                     :options="areaCascadeOptions"
@@ -252,6 +271,21 @@
                     value-attribute="value"
                     :disabled="!pdvForm.territory_code"
                     placeholder="Sélectionner une area"
+                    searchable
+                    searchable-placeholder="Rechercher..."
+                    size="md"
+                    class="w-full"
+                    @update:model-value="onAreaChange"
+                  />
+                </UFormGroup>
+                <UFormGroup label="Quartier" size="md">
+                  <USelectMenu
+                    v-model="pdvForm.quartier_nom"
+                    :options="quartierCascadeOptions"
+                    option-attribute="label"
+                    value-attribute="value"
+                    :disabled="!pdvForm.area_code"
+                    placeholder="Sélectionner un quartier"
                     searchable
                     searchable-placeholder="Rechercher..."
                     size="md"
@@ -329,7 +363,7 @@
       <div class="p-6">
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Import CSV PDV</h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          Colonnes : PDV ID, Nom du PDV, Canal, Catégorie de PDV, Région, Zone, Secteur, Geolocation, Adressage…
+          Colonnes : PDV ID, Nom du PDV, Canal, Catégorie de PDV, Région, Zone, Quartier, Geolocation, Adressage…
           <br>Référentiels (optionnel) : <strong>Territoire</strong> (code), <strong>Area</strong> (code), <strong>Distributeur</strong>, <strong>Objectif Perfect Store</strong> (FLAGSHIP/VIP/CORE/BASIC).
           <br>Astuce : exporte d'abord (bouton Export) pour récupérer le modèle avec les bons en-têtes.
         </p>
@@ -398,7 +432,6 @@ const pdvForm = ref({
   categorie_pdv: '',
   sous_categorie_pdv: '',
   zone: '',
-  secteur: '',
   region: '',
   region_code: '',
   sub_region_code: '',
@@ -407,6 +440,7 @@ const pdvForm = ref({
   geolocation_lng: null as number | null,
   territory_code: '',
   area_code: '',
+  quartier_nom: '',
   distributor_name: '',
   objectif_perfect_store: '',
 })
@@ -415,7 +449,7 @@ const zoneOptions = computed(() => ['', ...pdvStore.uniqueZones])
 const regionOptions = computed(() => ['', ...pdvStore.uniqueRegions])
 
 // Référentiels géo (Système B) : hiérarchie Region → Sous-région → Territoire → Area.
-const { distributeurs, regions, territories, areas, subRegions, posTypes, territoireDistributeurs, fetchReferentiels } = useReferentiels()
+const { distributeurs, regions, territories, areas, quartiers, subRegions, posTypes, territoireDistributeurs, fetchReferentiels } = useReferentiels()
 
 // Cascade Catégorie (level3 / groupe) → Sous-catégorie (level4 / type de PDV).
 const categorieOptions = computed(() => [...new Set(posTypes.value.map(p => p.level3_group).filter(Boolean))].sort())
@@ -441,20 +475,36 @@ const subRegionCodesForRegion = computed(() => new Set(
   subRegions.value.filter(s => s.region_code === pdvForm.value.region_code).map(s => s.code),
 ))
 const regionCascadeOptions = computed(() => regions.value.map(r => ({ value: r.code, label: r.nom_affichage ? `${r.nom_affichage} · ${r.name}` : r.name })))
+const subRegionCascadeOptions = computed(() => subRegions.value
+  .filter(s => !pdvForm.value.region_code || s.region_code === pdvForm.value.region_code)
+  .map(s => ({ value: s.code, label: s.nom_affichage ? `${s.nom_affichage} · ${s.name}` : s.name })))
 const territoryCascadeOptions = computed(() => territories.value
-  .filter(t => !pdvForm.value.region_code || subRegionCodesForRegion.value.has(t.sub_region_code || ''))
+  .filter(t => pdvForm.value.sub_region_code
+    ? t.sub_region_code === pdvForm.value.sub_region_code
+    : (!pdvForm.value.region_code || subRegionCodesForRegion.value.has(t.sub_region_code || '')))
   .map(t => ({ value: t.code, label: t.name })))
 const areaCascadeOptions = computed(() => areas.value
   .filter(a => !pdvForm.value.territory_code || a.territory_code === pdvForm.value.territory_code)
-  .map(a => ({ value: a.code, label: a.name || a.code })))
+  .map(a => ({ value: a.code, label: a.code })))
+// zone.id de l'area sélectionnée (territoire + code) : clé pour désambiguïser les
+// quartiers homonymes (ex SLEIL sur GAG 1 vs GAG 2).
+const selectedZoneId = computed(() => areas.value.find(a =>
+  a.code === pdvForm.value.area_code && a.territory_code === pdvForm.value.territory_code)?.id)
+const quartierCascadeOptions = computed(() => quartiers.value
+  .filter(q => q.zone_id === selectedZoneId.value)
+  .sort((a, b) => a.ordre - b.ordre)
+  .map(q => ({ value: q.nom, label: q.nom })))
 
 // Reset des niveaux enfants quand un parent change.
-function onRegionChange() { pdvForm.value.territory_code = ''; pdvForm.value.area_code = ''; pdvForm.value.sub_region_code = '' }
+function onRegionChange() { pdvForm.value.sub_region_code = ''; pdvForm.value.territory_code = ''; pdvForm.value.area_code = ''; pdvForm.value.quartier_nom = '' }
+function onSousRegionChange() { pdvForm.value.territory_code = ''; pdvForm.value.area_code = ''; pdvForm.value.quartier_nom = '' }
+function onAreaChange() { pdvForm.value.quartier_nom = '' }
 function onTerritoryChange() {
   pdvForm.value.area_code = ''
+  pdvForm.value.quartier_nom = ''
   // Dérive la sous-région du territoire choisi (interne, pour le save).
   const terr = territories.value.find(t => t.code === pdvForm.value.territory_code)
-  pdvForm.value.sub_region_code = terr?.sub_region_code || ''
+  if (terr?.sub_region_code) pdvForm.value.sub_region_code = terr.sub_region_code
   // Distributeur par défaut : premier lié au territoire, sinon premier national.
   if (!pdvForm.value.distributor_name) {
     pdvForm.value.distributor_name = territoryDistributors.value[0]?.name || nationalDistributors.value[0]?.name || ''
@@ -512,6 +562,7 @@ function getPDVActions(pdv: PDV) {
         // Reset référentiels (absents de LIST_COLUMNS), puis préremplir via la ligne complète
         pdvForm.value.territory_code = ''
         pdvForm.value.area_code = ''
+        pdvForm.value.quartier_nom = ''
         pdvForm.value.distributor_name = ''
         pdvForm.value.objectif_perfect_store = ''
         showCreate.value = true
@@ -522,9 +573,13 @@ function getPDVActions(pdv: PDV) {
             pdvForm.value.area_code = full.area_code || ''
             pdvForm.value.distributor_name = full.distributor_name || ''
             pdvForm.value.objectif_perfect_store = full.objectif_perfect_store || ''
+            hydrateGeoCascade()
+            // Préselection quartier si présent dans les options de l'area (byte-exact).
+            pdvForm.value.quartier_nom = quartierCascadeOptions.value.some(o => o.value === full.quartier)
+              ? full.quartier
+              : ''
           }
         } catch { /* colonnes absentes avant migration 020 — ignorer */ }
-        hydrateGeoCascade()
       },
     },
     {
@@ -554,7 +609,6 @@ function openCreatePDV() {
     categorie_pdv: '',
     sous_categorie_pdv: '',
     zone: '',
-    secteur: '',
     region: '',
     region_code: '',
     sub_region_code: '',
@@ -563,6 +617,7 @@ function openCreatePDV() {
     geolocation_lng: null,
     territory_code: '',
     area_code: '',
+    quartier_nom: '',
     distributor_name: '',
     objectif_perfect_store: '',
   }
@@ -572,18 +627,19 @@ function openCreatePDV() {
 async function handleSavePDV() {
   saving.value = true
   try {
-    // Dérive les colonnes legacy (region/zone/secteur) depuis la cascade géo,
-    // pour rester cohérent avec le scoping (matchesPDVScope lit zone/secteur).
+    // Dérive zone (territoire.nom) / region (sous_region) depuis la cascade géo,
+    // pour rester cohérent avec le scoping (matchesPDVScope lit zone + quartier).
     const terr = territories.value.find(t => t.code === pdvForm.value.territory_code)
     const sr = subRegions.value.find(s => s.code === pdvForm.value.sub_region_code)
-    const area = areas.value.find(a => a.code === pdvForm.value.area_code && a.territory_code === pdvForm.value.territory_code)
     const payload: any = { ...pdvForm.value, canal: derivedCanal.value }
     if (terr) payload.zone = terr.name
     if (sr) payload.region = sr.nom_affichage || sr.name
-    if (area) payload.secteur = area.name
-    // region_code/sub_region_code ne sont pas des colonnes pdv (cascade UI only).
+    // quartier = nom exact du quartier choisi (plus de bloc d'area collé).
+    payload.quartier = pdvForm.value.quartier_nom || null
+    // region_code/sub_region_code/quartier_nom ne sont pas des colonnes pdv (cascade UI only).
     delete payload.region_code
     delete payload.sub_region_code
+    delete payload.quartier_nom
     payload.territory_code = payload.territory_code || null
     payload.area_code = payload.area_code || null
     payload.distributor_name = payload.distributor_name || null

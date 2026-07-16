@@ -261,7 +261,7 @@ const generalInfo = computed(() => [
   { label: 'Type PDV', value: props.visite?.pdv?.sous_categorie_pdv || '—' },
   { label: 'Région', value: props.visite?.pdv?.region || '—' },
   { label: 'Zone', value: props.visite?.pdv?.zone || '—' },
-  { label: 'Secteur', value: props.visite?.pdv?.secteur || '—' },
+  { label: 'Quartier', value: props.visite?.pdv?.quartier || '—' },
   {
     label: 'GPS validé',
     value: props.visite?.geofence_validated ? 'Oui' : 'Non',

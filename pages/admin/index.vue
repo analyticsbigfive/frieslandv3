@@ -400,7 +400,7 @@ const manques = ref<PerfectStoreManqueItem[]>([])
 const storesPerPage = 5
 
 // Filtres cascade du tableau « critères manquants » : Territoire → Area + Distributeur.
-// Options dérivées des lignes réelles (garantit le match ; pdv.zone/secteur sont
+// Options dérivées des lignes réelles (garantit le match ; pdv.zone/quartier sont
 // du texte libre, non alignés sur les noms concaténés du référentiel `zone`).
 const fDivision = ref('')
 const fTerritoire = ref('')
@@ -413,14 +413,14 @@ const territoireOptions = computed(() => ['', ...uniq(manques.value
   .map(m => m.zone))])
 const areaOptions = computed(() => ['', ...uniq(manques.value
   .filter(m => (!fDivision.value || m.division === fDivision.value) && (!fTerritoire.value || m.zone === fTerritoire.value))
-  .map(m => m.secteur))])
+  .map(m => m.quartier))])
 const distribOptions = computed(() => ['', ...uniq(manques.value.map(m => m.distributor_name))])
 watch(fDivision, () => { if (!territoireOptions.value.includes(fTerritoire.value)) fTerritoire.value = '' })
 watch(fTerritoire, () => { if (!areaOptions.value.includes(fArea.value)) fArea.value = '' })
 const filteredManques = computed(() => manques.value.filter(m =>
   (!fDivision.value || m.division === fDivision.value)
   && (!fTerritoire.value || m.zone === fTerritoire.value)
-  && (!fArea.value || m.secteur === fArea.value)
+  && (!fArea.value || m.quartier === fArea.value)
   && (!fDistrib.value || m.distributor_name === fDistrib.value),
 ))
 function resetManqueFilters() { fDivision.value = ''; fTerritoire.value = ''; fArea.value = ''; fDistrib.value = '' }

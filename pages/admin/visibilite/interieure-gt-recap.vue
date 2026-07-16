@@ -38,7 +38,7 @@
               <th class="whitespace-nowrap">Nom du PDV</th>
               <th>Région</th>
               <th>Zone</th>
-              <th>Secteur</th>
+              <th>Quartier</th>
               <th>Sous-cat.</th>
               <th>Merchandiser</th>
               <th v-for="col in intColumns" :key="col.code" class="whitespace-nowrap text-center">{{ col.label }}</th>
@@ -54,7 +54,7 @@
               </td>
               <td>{{ row.region }}</td>
               <td>{{ row.zone }}</td>
-              <td>{{ row.secteur }}</td>
+              <td>{{ row.quartier }}</td>
               <td>{{ row.sousCategorie }}</td>
               <td>{{ row.commercial }}</td>
               <td v-for="col in intColumns" :key="col.code + idx" class="text-center">
@@ -102,7 +102,7 @@ const allRows = computed(() => gtVisites.value.map(v => ({
   image_url: (v.pdv as any)?.image_url || null,
   region: v.pdv?.region || '',
   zone: v.pdv?.zone || '',
-  secteur: v.pdv?.secteur || '',
+  quartier: v.pdv?.quartier || '',
   sousCategorie: v.pdv?.sous_categorie_pdv || '',
   commercial: v.commercial || '',
   standards: standardsOf(v),

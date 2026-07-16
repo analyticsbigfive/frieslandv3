@@ -69,7 +69,7 @@ export function useUsersCache() {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, nom, email, role, zone_assignee, secteurs_assignes, region, telephone, is_active, created_at, updated_at')
+          .select('id, nom, email, role, zone_assignee, quartiers_assignes, region, telephone, is_active, created_at, updated_at')
           .order('nom')
 
         if (error) throw error

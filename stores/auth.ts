@@ -42,7 +42,7 @@ export const useAuthStore = defineStore('auth', () => {
       try {
         const { data, error: err } = await supabase
           .from('profiles')
-          .select('id, email, nom, telephone, role, zone_assignee, secteurs_assignes, region, avatar_url, is_active, created_at, updated_at')
+          .select('id, email, nom, telephone, role, zone_assignee, quartiers_assignes, region, avatar_url, is_active, created_at, updated_at')
           .eq('id', requestedUserId)
           .single()
 

@@ -51,7 +51,7 @@
               <th>Nom du PDV</th>
               <th>Région</th>
               <th>Zone</th>
-              <th>Secteur</th>
+              <th>Quartier</th>
               <th>Sous-cat.</th>
               <th v-for="col in intColumns" :key="col.code" class="text-center">{{ col.label }}</th>
             </tr>
@@ -66,7 +66,7 @@
               </td>
               <td>{{ row.region }}</td>
               <td>{{ row.zone }}</td>
-              <td>{{ row.secteur }}</td>
+              <td>{{ row.quartier }}</td>
               <td>{{ row.sousCategorie }}</td>
               <td v-for="col in intColumns" :key="col.code + idx" class="text-center">
                 <span v-if="!row.applicable[col.code]" class="text-slate-300 dark:text-slate-600">—</span>
@@ -113,7 +113,7 @@ const allRows = computed(() => mtVisites.value.map(v => ({
   image_url: (v.pdv as any)?.image_url || null,
   region: v.pdv?.region || '',
   zone: v.pdv?.zone || '',
-  secteur: v.pdv?.secteur || '',
+  quartier: v.pdv?.quartier || '',
   sousCategorie: v.pdv?.sous_categorie_pdv || '',
   standards: standardsOf(v),
   applicable: applicable(v.pdv?.sous_categorie_pdv, 'interieure'),

@@ -19,7 +19,7 @@ export interface VisiteWithPDV {
     sous_categorie_pdv: string
     region: string
     zone: string
-    secteur: string
+    quartier: string
   } | null
 }
 
@@ -45,7 +45,7 @@ export function useDashboardDirection() {
     commercial: '',
     region: '',
     zone: '',
-    secteur: '',
+    quartier: '',
     nomPdv: '',
   })
 
@@ -71,7 +71,7 @@ export function useDashboardDirection() {
   async function fetchVisitesFallback() {
     let query = supabase
       .from('visites')
-      .select('visite_id, date_visite, commercial, email, data, pdv_id, pdv:pdv_id(pdv_id, nom_pdv, canal, categorie_pdv, sous_categorie_pdv, region, zone, secteur)')
+      .select('visite_id, date_visite, commercial, email, data, pdv_id, pdv:pdv_id(pdv_id, nom_pdv, canal, categorie_pdv, sous_categorie_pdv, region, zone, quartier)')
       .order('date_visite', { ascending: false })
       .limit(2000)
 
@@ -112,7 +112,7 @@ export function useDashboardDirection() {
         p_sous_categorie: filters.value.sousCategorie || null,
         p_region: filters.value.region || null,
         p_zone: filters.value.zone || null,
-        p_secteur: filters.value.secteur || null,
+        p_secteur: filters.value.quartier || null,
         p_nom_pdv: filters.value.nomPdv || null,
       }
 
@@ -141,7 +141,7 @@ export function useDashboardDirection() {
               sous_categorie_pdv: row.sous_categorie_pdv,
               region: row.region,
               zone: row.zone,
-              secteur: row.secteur,
+              quartier: row.quartier,
             }
           : null,
       }))

@@ -92,7 +92,7 @@
             <div class="flex-1 min-w-0">
               <h3 class="font-bold text-gray-900 dark:text-gray-100 text-sm">{{ rp.pdv?.nom_pdv || rp.pdv_id }}</h3>
               <p class="text-xs text-gray-400 mt-0.5">
-                {{ rp.pdv?.zone || '' }}{{ rp.pdv?.secteur ? ` — ${rp.pdv.secteur}` : '' }}
+                {{ rp.pdv?.zone || '' }}{{ rp.pdv?.quartier ? ` — ${rp.pdv.quartier}` : '' }}
               </p>
               <p v-if="rp.pdv?.adressage" class="text-xs text-gray-400">{{ rp.pdv.adressage }}</p>
 
