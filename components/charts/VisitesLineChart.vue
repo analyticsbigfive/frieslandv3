@@ -27,10 +27,13 @@ const chartData = computed(() => {
   const sorted = [...props.data].sort((a, b) => a.date.localeCompare(b.date))
 
   return {
-    labels: sorted.map(d => {
-      const date = new Date(d.date)
-      return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
-    }),
+    labels: sorted.map(d =>
+      // Les libellés déjà formatés ('S28 - 2026', 'juillet 2026') passent tels
+      // quels ; seules les dates ISO sont re-formatées. Évite « Invalid Date ».
+      isIsoDate(d.date)
+        ? formatDateFr(d.date, { day: '2-digit', month: 'short' })
+        : d.date,
+    ),
     datasets: [{
       label: 'Visites',
       data: sorted.map(d => d.count),

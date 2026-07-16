@@ -153,7 +153,7 @@ function getIntVal(row: any, marque: string) {
 }
 
 function formatDate(d: string) {
-  return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return formatDateFr(d, { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 const filteredRows = computed(() => {

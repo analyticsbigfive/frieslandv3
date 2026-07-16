@@ -1,0 +1,14 @@
+﻿Perfect store =,OSA(disponibilité)+,Visibilité parfaite (100% respect planogramme)+,Promotion effective (100% respect promo)
+,"Disponibilité SKU:nombre de point de vente ou le sku est disponible*/nombre total de point de vente visite evalué sur ce sku
+
+
+Disponibilté categorie: nombre de point vente ou les produits de la catégories sont disponibles","Visibilite parfaite= visibilté interieure + visibilité exterieure
+Visibilité exterieure
+option 1:Visibilité à calculer en fonction du type de point de vente
+
+Visibiité interieure
+option 1:Visibilité à calculer en fonction du type de point de vente","Il s'agit ici de savoir si le point de vente à beneficié de la promo en cours
+Rendre optionel cet indicateur"
+,"Disponibilte est différente de la presence:
+Presence = une seule unite minimal du sku existe dans le point de vente
+*Disponibilité= existance du produit en quantité minimale definie (standard de disponibilité à communiqué à big five pour le parametrage)",,

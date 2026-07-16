@@ -229,6 +229,8 @@ export interface PerfectStoreRefsB {
   poids: { reference_nom: string; canal: TradeType; base_calcul: PerfectBasis; poids: number }[]
   /** Quantité minimale par référence × segment × grade. */
   seuils: { reference_nom: string; segment: string; grade: string; quantite_min: number }[]
+  /** Seuils MT (seuil_disponibilite_mt) : quantité min + facings, par référence × format supermarché. */
+  seuilsMt?: { reference_nom: string; segment_mt: string; quantite_min: number; facings: number }[]
   /** Minimum de SKU présents et obligation des références Hero par segment/grade. */
   assortmentStandards: {
     segment: string
@@ -309,8 +311,22 @@ export function scoreVisiteB(
       if (!p || !s) continue   // référence non évaluable pour ce canal/segment/grade
       const qteRaw = produits?.[cat]?.quantites?.[c.sku_key]
       const qte = Number.isFinite(Number(qteRaw)) ? Number(qteRaw) : 0
+      // MT : règle ET — quantité ≥ seuil MT ET facings ≥ seuil MT (miroir SQL).
+      // Seuil quantité : standard MT vivant prioritaire, sinon seuil_disponibilite.
+      let okFacings = true
+      let seuilQte = s.quantite_min
+      if (canal === 'MT' && refs.seuilsMt?.length) {
+        const segMt = grade === 'A' ? 'Hypermarche' : grade === 'B' ? 'MoyenSuper' : grade === 'C' ? 'PetitSuper' : null
+        const fs = segMt ? refs.seuilsMt.find(x => x.reference_nom === c.reference_nom && x.segment_mt === segMt) : undefined
+        if (fs) {
+          seuilQte = fs.quantite_min
+          const fRaw = produits?.[cat]?.facings?.[c.sku_key]
+          const f = Number.isFinite(Number(fRaw)) ? Number(fRaw) : 0
+          okFacings = f >= fs.facings
+        }
+      }
       poids.push(Number(p.poids))
-      dispo.push(estDisponible(qte, s.quantite_min))
+      dispo.push(estDisponible(qte, seuilQte) && okFacings ? 1 : 0)
     }
     dispoCategorie[cat] = poids.length ? calculerDisponibiliteRayon(poids, dispo) : null
   }

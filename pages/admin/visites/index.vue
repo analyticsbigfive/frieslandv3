@@ -55,6 +55,7 @@
               <th>Date</th>
               <th>Commercial</th>
               <th>Point de vente</th>
+              <th>Canal</th>
               <th class="text-center">Niveau</th>
               <th class="text-center">Score</th>
               <th class="text-center">EVAP</th>
@@ -82,6 +83,12 @@
                   <p class="font-medium text-slate-900 dark:text-white">{{ visite.pdv?.nom_pdv || visite.pdv_id?.substring(0, 8) }}</p>
                   <p class="mt-0.5 text-xs text-slate-400">{{ visite.pdv?.sous_categorie_pdv || 'Type non renseigné' }}</p>
                 </div>
+              </td>
+              <td>
+                <UBadge v-if="visite.pdv?.canal" :color="canalColor(visite.pdv.canal)" variant="soft" size="xs">
+                  {{ visite.pdv.canal }}
+                </UBadge>
+                <span v-else class="text-xs text-slate-400">—</span>
               </td>
               <td class="text-center">
                 <UBadge
@@ -272,9 +279,14 @@ function tierColor(value: string | null | undefined): any {
   return 'orange'
 }
 
+function canalColor(value: string | null | undefined): any {
+  const v = value?.toUpperCase() || ''
+  if (v.startsWith('MT') || v.includes('MODERN')) return 'violet'
+  return 'sky'
+}
+
 function formatDate(value: string): string {
-  if (!value) return '—'
-  return new Date(value).toLocaleDateString('fr-FR', {
+  return formatDateFr(value, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',

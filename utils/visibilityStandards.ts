@@ -5,6 +5,7 @@ export type VisibilitySegment =
   | 'pushcart'
   | 'porridge'
   | 'kiosque_aboki'
+  | 'mt'
 
 export type VisibilityPlacement = 'exterieure' | 'interieure' | 'promotion'
 
@@ -95,6 +96,17 @@ const ELEMENTS_BY_SEGMENT: Record<VisibilitySegment, ElementSeed[]> = {
     ['full_branding', 'Full branding', 'exterieure'],
     ['promotion', 'Promotion', 'promotion'],
   ],
+  // Modern Trade (supermarchés) — matrice dédiée, tout en intérieur.
+  mt: [
+    ['niche', 'Niche', 'interieure'],
+    ['wobler', 'Wobbler', 'interieure'],
+    ['top_shelf', 'Top shelf', 'interieure'],
+    ['bacs', 'Bacs', 'interieure'],
+    ['reglette', 'Réglettes', 'interieure'],
+    ['tg', 'TG (activités promotionnelles)', 'interieure'],
+    ['plot', 'Plot', 'promotion'],
+    ['hotesses', 'Hôtesses', 'promotion'],
+  ],
 }
 
 export const FALLBACK_VISIBILITY_ELEMENTS: VisibilityElementRef[] =
@@ -112,7 +124,8 @@ export function visibilitySegmentForPdv(typePdv?: string | null): VisibilitySegm
   const value = (typePdv || '').trim().toLowerCase()
   if (!value) return null
   if (value.includes('boutique')) return 'boutique'
-  if (value.includes('superette') || value.includes('supermarket') || value.includes('hypermarket')) return 'superette'
+  if (value.includes('supermarket') || value.includes('hypermarket')) return 'mt'
+  if (value.includes('superette')) return 'superette'
   if (value.includes('table top') || value.includes('table_top')) return 'table_top'
   if (value.includes('pushcard') || value.includes('pushcart')) return 'pushcart'
   if (value.includes('porridge')) return 'porridge'

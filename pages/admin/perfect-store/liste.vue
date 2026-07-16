@@ -141,7 +141,7 @@ const niveauOptions = [
 const pageCount = computed(() => Math.max(1, Math.ceil(total.value / perPage)))
 
 const pct = (v: number | null | undefined) => v == null ? '—' : `${v}%`
-const formatDate = (v: string) => new Date(v).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
+const formatDate = (v: string) => formatDateFr(v, { day: '2-digit', month: 'short', year: 'numeric' })
 
 function niveauDot(n: string): string {
   if (n?.startsWith('FLAGSHIP')) return 'bg-violet-500'

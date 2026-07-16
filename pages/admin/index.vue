@@ -7,6 +7,28 @@
       </p>
     </div>
 
+    <!-- Filtres cascade Division → Territoire → Area + Distributeur (pilotent KPI + tableaux) -->
+    <div class="admin-toolbar">
+      <div class="grid grid-cols-2 gap-2 sm:grid-cols-5">
+        <UFormGroup label="Division (North/South)" size="xs">
+          <USelectMenu v-model="fDivision" :options="divisionOptions" placeholder="Toutes" size="xs" />
+        </UFormGroup>
+        <UFormGroup label="Territoire" size="xs">
+          <USelectMenu v-model="fTerritoire" :options="territoireOptions" placeholder="Tous" size="xs" searchable />
+        </UFormGroup>
+        <UFormGroup label="Area" size="xs">
+          <USelectMenu v-model="fArea" :options="areaOptions" placeholder="Toutes" size="xs" searchable />
+        </UFormGroup>
+        <UFormGroup label="Distributeur" size="xs">
+          <USelectMenu v-model="fDistrib" :options="distribOptions" placeholder="Tous" size="xs" searchable />
+        </UFormGroup>
+        <div class="flex items-end">
+          <UButton v-if="filtersActive" size="xs" variant="ghost" @click="resetManqueFilters">Réinitialiser</UButton>
+        </div>
+      </div>
+      <p v-if="filtersActive" class="mt-2 text-xs text-fc-red">Filtres actifs — KPI et tableaux limités au périmètre sélectionné.</p>
+    </div>
+
     <div v-if="loading" class="grid gap-4 lg:grid-cols-3">
       <div class="admin-surface h-44 animate-pulse bg-slate-100 dark:bg-slate-800 lg:col-span-2" />
       <div class="admin-surface h-44 animate-pulse bg-slate-100 dark:bg-slate-800" />
@@ -32,12 +54,17 @@
 
       <!-- KPI Big Five -->
       <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <StatsCard title="Couverture du mois" :value="String(coverage?.pdv_vus ?? 0)" format="none" :icon="MapPinned" color="purple" />
+        <StatsCard title="Couverture du mois" :value="coverageLabel" :subtitle="coverageSub" format="none" :icon="MapPinned" color="purple" />
         <StatsCard title="Score global moyen" :value="fmtPct(global.score_global_moyen_pct)" format="none" :icon="BarChart3" color="blue" />
         <StatsCard title="OSA pondérée moyenne" :value="fmtPct(global.osa_moyen_pct)" format="none" :icon="Package" color="green" />
         <StatsCard title="Assortiment moyen" :value="fmtPct(global.assortiment_moyen_pct)" format="none" :icon="ListChecks" color="purple" />
         <StatsCard title="Visibilité moyenne" :value="fmtPct(global.visibilite_moyenne_pct)" format="none" :icon="Eye" color="orange" />
         <StatsCard title="Promotion effective" :value="fmtPct(global.promotion_moyenne_pct)" format="none" :icon="BadgePercent" color="red" />
+      </div>
+
+      <!-- Évolution du taux de Perfect Stores -->
+      <div v-if="evolution.length" class="h-80">
+        <ChartsVisitesLineChart title="Évolution du taux de Perfect Stores (%)" :data="evolution" />
       </div>
 
       <!-- Ventilation par type de PDV (accordéons) -->
@@ -212,6 +239,52 @@
           La liste détaillée sera disponible après l’application de la migration Perfect Store la plus récente.
         </div>
       </section>
+
+      <!-- Critères manquants pour le niveau supérieur -->
+      <section v-if="manques.length" class="admin-surface overflow-hidden" aria-labelledby="manques-heading">
+        <div class="border-b border-slate-100 px-5 py-4 dark:border-slate-700">
+          <h2 id="manques-heading" class="font-bold text-gray-900 dark:text-gray-100">Passer au niveau supérieur</h2>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Ce qu'il manque à chaque PDV pour atteindre le niveau immédiatement au-dessus.
+          </p>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="admin-table w-full text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-700/50">
+              <tr>
+                <th class="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Point de vente</th>
+                <th class="px-4 py-2 text-center text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Actuel</th>
+                <th class="px-4 py-2 text-center text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Cible</th>
+                <th class="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Critères manquants</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+              <tr v-if="!filteredManques.length">
+                <td colspan="4" class="px-4 py-6 text-center text-sm text-gray-400">Aucun PDV pour ce filtre.</td>
+              </tr>
+              <tr v-for="m in filteredManques" :key="m.visite_id">
+                <td class="px-4 py-2">
+                  <span class="block font-medium text-gray-900 dark:text-white">{{ m.nom_pdv || m.pdv_id }}</span>
+                  <span class="block text-xs text-gray-400">{{ m.type_pdv }}<template v-if="m.zone"> · {{ m.zone }}</template></span>
+                </td>
+                <td class="px-4 py-2 text-center">
+                  <span class="inline-flex items-center gap-1.5">
+                    <span class="h-2 w-2 rounded-full" :class="tierDotClass(m.niveau_actuel || '')" />
+                    <span class="text-xs text-gray-600 dark:text-gray-300">{{ niveauCourt(m.niveau_actuel) }}</span>
+                  </span>
+                </td>
+                <td class="px-4 py-2 text-center text-xs font-semibold text-gray-700 dark:text-gray-200">{{ niveauCourt(m.niveau_cible) }}</td>
+                <td class="px-4 py-2">
+                  <div v-if="manqueBadges(m).length" class="flex flex-wrap gap-1.5">
+                    <span v-for="b in manqueBadges(m)" :key="b" class="rounded-md bg-amber-50 px-2 py-0.5 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">{{ b }}</span>
+                  </div>
+                  <span v-else class="text-xs text-emerald-600">Aucun — prêt à monter de niveau</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </template>
 
     <div v-else class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-6 text-sm text-amber-800 dark:text-amber-200">
@@ -295,6 +368,7 @@ import type {
   CoverageKpi,
   PerfectStoreGlobalKpi,
   PerfectStoreListItem,
+  PerfectStoreManqueItem,
   PerfectStoreTypeKpi,
 } from '~/composables/usePerfectStore'
 import type { Visite } from '~/types'
@@ -312,13 +386,56 @@ const {
   fetchCoverage,
   fetchStoresByTier,
   fetchPerfectStoreListe,
+  fetchPerfectStoreEvolution,
+  fetchPerfectStoreManques,
+  fetchGlobalKpiFiltre,
 } = usePerfectStore()
 
 const loading = ref(true)
 const global = ref<PerfectStoreGlobalKpi | null>(null)
 const parType = ref<PerfectStoreTypeKpi[]>([])
 const coverage = ref<CoverageKpi | null>(null)
+const evolution = ref<{ date: string; count: number }[]>([])
+const manques = ref<PerfectStoreManqueItem[]>([])
 const storesPerPage = 5
+
+// Filtres cascade du tableau « critères manquants » : Territoire → Area + Distributeur.
+// Options dérivées des lignes réelles (garantit le match ; pdv.zone/secteur sont
+// du texte libre, non alignés sur les noms concaténés du référentiel `zone`).
+const fDivision = ref('')
+const fTerritoire = ref('')
+const fArea = ref('')
+const fDistrib = ref('')
+const uniq = (xs: (string | null)[]) => [...new Set(xs.filter((x): x is string => !!x))].sort()
+const divisionOptions = computed(() => ['', ...uniq(manques.value.map(m => m.division))])
+const territoireOptions = computed(() => ['', ...uniq(manques.value
+  .filter(m => !fDivision.value || m.division === fDivision.value)
+  .map(m => m.zone))])
+const areaOptions = computed(() => ['', ...uniq(manques.value
+  .filter(m => (!fDivision.value || m.division === fDivision.value) && (!fTerritoire.value || m.zone === fTerritoire.value))
+  .map(m => m.secteur))])
+const distribOptions = computed(() => ['', ...uniq(manques.value.map(m => m.distributor_name))])
+watch(fDivision, () => { if (!territoireOptions.value.includes(fTerritoire.value)) fTerritoire.value = '' })
+watch(fTerritoire, () => { if (!areaOptions.value.includes(fArea.value)) fArea.value = '' })
+const filteredManques = computed(() => manques.value.filter(m =>
+  (!fDivision.value || m.division === fDivision.value)
+  && (!fTerritoire.value || m.zone === fTerritoire.value)
+  && (!fArea.value || m.secteur === fArea.value)
+  && (!fDistrib.value || m.distributor_name === fDistrib.value),
+))
+function resetManqueFilters() { fDivision.value = ''; fTerritoire.value = ''; fArea.value = ''; fDistrib.value = '' }
+
+// Les filtres pilotent aussi les KPI agrégés du haut (RPC serveur).
+const filtersActive = computed(() => !!(fDivision.value || fTerritoire.value || fArea.value || fDistrib.value))
+async function applyDashboardFilters() {
+  const k = await fetchGlobalKpiFiltre({
+    division: fDivision.value, territoire: fTerritoire.value, area: fArea.value, distributeur: fDistrib.value,
+  })
+  if (!k) return
+  global.value = k as any
+  coverage.value = { periode: coverage.value?.periode ?? '', pdv_vus: k.pdv_vus, pdv_total: k.pdv_total, couverture_pct: k.couverture_pct }
+}
+watch([fDivision, fTerritoire, fArea, fDistrib], applyDashboardFilters)
 const storesError = ref(false)
 const showStoreDetail = ref(false)
 const selectedStoreVisite = ref<Visite | null>(null)
@@ -337,15 +454,42 @@ const tierStoreLists = computed(() => tiers.value.map(tier => ({
   ...(tierStoreState[tier.ps_tier] || { items: [], total: 0, page: 1, loading: true }),
 })))
 
+const coverageLabel = computed(() =>
+  `${coverage.value?.pdv_vus ?? 0}/${coverage.value?.pdv_total ?? 0}`,
+)
+const coverageSub = computed(() =>
+  coverage.value?.couverture_pct != null
+    ? `${coverage.value.couverture_pct} % du parc visités`
+    : 'PDV visités / parc actif',
+)
+
 function fmtPct(v: number | null | undefined): string {
   return v == null ? '—' : `${v}%`
+}
+
+// "FLAGSHIP STORE" -> "Flagship", "VIP PERFECT STORE" -> "VIP", etc.
+function niveauCourt(code: string | null): string {
+  if (!code) return 'Non conforme'
+  if (code.startsWith('FLAGSHIP')) return 'Flagship'
+  if (code.startsWith('VIP')) return 'VIP'
+  if (code.startsWith('CORE')) return 'Core'
+  return 'Basic'
+}
+
+// Liste à plat des critères manquants pour le niveau cible (badges).
+function manqueBadges(m: PerfectStoreManqueItem): string[] {
+  const out: string[] = []
+  if (m.dispo_manque) out.push(`Disponibilité ${m.dispo_rayon ?? 0}% < ${m.dispo_rayon_min ?? 0}%`)
+  if (m.assortiment_manque) out.push('Assortiment < 100%')
+  out.push(...m.visibilite_manques, ...m.promotion_manques)
+  return out
 }
 function fmtRatio(v: number | null | undefined): string {
   return v == null ? 'off' : `${Math.round(v * 100)}%`
 }
 
 function formatDate(value: string): string {
-  return new Date(value).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
+  return formatDateFr(value, { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 function tierDotClass(tier: string): string {
@@ -448,10 +592,12 @@ async function openStoreDetail(store: PerfectStoreListItem) {
 onMounted(async () => {
   await fetchRefs()
   try {
-    const [g, t, c] = await Promise.all([fetchGlobalKpi(), fetchKpiParType(), fetchCoverage()])
+    const [g, t, c, ev, mq] = await Promise.all([fetchGlobalKpi(), fetchKpiParType(), fetchCoverage(), fetchPerfectStoreEvolution(), fetchPerfectStoreManques()])
     global.value = g
     parType.value = t
     coverage.value = c
+    evolution.value = ev.map(p => ({ date: p.date, count: p.perfect_store_pct ?? 0 }))
+    manques.value = mq
     await Promise.all(tiers.value.map(tier => loadTierStores(tier.ps_tier)))
   } finally {
     loading.value = false

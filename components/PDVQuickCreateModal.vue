@@ -169,8 +169,9 @@ const defaultRegion = computed(() => authStore.profile?.region || '')
 const secteurOptions = computed(() => authStore.profile?.secteurs_assignes?.filter(Boolean) || [])
 
 // Nouvelle organisation géo : zone = territoire (name), secteur = area (name).
-// Le distributeur découle du territoire : nationaux (toujours) + ceux liés au territoire.
-const { distributeurs, territories, areas, territoireDistributeurs, posTypes, fetchReferentiels } = useReferentiels()
+// Le distributeur découle de l'area sélectionnée (zone_distributeur), avec repli
+// sur le territoire ; les nationaux sont toujours proposés (« sur tous les territoires »).
+const { distributeurs, territories, areas, territoireDistributeurs, zoneDistributeurs, posTypes, fetchReferentiels } = useReferentiels()
 
 const currentTerritory = computed(() => territories.value.find(t => t.name === form.zone))
 const territoryCode = computed(() => currentTerritory.value?.code || '')
@@ -188,10 +189,26 @@ const territoryDistributors = computed(() => {
   )
   return distributeurs.value.filter(d => linked.has(d.name) && !d.national)
 })
+// Distributeurs rattachés à l'area sélectionnée (zone_distributeur). Permet de
+// varier le distributeur d'une area à l'autre dans un même territoire.
+const areaDistributors = computed(() => {
+  const zid = selectedArea.value?.id
+  if (!zid) return []
+  const linked = new Set(
+    zoneDistributeurs.value
+      .filter(zd => zd.zone_id === zid)
+      .map(zd => zd.distributor_name)
+  )
+  return distributeurs.value.filter(d => linked.has(d.name) && !d.national)
+})
+// Portée locale = area si elle a des distributeurs propres, sinon repli territoire.
+const scopedDistributors = computed(() =>
+  areaDistributors.value.length ? areaDistributors.value : territoryDistributors.value
+)
 const distributorOptions = computed(() => {
   const out: { value: string, label: string }[] = []
   const seen = new Set<string>()
-  for (const d of [...territoryDistributors.value, ...nationalDistributors.value]) {
+  for (const d of [...scopedDistributors.value, ...nationalDistributors.value]) {
     if (seen.has(d.name)) continue
     seen.add(d.name)
     out.push({ value: d.name, label: d.national ? `${d.name} · national` : d.name })
@@ -245,7 +262,7 @@ function resetForm() {
   form.zone = defaultZone.value
   form.secteur = secteurOptions.value[0] || ''
   form.region = defaultRegion.value
-  form.distributor_name = territoryDistributors.value[0]?.name || nationalDistributors.value[0]?.name || ''
+  form.distributor_name = scopedDistributors.value[0]?.name || nationalDistributors.value[0]?.name || ''
   form.adressage = ''
   form.geolocation_lat = currentPosition.value?.lat || null
   form.geolocation_lng = currentPosition.value?.lng || null

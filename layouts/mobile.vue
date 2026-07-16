@@ -111,12 +111,8 @@
 
 <script setup lang="ts">
 const route = useRoute()
-<<<<<<< HEAD
-const { isOnline, pendingCount, lastSyncAt } = useOfflineSync()
-=======
 const authStore = useAuthStore()
-const { isOnline, pendingCount } = useOfflineSync()
->>>>>>> 8bce61d (feat: ajout du menu utilisateur avec option de déconnexion et confirmation pour les visites non synchronisées)
+const { isOnline, pendingCount, lastSyncAt } = useOfflineSync()
 const { currentPosition, isLocating, positionError, requestPosition } = useUserGeolocation()
 const { isTracking: isTrackingTournee, pointCount: tourneePointCount, autoStart, stopTournee } = useTournee()
 const tourneeUser = useSupabaseUser()

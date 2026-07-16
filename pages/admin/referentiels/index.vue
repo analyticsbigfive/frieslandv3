@@ -117,9 +117,9 @@
           <USelectMenu
             v-if="f.type === 'select'"
             v-model="form[f.key]"
-            :options="f.opts ? f.opts() : []"
-            :option-attribute="f.opts ? 'label' : undefined"
-            :value-attribute="f.opts ? 'value' : undefined"
+            :options="fieldOpts(f)"
+            option-attribute="label"
+            value-attribute="value"
             :disabled="editing && f.lockEdit"
             searchable
             searchable-placeholder="Rechercher..."
@@ -187,7 +187,8 @@ const CANAUX = ['GT', 'MT']
 const BASES = [{ value: 'taux_vente', label: 'Taux vente' }, { value: 'taux_revu', label: 'Taux revu' }]
 const GRADES = ['A', 'B', 'C']
 const DISPO_SEGMENTS = ['Boutique', 'Minimarket', 'Kiosque', 'Aboki', 'Pushcart', 'TableTop', 'Porridge']
-const VISI_SEGMENTS = ['boutique', 'superette', 'table_top', 'pushcart', 'porridge', 'kiosque_aboki']
+const MT_SEGMENTS = ['Hypermarche', 'MoyenSuper', 'PetitSuper']
+const VISI_SEGMENTS = ['boutique', 'superette', 'mt', 'table_top', 'pushcart', 'porridge', 'kiosque_aboki']
 const NIVEAUX = ['flagship', 'vip', 'core', 'basic']
 const PILIERS = ['visibilite', 'promotion']
 const EMPLACEMENTS = ['exterieure', 'interieure', 'promotion']
@@ -211,6 +212,7 @@ function rebuildMaps() {
   maps.sous_region = byKey('sous_region', 'code')
   maps.territoire_code = byKey('territoire', 'code')
   maps.territoire_id = byKey('territoire', 'id')
+  maps.zone_id = byKey('zone', 'id')
   maps.distributeur_id = byKey('distributeur', 'id')
   maps.categorie_pdv = byKey('categorie_pdv', 'id')
   maps.type_pdv = byKey('type_pdv', 'id')
@@ -227,6 +229,7 @@ const sousRegionOpts = () => opt(store.sous_region || [], r => r.code, r => `${r
 const territoireOpts = () => opt(store.territoire || [], r => r.code, r => `${r.nom} · ${r.code}`)
 const territoireIdOpts = () => opt(store.territoire || [], r => r.id, r => `${r.nom} · ${r.code}`)
 const distributeurIdOpts = () => opt(store.distributeur || [], r => r.id, r => r.nom)
+const zoneIdOpts = () => opt(store.zone || [], r => r.id, r => `${r.nom} · ${r.territoire_code}`)
 const categoriePdvOpts = () => opt(store.categorie_pdv || [], r => r.id, r => `${r.nom}${r.canal ? ' · ' + r.canal : ''}`)
 const typePdvOpts = () => opt(store.type_pdv || [], r => r.id, r => r.nom)
 const categorieProduitOpts = () => opt(store.categorie_produit || [], r => r.id, r => `${r.nom} (${r.code})`)
@@ -238,6 +241,7 @@ const refNameOf = (id: number) => maps.reference_produit?.get(id)?.nom || `#${id
 const typePdvNameOf = (id: number) => maps.type_pdv?.get(id)?.nom || `#${id}`
 const territoireNameOf = (id: number) => maps.territoire_id?.get(id)?.nom || `#${id}`
 const distributeurNameOf = (id: number) => maps.distributeur_id?.get(id)?.nom || `#${id}`
+const zoneNameOf = (id: number) => { const z = maps.zone_id?.get(id); return z ? `${z.nom} · ${z.territoire_code}` : `#${id}` }
 const elementVisNameOf = (id: number) => { const e = maps.element_visibilite?.get(id); return e ? `${e.nom} (${e.segment})` : `#${id}` }
 
 const tierColor = (v: string) => v === 'MT' ? 'purple' : 'blue'
@@ -392,6 +396,25 @@ const defs: Def[] = [
     valid: f => !!f.territoire_id && !!f.distributeur_id,
     save: (f, _e) => supabase.from('territoire_distributeur').upsert({ territoire_id: f.territoire_id, distributeur_id: f.distributeur_id }, { onConflict: 'territoire_id,distributeur_id' }),
     del: r => supabase.from('territoire_distributeur').delete().eq('territoire_id', r.territoire_id).eq('distributeur_id', r.distributeur_id),
+  },
+  {
+    id: 'zone_distributeur', section: 'distrib', label: 'Distrib ↔ Areas', table: 'zone_distributeur',
+    select: 'zone_id, distributeur_id',
+    columns: [
+      { label: 'Area (zone)', cell: r => zoneNameOf(r.zone_id) },
+      { label: 'Distributeur', cell: r => distributeurNameOf(r.distributeur_id) },
+    ],
+    fields: [
+      { key: 'zone_id', label: 'Area (zone)', type: 'select', opts: zoneIdOpts, required: true, lockEdit: true },
+      { key: 'distributeur_id', label: 'Distributeur', type: 'select', opts: distributeurIdOpts, required: true, lockEdit: true },
+    ],
+    blank: () => ({ zone_id: null, distributeur_id: null }),
+    fill: r => ({ ...r }),
+    rowKey: r => `${r.zone_id}-${r.distributeur_id}`,
+    search: r => `${zoneNameOf(r.zone_id)} ${distributeurNameOf(r.distributeur_id)}`.toLowerCase(),
+    valid: f => !!f.zone_id && !!f.distributeur_id,
+    save: (f, _e) => supabase.from('zone_distributeur').upsert({ zone_id: f.zone_id, distributeur_id: f.distributeur_id }, { onConflict: 'zone_id,distributeur_id' }),
+    del: r => supabase.from('zone_distributeur').delete().eq('zone_id', r.zone_id).eq('distributeur_id', r.distributeur_id),
   },
   // ===== POINTS DE VENTE =====
   {
@@ -624,6 +647,31 @@ const defs: Def[] = [
     del: r => supabase.from('seuil_disponibilite').delete().eq('reference_produit_id', r.reference_produit_id).eq('segment', r.segment).eq('grade', r.grade),
   },
   {
+    id: 'seuil_disponibilite_mt', section: 'ps', label: 'Seuils dispo MT (facings)', table: 'seuil_disponibilite_mt',
+    select: 'reference_produit_id, segment_mt, quantite_min, facings',
+    columns: [
+      { label: 'Référence', cell: r => refNameOf(r.reference_produit_id) },
+      { label: 'Format MT', cell: r => r.segment_mt, kind: 'badge' },
+      { label: 'Qté min', cell: r => r.quantite_min, align: 'c', kind: 'num' },
+      { label: 'Facings min', cell: r => r.facings, align: 'c', kind: 'num' },
+    ],
+    fields: [
+      { key: 'reference_produit_id', label: 'Référence', type: 'select', opts: referenceOpts, required: true, lockEdit: true },
+      { key: 'segment_mt', label: 'Format supermarché', type: 'select', opts: () => MT_SEGMENTS, required: true, lockEdit: true, hint: 'Hypermarche = Hyper/Grand · MoyenSuper = Supermarket B · PetitSuper = Supermarket C' },
+      { key: 'quantite_min', label: 'Quantité minimale', type: 'num', required: true, min: 0 },
+      { key: 'facings', label: 'Facings minimum', type: 'num', required: true, min: 0 },
+    ],
+    blank: () => ({ reference_produit_id: null, segment_mt: 'Hypermarche', quantite_min: 0, facings: 0 }),
+    fill: r => ({ ...r }),
+    rowKey: r => `${r.reference_produit_id}|${r.segment_mt}`,
+    search: r => `${refNameOf(r.reference_produit_id)} ${r.segment_mt}`.toLowerCase(),
+    valid: f => !!f.reference_produit_id && !!f.segment_mt && typeof f.quantite_min === 'number' && f.quantite_min >= 0 && typeof f.facings === 'number' && f.facings >= 0,
+    save: (f, e) => e
+      ? supabase.from('seuil_disponibilite_mt').update({ quantite_min: f.quantite_min, facings: f.facings }).eq('reference_produit_id', f.reference_produit_id).eq('segment_mt', f.segment_mt)
+      : supabase.from('seuil_disponibilite_mt').insert({ reference_produit_id: f.reference_produit_id, segment_mt: f.segment_mt, quantite_min: f.quantite_min, facings: f.facings }),
+    del: r => supabase.from('seuil_disponibilite_mt').delete().eq('reference_produit_id', r.reference_produit_id).eq('segment_mt', r.segment_mt),
+  },
+  {
     id: 'standard_assortiment', section: 'ps', label: 'Assortiment', table: 'standard_assortiment',
     select: 'segment, grade, sku_cibles, min_sku_presents, heros_obligatoires',
     columns: [
@@ -741,6 +789,13 @@ const filteredRows = computed(() => {
   if (!q) return rows
   return rows.filter(r => activeDef.value.search(r).includes(q))
 })
+
+// USelectMenu reçoit toujours option/value-attribute 'label'/'value' : les
+// listes d'options en chaînes brutes (CANAUX, GRADES, …) doivent être
+// normalisées en objets, sinon la sélection écrit `undefined` dans le form.
+const fieldOpts = (f: Field) =>
+  (f.opts ? f.opts() : []).map((o: any) =>
+    typeof o === 'object' && o !== null ? o : { value: o, label: String(o) })
 
 const canSave = computed(() => activeDef.value.valid(form.value))
 

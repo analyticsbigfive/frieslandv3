@@ -146,7 +146,8 @@ const navSections: Array<{ key: string; title: string; items: AdminNavItem[] }> 
     key: 'principal',
     title: 'Principal',
     items: [
-      { label: 'Dashboard', to: '/admin', icon: LayoutDashboard },
+      { label: 'Perfect Store', to: '/admin', icon: Trophy },
+      { label: 'Activité', to: '/admin/activite', icon: LayoutDashboard },
       { label: 'Routing & Planning', to: '/admin/routing', icon: Route },
       { label: 'Carte', to: '/admin/map', icon: Map },
       { label: 'Suivi commerciaux', to: '/admin/trajets', icon: Navigation },
@@ -175,7 +176,6 @@ const navSections: Array<{ key: string; title: string; items: AdminNavItem[] }> 
     key: 'perfect-store',
     title: 'Perfect Store',
     items: [
-      { label: 'Perfect Store', to: '/admin/perfect-store', icon: Trophy },
       { label: 'Liste par niveau', to: '/admin/perfect-store/liste', icon: ClipboardList },
     ],
   },

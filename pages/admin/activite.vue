@@ -63,7 +63,7 @@
 
       <section v-if="psGlobal" aria-labelledby="performance-heading" class="grid gap-5 lg:grid-cols-12">
         <NuxtLink
-          to="/admin/perfect-store"
+          to="/admin"
           class="group relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_45px_-32px_rgba(15,23,42,0.45)] transition duration-300 hover:-translate-y-0.5 hover:border-red-200 dark:border-slate-700 dark:bg-slate-800 lg:col-span-7"
         >
           <div class="absolute inset-y-0 left-0 w-1.5 bg-fc-red" />
@@ -337,7 +337,7 @@ const dashboardShortcuts = [
   { label: 'Visites terrain', hint: 'Consulter les visites', to: '/admin/visites', icon: 'i-heroicons-clipboard-document-list' },
   { label: 'Points de vente', hint: 'Gérer le parc actif', to: '/admin/pdv', icon: 'i-heroicons-map-pin' },
   { label: 'Disponibilité produit', hint: 'Contrôler les stocks', to: '/admin/produits/inventaire', icon: 'i-heroicons-cube' },
-  { label: 'Perfect Store', hint: 'Analyser la conformité', to: '/admin/perfect-store', icon: 'i-heroicons-trophy' },
+  { label: 'Perfect Store', hint: 'Analyser la conformité', to: '/admin', icon: 'i-heroicons-trophy' },
 ]
 
 const dashboardAlerts = computed(() => {
@@ -347,7 +347,7 @@ const dashboardAlerts = computed(() => {
     alerts.push({ key: 'products-low', title: 'Disponibilité', description: `${lowCategories.map(category => category.label).join(', ')} sous le seuil de 40 %.`, value: String(lowCategories.length), to: '/admin/produits/recap', level: 'critical' })
   }
   if (psGlobal.value && Number(psGlobal.value.perfect_store_pct ?? 0) < 40) {
-    alerts.push({ key: 'perfect-store-low', title: 'Perfect Store', description: 'Le score global est sous le seuil critique.', value: formatPercent(psGlobal.value.perfect_store_pct), to: '/admin/perfect-store', level: 'critical' })
+    alerts.push({ key: 'perfect-store-low', title: 'Perfect Store', description: 'Le score global est sous le seuil critique.', value: formatPercent(psGlobal.value.perfect_store_pct), to: '/admin', level: 'critical' })
   }
   return alerts.slice(0, 4)
 })
@@ -377,14 +377,16 @@ async function fetchRecentVisits() {
 
 function formatRecentDate(value: string) {
   if (!value) return 'Date inconnue'
-  return new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'short' }).format(new Date(value))
+  return formatDateFr(value, { day: '2-digit', month: 'short' })
 }
 
 const activityMetrics = computed(() => [
   {
     label: 'Couverture du mois',
-    value: numberFormatter.format(coverage.value?.pdv_vus ?? 0),
-    hint: 'PDV distincts visités',
+    value: `${numberFormatter.format(coverage.value?.pdv_vus ?? 0)}/${numberFormatter.format(coverage.value?.pdv_total ?? 0)}`,
+    hint: coverage.value?.couverture_pct != null
+      ? `${coverage.value.couverture_pct} % du parc visités`
+      : 'PDV visités / parc actif',
     icon: MapPin,
     to: '/admin/pdv',
   },

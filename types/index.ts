@@ -178,6 +178,7 @@ export interface VisiteProduits {
     pearl_400g: ProductStatus
     prix_respectes: boolean
     quantites?: SkuQuantites
+    facings?: SkuQuantites
   }
   imp: {
     present: boolean
@@ -192,6 +193,7 @@ export interface VisiteProduits {
     brd_350g: ProductStatus
     prix_respectes: boolean
     quantites?: SkuQuantites
+    facings?: SkuQuantites
   }
   scm: {
     present: boolean
@@ -199,6 +201,7 @@ export interface VisiteProduits {
     pearl_1kg: ProductStatus
     prix_respectes: boolean
     quantites?: SkuQuantites
+    facings?: SkuQuantites
   }
   uht: {
     present: boolean

@@ -36,6 +36,34 @@ export interface PerfectStoreTypeKpi {
 export interface CoverageKpi {
   periode: string
   pdv_vus: number
+  pdv_total: number
+  couverture_pct: number | null
+}
+
+export interface PerfectStoreEvolutionPoint {
+  date: string
+  perfect_stores: number
+  visites_scorees: number
+  perfect_store_pct: number | null
+}
+
+export interface PerfectStoreManqueItem {
+  visite_id: string
+  pdv_id: string
+  nom_pdv: string
+  type_pdv: string
+  division: string | null
+  zone: string | null
+  secteur: string | null
+  distributor_name: string | null
+  niveau_actuel: string | null
+  niveau_cible: string
+  dispo_manque: boolean
+  dispo_rayon: number | null
+  dispo_rayon_min: number | null
+  assortiment_manque: boolean
+  visibilite_manques: string[]
+  promotion_manques: string[]
 }
 
 export interface PerfectStoreListItem {
@@ -73,7 +101,7 @@ export function usePerfectStore() {
   async function fetchRefs(force = false) {
     if (loaded.value && !force && refs.value) return refs.value
     try {
-      const [corr, poids, seuils, assortiment, sg, niv, elements, standards, segmentMap] = await Promise.all([
+      const [corr, poids, seuils, assortiment, sg, niv, elements, standards, segmentMap, seuilsMt] = await Promise.all([
         supabase.from('correspondance_reference').select('categorie_jsonb, sku_key, reference_produit(nom, role)'),
         supabase.from('poids_reference').select('canal, base_calcul, poids, reference_produit(nom)'),
         supabase.from('seuil_disponibilite').select('segment, grade, quantite_min, reference_produit(nom)'),
@@ -83,6 +111,7 @@ export function usePerfectStore() {
         supabase.from('element_visibilite').select('id, segment, code, nom, pilier, emplacement, optionnel'),
         supabase.from('standard_visibilite').select('segment, niveau_perfect_store, requis, element_visibilite(code)'),
         supabase.from('segment_visibilite_type_pdv').select('segment, type_pdv(nom)'),
+        supabase.from('seuil_disponibilite_mt').select('segment_mt, quantite_min, facings, reference_produit(nom)'),
       ])
       const firstError = [corr, poids, seuils, assortiment, sg, niv, elements, standards, segmentMap].find(result => result.error)?.error
       if (firstError) throw firstError
@@ -103,6 +132,7 @@ export function usePerfectStore() {
           poids: Number(r.poids),
         })),
         seuils: (seuils.data || []).map((r: any) => ({ reference_nom: nomOf(r), segment: r.segment, grade: r.grade, quantite_min: r.quantite_min })),
+        seuilsMt: (seuilsMt.data || []).map((r: any) => ({ reference_nom: nomOf(r), segment_mt: r.segment_mt, quantite_min: r.quantite_min, facings: r.facings })),
         assortmentStandards: (assortiment.data || []).map((r: any) => ({
           segment: r.segment,
           grade: r.grade,
@@ -182,7 +212,7 @@ export function usePerfectStore() {
   async function fetchCoverage(): Promise<CoverageKpi | null> {
     const currentPeriod = new Date().toISOString().slice(0, 7)
     const { data, error } = await supabase.from('v_couverture_globale')
-      .select('periode, pdv_vus')
+      .select('periode, pdv_vus, pdv_total, couverture_pct')
       .eq('periode', currentPeriod)
       .maybeSingle()
     if (error) {
@@ -241,6 +271,50 @@ export function usePerfectStore() {
     return { items: (data || []) as PerfectStoreListItem[], total: count || 0 }
   }
 
+  /** Évolution du taux de Perfect Stores par jour (courbe d'accueil). */
+  async function fetchPerfectStoreEvolution(): Promise<PerfectStoreEvolutionPoint[]> {
+    const { data, error } = await supabase
+      .from('v_perfect_store_evolution')
+      .select('date, perfect_stores, visites_scorees, perfect_store_pct')
+      .order('date', { ascending: true })
+    if (error) {
+      console.warn('v_perfect_store_evolution indisponible', error.message)
+      return []
+    }
+    return (data || []) as PerfectStoreEvolutionPoint[]
+  }
+
+  /** KPI globaux filtrés par Division / Territoire / Area / Distributeur (RPC). */
+  async function fetchGlobalKpiFiltre(f: { division?: string; territoire?: string; area?: string; distributeur?: string }): Promise<PerfectStoreGlobalKpi & { pdv_vus: number; pdv_total: number; couverture_pct: number | null } | null> {
+    const { data, error } = await (supabase.rpc as any)('dashboard_perfect_store_filtre', {
+      p_division: f.division || null,
+      p_territoire: f.territoire || null,
+      p_area: f.area || null,
+      p_distributeur: f.distributeur || null,
+    })
+    if (error) {
+      console.warn('dashboard_perfect_store_filtre indisponible', error.message)
+      return null
+    }
+    return data as any
+  }
+
+  /** PDV avec leurs critères manquants pour atteindre le niveau supérieur. */
+  async function fetchPerfectStoreManques(limit = 50): Promise<PerfectStoreManqueItem[]> {
+    const { data, error } = await supabase
+      .from('v_perfect_store_manques')
+      .select('visite_id, pdv_id, nom_pdv, type_pdv, division, zone, secteur, distributor_name, niveau_actuel, niveau_cible, dispo_manque, dispo_rayon, dispo_rayon_min, assortiment_manque, visibilite_manques, promotion_manques')
+      // Les moins conformes d'abord : non conformes (niveau_actuel null), puis dispo manquante.
+      .order('niveau_actuel', { ascending: true, nullsFirst: true })
+      .order('dispo_manque', { ascending: false })
+      .limit(limit)
+    if (error) {
+      console.warn('v_perfect_store_manques indisponible', error.message)
+      return []
+    }
+    return (data || []) as PerfectStoreManqueItem[]
+  }
+
   return {
     refs,
     fetchRefs,
@@ -250,5 +324,8 @@ export function usePerfectStore() {
     fetchCoverage,
     fetchStoresByTier,
     fetchPerfectStoreListe,
+    fetchPerfectStoreEvolution,
+    fetchPerfectStoreManques,
+    fetchGlobalKpiFiltre,
   }
 }

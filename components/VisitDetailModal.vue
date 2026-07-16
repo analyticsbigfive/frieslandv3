@@ -1,5 +1,5 @@
 <template>
-  <UModal v-model="isOpen" :ui="{ width: 'max-w-4xl' }">
+  <UModal v-model="isOpen" :ui="{ width: 'w-full sm:max-w-5xl' }">
     <div v-if="visite" class="max-h-[88vh] overflow-y-auto p-5 sm:p-6">
       <header class="mb-6 flex items-start justify-between gap-4">
         <div>
@@ -257,6 +257,11 @@ const generalInfo = computed(() => [
   { label: 'Commercial', value: props.visite?.commercial || '—' },
   { label: 'Date', value: formatDate(props.visite?.date_visite) },
   { label: 'Point de vente', value: props.visite?.pdv?.nom_pdv || props.visite?.pdv_id?.substring(0, 8) || '—' },
+  { label: 'Canal', value: props.visite?.pdv?.canal || '—' },
+  { label: 'Type PDV', value: props.visite?.pdv?.sous_categorie_pdv || '—' },
+  { label: 'Région', value: props.visite?.pdv?.region || '—' },
+  { label: 'Zone', value: props.visite?.pdv?.zone || '—' },
+  { label: 'Secteur', value: props.visite?.pdv?.secteur || '—' },
   {
     label: 'GPS validé',
     value: props.visite?.geofence_validated ? 'Oui' : 'Non',

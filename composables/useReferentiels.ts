@@ -18,6 +18,7 @@ export interface PosType { level4_type: string; level3_group: string; tier: stri
 export interface ReferenceProduit { id: number; nom: string; category: string }
 export interface CategoriePdvRef { id: number; nom: string; canal: 'GT' | 'MT' | null }
 export interface TerritoireDistributeur { territory_code: string; territory_name: string; distributor_name: string }
+export interface ZoneDistributeur { zone_id: number; distributor_name: string }
 // AvailabilityWeight / AvailabilityStandard : types auto-importés de utils/perfectStore.
 
 export function useReferentiels() {
@@ -35,6 +36,9 @@ export function useReferentiels() {
   const references = useState<ReferenceProduit[]>('refb-references', () => [])
   const categoriesPdv = useState<CategoriePdvRef[]>('refb-categories-pdv', () => [])
   const territoireDistributeurs = useState<TerritoireDistributeur[]>('refb-territoire-distributeurs', () => [])
+  // Distributeur au niveau area (zone) : permet de faire varier le distributeur
+  // d'une area à l'autre dans un même territoire. Défaut seedé = hérité du territoire.
+  const zoneDistributeurs = useState<ZoneDistributeur[]>('refb-zone-distributeurs', () => [])
   const loaded = useState<boolean>('refb-loaded', () => false)
   const error = useState<string | null>('refb-error', () => null)
 
@@ -49,7 +53,7 @@ export function useReferentiels() {
     if (loaded.value && !force) return
     error.value = null
     try {
-      const [d, rg, sr, t, z, tp, rp, pr, sd, td] = await Promise.all([
+      const [d, rg, sr, t, z, tp, rp, pr, sd, td, zd] = await Promise.all([
         supabase.from('distributeur').select('nom, national').order('nom'),
         supabase.from('region').select('code, nom, nom_affichage').order('nom'),
         supabase.from('sous_region').select('code, nom, nom_affichage, region_code').order('nom'),
@@ -60,8 +64,9 @@ export function useReferentiels() {
         supabase.from('poids_reference').select('canal, base_calcul, poids, reference_produit(nom, categorie_produit(code))'),
         supabase.from('seuil_disponibilite').select('segment, grade, quantite_min, reference_produit(nom, categorie_produit(code))'),
         supabase.from('territoire_distributeur').select('territoire(code, nom), distributeur(nom)'),
+        supabase.from('zone_distributeur').select('zone_id, distributeur(nom)'),
       ])
-      const firstErr = [d, rg, sr, t, z, tp, rp, pr, sd, td].find(r => r.error)?.error
+      const firstErr = [d, rg, sr, t, z, tp, rp, pr, sd, td, zd].find(r => r.error)?.error
       if (firstErr) throw firstErr
 
       distributeurs.value = (d.data || []).map((r: any) => ({ name: r.nom, national: !!r.national }))
@@ -102,6 +107,11 @@ export function useReferentiels() {
         return { territory_code: terr?.code ?? '', territory_name: terr?.nom ?? '', distributor_name: one(r.distributeur)?.nom ?? '' }
       })
 
+      zoneDistributeurs.value = (zd.data || []).map((r: any) => ({
+        zone_id: Number(r.zone_id),
+        distributor_name: one(r.distributeur)?.nom ?? '',
+      }))
+
       loaded.value = true
     }
     catch (err: any) {
@@ -113,7 +123,7 @@ export function useReferentiels() {
   return {
     distributeurs, regions, subRegions, territories, areas, posTypes,
     availabilityWeights, availabilityStandards,
-    references, categoriesPdv, territoireDistributeurs,
+    references, categoriesPdv, territoireDistributeurs, zoneDistributeurs,
     loaded, error, fetchReferentiels,
   }
 }

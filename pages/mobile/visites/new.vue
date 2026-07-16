@@ -49,6 +49,16 @@
               value-attribute="value"
               size="lg"
             />
+            <!-- Canal du PDV sélectionné (GT / MT) -->
+            <div v-if="selectedPDV" class="mt-2 flex items-center gap-2">
+              <span
+                class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold"
+                :class="isMT ? 'bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'"
+              >
+                {{ isMT ? 'Modern Trade (MT)' : 'General Trade (GT)' }}
+              </span>
+              <span class="text-xs text-gray-400">{{ selectedPDV.sous_categorie_pdv || 'Type non renseigné' }}</span>
+            </div>
             <div class="mt-2 flex items-center justify-between gap-2">
               <p class="text-xs text-gray-400">Les suggestions ne remplacent jamais votre choix.</p>
               <button type="button" class="shrink-0 text-xs font-semibold text-fc-red underline underline-offset-2 disabled:opacity-50" :disabled="nearestPdvLoading" @click="suggestNearestPdv">
@@ -111,7 +121,10 @@
               :label="prod.label"
               :seuil="getSeuil('evap', prod.key)"
               :model-value="form.produits.evap.quantites?.[prod.key]"
+              :show-facings="isMT"
+              :facings="form.produits.evap.facings?.[prod.key]"
               @update:model-value="setQty('evap', prod.key, $event)"
+              @update:facings="setFacings('evap', prod.key, $event)"
             />
           </div>
         </div>
@@ -145,7 +158,10 @@
               :label="prod.label"
               :seuil="getSeuil('imp', prod.key)"
               :model-value="form.produits.imp.quantites?.[prod.key]"
+              :show-facings="isMT"
+              :facings="form.produits.imp.facings?.[prod.key]"
               @update:model-value="setQty('imp', prod.key, $event)"
+              @update:facings="setFacings('imp', prod.key, $event)"
             />
           </div>
         </div>
@@ -179,7 +195,10 @@
               :label="prod.label"
               :seuil="getSeuil('scm', prod.key)"
               :model-value="form.produits.scm.quantites?.[prod.key]"
+              :show-facings="isMT"
+              :facings="form.produits.scm.facings?.[prod.key]"
               @update:model-value="setQty('scm', prod.key, $event)"
+              @update:facings="setFacings('scm', prod.key, $event)"
             />
           </div>
         </div>
@@ -873,7 +892,8 @@ const filteredPdvList = computed(() => {
 })
 const pdvOptions = computed(() =>
   filteredPdvList.value.map(p => ({
-    label: `${p.nom_pdv} (${p.zone || ''})`,
+    // Canal (GT/MT) indiqué dans le libellé pour distinguer d'emblée.
+    label: `${p.nom_pdv} (${p.zone || ''}) · ${isModernTrade(p.canal) ? 'MT' : 'GT'}`,
     value: p.pdv_id,
   }))
 )
@@ -931,6 +951,15 @@ function setQty(cat: keyof VisiteProduits, sku: string, value: number) {
   const catData = form.produits[cat] as any
   if (!catData.quantites) catData.quantites = {}
   catData.quantites[sku] = Math.max(0, Math.round(value || 0))
+}
+
+// Modern Trade : le PDV est-il en canal MT ? (facings requis en MT uniquement)
+const isMT = computed(() => isModernTrade(selectedPDV.value?.canal))
+// Saisie facings par SKU (MT) → form.produits[cat].facings[sku]
+function setFacings(cat: keyof VisiteProduits, sku: string, value: number) {
+  const catData = form.produits[cat] as any
+  if (!catData.facings) catData.facings = {}
+  catData.facings[sku] = Math.max(0, Math.round(value || 0))
 }
 
 const visibConcurrenceItems: { key: VisibConcKey; label: string }[] = [

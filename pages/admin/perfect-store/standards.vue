@@ -337,7 +337,8 @@ const activeHelp = computed(() => tabs.find(t => t.key === activeTab.value)?.hel
 const segmentOptions = [
   { value: 'all', label: 'Tous les segments' },
   { value: 'boutique', label: 'Boutique' },
-  { value: 'superette', label: 'Superette / MT' },
+  { value: 'superette', label: 'Superette' },
+  { value: 'mt', label: 'Modern Trade (supermarchés)' },
   { value: 'table_top', label: 'Table Top' },
   { value: 'pushcart', label: 'Pushcart' },
   { value: 'porridge', label: 'Porridge' },

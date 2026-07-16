@@ -35,6 +35,20 @@
       >
         <UIcon name="i-heroicons-plus" class="w-4 h-4" />
       </button>
+
+      <!-- Facings : Modern Trade uniquement -->
+      <label v-if="showFacings" class="flex items-center gap-1 pl-1" :title="facingsMin ? `Facings requis : ≥ ${facingsMin}` : 'Nombre de facings'">
+        <span class="text-[10px] font-semibold uppercase text-gray-400">F</span>
+        <input
+          type="number"
+          inputmode="numeric"
+          min="0"
+          :value="facingsVal"
+          class="w-12 h-8 text-center rounded-lg border text-sm font-medium bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-fc-blue focus:outline-none"
+          :class="facingsMin && facingsVal < facingsMin ? 'border-amber-400 dark:border-amber-500' : 'border-gray-200 dark:border-gray-600'"
+          @input="onFacingsInput"
+        />
+      </label>
     </div>
   </div>
 </template>
@@ -46,13 +60,23 @@ const props = withDefaults(defineProps<{
   modelValue: number | undefined
   label: string
   seuil?: number
+  showFacings?: boolean
+  facings?: number
+  facingsMin?: number
 }>(), {
   seuil: 3,
+  showFacings: false,
 })
 
-const emit = defineEmits<{ 'update:modelValue': [number] }>()
+const emit = defineEmits<{ 'update:modelValue': [number]; 'update:facings': [number] }>()
 
 const qty = computed(() => (typeof props.modelValue === 'number' && !Number.isNaN(props.modelValue) ? props.modelValue : 0))
+const facingsVal = computed(() => (typeof props.facings === 'number' && !Number.isNaN(props.facings) ? props.facings : 0))
+
+function onFacingsInput(e: Event) {
+  const n = parseInt((e.target as HTMLInputElement).value, 10)
+  emit('update:facings', Number.isNaN(n) ? 0 : Math.max(0, n))
+}
 
 const level = computed<StockLevel>(() => {
   if (qty.value <= 0) return 'oos'
