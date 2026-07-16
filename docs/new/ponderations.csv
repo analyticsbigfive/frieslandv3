@@ -1,0 +1,32 @@
+﻿Canal,Catégorie,SKU,Poids,Vérif. somme catégorie
+GT,EVAP,BR 150g (150g R),0.65,1
+GT,EVAP,BRB 150g (150g B),0.07,
+GT,EVAP,BR 380g (380g R),0.05,
+GT,EVAP,BRB 380g (380g B),0.03,
+GT,EVAP,BR Gold 160g,0.1,
+GT,EVAP,Pearl 380g,0.1,
+GT,IMP,BR 15g,0.76,1
+GT,IMP,BR 360g,0.07,
+GT,IMP,Délice 15g,0.05,
+GT,IMP,Délice 350g,0.03,
+GT,IMP,BR 400g,0.05,
+GT,IMP,BR 900g,0.02,
+GT,IMP,BR 2500g,0.02,
+GT,SCM,Pearl 1kg,0.9462,1
+GT,SCM,BR 1kg,0.0538,
+MT,EVAP,BR 150g (150g R),0.55,1
+MT,EVAP,BRB 150g (150g B),0.12,
+MT,EVAP,BR 380g (380g R),0.08,
+MT,EVAP,BRB 380g (380g B),0.05,
+MT,EVAP,BR Gold 160g,0.15,
+MT,EVAP,Pearl 380g,0.05,
+MT,IMP,BR 15g,0.25,1
+MT,IMP,BR 360g,0.16,
+MT,IMP,Délice 15g,0.15,
+MT,IMP,Délice 350g,0.1,
+MT,IMP,BR 400g,0.15,
+MT,IMP,BR 900g,0.12,
+MT,IMP,BR 2500g,0.07,
+MT,SCM,Pearl 1kg,0.3,1
+MT,SCM,BR 1kg,0.7,
+Note,Calcul dispo catégorie d'un PDV = Σ (dispo SKU [0/1] × poids). Les poids GT ≠ MT : bien utiliser le bon canal. SCM GT = parts de ventes réelles (non arrondies).,,,

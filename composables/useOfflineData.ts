@@ -118,7 +118,7 @@ export function useOfflineData() {
           .order('date_visite', { ascending: false })
           .limit(200),
         supabase.from('profiles')
-          .select('id, nom, email, role, zone_assignee, telephone, region, is_active')
+          .select('id, nom, email, role, zone_assignee, territoires_assignes, quartiers_assignes, telephone, region, is_active')
           .eq('is_active', true)
           .order('nom'),
       ])

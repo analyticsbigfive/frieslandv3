@@ -411,6 +411,21 @@
             <span class="text-xs text-gray-400">{{ newRouting.pdvItems.length }} PDV sélectionnés</span>
           </div>
 
+          <!-- Périmètre : on ne peut cocher que les PDV des territoires du merchandiser choisi. -->
+          <div
+            v-if="!newRouting.userId"
+            class="mb-3 rounded-lg border border-dashed border-amber-300 bg-amber-50 px-3 py-2.5 text-xs text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300"
+          >
+            Sélectionnez d’abord un merchandiser pour voir les PDV de ses territoires.
+          </div>
+          <div
+            v-else-if="!scopedPdvList.length"
+            class="mb-3 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-2.5 text-xs text-gray-500 dark:border-gray-600 dark:bg-gray-800"
+          >
+            Aucun PDV dans le périmètre de ce merchandiser
+            ({{ profileTerritories(selectedMerchandiser).join(', ') || 'aucun territoire assigné' }}).
+          </div>
+
           <!-- Préselection par colonnes PDV -->
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
             <USelectMenu v-model="pdvFilter.canal" :options="pdvFilterCanalOptions" option-attribute="label" value-attribute="value" placeholder="Canal" size="sm" />
@@ -911,7 +926,18 @@ const userOptions = computed(() => [
 const merchandiserOptions = computed(() =>
   users.value
     .filter(u => u.role === 'merchandiser' || u.role === 'commercial')
-    .map(u => ({ value: u.id, label: `${u.nom || u.email} (${u.zone_assignee || 'N/A'})` }))
+    .map(u => ({ value: u.id, label: `${u.nom || u.email} (${profileTerritories(u).join(', ') || 'aucun territoire'})` }))
+)
+
+// Merchandiser actuellement choisi pour la tournée en cours d'édition.
+const selectedMerchandiser = computed(() => users.value.find(u => u.id === newRouting.userId) || null)
+
+// PDV éligibles = uniquement ceux du périmètre (territoires + quartiers) du merchandiser choisi.
+// Sans merchandiser choisi, aucun PDV n'est proposable : on ne connaît pas le périmètre.
+const scopedPdvList = computed(() =>
+  selectedMerchandiser.value
+    ? pdvList.value.filter(p => pdvInScope(p, selectedMerchandiser.value))
+    : []
 )
 
 // ---- Préselection PDV par colonnes (canal / région / zone / quartier) ----
@@ -924,24 +950,24 @@ function filterOpts(values: (string | null | undefined)[]) {
   ]
 }
 
-const pdvFilterCanalOptions = computed(() => filterOpts(pdvList.value.map(p => p.canal)))
+const pdvFilterCanalOptions = computed(() => filterOpts(scopedPdvList.value.map(p => p.canal)))
 const pdvFilterRegionOptions = computed(() =>
-  filterOpts(pdvList.value.filter(p => !pdvFilter.canal || p.canal === pdvFilter.canal).map(p => p.region))
+  filterOpts(scopedPdvList.value.filter(p => !pdvFilter.canal || p.canal === pdvFilter.canal).map(p => p.region))
 )
 const pdvFilterZoneOptions = computed(() =>
-  filterOpts(pdvList.value
+  filterOpts(scopedPdvList.value
     .filter(p => (!pdvFilter.canal || p.canal === pdvFilter.canal) && (!pdvFilter.region || p.region === pdvFilter.region))
     .map(p => p.zone))
 )
 const pdvFilterQuartierOptions = computed(() =>
-  filterOpts(pdvList.value
+  filterOpts(scopedPdvList.value
     .filter(p => (!pdvFilter.canal || p.canal === pdvFilter.canal) && (!pdvFilter.region || p.region === pdvFilter.region) && (!pdvFilter.zone || p.zone === pdvFilter.zone))
     .map(p => p.quartier))
 )
 
 const filteredAvailablePdv = computed(() => {
   const usedIds = new Set(newRouting.pdvItems.map(i => i.pdv_id))
-  return pdvList.value.filter(p =>
+  return scopedPdvList.value.filter(p =>
     !usedIds.has(p.pdv_id) &&
     (!pdvFilter.canal || p.canal === pdvFilter.canal) &&
     (!pdvFilter.region || p.region === pdvFilter.region) &&
@@ -971,6 +997,14 @@ watch(() => pdvFilter.canal, () => { pdvFilter.region = ''; pdvFilter.zone = '';
 watch(() => pdvFilter.region, () => { pdvFilter.zone = ''; pdvFilter.quartier = '' })
 watch(() => pdvFilter.zone, () => { pdvFilter.quartier = '' })
 
+// Changement de merchandiser : purge les PDV déjà sélectionnés qui sortent de son périmètre,
+// et remet les filtres colonnes à zéro (leurs options dépendent du nouveau périmètre).
+watch(() => newRouting.userId, () => {
+  const scopedIds = new Set(scopedPdvList.value.map(p => p.pdv_id))
+  newRouting.pdvItems = newRouting.pdvItems.filter(i => scopedIds.has(i.pdv_id))
+  clearPdvFilter()
+})
+
 function addFilteredPDV() {
   const usedIds = new Set(newRouting.pdvItems.map(i => i.pdv_id))
   for (const p of filteredAvailablePdv.value) {
@@ -982,7 +1016,7 @@ function addFilteredPDV() {
 
 // Liste cochable des PDV correspondant aux filtres (inclut les déjà sélectionnés, affichés cochés)
 const filteredPdvForSelection = computed(() =>
-  pdvList.value.filter(p =>
+  scopedPdvList.value.filter(p =>
     (!pdvFilter.canal || p.canal === pdvFilter.canal) &&
     (!pdvFilter.region || p.region === pdvFilter.region) &&
     (!pdvFilter.zone || p.zone === pdvFilter.zone) &&
@@ -1029,9 +1063,12 @@ function onDragEnd() {
   dragOverIndex.value = null
 }
 
-const canCreate = computed(() =>
-  newRouting.userId && newRouting.date && newRouting.pdvItems.length > 0
-)
+const canCreate = computed(() => {
+  if (!newRouting.userId || !newRouting.date || newRouting.pdvItems.length === 0) return false
+  // Filet UI : tous les PDV de la tournée doivent être dans le périmètre du merchandiser.
+  const scopedIds = new Set(scopedPdvList.value.map(p => p.pdv_id))
+  return newRouting.pdvItems.every(i => scopedIds.has(i.pdv_id))
+})
 
 const groupedTemplates = computed(() => {
   const list = routingStore.templates || []

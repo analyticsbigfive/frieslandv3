@@ -56,6 +56,7 @@
               <th>Commercial</th>
               <th>Point de vente</th>
               <th>Canal</th>
+              <th>Distributeur</th>
               <th class="text-center">Niveau</th>
               <th class="text-center">Score</th>
               <th class="text-center">EVAP</th>
@@ -90,6 +91,7 @@
                 </UBadge>
                 <span v-else class="text-xs text-slate-400">—</span>
               </td>
+              <td class="text-sm text-slate-600 dark:text-slate-300">{{ visite.pdv?.distributor_name || '—' }}</td>
               <td class="text-center">
                 <UBadge
                   v-if="scoreFor(visite)?.tierAtteint"

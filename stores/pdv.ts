@@ -45,10 +45,11 @@ export const usePDVStore = defineStore('pdv', () => {
     }
 
     const quartiers = (profile.quartiers_assignes || []).filter(Boolean).sort().join('|')
+    const territoires = profileTerritories(profile).slice().sort().join('|')
     return [
       profile.id,
       profile.role,
-      profile.zone_assignee || '',
+      territoires,
       profile.region || '',
       quartiers,
     ].join(':')
@@ -65,8 +66,12 @@ export const usePDVStore = defineStore('pdv', () => {
       return query
     }
 
-    if (profile.zone_assignee) {
-      query = query.eq('zone', profile.zone_assignee)
+    const territoires = profileTerritories(profile)
+    if (territoires.length === 1) {
+      query = query.eq('zone', territoires[0])
+    }
+    else if (territoires.length > 1) {
+      query = query.in('zone', territoires)
     }
 
     const quartiers = (profile.quartiers_assignes || []).filter(Boolean)

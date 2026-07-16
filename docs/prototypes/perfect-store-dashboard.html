@@ -254,6 +254,19 @@
     .compact-bar { display: grid; grid-template-columns: 100px 1fr 50px; align-items: center; gap: 12px; font-size: 12px; }
     .compact-bar > span:last-child { text-align: right; font-weight: 800; }
     .filter-bar .filter-chip.muted { color: var(--muted); background: #f7faf7; }
+    .subtabs {
+      display: flex; align-items: flex-end; gap: 4px; overflow-x: auto; margin: -7px 0 22px;
+      border-bottom: 1px solid var(--line); scrollbar-width: thin;
+    }
+    .subtab {
+      flex: 0 0 auto; min-height: 39px; padding: 0 12px; border: 0; border-bottom: 2px solid transparent;
+      color: var(--muted); background: transparent; font-size: 12px; font-weight: 700; white-space: nowrap;
+      transition: color .2s ease, border-color .2s ease, background .2s ease;
+    }
+    .subtab:hover { color: var(--ink); background: #f7faf7; }
+    .subtab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .subtab-count { display: inline-flex; min-width: 18px; height: 18px; align-items: center; justify-content: center; margin-left: 5px; padding: 0 5px; border-radius: 5px; background: #edf2ed; color: var(--muted); font-size: 10px; }
+    .subtab.active .subtab-count { background: var(--accent-soft); color: var(--accent); }
 
     @media (max-width: 1120px) {
       .shell { grid-template-columns: 82px minmax(0, 1fr); }
@@ -319,6 +332,9 @@
         <div class="nav-label">Performance</div>
         <button class="nav-item" type="button" data-page="disponibilite"><span class="nav-icon">▥</span><span>Disponibilité</span></button>
         <button class="nav-item" type="button" data-page="visibilite"><span class="nav-icon">⊙</span><span>Visibilité</span></button>
+        <button class="nav-item" type="button" data-page="concurrence"><span class="nav-icon">⇄</span><span>Concurrence</span></button>
+        <button class="nav-item" type="button" data-page="produits"><span class="nav-icon">▦</span><span>Produits</span></button>
+        <button class="nav-item" type="button" data-page="actions"><span class="nav-icon">✓</span><span>Actions</span></button>
       </nav>
       <nav class="nav-group">
         <div class="nav-label">Administration</div>
@@ -349,6 +365,12 @@
             <button class="button primary" type="button" data-open="filters">Modifier le périmètre</button>
           </div>
         </section>
+        <nav class="subtabs" aria-label="Navigation Perfect Store" data-tab-group="perfect-store">
+          <button class="subtab active" type="button" data-page="perfect-store" data-tab-group="perfect-store">Vue d’ensemble</button>
+          <button class="subtab" type="button" data-page="pdv" data-tab-group="perfect-store">Liste des PDV <span class="subtab-count">14</span></button>
+          <button class="subtab" type="button" data-page="visites" data-tab-group="perfect-store">Visites</button>
+          <button class="subtab" type="button" data-page="parametrage" data-tab-group="perfect-store">Standards</button>
+        </nav>
 
         <section class="filter-bar" aria-label="Périmètre actif">
           <span class="filter-label">Périmètre</span>
@@ -458,6 +480,11 @@
 
         <section id="page-activite" class="page-view" hidden>
           <section class="page-head compact"><div><h1>Activité</h1></div><div class="head-actions"><button class="button" type="button" onclick="window.print()">↥&nbsp; Exporter</button><button class="button" type="button" data-open="filters">Période</button></div></section>
+          <nav class="subtabs" aria-label="Navigation activité" data-tab-group="activite">
+            <button class="subtab active" type="button" data-page="activite" data-tab-group="activite">Vue activité</button>
+            <button class="subtab" type="button" data-page="visites" data-tab-group="activite">Visites</button>
+            <button class="subtab" type="button" data-page="routing" data-tab-group="activite">Routing</button>
+          </nav>
           <section class="kpis" aria-label="Indicateurs d’activité">
             <article class="kpi"><div class="kpi-label">Visites ce mois</div><div class="kpi-value">14</div><div class="kpi-note">Jeu de démonstration Perfect Store</div></article>
             <article class="kpi green"><div class="kpi-label">PDV visités</div><div class="kpi-value">14</div><div class="kpi-note">100 % du parc de démonstration</div></article>
@@ -473,6 +500,12 @@
 
         <section id="page-visites" class="page-view" hidden>
           <section class="page-head compact"><div><h1>Visites</h1></div><div class="head-actions"><button class="button" type="button">Exporter CSV</button><button class="button primary" type="button">Nouvelle visite</button></div></section>
+          <nav class="subtabs" aria-label="Navigation visites" data-tab-group="visites">
+            <button class="subtab active" type="button" data-page="visites" data-tab-group="visites">Toutes les visites <span class="subtab-count">14</span></button>
+            <button class="subtab" type="button" data-page="activite" data-tab-group="visites">Évolution</button>
+            <button class="subtab" type="button" data-page="activite" data-tab-group="visites">Catégories</button>
+            <button class="subtab" type="button" data-page="activite" data-tab-group="visites">Commerciaux</button>
+          </nav>
           <section class="filter-bar"><span class="filter-label">Rechercher</span><span class="filter-chip">Période <strong>01–31 juil. 2026</strong></span><span class="filter-chip">Commercial <strong>Tous</strong></span><span class="filter-chip">Canal <strong>Tous</strong></span><button class="button ghost" type="button" data-open="filters">Plus de filtres →</button></section>
           <section class="panel table-panel"><div class="table-head"><div><h2>14 visites</h2></div><span class="filter-chip muted">Tri : plus récentes</span></div><div class="table-wrap"><table><thead><tr><th>PDV</th><th>Type</th><th>Commercial</th><th>Date</th><th>Perfect Store</th><th>Synchronisation</th></tr></thead><tbody><tr data-store="PS-003" tabindex="0"><td><span class="pdv-name">PS-003</span><span class="pdv-meta">Visite complète · MT</span></td><td>Supermarket A</td><td>Démo Commercial</td><td>16 juil. 2026</td><td><span class="badge flagship">Flagship</span></td><td><span class="badge vip">Synchronisée</span></td></tr><tr data-store="PS-007" tabindex="0"><td><span class="pdv-name">PS-007</span><span class="pdv-meta">Visite complète · GT</span></td><td>Boutique C</td><td>Démo Commercial</td><td>16 juil. 2026</td><td><span class="badge core">Core</span></td><td><span class="badge vip">Synchronisée</span></td></tr><tr data-store="PS-013" tabindex="0"><td><span class="pdv-name">PS-013</span><span class="pdv-meta">Données insuffisantes</span></td><td>PDV démo</td><td>Démo Commercial</td><td>16 juil. 2026</td><td><span class="badge missing">Sous Basic</span></td><td><span class="badge vip">Synchronisée</span></td></tr></tbody></table></div></section>
         </section>
@@ -498,6 +531,12 @@
 
         <section id="page-disponibilite" class="page-view" hidden>
           <section class="page-head compact"><div><h1>Disponibilité</h1></div><div class="head-actions"><button class="button" type="button">Exporter</button><button class="button primary" type="button">Paramétrer les standards</button></div></section>
+          <nav class="subtabs" aria-label="Navigation produits" data-tab-group="produits">
+            <button class="subtab active" type="button" data-page="disponibilite" data-tab-group="produits">Disponibilité</button>
+            <button class="subtab" type="button" data-page="produits" data-tab-group="produits">Récapitulatif</button>
+            <button class="subtab" type="button" data-page="produits" data-tab-group="produits">Inventaire SKU</button>
+            <button class="subtab" type="button" data-page="parametrage" data-tab-group="produits">Seuils & pondérations</button>
+          </nav>
           <section class="filter-bar"><span class="filter-label">Analyse</span><span class="filter-chip">Canal <strong>General trade</strong></span><span class="filter-chip">Catégorie <strong>Toutes</strong></span><span class="filter-chip">Type de PDV <strong>Tous</strong></span><button class="button ghost" type="button" data-open="filters">Plus de filtres →</button></section>
           <section class="kpis"><article class="kpi green"><div class="kpi-label">Règle GT</div><div class="kpi-value">Qté ≥ seuil</div><div class="kpi-note">Disponibilité par SKU puis par catégorie</div></article><article class="kpi"><div class="kpi-label">Règle MT</div><div class="kpi-value">Qté + facing</div><div class="kpi-note">Les deux conditions doivent passer</div></article><article class="kpi purple"><div class="kpi-label">Catégories</div><div class="kpi-value">EVAP · IMP</div><div class="kpi-note">SCM est calculé dans le même moteur</div></article><article class="kpi blue"><div class="kpi-label">Base</div><div class="kpi-value">Taux vente</div><div class="kpi-note">Base de calcul actuellement utilisée</div></article></section>
           <section class="overview-grid"><article class="panel panel-pad"><div class="page-intro"><h2>Standards par canal</h2><span class="filter-chip">GT / MT</span></div><div class="compact-bars"><div class="compact-bar"><span>GT · quantité</span><div class="bar"><span class="vip" style="width:100%"></span></div><span>seuil SKU</span></div><div class="compact-bar"><span>MT · quantité</span><div class="bar"><span class="vip" style="width:100%"></span></div><span>seuil MT</span></div><div class="compact-bar"><span>MT · facings</span><div class="bar"><span class="basic" style="width:100%"></span></div><span>seuil MT</span></div></div></article><article class="panel panel-pad"><div class="page-intro"><h2>À afficher dans le drill-down</h2><button class="button" type="button">Voir les SKU →</button></div><ul class="simple-list"><li><span><strong>SKU sous le seuil</strong><small>Quantité observée vs quantité minimale</small></span><span class="table-action">Comparer →</span></li><li><span><strong>Facings insuffisants</strong><small>MT uniquement · règle ET</small></span><span class="table-action">Comparer →</span></li><li><span><strong>Pondération</strong><small>EVAP · IMP · SCM · base taux de vente</small></span><span class="table-action">Voir →</span></li></ul></article></section>
@@ -505,9 +544,54 @@
 
         <section id="page-visibilite" class="page-view" hidden>
           <section class="page-head compact"><div><h1>Visibilité</h1></div><div class="head-actions"><button class="button" type="button">Exporter</button><button class="button primary" type="button">Voir les critères</button></div></section>
+          <nav class="subtabs" aria-label="Navigation visibilité" data-tab-group="visibilite">
+            <button class="subtab active" type="button" data-page="visibilite" data-tab-group="visibilite">Synthèse</button>
+            <button class="subtab" type="button" data-page="visibilite" data-tab-group="visibilite">Extérieure</button>
+            <button class="subtab" type="button" data-page="visibilite" data-tab-group="visibilite">Intérieure GT</button>
+            <button class="subtab" type="button" data-page="visibilite" data-tab-group="visibilite">Intérieure MT</button>
+            <button class="subtab" type="button" data-page="visibilite" data-tab-group="visibilite">Promotion</button>
+            <button class="subtab" type="button" data-page="visibilite" data-tab-group="visibilite">Évolution</button>
+          </nav>
           <section class="filter-bar"><span class="filter-label">Analyse</span><span class="filter-chip">Canal <strong>Tous</strong></span><span class="filter-chip">Pilier <strong>Tous</strong></span><span class="filter-chip">Niveau <strong>Tous</strong></span><button class="button ghost" type="button" data-open="filters">Plus de filtres →</button></section>
           <section class="kpis"><article class="kpi green"><div class="kpi-label">Règle de niveau</div><div class="kpi-value">100 %</div><div class="kpi-note">Visibilité requise à chaque niveau</div></article><article class="kpi"><div class="kpi-label">Critères MT</div><div class="kpi-value">8</div><div class="kpi-note">Niche · wobbler · top shelf · bacs…</div></article><article class="kpi purple"><div class="kpi-label">Promotion</div><div class="kpi-value">Optionnelle</div><div class="kpi-note">Ignorée si promotion_applicable = false</div></article><article class="kpi blue"><div class="kpi-label">Matrice</div><div class="kpi-value">4 niveaux</div><div class="kpi-note">Flagship · VIP · Core · Basic</div></article></section>
           <section class="overview-grid"><article class="panel panel-pad"><div class="page-intro"><h2>Matrice MT visible</h2><span class="filter-chip muted">8 critères</span></div><div class="compact-bars"><div class="compact-bar"><span>Niche</span><div class="bar"><span class="vip" style="width:100%"></span></div><span>requis</span></div><div class="compact-bar"><span>Wobbler</span><div class="bar"><span class="vip" style="width:100%"></span></div><span>requis</span></div><div class="compact-bar"><span>Réglettes</span><div class="bar"><span class="vip" style="width:100%"></span></div><span>requis</span></div><div class="compact-bar"><span>TG / Hôtesses</span><div class="bar"><span class="basic" style="width:100%"></span></div><span>niveau</span></div></div></article><article class="panel panel-pad"><div class="page-intro"><h2>Critères manquants</h2><button class="button" type="button" data-page="perfect-store">Voir les PDV →</button></div><ul class="simple-list"><li><span><strong>Gap to next level</strong><small>Calculé pour chaque visite non-Flagship</small></span><span class="table-action">Ouvrir →</span></li><li><span><strong>Visibilité</strong><small>Liste des éléments non observés</small></span><span class="table-action">Détail →</span></li><li><span><strong>Promotion</strong><small>Liste produite seulement si applicable</small></span><span class="table-action">Détail →</span></li></ul></article></section>
+        </section>
+
+        <section id="page-concurrence" class="page-view" hidden>
+          <section class="page-head compact"><div><h1>Concurrence</h1></div><div class="head-actions"><button class="button" type="button">Exporter</button><button class="button primary" type="button" data-open="filters">Filtrer</button></div></section>
+          <nav class="subtabs" aria-label="Navigation concurrence" data-tab-group="concurrence">
+            <button class="subtab active" type="button" data-page="concurrence" data-tab-group="concurrence">Récapitulatif</button>
+            <button class="subtab" type="button" data-page="concurrence" data-tab-group="concurrence">Évolution</button>
+            <button class="subtab" type="button" data-page="concurrence" data-tab-group="concurrence">Visibilité concurrence</button>
+          </nav>
+          <section class="kpis"><article class="kpi"><div class="kpi-label">Présence concurrence</div><div class="kpi-value">42,6 %</div><div class="kpi-note">PDV avec au moins un concurrent observé</div></article><article class="kpi green"><div class="kpi-label">EVAP</div><div class="kpi-value">Cowmilk</div><div class="kpi-note">Concurrent le plus déclaré</div></article><article class="kpi purple"><div class="kpi-label">IMP</div><div class="kpi-value">NIDO</div><div class="kpi-note">Suivi par catégorie</div></article><article class="kpi blue"><div class="kpi-label">Visibilité</div><div class="kpi-value">À suivre</div><div class="kpi-note">Extérieure et intérieure séparées</div></article></section>
+          <section class="overview-grid"><article class="panel panel-pad"><div class="page-intro"><h2>Présence par catégorie</h2><span class="filter-chip">Période active</span></div><div class="compact-bars"><div class="compact-bar"><span>EVAP</span><div class="bar"><span class="basic" style="width:43%"></span></div><span>43 %</span></div><div class="compact-bar"><span>IMP</span><div class="bar"><span class="vip" style="width:37%"></span></div><span>37 %</span></div><div class="compact-bar"><span>SCM</span><div class="bar"><span class="vip" style="width:29%"></span></div><span>29 %</span></div><div class="compact-bar"><span>UHT</span><div class="bar"><span class="basic" style="width:51%"></span></div><span>51 %</span></div></div></article><article class="panel panel-pad"><div class="page-intro"><h2>Concurrent à analyser</h2><span class="badge basic">Priorité</span></div><ul class="simple-list"><li><span><strong>NIDO</strong><small>Présence multi-catégories</small></span><span class="table-action">Voir →</span></li><li><span><strong>LAITY</strong><small>IMP · suivi visibilité</small></span><span class="table-action">Voir →</span></li><li><span><strong>CANDIA</strong><small>UHT · évolution à surveiller</small></span><span class="table-action">Voir →</span></li></ul></article></section>
+        </section>
+
+        <section id="page-produits" class="page-view" hidden>
+          <section class="page-head compact"><div><h1>Produits</h1></div><div class="head-actions"><button class="button" type="button">Exporter</button><button class="button primary" type="button">Actualiser les seuils</button></div></section>
+          <nav class="subtabs" aria-label="Navigation produits" data-tab-group="produits-root">
+            <button class="subtab active" type="button" data-page="produits" data-tab-group="produits-root">Récapitulatif</button>
+            <button class="subtab" type="button" data-page="disponibilite" data-tab-group="produits-root">Disponibilité</button>
+            <button class="subtab" type="button" data-page="produits" data-tab-group="produits-root">EVAP</button>
+            <button class="subtab" type="button" data-page="produits" data-tab-group="produits-root">IMP</button>
+            <button class="subtab" type="button" data-page="produits" data-tab-group="produits-root">SCM</button>
+            <button class="subtab" type="button" data-page="produits" data-tab-group="produits-root">Inventaire</button>
+            <button class="subtab" type="button" data-page="parametrage" data-tab-group="produits-root">Seuils</button>
+          </nav>
+          <section class="kpis"><article class="kpi green"><div class="kpi-label">Disponibilité globale</div><div class="kpi-value">OSA</div><div class="kpi-note">Quantité au seuil, pondérée par catégorie</div></article><article class="kpi"><div class="kpi-label">EVAP</div><div class="kpi-value">36 SKU</div><div class="kpi-note">Références GT / MT</div></article><article class="kpi purple"><div class="kpi-label">IMP</div><div class="kpi-value">36 SKU</div><div class="kpi-note">Références GT / MT</div></article><article class="kpi blue"><div class="kpi-label">SCM</div><div class="kpi-value">39 SKU</div><div class="kpi-note">Références GT / MT</div></article></section>
+          <section class="overview-grid"><article class="panel panel-pad"><div class="page-intro"><h2>Chemin de lecture</h2><span class="badge vip">2 règles</span></div><ul class="simple-list"><li><span><strong>GT</strong><small>Quantité observée ≥ seuil SKU</small></span><span class="badge vip">Actif</span></li><li><span><strong>MT</strong><small>Quantité observée ET facings ≥ seuil</small></span><span class="badge vip">Actif</span></li><li><span><strong>Assortiment</strong><small>Présence distincte de disponibilité</small></span><span class="badge basic">À distinguer</span></li></ul></article><article class="panel panel-pad"><div class="page-intro"><h2>Références à traiter</h2><span class="filter-chip muted">Dernière visite</span></div><ul class="simple-list"><li><span><strong>Ruptures sous seuil</strong><small>Quantité insuffisante</small></span><span class="table-action">Voir →</span></li><li><span><strong>Facings MT</strong><small>PS-003 et supermarchés</small></span><span class="table-action">Voir →</span></li><li><span><strong>Standards</strong><small>Seuils et pondérations</small></span><span class="table-action">Paramétrer →</span></li></ul></article></section>
+        </section>
+
+        <section id="page-actions" class="page-view" hidden>
+          <section class="page-head compact"><div><h1>Actions</h1></div><div class="head-actions"><button class="button" type="button">Exporter</button><button class="button primary" type="button">Créer une action</button></div></section>
+          <nav class="subtabs" aria-label="Navigation actions" data-tab-group="actions">
+            <button class="subtab active" type="button" data-page="actions" data-tab-group="actions">Récapitulatif</button>
+            <button class="subtab" type="button" data-page="actions" data-tab-group="actions">Évolution</button>
+            <button class="subtab" type="button" data-page="actions" data-tab-group="actions">Détail par action</button>
+          </nav>
+          <section class="kpis"><article class="kpi green"><div class="kpi-label">Taux de réalisation</div><div class="kpi-value">68,4 %</div><div class="kpi-note">Actions déclarées sur la période</div></article><article class="kpi"><div class="kpi-label">Référencement</div><div class="kpi-value">74,2 %</div><div class="kpi-note">Action la plus avancée</div></article><article class="kpi purple"><div class="kpi-label">Activités promo</div><div class="kpi-value">52,6 %</div><div class="kpi-note">À rapprocher de promotion_applicable</div></article><article class="kpi blue"><div class="kpi-label">À relancer</div><div class="kpi-value">2</div><div class="kpi-note">Actions prioritaires du périmètre</div></article></section>
+          <section class="panel table-panel"><div class="table-head"><div><h2>Actions à relancer</h2></div><span class="filter-chip muted">Priorité opérationnelle</span></div><div class="table-wrap"><table><thead><tr><th>Action</th><th>PDV</th><th>Responsable</th><th>Échéance</th><th>Statut</th></tr></thead><tbody><tr><td class="pdv-name">Pose matériel visibilité</td><td>PS-007 · Boutique C</td><td>Démo Commercial</td><td>18 juil. 2026</td><td><span class="badge basic">À relancer</span></td></tr><tr><td class="pdv-name">Vérification FIFO</td><td>PS-013 · PDV non conforme</td><td>Démo Commercial</td><td>18 juil. 2026</td><td><span class="badge missing">Prioritaire</span></td></tr></tbody></table></div></section>
         </section>
 
         <section id="page-parametrage" class="page-view" hidden>
@@ -573,6 +657,9 @@
       territoires: 'Territoires & distributeurs',
       disponibilite: 'Disponibilité',
       visibilite: 'Visibilité',
+      concurrence: 'Concurrence',
+      produits: 'Produits',
+      actions: 'Actions',
       parametrage: 'Paramétrage',
     }
     const crumbPage = document.getElementById('crumb-page')
@@ -587,6 +674,9 @@
       const control = event.target.closest('[data-page]')
       if (!control) return
       event.preventDefault()
+      if (control.dataset.tabGroup) {
+        document.querySelectorAll(`[data-tab-group="${control.dataset.tabGroup}"]`).forEach((item) => item.classList.toggle('active', item === control))
+      }
       showPage(control.dataset.page)
     })
     document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closePanel() })

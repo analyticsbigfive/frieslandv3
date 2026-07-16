@@ -10,6 +10,41 @@ export const useRoutingStore = defineStore('routing', () => {
   const routingPDVList = ref<RoutingPDV[]>([])
   const loading = ref(false)
 
+  // ---- Garde périmètre : refuse toute tournée contenant un PDV hors des territoires du user ----
+  // Filet côté store, appliqué même quand l'UI est contournée (duplicate, template, generate, CSV).
+  // Retourne la liste des pdv_id hors périmètre (vide si tout est valide).
+  async function findOutOfScopePDV(userId: string, pdvIds: string[]): Promise<string[]> {
+    const ids = [...new Set(pdvIds.filter(Boolean))]
+    if (!ids.length) return []
+
+    const { data: profile, error: profErr } = await (supabase
+      .from('profiles') as any)
+      .select('role, zone_assignee, territoires_assignes, quartiers_assignes')
+      .eq('id', userId)
+      .single()
+    if (profErr) throw profErr
+
+    // admin / superviseur : aucune restriction de périmètre.
+    if (profile?.role === 'admin' || profile?.role === 'superviseur') return []
+
+    const { data: pdvs, error: pdvErr } = await (supabase
+      .from('pdv') as any)
+      .select('pdv_id, zone, quartier')
+      .in('pdv_id', ids)
+    if (pdvErr) throw pdvErr
+
+    return (pdvs || [])
+      .filter((p: any) => !pdvInScope(p, profile as Profile))
+      .map((p: any) => p.pdv_id)
+  }
+
+  async function assertScopedPDV(userId: string, pdvIds: string[]) {
+    const bad = await findOutOfScopePDV(userId, pdvIds)
+    if (bad.length) {
+      throw new Error(`${bad.length} PDV hors du périmètre du merchandiser : ${bad.slice(0, 5).join(', ')}${bad.length > 5 ? '…' : ''}`)
+    }
+  }
+
   // ---- Mobile: fetch today's routing for current user ----
   async function fetchTodayRouting(userId: string) {
     loading.value = true
@@ -158,6 +193,9 @@ export const useRoutingStore = defineStore('routing', () => {
     createdBy: string,
     notes?: string
   ) {
+    // Garde périmètre : refuse tout PDV hors des territoires assignés au user.
+    await assertScopedPDV(userId, pdvItems.map(i => i.pdv_id))
+
     // Create routing
     const { data: routing, error: routingError } = await (supabase
       .from('routings') as any)
@@ -236,6 +274,21 @@ export const useRoutingStore = defineStore('routing', () => {
     updates: { user_id?: string; date_routing?: string; notes?: string | null; status?: string },
     pdvItems?: { pdv_id: string; objectifs: RoutingObjectives }[]
   ) {
+    // Garde périmètre : si la liste PDV change, valide contre le user (nouveau ou courant).
+    if (pdvItems) {
+      let targetUser = updates.user_id
+      if (!targetUser) {
+        const { data: cur, error: curErr } = await (supabase
+          .from('routings') as any)
+          .select('user_id')
+          .eq('id', routingId)
+          .single()
+        if (curErr) throw curErr
+        targetUser = (cur as any)?.user_id
+      }
+      if (targetUser) await assertScopedPDV(targetUser, pdvItems.map(i => i.pdv_id))
+    }
+
     // 1. Update routing metadata
     const metaUpdate: any = { ...updates, updated_at: new Date().toISOString() }
     const { error: metaError } = await (supabase
@@ -297,20 +350,21 @@ export const useRoutingStore = defineStore('routing', () => {
     const summary = { created: 0, updated: 0, pdvCount: 0, errors: [] as string[] }
     if (!rows.length) return summary
 
-    // Résolution email -> user_id
+    // Résolution email -> profil (id + périmètre pour la garde territoire)
     const { data: profiles, error: pErr } = await (supabase.from('profiles') as any)
-      .select('id, email')
+      .select('id, email, role, zone_assignee, territoires_assignes, quartiers_assignes')
     if (pErr) throw pErr
-    const emailToId = new Map<string, string>(
-      (profiles || []).map((p: any) => [String(p.email || '').trim().toLowerCase(), p.id])
+    const emailToProfile = new Map<string, any>(
+      (profiles || []).map((p: any) => [String(p.email || '').trim().toLowerCase(), p])
     )
 
-    // PDV valides
+    // PDV valides + leur zone/quartier (pour vérifier le périmètre)
     const { data: pdvs, error: pdvErr } = await (supabase.from('pdv') as any)
-      .select('pdv_id')
+      .select('pdv_id, zone, quartier')
       .eq('is_active', true)
     if (pdvErr) throw pdvErr
-    const validPdv = new Set((pdvs || []).map((p: any) => p.pdv_id))
+    const pdvById = new Map<string, any>((pdvs || []).map((p: any) => [p.pdv_id, p]))
+    const validPdv = new Set(pdvById.keys())
 
     const parseBool = (v?: string) => {
       const s = (v || '').trim().toLowerCase()
@@ -360,16 +414,22 @@ export const useRoutingStore = defineStore('routing', () => {
 
     // Traitement de chaque groupe (routing)
     for (const g of groups.values()) {
-      const userId = emailToId.get(g.email)
-      if (!userId) {
+      const profile = emailToProfile.get(g.email)
+      if (!profile) {
         summary.errors.push(`${g.email} (${g.date}): utilisateur introuvable`)
         continue
       }
+      const userId = profile.id
 
       const items = g.items
         .filter((it) => {
           if (!validPdv.has(it.pdv_id)) {
             summary.errors.push(`${g.email} (${g.date}): PDV "${it.pdv_id}" introuvable, ignoré`)
+            return false
+          }
+          // Garde périmètre : PDV hors territoires assignés au user → rejeté avec message clair.
+          if (!pdvInScope(pdvById.get(it.pdv_id), profile as Profile)) {
+            summary.errors.push(`${g.email} (${g.date}): PDV "${it.pdv_id}" hors du périmètre assigné, ignoré`)
             return false
           }
           return true

@@ -4,6 +4,27 @@ function isPrivilegedProfile(profile?: Profile | null) {
   return profile?.role === 'admin' || profile?.role === 'superviseur'
 }
 
+// Territoires effectifs d'un profil : liste multi (territoires_assignes),
+// fallback mono legacy (zone_assignee) si la liste est vide.
+export function profileTerritories(profile?: Profile | null): string[] {
+  const multi = (profile?.territoires_assignes || []).filter(Boolean)
+  if (multi.length) return multi
+  return profile?.zone_assignee ? [profile.zone_assignee] : []
+}
+
+// PDV ∈ périmètre d'un user ? (zone ∈ territoires) ET (quartiers vide OU quartier ∈ quartiers).
+// Aucun territoire ⇒ pas de contrainte de zone (comportement legacy inchangé).
+export function pdvInScope(
+  pdv: Partial<Pick<PDV, 'zone' | 'quartier'>>,
+  profile?: Profile | null
+): boolean {
+  const terrs = profileTerritories(profile)
+  if (terrs.length && !terrs.includes(pdv.zone || '')) return false
+  const quartiers = (profile?.quartiers_assignes || []).filter(Boolean)
+  if (quartiers.length && !quartiers.includes(pdv.quartier || '')) return false
+  return true
+}
+
 export function useUserScope() {
   const authStore = useAuthStore()
   const user = useSupabaseUser()
@@ -20,16 +41,7 @@ export function useUserScope() {
       return true
     }
 
-    if (profile.zone_assignee && pdv.zone !== profile.zone_assignee) {
-      return false
-    }
-
-    const quartiers = profile.quartiers_assignes?.filter(Boolean) || []
-    if (quartiers.length > 0 && !quartiers.includes(pdv.quartier || '')) {
-      return false
-    }
-
-    return true
+    return pdvInScope(pdv, profile)
   }
 
   function filterPDVList<T extends Partial<PDV>>(

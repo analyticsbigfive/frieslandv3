@@ -23,6 +23,7 @@ export interface Profile {
   telephone?: string
   role: UserRole
   zone_assignee?: string
+  territoires_assignes?: string[]
   quartiers_assignes?: string[]
   region?: string
   avatar_url?: string

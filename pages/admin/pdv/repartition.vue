@@ -62,6 +62,7 @@
               <th class="text-left text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">Zone</th>
               <th class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">Nb PDV</th>
               <th class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">%</th>
+              <th class="text-right text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3"></th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -69,6 +70,16 @@
               <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">{{ row.zone }}</td>
               <td class="px-4 py-3 text-center text-sm text-fc-blue font-bold">{{ row.count }}</td>
               <td class="px-4 py-3 text-center text-sm text-gray-600 dark:text-gray-400">{{ row.pct }}%</td>
+              <td class="px-4 py-3 text-right">
+                <UButton
+                  size="xs"
+                  variant="ghost"
+                  icon="i-heroicons-arrow-top-right-on-square"
+                  @click="openPDVList(row.zone)"
+                >
+                  Voir les PDV
+                </UButton>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -116,6 +127,12 @@ const zoneTable = computed(() => {
     .sort((a, b) => b[1] - a[1])
     .map(([zone, count]) => ({ zone, count, pct: Math.round(count / total * 100) }))
 })
+
+function openPDVList(zone: string) {
+  // "Non défini" = PDV sans zone : pas de préfiltre exploitable.
+  const query = zone && zone !== 'Non défini' ? { zone } : {}
+  navigateTo({ path: '/admin/pdv', query })
+}
 
 onMounted(async () => {
   try {

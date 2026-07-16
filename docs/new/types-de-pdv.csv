@@ -1,0 +1,42 @@
+﻿Famille (Level 3),Type (Level 4),Canal (proposé),Libellé d'origine (source)
+Hypermarchés,Hypermarché,MT,Hypermarket
+Supermarchés premium,Supermarché A,MT,Supermarket A
+Supermarchés économiques,Supermarché B,MT,Supermarket B
+Supermarchés économiques,Supermarché C,MT,Supermarket C
+Supérettes,Supérette A,MT,Superettes A
+Supérettes,Supérette B,MT,Superettes B
+Supérettes,Supérette C,MT,Superettes C
+Épiceries de proximité (GT),Boutique A,GT,Boutique A
+Épiceries de proximité (GT),Boutique B,GT,Boutique B
+Épiceries de proximité (GT),Boutique C,GT,Boutique C
+Boutiques de station-service,Station-service,GT,Petrol Station
+Pharmacies (chaînes & indépendantes),Pharmacie A,GT,Pharmacy A
+Pharmacies (chaînes & indépendantes),Pharmacie B,GT,Pharmacy B
+Pharmacies (chaînes & indépendantes),Pharmacie C,GT,Pharmacy C
+Boulangeries (chaînes & indépendantes),Boulangerie A,GT,Bakery A
+Boulangeries (chaînes & indépendantes),Boulangerie B,GT,Bakery B
+Boulangeries (chaînes & indépendantes),Boulangerie C,GT,Bakery C
+Marchés publics,Étal d'épicerie générale,GT,General Grocery stall
+Marchés publics,Table top de marché ouvert,GT,Open Market Table Top
+Marchés publics,"Tmamies (huile, épices & condiments)",GT,Tmamies (Oil spice & condiments)
+Commerce de gros traditionnel,Grossistes,GT,Wholesalers
+Commerce de gros traditionnel,Demi-grossistes,GT,Semi-Wholesalers
+Libre-service de gros,Cash & Carry A,MT,Cash & Carry A
+Libre-service de gros,Cash & Carry B,MT,Cash & Carry B
+Commerce en ligne,E-commerçants,MT,E-retailers
+Corner (shop-in-shop),Livraison à domicile,MT,Home delivery
+Hôtellerie,Hôtel de chaîne,Alternatif / HORECA,Chain Hotel
+Hôtellerie,Hôtel indépendant,Alternatif / HORECA,Independent Hotel
+Restauration,Restaurant international,Alternatif / HORECA,International Restaurant
+Restauration,Restaurant local,Alternatif / HORECA,Local Restaurant
+Vente ambulante thé & café,Aboki A,Alternatif / HORECA,Aboki A
+Vente ambulante thé & café,Aboki B,Alternatif / HORECA,Aboki B
+Vente ambulante thé & café,Kiosque A,Alternatif / HORECA,Kiosk A
+Vente ambulante thé & café,Kiosque B,Alternatif / HORECA,Kiosk B
+Vente ambulante thé & café,Pushcart A (chariot ambulant),Alternatif / HORECA,Pushcard A
+Vente ambulante thé & café,Pushcart B (chariot ambulant),Alternatif / HORECA,Pushcard B
+Vente ambulante thé & café,Café HORECA,Alternatif / HORECA,Horeca coffee
+Vente ambulante thé & café,Bouillie (porridge),Alternatif / HORECA,Porridge
+Vente ambulante thé & café,Table top,Alternatif / HORECA,Table Top
+Institutions & entreprises,Distributeur automatique,Alternatif / HORECA,Vending machine
+Institutions & entreprises,Ventes institutions / entreprises,Alternatif / HORECA,Institutes/company sales

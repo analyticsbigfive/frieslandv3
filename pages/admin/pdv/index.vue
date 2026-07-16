@@ -731,6 +731,13 @@ async function loadPDV() {
 }
 
 onMounted(() => {
+  // Préfiltre zone transmis par l'écran Répartition (?zone=...).
+  const route = useRoute()
+  const zoneParam = route.query.zone
+  if (typeof zoneParam === 'string' && zoneParam) {
+    selectedZone.value = zoneParam
+    pdvStore.filters.page = 1
+  }
   loadPDV()
   fetchReferentiels()
 })

@@ -1,0 +1,6 @@
+﻿Niveau,SKU prioritaire exigé,Exigence globale
+FLAGSHIP STORE,Hero SKU,Le plus haut niveau : dispo + visibilité intérieure ET extérieure complètes + promo (si active). La quasi-totalité des critères du type de PDV sont requis.
+VIP PERFECT STORE,Emerging heroes,"Niveau élevé : dispo + visibilité forte. Presque tous les critères, quelques éléments optionnels en moins."
+CORE PERFECT STORE,Support SKU,"Niveau intermédiaire : dispo + visibilité de base (réglette, espace BR, wobbler…)."
+BASIC PERFECT STORE,Candidate to delist,"Niveau minimal : dispo + visibilité réduite (affiche, flèche, réglette)."
+Note,"Les critères précis (matériel de visibilité, promo) diffèrent selon le type de PDV : voir les feuilles Critères GT / MT / Canaux Alt.",

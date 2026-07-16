@@ -1,0 +1,13 @@
+﻿Niveau,Disponibilite (Etagere Ou Rayon),Visibilite Exterieure,,,,,,Visibilite Interieure,,,,,,,,Promotion,,
+,,Affiche,Flèche,Guirlande (optionnelle),sign board,Panneau privilège,Full branding,Reglette,Maison BR,Hanger,Wobler,Présentoire,TG,Plaque BR (Optionnelle),Merchandising,Standard,Hotesses,Dégustation
+FLAGSHIP STORE,Herro SKU,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X
+VIP PERFECT STORE,Emerging heros,X,X,X,X,X,,X,X,X,X,X,X,,X,X,X,X
+CORE PERFECT STORE,Support SKU,X,X,X,X,,,X,X,X,X,,,,X,X,,
+BASIC PERFECT STORE,Candidate to delist,X,X,X,,,,X,X,X,X,,,,X,X,,
+SUPÉRETTE,,,,,,,,,,,,,,,,,,
+Niveau,Disponibilite Rayon,Visibilite Exterieure,,,,Visibilite Interieure,,,,,,,Promotion,,,,,
+,,Affiche (optionnelle),Flèche (Entrée et sortie),sign board lumineux (optionnel),Panneau privilège lumineux (optionnel),Reglette,Espace BR,Wobler rayon,Présentoire,TG,Plaque BR (Optionnelle),Merchandising,Standard,Hotesses,Dégustation,,,
+FLAGSHIP STORE,Herro SKU,X,X,X,X,X,X,X,X,X,X,X,X,X,X,,,
+VIP PERFECT STORE,Emerging heros,X,X,X,X,X,X,X,X,X,X,X,X,X,X,,,
+CORE PERFECT STORE,Support SKU,X,X,,,X,X,X,,,,X,X,X,X,,,
+BASIC PERFECT STORE,Candidate to delist,X,X,,,X,X,X,,,,X,X,,,,,

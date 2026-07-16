@@ -1,0 +1,27 @@
+﻿Niveau,Disponibilite,Visibilite,,,,Promotion,,,
+,,PARASOLS,NAPPE,HANGER,TABLIER (Optionnel),,,,
+FLAGSHIP STORE,X,X,X,X,X,X,,,
+VIP PERFECT STORE,X,Support SKU,X,X,X,X,,,
+CORE PERFECT STORE,X,Herro SKU,X,X,,X,,,
+BASIC PERFECT STORE,X,Emerging heros,,X,,,,,
+PUSHCART,,,,,,,,,
+Niveau,Disponibilite,Visibilite,,,,,Promotion,,
+,,AFFICHE,THERMOS,VERRE JETABLE,CHASUBLE,FULL BRANDING,,,
+FLAGSHIP STORE,X,,X,X,X,X,X,,
+VIP PERFECT STORE,X,Support SKU,X,X,X,,X,,
+CORE PERFECT STORE,X,Herro SKU,X,X,,,X,,
+BASIC PERFECT STORE,X,Emerging heros,,,,,X,,
+PORRIDGE,,,,,,,,,
+Niveau,Disponibilite,Visibilite,,,,,Promotion,,
+,,PARASOLS,NAPPE,HANGER,VERRE JETABLE,TABLIER,STANDARD,DEGUSTATION,
+FLAGSHIP STORE,X,X,X,X,X,X,X,X,
+VIP PERFECT STORE,X,Support SKU,X,X,X,,X,,
+CORE PERFECT STORE,X,Herro SKU,,X,X,,X,,
+BASIC PERFECT STORE,X,Emerging heros,,X,,,X,,
+KIOSQUE & ABOKI,,,,,,,,,
+Niveau,Disponibilite,Visibilite,,,,,,,Promotion
+,,AFFICHE,THERMOS,VERRE,CARAFE,MAISON BR,CHASUBLE,FULL BRANDING,
+FLAGSHIP STORE,Support SKU,X,X,X,X,X,X,X,X
+VIP PERFECT STORE,Herro SKU,Support SKU,X,X,X,X,X,,X
+CORE PERFECT STORE,Emerging heros,Herro SKU,,X,X,X,,,X
+BASIC PERFECT STORE,Candidate to delist,Emerging heros,,,,,,,

@@ -117,6 +117,7 @@ import {
   SlidersHorizontal,
   Trophy,
   Database,
+  Truck,
 } from 'lucide-vue-next'
 
 defineProps<{ collapsed: boolean; mobileOpen?: boolean }>()
@@ -158,6 +159,7 @@ const navSections: Array<{ key: string; title: string; items: AdminNavItem[] }> 
     title: 'PDV',
     items: [
       { label: 'Liste des PDV', to: '/admin/pdv', icon: MapPin },
+      { label: 'Distributeurs', to: '/admin/distributeurs', icon: Truck },
       { label: 'Répartition', to: '/admin/pdv/repartition', icon: BarChart3 },
       { label: 'Ajouts : Évolution', to: '/admin/pdv/evolution', icon: BarChart3 },
     ],
