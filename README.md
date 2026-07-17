@@ -1,2 +1,2 @@
 
-vercel is down yall
+vercel is back ya"ll
