@@ -2,7 +2,6 @@
   <div class="space-y-6">
     <AdminPageHeader
       title="Récapitulatif produits"
-      description="Présence, prix respectés et détail par famille de produit."
       eyebrow="Domaine produits"
     />
 

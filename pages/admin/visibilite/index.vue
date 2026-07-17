@@ -2,7 +2,6 @@
   <div class="space-y-6">
     <AdminPageHeader
       title="Visibilité extérieure"
-      description="Taux de présence des éléments extérieurs mesurés, issus du référentiel Perfect Store (data.visibilite.standards)."
       eyebrow="Perfect Store · Visibilité"
     />
 

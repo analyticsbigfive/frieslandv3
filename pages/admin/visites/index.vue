@@ -2,7 +2,6 @@
   <div class="space-y-6">
     <AdminPageHeader
       title="Visites"
-      description="Consultez les relevés, les résultats Perfect Store et le détail de chaque visite."
       eyebrow="Domaine visites"
     />
 
@@ -45,7 +44,6 @@
     <div class="admin-surface overflow-hidden">
       <div class="border-b border-slate-100 px-5 py-4 dark:border-slate-700">
         <h2 class="font-semibold text-slate-900 dark:text-white">Visites et résultats Perfect Store</h2>
-        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Cliquez sur une ligne pour consulter le relevé complet et son niveau.</p>
       </div>
 
       <div class="overflow-x-auto">

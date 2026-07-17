@@ -2,7 +2,6 @@
   <div class="space-y-6">
     <AdminPageHeader
       title="Distributeurs"
-      description="Chaque distributeur regroupe les visites et les PDV des territoires qui lui sont rattachés."
       eyebrow="Domaine PDV"
     />
 
@@ -20,9 +19,6 @@
     <div class="admin-surface overflow-hidden">
       <div class="border-b border-slate-100 px-5 py-4 dark:border-slate-700">
         <h2 class="font-semibold text-slate-900 dark:text-white">Distributeurs</h2>
-        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Chaque distributeur regroupe les visites et PDV des territoires qui lui sont rattachés. Cliquez pour voir ses visites.
-        </p>
       </div>
 
       <div class="overflow-x-auto">

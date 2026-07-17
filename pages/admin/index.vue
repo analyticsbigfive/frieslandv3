@@ -2,7 +2,6 @@
   <div class="space-y-6">
     <AdminPageHeader
       title="Perfect Store"
-      description="Suivez la conformité globale et les résultats par type de magasin."
       eyebrow="Vue de synthèse"
     />
 
@@ -37,7 +36,6 @@
           <span>{{ chip.label }}</span>
           <UIcon name="i-heroicons-x-mark" class="h-3.5 w-3.5" />
         </button>
-        <span class="text-xs text-fc-red">KPI et tableaux limités au périmètre sélectionné.</span>
       </div>
     </div>
 
@@ -98,7 +96,7 @@
       <div class="admin-surface overflow-hidden">
         <div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-gray-100 dark:border-gray-700">
           <h2 class="font-bold text-gray-900 dark:text-gray-100">Perfect Store par type de magasin</h2>
-          <span class="text-xs text-gray-400">{{ parType.length }} type(s) · cliquez pour dérouler</span>
+          <span class="text-xs text-gray-400">{{ parType.length }} type(s)</span>
         </div>
 
         <div v-if="!parType.length" class="px-4 py-8 text-center text-sm text-gray-400">Aucune visite scorée.</div>
@@ -194,15 +192,10 @@
         </div>
       </div>
 
-      <p class="text-xs text-gray-400">Couverture = nombre de PDV distincts effectivement visités pendant le mois. La promotion est exclue du score lorsqu’elle n’est pas applicable.</p>
-
       <!-- PDV classés par niveau -->
       <section class="admin-surface overflow-hidden" aria-labelledby="stores-by-tier-heading">
         <div class="border-b border-slate-100 px-5 py-4 dark:border-slate-700">
           <h2 id="stores-by-tier-heading" class="font-bold text-gray-900 dark:text-gray-100">Points de vente par niveau</h2>
-          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Chaque magasin apparaît dans le niveau obtenu lors de sa dernière visite.
-          </p>
         </div>
 
         <div class="grid xl:grid-cols-2">
@@ -271,9 +264,6 @@
       <section v-if="manques.length" class="admin-surface overflow-hidden" aria-labelledby="manques-heading">
         <div class="border-b border-slate-100 px-5 py-4 dark:border-slate-700">
           <h2 id="manques-heading" class="font-bold text-gray-900 dark:text-gray-100">Passer au niveau supérieur</h2>
-          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Ce qu'il manque à chaque PDV pour atteindre le niveau immédiatement au-dessus.
-          </p>
         </div>
         <div class="overflow-x-auto">
           <table class="admin-table w-full text-sm">
@@ -318,37 +308,12 @@
       Vues Perfect Store indisponibles. Lance les migrations <code>supabase/nouveau</code> dans Supabase.
     </div>
 
-    <!-- Explication du calcul et seuils par niveau -->
+    <!-- Seuils par niveau -->
     <div class="admin-surface overflow-hidden">
       <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
-        <h2 class="font-bold text-gray-900 dark:text-gray-100">Comprendre le résultat</h2>
+        <h2 class="font-bold text-gray-900 dark:text-gray-100">Seuils par niveau</h2>
       </div>
       <div class="p-5 space-y-4">
-        <p class="text-sm text-gray-600 dark:text-gray-300">
-          Chaque visite est comparée aux standards du type de magasin. Le point de vente obtient le meilleur niveau
-          pour lequel tous les critères sont atteints.
-        </p>
-
-        <div class="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-          <div class="rounded-xl bg-slate-50 p-3 dark:bg-slate-700/40">
-            <p class="font-semibold text-gray-900 dark:text-gray-100">Disponibilité</p>
-            <p class="mt-1 text-gray-500 dark:text-gray-400">Les produits attendus sont disponibles.</p>
-          </div>
-          <div class="rounded-xl bg-slate-50 p-3 dark:bg-slate-700/40">
-            <p class="font-semibold text-gray-900 dark:text-gray-100">Assortiment</p>
-            <p class="mt-1 text-gray-500 dark:text-gray-400">Les références requises sont présentes.</p>
-          </div>
-          <div class="rounded-xl bg-slate-50 p-3 dark:bg-slate-700/40">
-            <p class="font-semibold text-gray-900 dark:text-gray-100">Visibilité</p>
-            <p class="mt-1 text-gray-500 dark:text-gray-400">Les supports demandés sont installés.</p>
-          </div>
-          <div class="rounded-xl bg-slate-50 p-3 dark:bg-slate-700/40">
-            <p class="font-semibold text-gray-900 dark:text-gray-100">Promotion</p>
-            <p class="mt-1 text-gray-500 dark:text-gray-400">La promotion est correctement mise en place.</p>
-          </div>
-        </div>
-
-        <!-- Seuils par niveau -->
         <div class="overflow-x-auto border border-gray-100 dark:border-gray-700 rounded-lg">
           <table class="admin-table text-sm">
             <thead class="bg-gray-50 dark:bg-gray-700/50">
@@ -375,7 +340,6 @@
           </table>
         </div>
         <p class="text-xs text-gray-400">
-          Un magasin est Perfect Store dès qu’il atteint le niveau BASIC.
           <NuxtLink to="/admin/perfect-store/standards" class="text-fc-red underline">Modifier les standards</NuxtLink>
         </p>
       </div>

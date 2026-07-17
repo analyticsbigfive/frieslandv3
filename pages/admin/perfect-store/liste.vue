@@ -2,7 +2,6 @@
   <div class="space-y-5">
     <AdminPageHeader
       title="Perfect Store — liste par niveau"
-      description="Un point de vente par ligne, avec le niveau obtenu à sa dernière visite scorée."
       eyebrow="Perfect Store"
     />
 

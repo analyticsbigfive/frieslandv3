@@ -2,7 +2,6 @@
   <div class="space-y-6">
     <AdminPageHeader
       title="Concurrence — évolution"
-      description="Suivez la présence concurrente par catégorie et dans le temps."
       eyebrow="Domaine concurrence"
     />
 

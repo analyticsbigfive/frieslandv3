@@ -2,7 +2,6 @@
   <div class="space-y-6">
     <AdminPageHeader
       title="Actions"
-      description="Suivez les actions déclarées et leur taux de réalisation par période."
       eyebrow="Domaine actions"
     />
 

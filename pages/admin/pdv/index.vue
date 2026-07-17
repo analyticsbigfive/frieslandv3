@@ -2,7 +2,6 @@
   <div class="space-y-5">
     <AdminPageHeader
       title="Points de vente"
-      description="Recherchez, filtrez et gérez les points de vente du périmètre courant."
       eyebrow="Domaine PDV"
     />
 
