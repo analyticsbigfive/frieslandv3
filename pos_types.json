@@ -3,246 +3,287 @@
     "level3_fr": "Hypermarchés",
     "level4_fr": "Hypermarché",
     "level3_en": "Hypermarkets",
-    "level4_en": "Hypermarket"
+    "level4_en": "Hypermarket",
+    "canal": "MT"
   },
   {
-    "level3_fr": "Supermarchés haut de gamme",
+    "level3_fr": "Supermarchés premium",
     "level4_fr": "Supermarché A",
     "level3_en": "Premium Supermarkets",
-    "level4_en": "Supermarket A"
+    "level4_en": "Supermarket A",
+    "canal": "MT"
   },
   {
     "level3_fr": "Supermarchés économiques",
     "level4_fr": "Supermarché B",
     "level3_en": "Value Supermarkets",
-    "level4_en": "Supermarket B"
+    "level4_en": "Supermarket B",
+    "canal": "MT"
   },
   {
     "level3_fr": "Supermarchés économiques",
     "level4_fr": "Supermarché C",
     "level3_en": "Value Supermarkets",
-    "level4_en": "Supermarket C"
+    "level4_en": "Supermarket C",
+    "canal": "MT"
   },
   {
     "level3_fr": "Supérettes",
     "level4_fr": "Supérette A",
     "level3_en": "Minimarkets",
-    "level4_en": "Superettes A"
+    "level4_en": "Superettes A",
+    "canal": "MT"
   },
   {
     "level3_fr": "Supérettes",
     "level4_fr": "Supérette B",
     "level3_en": "Minimarkets",
-    "level4_en": "Superettes B"
+    "level4_en": "Superettes B",
+    "canal": "MT"
   },
   {
     "level3_fr": "Supérettes",
     "level4_fr": "Supérette C",
     "level3_en": "Minimarkets",
-    "level4_en": "Superettes C"
+    "level4_en": "Superettes C",
+    "canal": "MT"
   },
   {
-    "level3_fr": "Petites et moyennes épiceries (commerce général)",
+    "level3_fr": "Épiceries de proximité (GT)",
     "level4_fr": "Boutique A",
     "level3_en": "Small/Medium Grocery GT",
-    "level4_en": "Boutique A"
+    "level4_en": "Boutique A",
+    "canal": "GT"
   },
   {
-    "level3_fr": "Petites et moyennes épiceries (commerce général)",
+    "level3_fr": "Épiceries de proximité (GT)",
     "level4_fr": "Boutique B",
     "level3_en": "Small/Medium Grocery GT",
-    "level4_en": "Boutique B"
+    "level4_en": "Boutique B",
+    "canal": "GT"
   },
   {
-    "level3_fr": "Petites et moyennes épiceries (commerce général)",
+    "level3_fr": "Épiceries de proximité (GT)",
     "level4_fr": "Boutique C",
     "level3_en": "Small/Medium Grocery GT",
-    "level4_en": "Boutique C"
+    "level4_en": "Boutique C",
+    "canal": "GT"
   },
   {
-    "level3_fr": "Stations-service",
+    "level3_fr": "Boutiques de station-service",
     "level4_fr": "Station-service",
     "level3_en": "Fuel forecourts",
-    "level4_en": "Petrol Station"
+    "level4_en": "Petrol Station",
+    "canal": "GT"
   },
   {
-    "level3_fr": "Pharmacies (chaîne / indépendantes)",
+    "level3_fr": "Pharmacies (chaînes & indépendantes)",
     "level4_fr": "Pharmacie A",
     "level3_en": "Pharmacy Chain/Independent",
-    "level4_en": "Pharmacy A"
+    "level4_en": "Pharmacy A",
+    "canal": "GT"
   },
   {
-    "level3_fr": "Pharmacies (chaîne / indépendantes)",
+    "level3_fr": "Pharmacies (chaînes & indépendantes)",
     "level4_fr": "Pharmacie B",
     "level3_en": "Pharmacy Chain/Independent",
-    "level4_en": "Pharmacy B"
+    "level4_en": "Pharmacy B",
+    "canal": "GT"
   },
   {
-    "level3_fr": "Pharmacies (chaîne / indépendantes)",
+    "level3_fr": "Pharmacies (chaînes & indépendantes)",
     "level4_fr": "Pharmacie C",
     "level3_en": "Pharmacy Chain/Independent",
-    "level4_en": "Pharmacy C"
+    "level4_en": "Pharmacy C",
+    "canal": "GT"
   },
   {
-    "level3_fr": "Boulangeries (chaîne / indépendantes)",
+    "level3_fr": "Boulangeries (chaînes & indépendantes)",
     "level4_fr": "Boulangerie A",
     "level3_en": "Bakery (Chain/Independent)",
-    "level4_en": "Bakery A"
+    "level4_en": "Bakery A",
+    "canal": "GT"
   },
   {
-    "level3_fr": "Boulangeries (chaîne / indépendantes)",
+    "level3_fr": "Boulangeries (chaînes & indépendantes)",
     "level4_fr": "Boulangerie B",
     "level3_en": "Bakery (Chain/Independent)",
-    "level4_en": "Bakery B"
+    "level4_en": "Bakery B",
+    "canal": "GT"
   },
   {
-    "level3_fr": "Boulangeries (chaîne / indépendantes)",
+    "level3_fr": "Boulangeries (chaînes & indépendantes)",
     "level4_fr": "Boulangerie C",
     "level3_en": "Bakery (Chain/Independent)",
-    "level4_en": "Bakery C"
+    "level4_en": "Bakery C",
+    "canal": "GT"
   },
   {
     "level3_fr": "Marchés publics",
     "level4_fr": "Étal d’épicerie générale",
     "level3_en": "Wet/Public Market",
-    "level4_en": "General Grocery stall"
+    "level4_en": "General Grocery stall",
+    "canal": "GT"
   },
   {
     "level3_fr": "Marchés publics",
-    "level4_fr": "Étal de marché (table top)",
+    "level4_fr": "Table top de marché ouvert",
     "level3_en": "Wet/Public Market",
-    "level4_en": "Open Market Table Top"
+    "level4_en": "Open Market Table Top",
+    "canal": "GT"
   },
   {
     "level3_fr": "Marchés publics",
-    "level4_fr": "Tanties (huile, épices et condiments)",
+    "level4_fr": "Tmamies (huile, épices & condiments)",
     "level3_en": "Wet/Public Market",
-    "level4_en": "Tmamies (Oil spice & condiments)"
+    "level4_en": "Tmamies (Oil spice & condiments)",
+    "canal": "GT"
   },
   {
-    "level3_fr": "Grossistes traditionnels",
+    "level3_fr": "Commerce de gros traditionnel",
     "level4_fr": "Grossistes",
     "level3_en": "Traditional Wholesale",
-    "level4_en": "Wholesalers"
+    "level4_en": "Wholesalers",
+    "canal": "GT"
   },
   {
-    "level3_fr": "Grossistes traditionnels",
-    "level4_fr": "Semi-grossistes",
+    "level3_fr": "Commerce de gros traditionnel",
+    "level4_fr": "Demi-grossistes",
     "level3_en": "Traditional Wholesale",
-    "level4_en": "Semi-Wholesalers"
+    "level4_en": "Semi-Wholesalers",
+    "canal": "GT"
   },
   {
-    "level3_fr": "Cash & Carry / clubs de gros",
+    "level3_fr": "Libre-service de gros",
     "level4_fr": "Cash & Carry A",
     "level3_en": "Wholesale Club/Cash & Carry",
-    "level4_en": "Cash & Carry A"
+    "level4_en": "Cash & Carry A",
+    "canal": "MT"
   },
   {
-    "level3_fr": "Cash & Carry / clubs de gros",
+    "level3_fr": "Libre-service de gros",
     "level4_fr": "Cash & Carry B",
     "level3_en": "Wholesale Club/Cash & Carry",
-    "level4_en": "Cash & Carry B"
+    "level4_en": "Cash & Carry B",
+    "canal": "MT"
   },
   {
-    "level3_fr": "Commerce physique et en ligne",
-    "level4_fr": "E-commerçants (détaillants en ligne)",
+    "level3_fr": "Commerce en ligne",
+    "level4_fr": "E-commerçants",
     "level3_en": "Bricks and Clicks",
-    "level4_en": "E-retailers"
+    "level4_en": "E-retailers",
+    "canal": "MT"
   },
   {
-    "level3_fr": "Corner en magasin (shop-in-shop)",
+    "level3_fr": "Corner (shop-in-shop)",
     "level4_fr": "Livraison à domicile",
     "level3_en": "Shop in Shop",
-    "level4_en": "Home delivery"
+    "level4_en": "Home delivery",
+    "canal": "MT"
   },
   {
-    "level3_fr": "Chaînes hôtelières",
+    "level3_fr": "Hôtellerie",
     "level4_fr": "Hôtel de chaîne",
     "level3_en": "Hotel chains",
-    "level4_en": "Chain Hotel"
+    "level4_en": "Chain Hotel",
+    "canal": "Alternatif / HORECA"
   },
   {
-    "level3_fr": "Chaînes hôtelières",
+    "level3_fr": "Hôtellerie",
     "level4_fr": "Hôtel indépendant",
     "level3_en": "Hotel chains",
-    "level4_en": "Independent Hotel"
+    "level4_en": "Independent Hotel",
+    "canal": "Alternatif / HORECA"
   },
   {
-    "level3_fr": "Restaurants avec service à table",
+    "level3_fr": "Restauration",
     "level4_fr": "Restaurant international",
     "level3_en": "Full Service Restaurant",
-    "level4_en": "International Restaurant"
+    "level4_en": "International Restaurant",
+    "canal": "Alternatif / HORECA"
   },
   {
-    "level3_fr": "Restaurants avec service à table",
+    "level3_fr": "Restauration",
     "level4_fr": "Restaurant local",
     "level3_en": "Full Service Restaurant",
-    "level4_en": "Local Restaurant"
+    "level4_en": "Local Restaurant",
+    "canal": "Alternatif / HORECA"
   },
   {
-    "level3_fr": "Vendeurs de rue indépendants (thé et café)",
+    "level3_fr": "Vente ambulante thé & café",
     "level4_fr": "Aboki A",
     "level3_en": "Independent Street Vendor Tea & Coffee",
-    "level4_en": "Aboki A"
+    "level4_en": "Aboki A",
+    "canal": "Alternatif / HORECA"
   },
   {
-    "level3_fr": "Vendeurs de rue indépendants (thé et café)",
+    "level3_fr": "Vente ambulante thé & café",
     "level4_fr": "Aboki B",
     "level3_en": "Independent Street Vendor Tea & Coffee",
-    "level4_en": "Aboki B"
+    "level4_en": "Aboki B",
+    "canal": "Alternatif / HORECA"
   },
   {
-    "level3_fr": "Vendeurs de rue indépendants (thé et café)",
+    "level3_fr": "Vente ambulante thé & café",
     "level4_fr": "Kiosque A",
     "level3_en": "Independent Street Vendor Tea & Coffee",
-    "level4_en": "Kiosk A"
+    "level4_en": "Kiosk A",
+    "canal": "Alternatif / HORECA"
   },
   {
-    "level3_fr": "Vendeurs de rue indépendants (thé et café)",
+    "level3_fr": "Vente ambulante thé & café",
     "level4_fr": "Kiosque B",
     "level3_en": "Independent Street Vendor Tea & Coffee",
-    "level4_en": "Kiosk B"
+    "level4_en": "Kiosk B",
+    "canal": "Alternatif / HORECA"
   },
   {
-    "level3_fr": "Vendeurs de rue indépendants (thé et café)",
-    "level4_fr": "Charrette A",
+    "level3_fr": "Vente ambulante thé & café",
+    "level4_fr": "Pushcart A (chariot ambulant)",
     "level3_en": "Independent Street Vendor Tea & Coffee",
-    "level4_en": "Pushcard A"
+    "level4_en": "Pushcard A",
+    "canal": "Alternatif / HORECA"
   },
   {
-    "level3_fr": "Vendeurs de rue indépendants (thé et café)",
-    "level4_fr": "Charrette B",
+    "level3_fr": "Vente ambulante thé & café",
+    "level4_fr": "Pushcart B (chariot ambulant)",
     "level3_en": "Independent Street Vendor Tea & Coffee",
-    "level4_en": "Pushcard B"
+    "level4_en": "Pushcard B",
+    "canal": "Alternatif / HORECA"
   },
   {
-    "level3_fr": "Vendeurs de rue indépendants (thé et café)",
+    "level3_fr": "Vente ambulante thé & café",
     "level4_fr": "Café HORECA",
     "level3_en": "Independent Street Vendor Tea & Coffee",
-    "level4_en": "Horeca coffee"
+    "level4_en": "Horeca coffee",
+    "canal": "Alternatif / HORECA"
   },
   {
-    "level3_fr": "Vendeurs de rue indépendants (thé et café)",
-    "level4_fr": "Bouillie",
+    "level3_fr": "Vente ambulante thé & café",
+    "level4_fr": "Bouillie (porridge)",
     "level3_en": "Independent Street Vendor Tea & Coffee",
-    "level4_en": "Porridge"
+    "level4_en": "Porridge",
+    "canal": "Alternatif / HORECA"
   },
   {
-    "level3_fr": "Vendeurs de rue indépendants (thé et café)",
-    "level4_fr": "Étal (table top)",
+    "level3_fr": "Vente ambulante thé & café",
+    "level4_fr": "Table top",
     "level3_en": "Independent Street Vendor Tea & Coffee",
-    "level4_en": "Table Top"
+    "level4_en": "Table Top",
+    "canal": "Alternatif / HORECA"
   },
   {
-    "level3_fr": "Institutions / bureaux / usines / industries",
+    "level3_fr": "Institutions & entreprises",
     "level4_fr": "Distributeur automatique",
     "level3_en": "Institutes/Office/Factory/Industry",
-    "level4_en": "Vending machine"
+    "level4_en": "Vending machine",
+    "canal": "Alternatif / HORECA"
   },
   {
-    "level3_fr": "Institutions / bureaux / usines / industries",
+    "level3_fr": "Institutions & entreprises",
     "level4_fr": "Ventes institutions / entreprises",
     "level3_en": "Institutes/Office/Factory/Industry",
-    "level4_en": "Institutes/company sales"
+    "level4_en": "Institutes/company sales",
+    "canal": "Alternatif / HORECA"
   }
 ]

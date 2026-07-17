@@ -1,0 +1,16 @@
+pdv_id;nom_pdv;region;zone;quartier;latitude_osm;longitude_osm;osm_type;osm_id;statut;commentaire
+75298881;test;ABIDJAN 2;Yopougon 1;WASSAKARA;5.3481134;-4.0667528;neighbourhood;2840442365;repere_quartier;Correspondance exacte du quartier dans Yopougon
+PS-001;Boutique Cocody Palmeraie;Abidjan;Cocody 1;PALMERAIE;5.3699343;-3.9554947;administrative;4525205;repere_quartier;Le résultat OSM porte le quartier Palmeraie dans Cocody
+PS-002;Superette Treichville Zone 3;Abidjan;Treichville;ZONE 3;5.2957060;-3.9959665;suburb;2838230366;repere_quartier;Correspondance exacte de Zone 3 dans Treichville
+PS-003;Supermarché Bouaké Koko;Intérieur;Bouake 1;Koko;7.6905370;-5.0356999;suburb;2096687283;repere_quartier;Correspondance exacte de Koko dans Bouaké
+PS-004;Boutique Marcory Hibiscus;Abidjan;Marcory;HIBISCUS;5.2990032;-3.9818359;neighbourhood;2608384310;a_valider;OSM retourne Cité Hibiscus : correspondance probable mais non byte-exacte
+PS-005;Boutique Gagnoa Soleil;Intérieur;Gagnoa 1;Soleil;6.1239507;-5.9311705;quarter;9864199966;repere_quartier;Correspondance exacte de Soleil dans Gagnoa
+PS-006;Boutique Yamoussoukro Assabou;Intérieur;Yamoussoukro;Assabou 1;6.8302421;-5.2655923;suburb;2996988307;repere_quartier;OSM référence Assabou, le suffixe 1 est interne au référentiel
+PS-007;Boutique Yopougon Wassakara;Abidjan;Yopougon 1;WASSAKARA;5.3481134;-4.0667528;neighbourhood;2840442365;repere_quartier;Réutilisation de la même correspondance OSM du quartier
+PS-008;Boutique Plateau Centre;Abidjan;Plateau;PLATEAU CENTRE;;;motorway_junction;243771090;a_valider;Résultat OSM = carrefour Plateau-Centre, pas un quartier exploitable comme GPS PDV
+PS-009;Boutique Korhogo Commerce;Intérieur;Korhogo;Commerce;;;;;non_trouve;Les résultats OSM trouvés concernent des établissements voisins, pas le quartier Commerce
+PS-010;Boutique Daloa Labia;Intérieur;Daloa;Labia;6.8749151;-6.4402075;quarter;11008079606;repere_quartier;Correspondance exacte de Labia dans Daloa
+PS-011;Kiosque Bingerville Nouveau Goudron;Abidjan;Bingerville;NOUVEAU GOUDRON;5.3485994;-3.8603267;bus_stop;10543651513;a_valider;Résultat OSM = arrêt de bus, repère de voirie et non quartier confirmé
+PS-012;Kiosque Man Marché;Intérieur;Man;Marche;7.4096970;-7.5481780;marketplace;300274471;a_valider;Résultat OSM = marché de Man, pas un quartier confirmé
+PS-013;Boutique Abobo Dokui;Abidjan;Abobo 1;DOKUI;;;;;non_trouve;OSM renvoie plusieurs points d’intérêt Dokui sans centroïde de quartier unique
+PS-014;Supermarché Divo Sokoura;Intérieur;Divo;Sokoura;;;;;non_trouve;Aucune correspondance OSM suffisamment précise trouvée

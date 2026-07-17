@@ -41,6 +41,8 @@ definePageMeta({
 })
 
 const pdvStore = usePDVStore()
+const { typePdvLabel, fetchTypePdvLabels } = useTypePdvLabels()
+const route = useRoute()
 
 const mapContainer = ref<HTMLElement | null>(null)
 const allPDV = ref<PDV[]>([])
@@ -111,7 +113,7 @@ function addMarkers() {
 
     const canalP = document.createElement('p')
     canalP.className = 'text-gray-400 text-xs'
-    canalP.textContent = `${pdv.canal} / ${pdv.sous_categorie_pdv || ''}`
+    canalP.textContent = `${pdv.canal} / ${typePdvLabel(pdv.sous_categorie_pdv) || ''}`
     el.appendChild(canalP)
 
     const coordP = document.createElement('p')
@@ -150,6 +152,15 @@ function addMarkers() {
   }
 }
 
+function focusTarget() {
+  if (!map) return
+  const latitude = Number(route.query.lat)
+  const longitude = Number(route.query.lng)
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return
+  map.setView([latitude, longitude], 16)
+}
+
 async function initMap() {
   if (!mapContainer.value || !import.meta.client) return
 
@@ -172,6 +183,7 @@ async function initMap() {
   // Load PDV
   allPDV.value = await pdvStore.fetchAllPDV()
   addMarkers()
+  focusTarget()
 
   // Listen for photo button clicks inside Leaflet popups
   map.on('popupopen', () => {
@@ -195,6 +207,7 @@ async function initMap() {
 }
 
 onMounted(async () => {
+  void fetchTypePdvLabels()
   await nextTick()
   setTimeout(initMap, 100)
 })

@@ -32,8 +32,8 @@
         </div>
         <div class="flex gap-2 mt-3">
           <UBadge variant="subtle" color="red" size="xs">{{ pdv.canal }}</UBadge>
-          <UBadge variant="subtle" color="gray" size="xs">{{ pdv.categorie_pdv }}</UBadge>
-          <UBadge v-if="pdv.sous_categorie_pdv" variant="subtle" color="green" size="xs">{{ pdv.sous_categorie_pdv }}</UBadge>
+          <UBadge variant="subtle" color="gray" size="xs">{{ categoriePdvLabel(pdv.categorie_pdv) }}</UBadge>
+          <UBadge v-if="pdv.sous_categorie_pdv" variant="subtle" color="green" size="xs">{{ typePdvLabel(pdv.sous_categorie_pdv) }}</UBadge>
         </div>
       </div>
 
@@ -106,6 +106,8 @@
               <USelectMenu
                 v-model="form.categorie_pdv"
                 :options="categorieOptions"
+                value-attribute="value"
+                option-attribute="label"
                 searchable
                 placeholder="Catégorie..."
                 @update:model-value="onCategorieChange"
@@ -116,6 +118,8 @@
               <USelectMenu
                 v-model="form.sous_categorie_pdv"
                 :options="sousCategorieOptions"
+                value-attribute="value"
+                option-attribute="label"
                 :disabled="!form.categorie_pdv"
                 searchable
                 placeholder="Type de PDV..."
@@ -205,7 +209,15 @@ const toast = useToast()
 
 // Cascade Catégorie (level3) → Sous-catégorie (level4), depuis le référentiel type_pdv.
 const { posTypes, fetchReferentiels } = useReferentiels()
-const categorieOptions = computed(() => [...new Set(posTypes.value.map(p => p.level3_group).filter(Boolean))].sort())
+const { typePdvLabel, categoriePdvLabel, fetchTypePdvLabels } = useTypePdvLabels()
+// Options {label: nom_fr, value: nom EN} : affichage français, valeur stockée
+// inchangée (nom EN du référentiel, utilisé par le matching Perfect Store).
+const categorieOptions = computed(() => {
+  const byNom = new Map(posTypes.value.filter(p => p.level3_group).map(p => [p.level3_group, p.level3_fr]))
+  return [...byNom.entries()]
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'fr'))
+})
 // Canal dérivé de la catégorie (categorie_pdv.canal), aligné sur le calcul
 // Perfect Store — plus de saisie manuelle.
 const derivedCanal = computed(() => {
@@ -214,9 +226,9 @@ const derivedCanal = computed(() => {
 })
 const sousCategorieOptions = computed(() => posTypes.value
   .filter(p => !form.value.categorie_pdv || p.level3_group === form.value.categorie_pdv)
-  .map(p => p.level4_type))
+  .map(p => ({ value: p.level4_type, label: p.level4_fr })))
 function onCategorieChange() {
-  if (!sousCategorieOptions.value.includes(form.value.sous_categorie_pdv)) {
+  if (!sousCategorieOptions.value.some(o => o.value === form.value.sous_categorie_pdv)) {
     form.value.sous_categorie_pdv = ''
   }
 }
@@ -247,6 +259,7 @@ const form = ref({
 onMounted(async () => {
   try {
     fetchReferentiels()
+    fetchTypePdvLabels()
     if (!authStore.profile) {
       await authStore.fetchProfile()
     }

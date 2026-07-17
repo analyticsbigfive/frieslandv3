@@ -12,7 +12,6 @@
 
     <DashboardFilters
       v-model="dashboard.filters.value"
-      :zone-options="dashboard.availableZones.value"
       @filter="dashboard.fetchVisites()"
     />
 
@@ -124,6 +123,6 @@ const gtElements = computed(() => aggregate(gtVisites.value, 'interieure'))
 const mtElements = computed(() => aggregate(mtVisites.value, 'interieure'))
 
 onMounted(() => {
-  Promise.all([dashboard.fetchZones(), dashboard.fetchVisites(), fetchElements(), fetchConformity()])
+  Promise.all([dashboard.fetchVisites(), fetchElements(), fetchConformity()])
 })
 </script>

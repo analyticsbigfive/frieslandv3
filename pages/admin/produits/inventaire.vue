@@ -9,7 +9,6 @@
 
     <DashboardFilters
       v-model="dashboard.filters.value"
-      :zone-options="dashboard.availableZones.value"
       @filter="dashboard.fetchVisites()"
     />
 
@@ -125,7 +124,7 @@ const dispoMoyenne = computed(() => {
 })
 
 onMounted(() => {
-  dashboard.fetchZones()
+  
   fetchThresholds()
   dashboard.fetchVisites()
 })

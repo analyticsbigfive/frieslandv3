@@ -7,31 +7,36 @@
           Un point de vente par ligne, avec le niveau obtenu à sa dernière visite scorée.
         </p>
       </div>
-      <NuxtLink to="/admin/perfect-store" class="text-sm text-fc-red underline">← Tableau de bord</NuxtLink>
     </div>
 
-    <!-- Filtres -->
-    <div class="admin-surface flex flex-wrap items-end gap-3 p-4">
-      <div class="flex-1 min-w-[220px]">
-        <label class="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Recherche</label>
-        <UInput v-model="search" icon="i-heroicons-magnifying-glass" placeholder="Nom, code PDV, zone…" size="sm" @update:model-value="onFilterChange" />
-      </div>
-      <div>
-        <label class="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Niveau</label>
-        <div class="flex flex-wrap gap-1.5">
-          <button
-            v-for="opt in niveauOptions"
-            :key="opt.value"
-            type="button"
-            class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
-            :class="niveau === opt.value ? 'bg-fc-red text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300'"
-            @click="setNiveau(opt.value)"
-          >
-            {{ opt.label }}
-          </button>
+    <AdminListToolbar
+      :search="search"
+      search-placeholder="Nom, code PDV, zone…"
+      :result-count="total"
+      result-label="magasin(s)"
+      :chips="filterChips"
+      @update:search="updateSearch"
+      @reset="resetListFilters"
+      @remove-chip="removeFilterChip"
+    >
+      <template #filters>
+        <div>
+          <label class="mb-1 block text-[11px] font-semibold text-slate-500 dark:text-slate-400">Niveau</label>
+          <div class="flex flex-wrap gap-1.5">
+            <button
+              v-for="opt in niveauOptions"
+              :key="opt.value"
+              type="button"
+              class="rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors"
+              :class="niveau === opt.value ? 'border-fc-red bg-fc-red text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'"
+              @click="setNiveau(opt.value)"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
         </div>
-      </div>
-    </div>
+      </template>
+    </AdminListToolbar>
 
     <!-- Table -->
     <div class="admin-surface overflow-hidden">
@@ -66,7 +71,7 @@
                 <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ row.nom_pdv || row.pdv_id }}</p>
                 <p class="text-xs text-gray-400">{{ row.pdv_id }}</p>
               </td>
-              <td class="px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300">{{ row.type_pdv }}</td>
+              <td class="px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300">{{ typePdvLabel(row.type_pdv) }}</td>
               <td class="px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300">{{ row.zone || '—' }}</td>
               <td class="px-4 py-2.5 text-center">
                 <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold" :class="niveauBadge(row.niveau)">
@@ -88,14 +93,15 @@
         </table>
       </div>
 
-      <!-- Pagination -->
-      <div v-if="total > perPage" class="flex items-center justify-between border-t border-gray-100 px-4 py-3 dark:border-gray-700">
-        <span class="text-xs text-gray-400">{{ total }} magasin(s) · page {{ page }} / {{ pageCount }}</span>
-        <div class="flex gap-2">
-          <UButton size="xs" variant="outline" :disabled="page <= 1 || loading" @click="goto(page - 1)">Précédent</UButton>
-          <UButton size="xs" variant="outline" :disabled="page >= pageCount || loading" @click="goto(page + 1)">Suivant</UButton>
-        </div>
-      </div>
+      <AdminPagination
+        :total="total"
+        :page="page"
+        :page-size="perPage"
+        :loading="loading"
+        item-label="magasin(s)"
+        @previous="goto(page - 1)"
+        @next="goto(page + 1)"
+      />
     </div>
 
     <div v-if="error" class="rounded-xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-700 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-300">
@@ -114,6 +120,7 @@ import type { PerfectStoreResultB } from '~/utils/perfectStore'
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const { refs, fetchRefs, scoreVisite, fetchPerfectStoreListe } = usePerfectStore()
+const { typePdvLabel, fetchTypePdvLabels } = useTypePdvLabels()
 const visitesStore = useVisitesStore()
 
 const items = ref<PerfectStoreListItem[]>([])
@@ -129,16 +136,16 @@ const showDetail = ref(false)
 const selectedVisite = ref<Visite | null>(null)
 const selectedPerfect = ref<PerfectStoreResultB | null>(null)
 
+// Les valeurs doivent matcher resultat_perfect_store.niveau tel qu'exposé par
+// v_perfect_store_liste_full (eq strict côté requête).
 const niveauOptions = [
   { value: 'TOUS', label: 'Tous' },
-  { value: 'FLAGSHIP', label: 'Flagship' },
-  { value: 'VIP', label: 'VIP' },
-  { value: 'CORE', label: 'Core' },
-  { value: 'BASIC', label: 'Basic' },
+  { value: 'FLAGSHIP STORE', label: 'Flagship' },
+  { value: 'VIP PERFECT STORE', label: 'VIP' },
+  { value: 'CORE PERFECT STORE', label: 'Core' },
+  { value: 'BASIC PERFECT STORE', label: 'Basic' },
   { value: 'NON CONFORME', label: 'Non conforme' },
 ]
-
-const pageCount = computed(() => Math.max(1, Math.ceil(total.value / perPage)))
 
 const pct = (v: number | null | undefined) => v == null ? '—' : `${v}%`
 const formatDate = (v: string) => formatDateFr(v, { day: '2-digit', month: 'short', year: 'numeric' })
@@ -181,6 +188,33 @@ function onFilterChange() {
   if (searchTimer) clearTimeout(searchTimer)
   searchTimer = setTimeout(() => { page.value = 1; load() }, 350)
 }
+
+function updateSearch(value: string) {
+  search.value = value
+  onFilterChange()
+}
+
+function resetListFilters() {
+  search.value = ''
+  niveau.value = 'TOUS'
+  page.value = 1
+  load()
+}
+
+// Chips des filtres actifs — clic = retirer ce filtre seul.
+const filterChips = computed(() => {
+  const chips: { key: string; label: string }[] = []
+  if (niveau.value !== 'TOUS') {
+    const opt = niveauOptions.find(o => o.value === niveau.value)
+    chips.push({ key: 'niveau', label: `Niveau : ${opt?.label || niveau.value}` })
+  }
+  if (search.value.trim()) chips.push({ key: 'search', label: `Recherche : ${search.value.trim()}` })
+  return chips
+})
+function removeFilterChip(key: string) {
+  if (key === 'niveau') { setNiveau('TOUS'); return }
+  if (key === 'search') { search.value = ''; page.value = 1; load() }
+}
 function setNiveau(v: string) {
   niveau.value = v
   page.value = 1
@@ -205,6 +239,7 @@ async function openDetail(row: PerfectStoreListItem) {
 }
 
 onMounted(async () => {
+  void fetchTypePdvLabels()
   await fetchRefs()
   await load()
 })

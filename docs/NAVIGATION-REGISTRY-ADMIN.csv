@@ -1,0 +1,26 @@
+domain,label,route,current_status,target_level,notes
+perfect-store,Tableau de bord,/admin,existing,primary,root dashboard currently hosts Perfect Store
+perfect-store,Liste par niveau,/admin/perfect-store/liste,existing,primary,keep route
+perfect-store,Visites,/admin/perfect-store/visites,existing,primary,existing route not currently in tabs
+perfect-store,Standards,/admin/perfect-store/standards,existing,secondary,keep separate from performance if RBAC requires
+visites,Toutes les visites,/admin/visites,existing,primary,existing tab
+visites,Évolution,/admin/visites/evolution,existing,primary,existing tab
+visites,Par catégorie,/admin/visites/categories,existing,primary,existing tab
+visites,Commerciaux,/admin/visites/commerciaux,existing,primary,existing tab
+pdv,Liste,/admin/pdv,existing,primary,sidebar currently
+pdv,Répartition,/admin/pdv/repartition,existing,primary,sidebar currently
+pdv,Évolution,/admin/pdv/evolution,existing,primary,sidebar currently
+pdv,Distributeurs,/admin/distributeurs,existing,primary,sidebar currently
+visibilite,Extérieure,/admin/visibilite,existing,primary,existing tab
+visibilite,Intérieure,/admin/visibilite/interieure,existing,primary,existing tab
+visibilite,Promotion,/admin/visibilite/promotion-recap,existing,primary,existing tab
+visibilite,Évolution,/admin/visibilite/interieure-evolution,existing,primary,existing tab
+concurrence,Évolution,/admin/concurrence,existing,primary,existing tab
+concurrence,Récapitulatif,/admin/concurrence/visibilite-recap,existing,primary,existing tab
+concurrence,Visibilité,/admin/concurrence/visibilite-evolution,existing,primary,existing tab
+produits,Récapitulatif,/admin/produits/recap,existing,primary,existing tab
+produits,Disponibilité,/admin/produits/[category],existing,primary,category selector secondary
+produits,Inventaire SKU,/admin/produits/inventaire,existing,primary,existing tab
+produits,Seuils de stock,/admin/produits/seuils,existing,primary,existing tab
+actions,Synthèse,/admin/actions,existing,primary,existing tab
+actions,Visites terrain,/admin/visites,existing,primary,current target reuses existing route

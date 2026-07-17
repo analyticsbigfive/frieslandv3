@@ -57,7 +57,7 @@
               >
                 {{ isMT ? 'Modern Trade (MT)' : 'General Trade (GT)' }}
               </span>
-              <span class="text-xs text-gray-400">{{ selectedPDV.sous_categorie_pdv || 'Type non renseigné' }}</span>
+              <span class="text-xs text-gray-400">{{ typePdvLabel(selectedPDV.sous_categorie_pdv) || 'Type non renseigné' }}</span>
             </div>
             <div class="mt-2 flex items-center justify-between gap-2">
               <p class="text-xs text-gray-400">Les suggestions ne remplacent jamais votre choix.</p>
@@ -480,7 +480,7 @@
           <div v-else class="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
             <p class="text-sm font-semibold text-amber-900 dark:text-amber-100">Aucun standard paramétré pour ce type de PDV</p>
             <p class="mt-1 text-xs text-amber-700 dark:text-amber-300">
-              Le type « {{ selectedPDV?.sous_categorie_pdv || 'non renseigné' }} » n’est lié à aucune matrice de visibilité.
+              Le type « {{ typePdvLabel(selectedPDV?.sous_categorie_pdv) || 'non renseigné' }} » n’est lié à aucune matrice de visibilité.
               La visite sera enregistrée, mais aucun niveau Perfect Store ne sera attribué avant son paramétrage dans Dashboard → Perfect Store → Standards.
             </p>
           </div>
@@ -982,6 +982,7 @@ const actionItems: { key: keyof VisiteActions; label: string }[] = [
 ]
 
 const { fetchElements: fetchVisibilityElements, forPdv, visibilitySegmentForPdv } = useVisibilityStandards()
+const { typePdvLabel, fetchTypePdvLabels } = useTypePdvLabels()
 const selectedPDV = computed(() => pdvList.value.find(p => p.pdv_id === form.pdv_id) || null)
 const visibilitySegment = computed(() => visibilitySegmentForPdv(selectedPDV.value?.sous_categorie_pdv))
 const visibilitySegmentLabels: Record<string, string> = {
@@ -1372,6 +1373,7 @@ onMounted(async () => {
   }
   void fetchThresholds()
   void fetchVisibilityElements()
+  void fetchTypePdvLabels()
   pdvList.value = await pdvStore.fetchScopedPDV(authStore.profile)
   restoreDraft()
 

@@ -4,7 +4,6 @@
 
     <DashboardFilters
       v-model="dashboard.filters.value"
-      :zone-options="dashboard.availableZones.value"
       @filter="dashboard.fetchVisites()"
     />
 
@@ -21,7 +20,7 @@
 
       <!-- Tableau récapitulatif -->
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-x-auto">
-        <table class="w-full text-xs">
+        <table class="w-full text-xs" data-no-column-tools>
           <thead class="bg-gray-50 dark:bg-gray-700/50 sticky top-0">
             <tr>
               <th class="px-3 py-2 text-left font-semibold text-gray-600">Date</th>
@@ -109,10 +108,16 @@ definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 const dashboard = useDashboardDirection()
 const { users: cachedUsers, fetchUsers: fetchCachedUsers } = useUsersCache()
 
-const commercialColOptions = computed(() => [
-  { value: '', label: 'Tous' },
-  ...new Set(dashboard.visites.value.map(v => v.commercial).filter(Boolean))
-].map(v => typeof v === 'string' ? { value: v, label: v } : v))
+// Liste complète des commerciaux (users), pas seulement ceux ayant une visite
+// dans la fenêtre courante.
+const commercialColOptions = computed(() => {
+  const byNom = new Map(cachedUsers.value
+    .filter(u => u.is_active !== false && u.nom)
+    .map(u => [u.nom as string, u.nom as string]))
+  return [{ value: '', label: 'Tous' }, ...[...byNom.keys()]
+    .sort((a, b) => a.localeCompare(b, 'fr'))
+    .map(nom => ({ value: nom, label: nom }))]
+})
 
 const marques = [
   { key: 'nido', label: 'NIDO', textClass: 'text-red-600' },
@@ -196,6 +201,6 @@ watch(filteredRows, () => { page.value = 1 })
 
 onMounted(() => {
   fetchCachedUsers()
-  Promise.all([dashboard.fetchZones(), dashboard.fetchVisites()])
+  Promise.all([dashboard.fetchVisites()])
 })
 </script>

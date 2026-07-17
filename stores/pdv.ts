@@ -28,10 +28,33 @@ export const usePDVStore = defineStore('pdv', () => {
     perPage: 50,
   })
 
-  // Unique values for filters
+  // Unique values for filters — dérivées de la PAGE courante seulement (à
+  // n'utiliser que pour un affichage lié aux lignes visibles).
   const uniqueZones = computed(() => [...new Set(pdvList.value.map(p => p.zone).filter(Boolean))])
   const uniqueRegions = computed(() => [...new Set(pdvList.value.map(p => p.region).filter(Boolean))])
   const uniqueCanaux = computed(() => [...new Set(pdvList.value.map(p => p.canal).filter(Boolean))])
+
+  // Facettes de filtre = valeurs distinctes sur TOUT le parc scopé (pas la page
+  // courante). La liste PDV est paginée : sans ça, les dropdowns Territoire /
+  // Sous-région n'affichaient que les valeurs de la page affichée.
+  const facetZones = ref<string[]>([])
+  const facetRegions = ref<string[]>([])
+  async function fetchFilterFacets(profile?: Profile | null) {
+    let query = supabase.from('pdv').select('zone, region').eq('is_active', true)
+    if (profile && !isPrivilegedProfile(profile)) {
+      const territoires = profileTerritories(profile)
+      if (territoires.length === 1) query = query.eq('zone', territoires[0])
+      else if (territoires.length > 1) query = query.in('zone', territoires)
+      const quartiers = (profile.quartiers_assignes || []).filter(Boolean)
+      if (quartiers.length === 1) query = query.eq('quartier', quartiers[0])
+      else if (quartiers.length > 1) query = query.in('quartier', quartiers)
+    }
+    const { data, error } = await query
+    if (error) return
+    const rows = (data || []) as { zone: string | null; region: string | null }[]
+    facetZones.value = [...new Set(rows.map(r => r.zone).filter((z): z is string => !!z))].sort((a, b) => a.localeCompare(b, 'fr'))
+    facetRegions.value = [...new Set(rows.map(r => r.region).filter((r): r is string => !!r))].sort((a, b) => a.localeCompare(b, 'fr'))
+  }
 
   function isPrivilegedProfile(profile?: Profile | null) {
     return profile?.role === 'admin' || profile?.role === 'superviseur'
@@ -314,6 +337,9 @@ export const usePDVStore = defineStore('pdv', () => {
     uniqueZones,
     uniqueRegions,
     uniqueCanaux,
+    facetZones,
+    facetRegions,
+    fetchFilterFacets,
     fetchPDV,
     fetchAllPDV,
     fetchScopedPDV,

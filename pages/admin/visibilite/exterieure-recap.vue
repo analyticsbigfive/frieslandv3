@@ -10,7 +10,6 @@
 
     <DashboardFilters
       v-model="dashboard.filters.value"
-      :zone-options="dashboard.availableZones.value"
       @filter="dashboard.fetchVisites()"
     />
 
@@ -45,7 +44,7 @@
         <span class="text-xs tabular-nums text-slate-400">{{ filteredVisites.length }} PDV</span>
       </div>
       <div class="overflow-x-auto">
-        <table class="admin-table">
+        <table class="admin-table" data-no-column-tools>
           <thead>
             <tr>
               <th class="cursor-pointer select-none" @click="sortBy = 'nom'; sortAsc = !sortAsc">
@@ -97,6 +96,7 @@
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const dashboard = useDashboardDirection()
+const { typePdvLabel, fetchTypePdvLabels } = useTypePdvLabels()
 const { fetchElements, columns, applicable, standardsOf, hasPresence, elementTotals } = useVisibilityAggregation()
 const page = ref(1)
 const sortBy = ref('nom')
@@ -122,7 +122,7 @@ const tableRows = computed(() => filteredVisites.value.map(v => ({
   nom: v.pdv?.nom_pdv || v.visite_id.substring(0, 8),
   pdv_id: v.pdv?.pdv_id || '',
   image_url: (v.pdv as any)?.image_url || null,
-  type: v.pdv?.sous_categorie_pdv || '',
+  type: typePdvLabel(v.pdv?.sous_categorie_pdv) || '',
   zone: v.pdv?.zone || '',
   quartier: v.pdv?.quartier || '',
   standards: standardsOf(v),
@@ -136,6 +136,6 @@ const tableRows = computed(() => filteredVisites.value.map(v => ({
 const paginatedRows = computed(() => tableRows.value.slice((page.value - 1) * 100, page.value * 100))
 
 onMounted(() => {
-  Promise.all([dashboard.fetchZones(), dashboard.fetchVisites(), fetchElements()])
+  Promise.all([dashboard.fetchVisites(), fetchElements(), fetchTypePdvLabels()])
 })
 </script>

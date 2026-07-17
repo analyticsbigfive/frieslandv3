@@ -1,23 +1,23 @@
 <template>
   <div
-    class="admin-surface group overflow-hidden p-5 transition duration-300 hover:-translate-y-0.5 hover:border-slate-300 dark:hover:border-slate-600"
+    class="admin-surface group overflow-hidden p-4 transition duration-300 hover:-translate-y-0.5 hover:border-slate-300 dark:hover:border-slate-600"
     :class="cardClass"
   >
     <div class="absolute inset-x-0 top-0 h-1" :class="accentClass" />
     <div class="flex items-start justify-between gap-4">
       <div class="min-w-0">
         <p class="text-xs font-semibold uppercase tracking-normal text-slate-400 dark:text-slate-500">{{ title }}</p>
-        <p class="mt-2 text-3xl font-semibold leading-none tracking-tight tabular-nums" :class="valueClass">
+        <p class="mt-1.5 text-2xl font-semibold leading-none tracking-tight tabular-nums" :class="valueClass">
           {{ formattedValue }}
         </p>
         <p v-if="subtitle" class="mt-1.5 text-xs leading-5 text-slate-400 dark:text-slate-500">{{ subtitle }}</p>
       </div>
       <div
-        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105"
+        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-transform duration-300 group-hover:scale-105"
         :class="iconBgClass"
       >
-        <UIcon v-if="typeof icon === 'string'" :name="icon" class="h-5 w-5" :class="iconColorClass" />
-        <component :is="icon" v-else class="h-5 w-5" :class="iconColorClass" />
+        <UIcon v-if="typeof icon === 'string'" :name="icon" class="h-4 w-4" :class="iconColorClass" />
+        <component :is="icon" v-else class="h-4 w-4" :class="iconColorClass" />
       </div>
     </div>
 

@@ -595,7 +595,7 @@ async function loadData() {
         .order('nom'),
       supabase.from('standard_visibilite')
         .select('niveau_perfect_store, element_visibilite_id, requis'),
-      supabase.from('type_pdv').select('id, nom').order('nom'),
+      supabase.from('type_pdv').select('*').order('nom'),
       supabase.from('segment_visibilite_type_pdv').select('type_pdv_id, segment'),
       supabase.from('segment_grade_type_pdv').select('type_pdv_id, segment, grade'),
       supabase.from('poids_reference')
@@ -649,7 +649,7 @@ async function loadData() {
     const availabilityByType = new Map((availabilityMappingResult.data || []).map((row: any) => [row.type_pdv_id, row]))
     typeMappings.value = (typeResult.data || []).map((row: any) => ({
       type_pdv_id: row.id,
-      nom: row.nom,
+      nom: row.nom_fr || row.nom,
       visibility_segment: visibilityByType.get(row.id) || '',
       availability_segment: availabilityByType.get(row.id)?.segment || '',
       grade: availabilityByType.get(row.id)?.grade || '',

@@ -198,8 +198,23 @@ export function usePerfectStore() {
     return data as PerfectStoreGlobalKpi | null
   }
 
-  /** KPI par catégorie de PDV. */
-  async function fetchKpiParType(): Promise<PerfectStoreTypeKpi[]> {
+  /** Filtres Division / Territoire / Area / Distributeur du dashboard. */
+  type DashFilters = { division?: string; territoire?: string; area?: string; distributeur?: string }
+  const hasDashFilters = (f?: DashFilters) => !!(f && (f.division || f.territoire || f.area || f.distributeur))
+  const dashFilterParams = (f: DashFilters) => ({
+    p_division: f.division || null,
+    p_territoire: f.territoire || null,
+    p_area: f.area || null,
+    p_distributeur: f.distributeur || null,
+  })
+
+  /** KPI par catégorie de PDV (RPC filtrée si un filtre dashboard est actif). */
+  async function fetchKpiParType(filters?: DashFilters): Promise<PerfectStoreTypeKpi[]> {
+    if (hasDashFilters(filters)) {
+      const { data, error } = await (supabase.rpc as any)('perfect_store_par_type_filtre', dashFilterParams(filters!))
+      if (!error) return (data || []) as PerfectStoreTypeKpi[]
+      console.warn('perfect_store_par_type_filtre indisponible (migration 20260717140000 ?), repli non filtré', error.message)
+    }
     const { data, error } = await supabase.from('v_perfect_store_par_categorie_pdv')
       .select('type_pdv, visites_scorees, perfect_stores, perfect_store_pct, score_global_moyen_pct')
     if (error) {
@@ -222,7 +237,19 @@ export function usePerfectStore() {
     return data as CoverageKpi | null
   }
 
-  async function fetchStoresByTier(tier: string, page = 1, perPage = 5): Promise<PerfectStoreListPage> {
+  async function fetchStoresByTier(tier: string, page = 1, perPage = 5, filters?: DashFilters): Promise<PerfectStoreListPage> {
+    if (hasDashFilters(filters)) {
+      const { data, error } = await (supabase.rpc as any)('perfect_store_liste_filtre', {
+        p_niveau: tier,
+        p_type: null,
+        p_page: page,
+        p_per_page: perPage,
+        p_order: 'date',
+        ...dashFilterParams(filters!),
+      })
+      if (error) throw error
+      return { items: (data?.items || []) as PerfectStoreListItem[], total: data?.total || 0 }
+    }
     const from = (page - 1) * perPage
     const to = from + perPage - 1
     const { data, count, error } = await supabase
@@ -249,9 +276,23 @@ export function usePerfectStore() {
     search?: string
     page?: number
     perPage?: number
+    filters?: DashFilters
   } = {}): Promise<PerfectStoreListPage> {
     const page = opts.page && opts.page > 0 ? opts.page : 1
     const perPage = opts.perPage || 20
+    if (hasDashFilters(opts.filters)) {
+      // RPC filtrée (pas de recherche texte côté RPC — non utilisée avec filtres).
+      const { data, error } = await (supabase.rpc as any)('perfect_store_liste_filtre', {
+        p_niveau: opts.niveau && opts.niveau !== 'TOUS' ? opts.niveau : null,
+        p_type: opts.type || null,
+        p_page: page,
+        p_per_page: perPage,
+        p_order: 'score',
+        ...dashFilterParams(opts.filters!),
+      })
+      if (error) throw error
+      return { items: (data?.items || []) as PerfectStoreListItem[], total: data?.total || 0 }
+    }
     const from = (page - 1) * perPage
     const to = from + perPage - 1
     let query = supabase
@@ -271,8 +312,13 @@ export function usePerfectStore() {
     return { items: (data || []) as PerfectStoreListItem[], total: count || 0 }
   }
 
-  /** Évolution du taux de Perfect Stores par jour (courbe d'accueil). */
-  async function fetchPerfectStoreEvolution(): Promise<PerfectStoreEvolutionPoint[]> {
+  /** Évolution du taux de Perfect Stores par jour (RPC filtrée si filtres actifs). */
+  async function fetchPerfectStoreEvolution(filters?: DashFilters): Promise<PerfectStoreEvolutionPoint[]> {
+    if (hasDashFilters(filters)) {
+      const { data, error } = await (supabase.rpc as any)('perfect_store_evolution_filtre', dashFilterParams(filters!))
+      if (!error) return (data || []) as PerfectStoreEvolutionPoint[]
+      console.warn('perfect_store_evolution_filtre indisponible (migration 20260717140000 ?), repli non filtré', error.message)
+    }
     const { data, error } = await supabase
       .from('v_perfect_store_evolution')
       .select('date, perfect_stores, visites_scorees, perfect_store_pct')

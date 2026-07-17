@@ -46,6 +46,7 @@
                 <th class="text-center">Ce mois</th>
                 <th class="text-center">Dernière visite</th>
                 <th>Volume relatif</th>
+                <th class="text-right">Visites</th>
               </tr>
             </thead>
             <tbody>
@@ -69,6 +70,16 @@
                   <div class="h-1.5 w-28 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
                     <div class="h-full rounded-full bg-fc-red transition-all" :style="{ width: barWidth(com) }" />
                   </div>
+                </td>
+                <td class="text-right">
+                  <UButton
+                    size="xs"
+                    variant="ghost"
+                    icon="i-heroicons-arrow-top-right-on-square"
+                    :to="{ path: '/admin/visites', query: { commercial: com.nom || com.email } }"
+                  >
+                    Voir les visites
+                  </UButton>
                 </td>
               </tr>
             </tbody>

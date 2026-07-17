@@ -12,6 +12,7 @@ interface TableState {
   toolbar: HTMLDivElement
   filterRow: HTMLTableRowElement
   filters: HTMLInputElement[]
+  panels: HTMLUListElement[]
   originalRows: HTMLTableRowElement[]
   sortColumn: number | null
   sortDirection: SortDirection
@@ -21,6 +22,7 @@ const root = ref<HTMLElement | null>(null)
 const states = new Map<HTMLTableElement, TableState>()
 let observer: MutationObserver | null = null
 let refreshTimer: ReturnType<typeof setTimeout> | null = null
+let onDocPointerDown: ((event: Event) => void) | null = null
 
 const normalize = (value: string) => value.trim().toLocaleLowerCase('fr-FR')
 
@@ -41,6 +43,48 @@ const sortableValue = (value: string): string | number => {
 
 const cellText = (row: HTMLTableRowElement, column: number) =>
   row.cells[column]?.textContent || ''
+
+// Combobox par colonne : le champ filtre les lignes (« contient »), et le
+// bouton ▾ ouvre un panneau des valeurs distinctes de la colonne, filtré par
+// la saisie et cliquable. Reconstruit à l'ouverture (lignes en mémoire).
+const columnValues = (state: TableState, column: number, query: string) => {
+  const q = normalize(query)
+  return [...new Set(state.originalRows
+    .map(row => cellText(row, column).trim().replace(/\s+/g, ' '))
+    .filter(Boolean))]
+    .filter(value => !q || normalize(value).includes(q))
+    .sort((a, b) => a.localeCompare(b, 'fr', { numeric: true, sensitivity: 'base' }))
+    .slice(0, 50)
+}
+
+const closeAllPanels = (except?: HTMLUListElement) => {
+  states.forEach(state => state.panels.forEach((panel) => {
+    if (panel !== except) panel.hidden = true
+  }))
+}
+
+const openPanel = (state: TableState, column: number) => {
+  const input = state.filters[column]
+  const panel = state.panels[column]
+  const values = columnValues(state, column, input.value)
+  panel.replaceChildren(...values.map((value) => {
+    const item = document.createElement('li')
+    const option = document.createElement('button')
+    option.type = 'button'
+    option.className = 'admin-column-combo__option'
+    option.textContent = value
+    option.addEventListener('mousedown', (event) => {
+      event.preventDefault()
+      input.value = value
+      applyFilters(state)
+      panel.hidden = true
+    })
+    item.appendChild(option)
+    return item
+  }))
+  panel.hidden = values.length === 0
+  closeAllPanels(panel)
+}
 
 const applyFilters = (state: TableState) => {
   const activeFilters = state.filters.map(input => normalize(input.value))
@@ -87,6 +131,7 @@ const sortTable = (state: TableState, column: number, toggleDirection = true) =>
 
 const resetTable = (state: TableState) => {
   state.filters.forEach(input => { input.value = '' })
+  state.panels.forEach(panel => { panel.hidden = true })
   state.originalRows.forEach(row => state.table.tBodies[0].appendChild(row))
   state.sortColumn = null
   state.sortDirection = 'asc'
@@ -116,6 +161,7 @@ const enhanceTable = (table: HTMLTableElement) => {
   const filterRow = document.createElement('tr')
   filterRow.className = 'admin-column-filter-row'
   filterRow.hidden = true
+  const panels: HTMLUListElement[] = []
   const filters = headers.map((header, index) => {
     header.classList.add('admin-sortable-header')
     header.tabIndex = header.tabIndex >= 0 ? header.tabIndex : 0
@@ -123,25 +169,48 @@ const enhanceTable = (table: HTMLTableElement) => {
     header.setAttribute('aria-sort', 'none')
 
     const cell = document.createElement('th')
+    const combo = document.createElement('div')
+    combo.className = 'admin-column-combo'
     const input = document.createElement('input')
     input.type = 'search'
     input.className = 'admin-column-filter'
     input.placeholder = 'Filtrer…'
+    input.autocomplete = 'off'
     input.setAttribute('aria-label', `Filtrer la colonne ${header.textContent?.trim() || index + 1}`)
-    cell.appendChild(input)
+    const toggle = document.createElement('button')
+    toggle.type = 'button'
+    toggle.tabIndex = -1
+    toggle.className = 'admin-column-combo__toggle'
+    toggle.setAttribute('aria-label', 'Voir les valeurs')
+    toggle.innerHTML = '<span aria-hidden="true">▾</span>'
+    const panel = document.createElement('ul')
+    panel.className = 'admin-column-combo__panel'
+    panel.hidden = true
+    panels.push(panel)
+    combo.append(input, toggle, panel)
+    cell.appendChild(combo)
     filterRow.appendChild(cell)
+
+    toggle.addEventListener('click', () => {
+      if (panel.hidden) { openPanel(state, index); input.focus() }
+      else panel.hidden = true
+    })
+    input.addEventListener('focus', () => openPanel(state, index))
     return input
   })
   head.appendChild(filterRow)
 
   const toolbar = document.createElement('div')
   toolbar.className = 'admin-table-tools'
+  const toolbarLabel = document.createElement('span')
+  toolbarLabel.className = 'admin-table-tools__label'
+  toolbarLabel.textContent = 'Colonnes : tri et filtres'
   const filterButton = createButton('Filtrer les colonnes', '⌕')
   filterButton.dataset.filterToggle = ''
   filterButton.setAttribute('aria-expanded', 'false')
   const resetButton = createButton('Réinitialiser', '↺')
   resetButton.dataset.resetTable = ''
-  toolbar.append(filterButton, resetButton)
+  toolbar.append(toolbarLabel, filterButton, resetButton)
   table.parentElement?.insertBefore(toolbar, table)
 
   const state: TableState = {
@@ -149,6 +218,7 @@ const enhanceTable = (table: HTMLTableElement) => {
     toolbar,
     filterRow,
     filters,
+    panels,
     originalRows: Array.from(body.rows),
     sortColumn: null,
     sortDirection: 'asc',
@@ -158,10 +228,14 @@ const enhanceTable = (table: HTMLTableElement) => {
   filterButton.addEventListener('click', () => {
     filterRow.hidden = !filterRow.hidden
     filterButton.setAttribute('aria-expanded', String(!filterRow.hidden))
-    if (!filterRow.hidden) filters[0]?.focus()
+    if (filterRow.hidden) closeAllPanels()
+    else filters[0]?.focus()
   })
   resetButton.addEventListener('click', () => resetTable(state))
-  filters.forEach(input => input.addEventListener('input', () => applyFilters(state)))
+  filters.forEach((input, column) => input.addEventListener('input', () => {
+    applyFilters(state)
+    if (!state.panels[column].hidden) openPanel(state, column)
+  }))
 
   const activateHeader = (event: Event) => {
     const target = event.target as HTMLElement
@@ -205,21 +279,43 @@ onMounted(() => {
     refreshTimer = setTimeout(refreshTables, 80)
   })
   if (root.value) observer.observe(root.value, { childList: true, subtree: true })
+
+  // Fermer les panneaux combobox au clic en dehors / Échap.
+  onDocPointerDown = (event: Event) => {
+    if (!(event.target as HTMLElement)?.closest('.admin-column-combo')) closeAllPanels()
+  }
+  document.addEventListener('pointerdown', onDocPointerDown)
+  document.addEventListener('keydown', onDocKeydown)
 })
+
+function onDocKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') closeAllPanels()
+}
 
 onBeforeUnmount(() => {
   observer?.disconnect()
   if (refreshTimer) clearTimeout(refreshTimer)
+  if (onDocPointerDown) document.removeEventListener('pointerdown', onDocPointerDown)
+  document.removeEventListener('keydown', onDocKeydown)
 })
 </script>
 
 <style>
 .admin-table-tools {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid rgb(226 232 240 / 0.8);
+}
+
+.admin-table-tools__label {
+  margin-right: auto;
+  color: rgb(100 116 139);
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .admin-table-tool {
@@ -272,12 +368,18 @@ onBeforeUnmount(() => {
   background: rgb(248 250 252);
 }
 
+.admin-column-combo {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
 .admin-column-filter {
   width: 100%;
   min-width: 7rem;
   border: 1px solid rgb(203 213 225);
   border-radius: 0.5rem;
-  padding: 0.4rem 0.55rem;
+  padding: 0.4rem 1.6rem 0.4rem 0.55rem;
   background: white;
   color: rgb(15 23 42);
   font-size: 0.75rem;
@@ -290,12 +392,66 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 0 2px rgb(254 226 226);
 }
 
+.admin-column-combo__toggle {
+  position: absolute;
+  right: 0.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  color: rgb(100 116 139);
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.admin-column-combo__toggle:hover { color: rgb(220 38 38); }
+
+.admin-column-combo__panel {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  z-index: 30;
+  max-height: 14rem;
+  min-width: 100%;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+  border: 1px solid rgb(203 213 225);
+  border-radius: 0.5rem;
+  background: white;
+  box-shadow: 0 10px 25px -5px rgb(15 23 42 / 0.15);
+}
+
+.admin-column-combo__option {
+  display: block;
+  width: 100%;
+  border-radius: 0.35rem;
+  padding: 0.3rem 0.5rem;
+  text-align: left;
+  white-space: nowrap;
+  color: rgb(51 65 85);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.admin-column-combo__option:hover {
+  background: rgb(248 250 252);
+  color: rgb(15 23 42);
+}
+
 .dark .admin-table-tools { border-color: rgb(51 65 85); }
+.dark .admin-table-tools__label { color: rgb(148 163 184); }
 .dark .admin-table-tool { border-color: rgb(71 85 105); background: rgb(30 41 59); color: rgb(203 213 225); }
 .dark .admin-table-tool:hover { background: rgb(51 65 85); color: white; }
 .dark .admin-column-filter-row th { background: rgb(15 23 42); }
 .dark .admin-column-filter { border-color: rgb(71 85 105); background: rgb(30 41 59); color: white; }
 .dark .admin-column-filter:focus { border-color: rgb(248 113 113); box-shadow: 0 0 0 2px rgb(127 29 29 / 0.45); }
+.dark .admin-column-combo__toggle { color: rgb(148 163 184); }
+.dark .admin-column-combo__panel { border-color: rgb(71 85 105); background: rgb(30 41 59); box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.5); }
+.dark .admin-column-combo__option { color: rgb(203 213 225); }
+.dark .admin-column-combo__option:hover { background: rgb(51 65 85); color: white; }
 
 @media print {
   .admin-table-tools,

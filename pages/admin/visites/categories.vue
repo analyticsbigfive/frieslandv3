@@ -4,7 +4,7 @@
 
     <DashboardFilters
       v-model="dashboard.filters.value"
-      :zone-options="dashboard.availableZones.value"
+      :show-quartier="false"
       @filter="dashboard.fetchVisites()"
     />
 
@@ -162,6 +162,6 @@ const chartOptions = {
 }
 
 onMounted(() => {
-  Promise.all([dashboard.fetchZones(), dashboard.fetchVisites()])
+  Promise.all([dashboard.fetchVisites()])
 })
 </script>

@@ -87,7 +87,7 @@
             <p class="text-xs text-gray-400 mt-1">{{ pdv.zone }} — {{ pdv.region }}</p>
             <div class="flex gap-2 mt-2">
               <UBadge variant="subtle" color="blue" size="xs">{{ pdv.canal }}</UBadge>
-              <UBadge variant="subtle" color="gray" size="xs">{{ pdv.categorie_pdv }}</UBadge>
+              <UBadge variant="subtle" color="gray" size="xs">{{ categoriePdvLabel(pdv.categorie_pdv) }}</UBadge>
               <!-- Distance badge -->
               <UBadge
                 v-if="sortByProximity && pdv._distance != null"
@@ -136,6 +136,7 @@ definePageMeta({ middleware: ['auth'], layout: 'mobile' })
 
 const pdvStore = usePDVStore()
 const authStore = useAuthStore()
+const { categoriePdvLabel, fetchTypePdvLabels } = useTypePdvLabels()
 const { currentPosition, isLocating, requestPosition } = useUserGeolocation()
 
 const search = ref('')
@@ -220,6 +221,7 @@ const filteredPDV = computed(() => {
 
 onMounted(async () => {
   loading.value = true
+  void fetchTypePdvLabels()
   try {
     if (!authStore.profile) {
       await authStore.fetchProfile()

@@ -1,46 +1,40 @@
 <template>
   <div class="space-y-6">
-    <div class="admin-toolbar">
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+    <AdminListToolbar
+      :result-count="total"
+      result-label="visite(s)"
+      :chips="filterChips"
+      @reset="resetFilters"
+      @remove-chip="removeFilterChip"
+    >
+      <template #filters>
         <UFormGroup label="Date début">
           <UInput v-model="filters.dateFrom" type="date" size="sm" />
         </UFormGroup>
         <UFormGroup label="Date fin">
           <UInput v-model="filters.dateTo" type="date" size="sm" />
         </UFormGroup>
-        <UFormGroup label="Commercial">
+        <UFormGroup label="Commercial" class="min-w-64 flex-1">
           <USelectMenu
             v-model="filters.commercial"
             :options="commercialOptions"
             placeholder="Tous"
             size="sm"
+            class="w-full"
             searchable
-            searchable-placeholder="Rechercher..."
+            searchable-placeholder="Rechercher un commercial…"
             :search-attributes="['label']"
+            :loading="usersLoading"
             value-attribute="value"
             option-attribute="label"
           />
         </UFormGroup>
-        <UFormGroup label="Email">
-          <USelectMenu
-            v-model="filters.email"
-            :options="emailOptions"
-            placeholder="Tous"
-            size="sm"
-            searchable
-            searchable-placeholder="Rechercher..."
-            :search-attributes="['label']"
-            value-attribute="value"
-            option-attribute="label"
-          />
-        </UFormGroup>
-        <div class="flex items-end gap-2">
-          <UButton size="sm" icon="i-heroicons-magnifying-glass" @click="loadVisites">Filtrer</UButton>
-          <UButton size="sm" variant="ghost" @click="resetFilters">Réinitialiser</UButton>
-          <UButton size="sm" variant="outline" icon="i-heroicons-arrow-down-tray" @click="handleExport">Export</UButton>
-        </div>
-      </div>
-    </div>
+      </template>
+      <template #actions>
+        <UButton size="sm" icon="i-heroicons-magnifying-glass" @click="filterVisites">Filtrer</UButton>
+        <UButton size="sm" variant="outline" icon="i-heroicons-arrow-down-tray" @click="handleExport">Export</UButton>
+      </template>
+    </AdminListToolbar>
 
     <div class="admin-surface overflow-hidden">
       <div class="border-b border-slate-100 px-5 py-4 dark:border-slate-700">
@@ -82,7 +76,7 @@
               <td>
                 <div class="min-w-40">
                   <p class="font-medium text-slate-900 dark:text-white">{{ visite.pdv?.nom_pdv || visite.pdv_id?.substring(0, 8) }}</p>
-                  <p class="mt-0.5 text-xs text-slate-400">{{ visite.pdv?.sous_categorie_pdv || 'Type non renseigné' }}</p>
+                  <p class="mt-0.5 text-xs text-slate-400">{{ typePdvLabel(visite.pdv?.sous_categorie_pdv) || 'Type non renseigné' }}</p>
                 </div>
               </td>
               <td>
@@ -150,13 +144,15 @@
         <div v-for="i in 5" :key="i" class="h-12 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-700/50" />
       </div>
 
-      <div class="flex items-center justify-between border-t border-slate-100 px-5 py-3 dark:border-slate-700">
-        <p class="text-sm text-slate-500 dark:text-slate-400">{{ total }} visite(s)</p>
-        <div class="flex gap-2">
-          <UButton size="xs" variant="outline" :disabled="filters.page <= 1" @click="filters.page--; loadVisites()">Précédent</UButton>
-          <UButton size="xs" variant="outline" :disabled="visites.length < filters.perPage" @click="filters.page++; loadVisites()">Suivant</UButton>
-        </div>
-      </div>
+      <AdminPagination
+        :total="total"
+        :page="filters.page"
+        :page-size="filters.perPage"
+        :loading="loading"
+        item-label="visite(s)"
+        @previous="filters.page--; loadVisites()"
+        @next="filters.page++; loadVisites()"
+      />
     </div>
 
     <VisitDetailModal
@@ -209,8 +205,9 @@ definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const visitesStore = useVisitesStore()
 const { exportVisitesToExcel } = useCsvExport()
-const { users: cachedUsers, fetchUsers: fetchCachedUsers } = useUsersCache()
+const { users: cachedUsers, fetchUsers: fetchCachedUsers, loading: usersLoading } = useUsersCache()
 const { refs, fetchRefs, scoreVisite } = usePerfectStore()
+const { typePdvLabel, fetchTypePdvLabels } = useTypePdvLabels()
 
 const visites = computed(() => visitesStore.visites)
 const total = computed(() => visitesStore.total)
@@ -234,13 +231,6 @@ const commercialOptions = computed(() => [
   ...cachedUsers.value
     .filter(user => user.is_active !== false)
     .map(user => ({ value: user.nom || user.email || '', label: `${user.nom || '—'} (${user.email})` })),
-])
-
-const emailOptions = computed(() => [
-  { value: '', label: 'Tous' },
-  ...cachedUsers.value
-    .filter(user => user.is_active !== false && user.email)
-    .map(user => ({ value: user.email!, label: user.email! })),
 ])
 
 const perfectStoreScores = computed(() => {
@@ -334,13 +324,49 @@ function resetFilters() {
   loadVisites()
 }
 
+// Chips des filtres actifs (sous la barre) — clic = retirer ce filtre seul.
+const filterChips = computed(() => {
+  const chips: { key: string; label: string }[] = []
+  if (filters.dateFrom) chips.push({ key: 'dateFrom', label: `Début : ${formatDate(filters.dateFrom)}` })
+  if (filters.dateTo) chips.push({ key: 'dateTo', label: `Fin : ${formatDate(filters.dateTo)}` })
+  if (filters.commercial) {
+    const opt = commercialOptions.value.find(o => o.value === filters.commercial)
+    chips.push({ key: 'commercial', label: `Commercial : ${opt?.label || filters.commercial}` })
+  }
+  return chips
+})
+function removeFilterChip(key: string) {
+  ;(filters as any)[key] = ''
+  filters.page = 1
+  loadVisites()
+}
+
 async function loadVisites() {
   await visitesStore.fetchVisites()
 }
 
+function filterVisites() {
+  filters.page = 1
+  loadVisites()
+}
+
+// Filtrage dynamique : les changements de filtres relancent la liste sans
+// passer par le bouton « Filtrer » (debounce court).
+let autoFilterTimer: ReturnType<typeof setTimeout> | null = null
+watch(() => [filters.dateFrom, filters.dateTo, filters.commercial], () => {
+  if (autoFilterTimer) clearTimeout(autoFilterTimer)
+  autoFilterTimer = setTimeout(() => { filters.page = 1; loadVisites() }, 400)
+})
+
 onMounted(() => {
+  // Le champ Email a été retiré de l'UI : purge d'un éventuel filtre persistant.
+  filters.email = ''
+  // Deep-link depuis le classement des commerciaux : /admin/visites?commercial=X
+  const qCommercial = useRoute().query.commercial
+  if (typeof qCommercial === 'string' && qCommercial) filters.commercial = qCommercial
   fetchCachedUsers()
   fetchRefs()
+  fetchTypePdvLabels()
   loadVisites()
 })
 </script>

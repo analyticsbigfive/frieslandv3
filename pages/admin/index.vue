@@ -7,26 +7,39 @@
       </p>
     </div>
 
-    <!-- Filtres cascade Division → Territoire → Area + Distributeur (pilotent KPI + tableaux) -->
+    <!-- Filtres cascade Division → Territoire → Quartier + Distributeur (pilotent KPI + tableaux) -->
     <div class="admin-toolbar">
       <div class="grid grid-cols-2 gap-2 sm:grid-cols-5">
         <UFormGroup label="Division (North/South)" size="xs">
-          <USelectMenu v-model="fDivision" :options="divisionOptions" placeholder="Toutes" size="xs" />
+          <USelectMenu v-model="fDivision" :options="divisionOptions" placeholder="Toutes" size="xs" searchable :loading="loading" />
         </UFormGroup>
         <UFormGroup label="Territoire" size="xs">
-          <USelectMenu v-model="fTerritoire" :options="territoireOptions" placeholder="Tous" size="xs" searchable />
+          <USelectMenu v-model="fTerritoire" :options="territoireOptions" placeholder="Tous" size="xs" searchable searchable-placeholder="Rechercher…" :loading="loading" />
         </UFormGroup>
-        <UFormGroup label="Area" size="xs">
-          <USelectMenu v-model="fArea" :options="areaOptions" placeholder="Toutes" size="xs" searchable />
+        <UFormGroup label="Quartier" size="xs">
+          <USelectMenu v-model="fArea" :options="areaOptions" placeholder="Tous" size="xs" searchable searchable-placeholder="Rechercher…" :loading="loading" />
         </UFormGroup>
         <UFormGroup label="Distributeur" size="xs">
-          <USelectMenu v-model="fDistrib" :options="distribOptions" placeholder="Tous" size="xs" searchable />
+          <USelectMenu v-model="fDistrib" :options="distribOptions" placeholder="Tous" size="xs" searchable searchable-placeholder="Rechercher…" :loading="loading" />
         </UFormGroup>
         <div class="flex items-end">
           <UButton v-if="filtersActive" size="xs" variant="ghost" @click="resetManqueFilters">Réinitialiser</UButton>
         </div>
       </div>
-      <p v-if="filtersActive" class="mt-2 text-xs text-fc-red">Filtres actifs — KPI et tableaux limités au périmètre sélectionné.</p>
+      <div v-if="filtersActive" class="admin-list-toolbar__chips">
+        <button
+          v-for="chip in dashFilterChips"
+          :key="chip.key"
+          type="button"
+          class="admin-list-toolbar__chip"
+          :title="`Retirer le filtre ${chip.label}`"
+          @click="removeDashFilterChip(chip.key)"
+        >
+          <span>{{ chip.label }}</span>
+          <UIcon name="i-heroicons-x-mark" class="h-3.5 w-3.5" />
+        </button>
+        <span class="text-xs text-fc-red">KPI et tableaux limités au périmètre sélectionné.</span>
+      </div>
     </div>
 
     <div v-if="loading" class="grid gap-4 lg:grid-cols-3">
@@ -36,30 +49,45 @@
 
     <template v-else-if="global">
       <!-- Compteur global -->
-      <div class="admin-surface relative overflow-hidden p-6 sm:p-8">
-        <div class="absolute inset-y-0 left-0 w-1.5 bg-fc-red" />
-        <div class="flex items-center justify-between flex-wrap gap-6">
+      <div class="admin-surface relative overflow-hidden p-4 sm:p-5">
+        <div class="absolute inset-y-0 left-0 w-1 bg-fc-red" />
+        <div class="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-fc-red">Performance réseau</p>
-            <p class="mt-3 text-5xl font-semibold tracking-tight text-slate-950 dark:text-white">{{ fmtPct(global.perfect_store_pct) }}</p>
-            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.12em] text-fc-red">Performance réseau</p>
+            <p class="mt-1.5 text-3xl font-semibold tracking-tight text-slate-950 dark:text-white">{{ fmtPct(global.perfect_store_pct) }}</p>
+            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
               {{ global.perfect_stores }} / {{ global.visites_scorees }} visites conformes
             </p>
           </div>
-          <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-fc-red dark:bg-red-950/30">
-            <UIcon name="i-heroicons-trophy" class="h-8 w-8" />
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-fc-red dark:bg-red-950/30">
+            <UIcon name="i-heroicons-trophy" class="h-5 w-5" />
           </div>
         </div>
       </div>
 
-      <!-- KPI Big Five -->
-      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <!-- KPI prioritaires -->
+      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatsCard title="Couverture du mois" :value="coverageLabel" :subtitle="coverageSub" format="none" :icon="MapPinned" color="purple" />
         <StatsCard title="Score global moyen" :value="fmtPct(global.score_global_moyen_pct)" format="none" :icon="BarChart3" color="blue" />
         <StatsCard title="OSA pondérée moyenne" :value="fmtPct(global.osa_moyen_pct)" format="none" :icon="Package" color="green" />
         <StatsCard title="Assortiment moyen" :value="fmtPct(global.assortiment_moyen_pct)" format="none" :icon="ListChecks" color="purple" />
-        <StatsCard title="Visibilité moyenne" :value="fmtPct(global.visibilite_moyenne_pct)" format="none" :icon="Eye" color="orange" />
-        <StatsCard title="Promotion effective" :value="fmtPct(global.promotion_moyenne_pct)" format="none" :icon="BadgePercent" color="red" />
+      </div>
+
+      <!-- Indicateurs secondaires, conservés sans ajouter deux cartes hautes -->
+      <div class="admin-surface flex flex-wrap items-center gap-x-8 gap-y-3 px-4 py-3 sm:px-5">
+        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">Autres piliers</p>
+        <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+          <span class="inline-flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />
+            <span class="text-slate-500 dark:text-slate-400">Visibilité</span>
+            <strong class="tabular-nums text-slate-900 dark:text-white">{{ fmtPct(global.visibilite_moyenne_pct) }}</strong>
+          </span>
+          <span class="inline-flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-fc-red" aria-hidden="true" />
+            <span class="text-slate-500 dark:text-slate-400">Promotion</span>
+            <strong class="tabular-nums text-slate-900 dark:text-white">{{ fmtPct(global.promotion_moyenne_pct) }}</strong>
+          </span>
+        </div>
       </div>
 
       <!-- Évolution du taux de Perfect Stores -->
@@ -91,7 +119,7 @@
                 :class="isTypeOpen(row.type_pdv) ? 'rotate-90 text-fc-red' : ''"
               />
               <span class="min-w-0 flex-1">
-                <span class="block truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{{ row.type_pdv }}</span>
+                <span class="block truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{{ typePdvLabel(row.type_pdv) }}</span>
                 <span class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
                   {{ row.visites_scorees }} visite(s) · <span class="text-emerald-600 font-medium">{{ row.perfect_stores }} perfect</span>
                 </span>
@@ -206,7 +234,7 @@
                   <div class="min-w-0 px-2">
                     <p class="truncate text-sm font-semibold text-slate-900 dark:text-white">{{ store.nom_pdv || store.pdv_id }}</p>
                     <p class="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">
-                      {{ store.type_pdv }}<template v-if="store.zone"> · {{ store.zone }}</template>
+                      {{ typePdvLabel(store.type_pdv) }}<template v-if="store.zone"> · {{ store.zone }}</template>
                     </p>
                   </div>
                   <div class="shrink-0 px-2 text-right">
@@ -265,7 +293,7 @@
               <tr v-for="m in filteredManques" :key="m.visite_id">
                 <td class="px-4 py-2">
                   <span class="block font-medium text-gray-900 dark:text-white">{{ m.nom_pdv || m.pdv_id }}</span>
-                  <span class="block text-xs text-gray-400">{{ m.type_pdv }}<template v-if="m.zone"> · {{ m.zone }}</template></span>
+                  <span class="block text-xs text-gray-400">{{ typePdvLabel(m.type_pdv) }}<template v-if="m.zone"> · {{ m.zone }}</template></span>
                 </td>
                 <td class="px-4 py-2 text-center">
                   <span class="inline-flex items-center gap-1.5">
@@ -363,7 +391,7 @@
 </template>
 
 <script setup lang="ts">
-import { BarChart3, Package, Eye, MapPinned, BadgePercent, ListChecks } from 'lucide-vue-next'
+import { BarChart3, Package, MapPinned, ListChecks } from 'lucide-vue-next'
 import type {
   CoverageKpi,
   PerfectStoreGlobalKpi,
@@ -377,6 +405,7 @@ import type { PerfectStoreResultB } from '~/utils/perfectStore'
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const visitesStore = useVisitesStore()
+const { typePdvLabel, fetchTypePdvLabels } = useTypePdvLabels()
 const {
   refs,
   fetchRefs,
@@ -399,24 +428,63 @@ const evolution = ref<{ date: string; count: number }[]>([])
 const manques = ref<PerfectStoreManqueItem[]>([])
 const storesPerPage = 5
 
-// Filtres cascade du tableau « critères manquants » : Territoire → Area + Distributeur.
-// Options dérivées des lignes réelles (garantit le match ; pdv.zone/quartier sont
-// du texte libre, non alignés sur les noms concaténés du référentiel `zone`).
+// Filtres cascade Division → Territoire → Quartier + Distributeur.
+// Les options viennent du RÉFÉRENTIEL géographique COMPLET (useReferentiels),
+// pas des lignes chargées : sinon seuls les territoires/quartiers/distributeurs
+// déjà présents dans v_perfect_store_manques apparaissaient (listes tronquées).
+// Les noms du référentiel correspondent aux valeurs pdv.zone/quartier/
+// distributor_name (géo reconstruite depuis la même source) → le filtrage
+// (RPC + tableau manques) matche toujours.
+const { regions, subRegions, territories, areas, quartiers, distributeurs, territoireDistributeurs, zoneDistributeurs, fetchReferentiels } = useReferentiels()
 const fDivision = ref('')
 const fTerritoire = ref('')
 const fArea = ref('')
 const fDistrib = ref('')
-const uniq = (xs: (string | null)[]) => [...new Set(xs.filter((x): x is string => !!x))].sort()
-const divisionOptions = computed(() => ['', ...uniq(manques.value.map(m => m.division))])
-const territoireOptions = computed(() => ['', ...uniq(manques.value
-  .filter(m => !fDivision.value || m.division === fDivision.value)
-  .map(m => m.zone))])
-const areaOptions = computed(() => ['', ...uniq(manques.value
-  .filter(m => (!fDivision.value || m.division === fDivision.value) && (!fTerritoire.value || m.zone === fTerritoire.value))
-  .map(m => m.quartier))])
-const distribOptions = computed(() => ['', ...uniq(manques.value.map(m => m.distributor_name))])
+const uniq = (xs: (string | null | undefined)[]) => [...new Set(xs.filter((x): x is string => !!x))].sort((a, b) => a.localeCompare(b, 'fr'))
+const regionLabel = (r: { name: string; nom_affichage: string | null }) => r.nom_affichage || r.name
+
+const divisionOptions = computed(() => ['', ...uniq(regions.value.map(regionLabel))])
+// Codes région/sous-région du périmètre Division, pour cascader.
+const scopedRegionCodes = computed(() => regions.value
+  .filter(r => !fDivision.value || regionLabel(r) === fDivision.value).map(r => r.code))
+const scopedSrCodes = computed(() => subRegions.value
+  .filter(sr => scopedRegionCodes.value.includes(sr.region_code || '')).map(sr => sr.code))
+const scopedTerritories = computed(() => territories.value
+  .filter(t => scopedSrCodes.value.includes(t.sub_region_code || '')))
+const territoireOptions = computed(() => ['', ...uniq(scopedTerritories.value.map(t => t.name))])
+// Quartiers du périmètre (territoire sélectionné, sinon toute la division).
+const scopedAreaIds = computed(() => {
+  const terrCodes = scopedTerritories.value
+    .filter(t => !fTerritoire.value || t.name === fTerritoire.value).map(t => t.code)
+  return areas.value.filter(a => terrCodes.includes(a.territory_code)).map(a => a.id)
+})
+const areaOptions = computed(() => ['', ...uniq(quartiers.value
+  .filter(q => scopedAreaIds.value.includes(q.zone_id)).map(q => q.nom))])
+// Area (zone.id) du quartier sélectionné : clé pour dériver le distributeur.
+const selectedQuartierAreaId = computed(() => {
+  if (!fArea.value) return null
+  return quartiers.value.find(q => scopedAreaIds.value.includes(q.zone_id) && q.nom === fArea.value)?.zone_id ?? null
+})
+// Distributeurs : liste complète, restreinte au périmètre choisi. Priorité à
+// l'AREA du quartier sélectionné (zone_distributeur), sinon territoire, sinon tout.
+// Les distributeurs nationaux couvrent tout le périmètre.
+const distribOptions = computed(() => {
+  const national = distributeurs.value.filter(d => d.national).map(d => d.name)
+  if (selectedQuartierAreaId.value) {
+    const local = zoneDistributeurs.value
+      .filter(zd => zd.zone_id === selectedQuartierAreaId.value).map(zd => zd.distributor_name)
+    return ['', ...uniq([...local, ...national])]
+  }
+  if (fTerritoire.value) {
+    const local = territoireDistributeurs.value
+      .filter(td => td.territory_name === fTerritoire.value).map(td => td.distributor_name)
+    return ['', ...uniq([...local, ...national])]
+  }
+  return ['', ...uniq(distributeurs.value.map(d => d.name))]
+})
 watch(fDivision, () => { if (!territoireOptions.value.includes(fTerritoire.value)) fTerritoire.value = '' })
 watch(fTerritoire, () => { if (!areaOptions.value.includes(fArea.value)) fArea.value = '' })
+watch([fDivision, fTerritoire, fArea], () => { if (fDistrib.value && !distribOptions.value.includes(fDistrib.value)) fDistrib.value = '' })
 const filteredManques = computed(() => manques.value.filter(m =>
   (!fDivision.value || m.division === fDivision.value)
   && (!fTerritoire.value || m.zone === fTerritoire.value)
@@ -425,15 +493,52 @@ const filteredManques = computed(() => manques.value.filter(m =>
 ))
 function resetManqueFilters() { fDivision.value = ''; fTerritoire.value = ''; fArea.value = ''; fDistrib.value = '' }
 
-// Les filtres pilotent aussi les KPI agrégés du haut (RPC serveur).
+// Chips des filtres actifs — clic = retirer ce filtre seul (le watch refetch tout).
+const dashFilterChips = computed(() => {
+  const chips: { key: string; label: string }[] = []
+  if (fDivision.value) chips.push({ key: 'division', label: `Division : ${fDivision.value}` })
+  if (fTerritoire.value) chips.push({ key: 'territoire', label: `Territoire : ${fTerritoire.value}` })
+  if (fArea.value) chips.push({ key: 'area', label: `Quartier : ${fArea.value}` })
+  if (fDistrib.value) chips.push({ key: 'distributeur', label: `Distributeur : ${fDistrib.value}` })
+  return chips
+})
+function removeDashFilterChip(key: string) {
+  if (key === 'division') fDivision.value = ''
+  if (key === 'territoire') fTerritoire.value = ''
+  if (key === 'area') fArea.value = ''
+  if (key === 'distributeur') fDistrib.value = ''
+}
+
+// Les filtres pilotent les KPI agrégés du haut (RPC serveur) ET les blocs
+// détaillés : évolution, ventilation par type, listes par niveau, accordéons.
 const filtersActive = computed(() => !!(fDivision.value || fTerritoire.value || fArea.value || fDistrib.value))
+// undefined quand aucun filtre actif → les fetchers retombent sur les vues globales.
+const dashFilters = computed(() => filtersActive.value
+  ? { division: fDivision.value, territoire: fTerritoire.value, area: fArea.value, distributeur: fDistrib.value }
+  : undefined)
 async function applyDashboardFilters() {
-  const k = await fetchGlobalKpiFiltre({
-    division: fDivision.value, territoire: fTerritoire.value, area: fArea.value, distributeur: fDistrib.value,
-  })
-  if (!k) return
-  global.value = k as any
-  coverage.value = { periode: coverage.value?.periode ?? '', pdv_vus: k.pdv_vus, pdv_total: k.pdv_total, couverture_pct: k.couverture_pct }
+  const f = dashFilters.value
+  const [k, ev, t] = await Promise.all([
+    fetchGlobalKpiFiltre({
+      division: fDivision.value, territoire: fTerritoire.value, area: fArea.value, distributeur: fDistrib.value,
+    }),
+    fetchPerfectStoreEvolution(f),
+    fetchKpiParType(f),
+  ])
+  if (k) {
+    global.value = k as any
+    coverage.value = { periode: coverage.value?.periode ?? '', pdv_vus: k.pdv_vus, pdv_total: k.pdv_total, couverture_pct: k.couverture_pct }
+  }
+  evolution.value = ev.map(p => ({ date: p.date, count: p.perfect_store_pct ?? 0 }))
+  parType.value = t
+  // Listes « PDV par niveau » : rechargées page 1 sur le nouveau périmètre.
+  // Accordéons par type : cache vidé, seuls les panneaux ouverts sont rechargés.
+  const openList = [...openTypes]
+  Object.keys(typeStoreState).forEach(key => delete typeStoreState[key])
+  await Promise.all([
+    ...tiers.value.map(tier => loadTierStores(tier.ps_tier, 1)),
+    ...openList.map(type => loadTypeStores(type, 1)),
+  ])
 }
 watch([fDivision, fTerritoire, fArea, fDistrib], applyDashboardFilters)
 const storesError = ref(false)
@@ -508,7 +613,7 @@ async function loadTierStores(tier: string, page = 1) {
   tierStoreState[tier] = state
   state.loading = true
   try {
-    const result = await fetchStoresByTier(tier, page, storesPerPage)
+    const result = await fetchStoresByTier(tier, page, storesPerPage, dashFilters.value)
     state.items = result.items
     state.total = result.total
     state.page = page
@@ -549,7 +654,7 @@ async function loadTypeStores(type: string, page = 1) {
   const state = typeStoreState[type]
   state.loading = true
   try {
-    const result = await fetchPerfectStoreListe({ type, page, perPage: typePerPage })
+    const result = await fetchPerfectStoreListe({ type, page, perPage: typePerPage, filters: dashFilters.value })
     state.items = result.items
     state.total = result.total
     state.page = page
@@ -590,6 +695,8 @@ async function openStoreDetail(store: PerfectStoreListItem) {
 }
 
 onMounted(async () => {
+  void fetchTypePdvLabels()
+  void fetchReferentiels()
   await fetchRefs()
   try {
     const [g, t, c, ev, mq] = await Promise.all([fetchGlobalKpi(), fetchKpiParType(), fetchCoverage(), fetchPerfectStoreEvolution(), fetchPerfectStoreManques()])

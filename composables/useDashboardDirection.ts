@@ -43,29 +43,13 @@ export function useDashboardDirection() {
     categorie: '',
     sousCategorie: '',
     commercial: '',
+    division: '',
     region: '',
     zone: '',
+    area: '',
     quartier: '',
     nomPdv: '',
   })
-
-  // Zones disponibles pour les filtres
-  const availableZones = ref<string[]>([''])
-
-  async function fetchZones() {
-    try {
-      const { data } = await supabase
-        .from('pdv')
-        .select('zone')
-        .not('zone', 'is', null)
-        .order('zone')
-      const zones = [...new Set((data || []).map((d: any) => d.zone).filter(Boolean))]
-      availableZones.value = ['', ...zones]
-    }
-    catch (err) {
-      console.warn('Erreur chargement zones:', err)
-    }
-  }
 
   /** Fallback: requête directe visites + join PDV si la RPC n'existe pas */
   async function fetchVisitesFallback() {
@@ -89,7 +73,22 @@ export function useDashboardDirection() {
 
     if (qError) throw qError
 
-    visites.value = (data || []).map((row: any) => ({
+    // Filtres PDV appliqués côté client (le fallback ne sait filtrer que
+    // dates + commercial en SQL). La division n'est pas résolvable ici.
+    const f = filters.value
+    const rows = (data || []).filter((row: any) => {
+      const p = row.pdv
+      if (f.canal && p?.canal !== f.canal) return false
+      if (f.categorie && p?.categorie_pdv !== f.categorie) return false
+      if (f.sousCategorie && p?.sous_categorie_pdv !== f.sousCategorie) return false
+      if (f.region && p?.region !== f.region) return false
+      if (f.zone && p?.zone !== f.zone) return false
+      if (f.quartier && !(p?.quartier || '').toLowerCase().includes(f.quartier.toLowerCase())) return false
+      if (f.nomPdv && !(p?.nom_pdv || '').toLowerCase().includes(f.nomPdv.toLowerCase())) return false
+      return true
+    })
+
+    visites.value = rows.map((row: any) => ({
       visite_id: row.visite_id,
       date_visite: row.date_visite,
       commercial: row.commercial,
@@ -114,6 +113,8 @@ export function useDashboardDirection() {
         p_zone: filters.value.zone || null,
         p_secteur: filters.value.quartier || null,
         p_nom_pdv: filters.value.nomPdv || null,
+        p_division: filters.value.division || null,
+        p_area: filters.value.area || null,
       }
 
       const { data, error: rpcError } = await supabase.rpc('get_visites_filtered', params)
@@ -243,8 +244,6 @@ export function useDashboardDirection() {
     error,
     totalVisites,
     filters,
-    availableZones,
-    fetchZones,
     fetchVisites,
     countWhere,
     pctWhere,

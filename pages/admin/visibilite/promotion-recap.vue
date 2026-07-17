@@ -10,7 +10,6 @@
 
     <DashboardFilters
       v-model="dashboard.filters.value"
-      :zone-options="dashboard.availableZones.value"
       @filter="dashboard.fetchVisites()"
     />
 
@@ -139,6 +138,7 @@
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const dashboard = useDashboardDirection()
+const { typePdvLabel, fetchTypePdvLabels } = useTypePdvLabels()
 const { fetchElements, aggregate, columns, applicable, standardsOf, hasPresence, elementTotals } = useVisibilityAggregation()
 const { fetchConformity, byLevel } = useVisibilityConformity()
 const page = ref(1)
@@ -169,7 +169,7 @@ const tableRows = computed(() => dashboard.visites.value.map(v => ({
   pdv_id: v.pdv?.pdv_id || '',
   image_url: (v.pdv as any)?.image_url || null,
   zone: v.pdv?.zone || '',
-  sousCategorie: v.pdv?.sous_categorie_pdv || '',
+  sousCategorie: typePdvLabel(v.pdv?.sous_categorie_pdv) || '',
   promoApplicable: promoApplicable(v),
   standards: standardsOf(v),
   applicable: applicable(v.pdv?.sous_categorie_pdv, 'promotion'),
@@ -178,6 +178,6 @@ const tableRows = computed(() => dashboard.visites.value.map(v => ({
 const paginatedRows = computed(() => tableRows.value.slice((page.value - 1) * 100, page.value * 100))
 
 onMounted(() => {
-  Promise.all([dashboard.fetchZones(), dashboard.fetchVisites(), fetchElements(), fetchConformity()])
+  Promise.all([dashboard.fetchVisites(), fetchElements(), fetchConformity(), fetchTypePdvLabels()])
 })
 </script>

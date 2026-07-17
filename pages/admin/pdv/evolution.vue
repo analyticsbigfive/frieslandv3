@@ -4,7 +4,6 @@
 
     <DashboardFilters
       v-model="dashboard.filters.value"
-      :zone-options="dashboard.availableZones.value"
       show-date-from
       show-date-to
       @filter="fetchPDV"
@@ -140,6 +139,6 @@ async function fetchPDV() {
 }
 
 onMounted(() => {
-  Promise.all([dashboard.fetchZones(), fetchPDV()])
+  Promise.all([fetchPDV()])
 })
 </script>

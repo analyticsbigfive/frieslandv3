@@ -26,6 +26,8 @@
             <USelectMenu
               v-model="form.categorie_pdv"
               :options="categorieOptions"
+              value-attribute="value"
+              option-attribute="label"
               searchable
               placeholder="Catégorie..."
               @update:model-value="onCategorieChange"
@@ -36,6 +38,8 @@
             <USelectMenu
               v-model="form.sous_categorie_pdv"
               :options="sousCategorieOptions"
+              value-attribute="value"
+              option-attribute="label"
               :disabled="!form.categorie_pdv"
               searchable
               placeholder="Type de PDV..."
@@ -230,7 +234,14 @@ const distributorOptions = computed(() => {
 // Cascade Catégorie (level3 / groupe) → Sous-catégorie (level4 / type de PDV),
 // lues depuis posTypes (référentiel type_pdv) → uniquement des valeurs valides.
 // Le level4 pilote le scoring Perfect Store.
-const categorieOptions = computed(() => [...new Set(posTypes.value.map(p => p.level3_group).filter(Boolean))].sort())
+// Options {label: nom_fr, value: nom EN} : l'affichage est en français mais la
+// valeur stockée reste le nom EN du référentiel (matching Perfect Store).
+const categorieOptions = computed(() => {
+  const byNom = new Map(posTypes.value.filter(p => p.level3_group).map(p => [p.level3_group, p.level3_fr]))
+  return [...byNom.entries()]
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'fr'))
+})
 // Le canal se déduit de la catégorie (categorie_pdv.canal), comme dans le
 // calcul Perfect Store — il n'est plus saisi pour éviter toute divergence.
 const derivedCanal = computed(() => {
@@ -239,9 +250,9 @@ const derivedCanal = computed(() => {
 })
 const sousCategorieOptions = computed(() => posTypes.value
   .filter(p => !form.categorie_pdv || p.level3_group === form.categorie_pdv)
-  .map(p => p.level4_type))
+  .map(p => ({ value: p.level4_type, label: p.level4_fr })))
 function onCategorieChange() {
-  if (!sousCategorieOptions.value.includes(form.sous_categorie_pdv)) {
+  if (!sousCategorieOptions.value.some(o => o.value === form.sous_categorie_pdv)) {
     form.sous_categorie_pdv = ''
   }
 }

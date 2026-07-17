@@ -1,0 +1,27 @@
+﻿Niveau,Disponibilite,Visibilite,,,,Promotion,,,,
+,,PARASOLS,NAPPE,HANGER,TABLIER (Optionnel),,,,,
+FLAGSHIP STORE,X,X,X,X,X,X,,,,
+VIP PERFECT STORE,X,,X,X,X,X,,,,
+CORE PERFECT STORE,X,,X,X,,X,,,,
+BASIC PERFECT STORE,X,,,X,,,,,,
+PUSHCART,,,,,,,,,,
+Niveau,Disponibilite,Visibilite,,,,,Promotion,,,
+,,AFFICHE,THERMOS,VERRE JETABLE (Optionnel),CHASUBLE,FULL BRANDING,,,,
+FLAGSHIP STORE,X,,X,X,X,X,X,,,
+VIP PERFECT STORE,X,X,X,X,X,,X,,,
+CORE PERFECT STORE,X,X,X,X,,,X,,,
+BASIC PERFECT STORE,X,X,,,,,X,,,
+PORRIDGE,,,,,,,,,,
+Niveau,Disponibilite,Visibilite,,,,,Promotion,,,
+,,PARASOLS,NAPPE,HANGER,VERRE JETABLE (Optionnel),TABLIER,STANDARD,DEGUSTATION,,
+FLAGSHIP STORE,X,X,X,X,X,X,X,X,,
+VIP PERFECT STORE,X,X,X,X,X,,X,,,
+CORE PERFECT STORE,X,,X,X,X,,X,,,
+BASIC PERFECT STORE,X,,,X,,,X,,,
+KIOSQUE & ABOKI,,,,,,,,,,
+Niveau,Disponibilite,Visibilite,,,,,,,,Promotion
+,,AFFICHE,THERMOS Brandé,VERRE Brandé,CARAFE Brandéé,MAISON Brandéé,CHASUBLE Brandé,FULL BRANDING,NAPPE Brandéé,
+FLAGSHIP STORE,X,X,X,X,X,X,X,X,X,X
+VIP PERFECT STORE,X,X,X,X,X,X,X,,X,X
+CORE PERFECT STORE,X,X,,X,X,X,,,,X
+BASIC PERFECT STORE,X,X,,,,,,,,

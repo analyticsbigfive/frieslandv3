@@ -10,7 +10,6 @@
 
     <DashboardFilters
       v-model="dashboard.filters.value"
-      :zone-options="dashboard.availableZones.value"
       @filter="dashboard.fetchVisites()"
     />
 
@@ -90,6 +89,6 @@ const evolutionData = computed(() => {
 })
 
 onMounted(() => {
-  Promise.all([dashboard.fetchZones(), dashboard.fetchVisites(), fetchElements()])
+  Promise.all([dashboard.fetchVisites(), fetchElements()])
 })
 </script>

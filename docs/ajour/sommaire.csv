@@ -1,0 +1,15 @@
+﻿#,Feuille,À quoi elle sert
+1,Sommaire,Cette page — liste des feuilles.
+2,KPI & Perfect Store,Les 2 KPI suivis et la définition d'un Perfect Store.
+3,Niveaux Perfect Store,"Les 4 niveaux (Flagship, VIP, Core, Basic) et le SKU exigé."
+4,Types de PDV,Nomenclature officielle des points de vente (Level 3 / Level 4) + canal.
+5,Territoires,"Hiérarchie Pays > Division > Sous-région > Territoire > Area, décomposée en un quartier par ligne, + distributeur."
+6,Distributeurs,Liste des distributeurs (dont enseignes nationales).
+7,Mapping Terr.-Distrib.,Quel distributeur couvre quel territoire (+ à pourvoir).
+8,Pondérations,Poids par SKU pour la dispo par catégorie — GT et MT séparés.
+9,Standards Dispo GT,Quantité minimale par SKU et par type de PDV (General Trade).
+10,Standards Dispo MT,Quantité minimale et facings par taille de supermarché (Modern Trade).
+11,Critères GT,Grille Perfect Store Boutique & Supérette (dispo / visibilité / promo).
+12,Critères MT,Grille Perfect Store supermarchés.
+13,Critères Canaux Alt.,"Grilles Table Top, Pushcart, Porridge, Kiosque & Aboki."
+14,Critères (données),"Tous les critères en format liste, prêt pour paramétrage/dev."

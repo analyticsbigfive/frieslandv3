@@ -4,7 +4,6 @@
 
     <DashboardFilters
       v-model="dashboard.filters.value"
-      :zone-options="dashboard.availableZones.value"
       @filter="dashboard.fetchVisites()"
     />
 
@@ -198,10 +197,16 @@ const route = useRoute()
 const dashboard = useDashboardDirection()
 const { users: cachedUsers, fetchUsers: fetchCachedUsers } = useUsersCache()
 
-const commercialColOptions = computed(() => [
-  { value: '', label: 'Tous' },
-  ...new Set(dashboard.visites.value.map(v => v.commercial).filter(Boolean))
-].map(v => typeof v === 'string' ? { value: v, label: v } : v))
+// Liste complète des commerciaux (users), pas seulement ceux ayant une visite
+// dans la fenêtre courante.
+const commercialColOptions = computed(() => {
+  const byNom = new Map(cachedUsers.value
+    .filter(u => u.is_active !== false && u.nom)
+    .map(u => [u.nom as string, u.nom as string]))
+  return [{ value: '', label: 'Tous' }, ...[...byNom.keys()]
+    .sort((a, b) => a.localeCompare(b, 'fr'))
+    .map(nom => ({ value: nom, label: nom }))]
+})
 
 const cat = computed(() => (route.params.category as string) || 'evap')
 const title = computed(() => cat.value.toUpperCase())
@@ -358,6 +363,6 @@ watch(() => route.query.tab, (tab) => {
 
 onMounted(() => {
   fetchCachedUsers()
-  Promise.all([dashboard.fetchZones(), dashboard.fetchVisites()])
+  Promise.all([dashboard.fetchVisites()])
 })
 </script>

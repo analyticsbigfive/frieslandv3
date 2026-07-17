@@ -4,7 +4,6 @@
 
     <DashboardFilters
       v-model="dashboard.filters.value"
-      :zone-options="dashboard.availableZones.value"
       @filter="dashboard.fetchVisites()"
     />
 
@@ -13,16 +12,12 @@
     </div>
 
     <template v-else>
-      <!-- KPI par catégorie produit -->
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <StatsCard
-          v-for="cat in productCategories"
-          :key="cat.key"
-          :title="cat.label + ' présent'"
-          :value="catPct(cat.key) + '%'"
-          icon="i-heroicons-check-circle"
-          :color="catPct(cat.key) >= 50 ? 'green' : 'orange'"
-        />
+      <!-- Indicateurs compacts par catégorie produit -->
+      <div class="admin-surface grid grid-cols-2 gap-x-5 gap-y-3 px-4 py-3 sm:grid-cols-3 xl:grid-cols-6">
+        <div v-for="cat in productCategories" :key="cat.key" class="min-w-0">
+          <p class="truncate text-[11px] font-semibold text-slate-500 dark:text-slate-400">{{ cat.label }} présent</p>
+          <p class="mt-1 text-xl font-semibold tabular-nums" :class="catPct(cat.key) >= 50 ? 'text-emerald-600' : 'text-amber-600'">{{ catPct(cat.key) }}%</p>
+        </div>
       </div>
 
       <!-- Pie charts côte à côte -->
@@ -131,6 +126,6 @@ function prixNon(key: string) {
 }
 
 onMounted(() => {
-  Promise.all([dashboard.fetchZones(), dashboard.fetchVisites()])
+  Promise.all([dashboard.fetchVisites()])
 })
 </script>

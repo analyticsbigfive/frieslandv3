@@ -1,0 +1,13 @@
+﻿Niveau,Disponibilite (Etagere Ou Rayon),Visibilite Exterieure,,,,,,Visibilite Interieure,,,,,,,,Promotion,,
+,,Affiche,Flèche (Optionnel),Guirlande (optionnelle),sign board,Panneau privilège,Full branding,Reglette,Maison BR,Hanger (Optionnel),Wobler (Optionnel),Présentoire (Optionnel),TG (Optionnel),Plaque BR (Optionnelle),Merchandising,Standard,Hotesses,Dégustation
+FLAGSHIP STORE,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X
+VIP PERFECT STORE,X,X,X,X,X,X,,X,X,X,X,X,X,,X,X,X,X
+CORE PERFECT STORE,X,X,X,,,,,X,X,X,X,,,,X,X,,
+BASIC PERFECT STORE,X,X,,,,,,X,X,X,,,,,X,X,,
+SUPÉRETTE,,,,,,,,,,,,,,,,,,
+Niveau,Disponibilite Rayon,Visibilite Exterieure,,,,Visibilite Interieure,,,,,,,Promotion,,,,,
+,,Affiche (optionnelle),Flèche (Entrée et sortie) (Optionnel),sign board lumineux (optionnel),Panneau privilège lumineux (optionnel),Reglette (Optionnel),Espace BR,Wobler rayon (Optionnel),Présentoire (Optionnel),TG (Optionnel),Plaque BR (Optionnelle),Merchandising,Standard,Hotesses,Dégustation,,,
+FLAGSHIP STORE,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,,,
+VIP PERFECT STORE,X,X,X,,,X,X,X,X,,X,X,X,X,X,,,
+CORE PERFECT STORE,X,X,X,,,X,X,X,,,,X,X,X,,,,
+BASIC PERFECT STORE,X,X,,,,X,X,,,,,X,X,,,,,

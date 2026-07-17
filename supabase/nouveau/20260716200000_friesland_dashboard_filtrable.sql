@@ -30,7 +30,7 @@ as $$
     left join region rg on rg.code = sr.region_code
     where (p_division is null or p_division = '' or rg.nom_affichage = p_division)
       and (p_territoire is null or p_territoire = '' or p.zone = p_territoire)
-      and (p_area is null or p_area = '' or p.secteur = p_area)
+      and (p_area is null or p_area = '' or p.area_code = p_area or p.quartier = p_area)
       and (p_distributeur is null or p_distributeur = '' or p.distributor_name = p_distributeur)
   ),
   actifs as (

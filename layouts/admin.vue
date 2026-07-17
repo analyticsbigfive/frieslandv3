@@ -51,16 +51,27 @@
                 <p class="mt-0.5 text-sm font-semibold tabular-nums text-slate-950 dark:text-white">{{ metric.value }}</p>
               </div>
             </div>
-          <!-- Online/Offline indicator -->
-          <div class="flex h-10 items-center gap-2 rounded-xl border border-slate-200/80 bg-white/70 px-3 text-sm shadow-[0_10px_24px_-22px_rgba(15,23,42,0.7)] dark:border-slate-700 dark:bg-slate-800/70">
-            <span
-              class="w-2.5 h-2.5 rounded-full"
-              :class="isOnline ? 'bg-emerald-500' : 'bg-red-500'"
-            />
-            <span class="text-gray-500 dark:text-gray-400 hidden sm:inline">
-              {{ isOnline ? 'En ligne' : 'Hors ligne' }}
+          <!-- Présence terrain : commerciaux en ligne (ping GPS récent) + accès
+               au suivi des tournées. -->
+          <NuxtLink
+            to="/admin/trajets"
+            class="flex h-10 items-center gap-2 rounded-xl border border-slate-200/80 bg-white/70 px-3 text-sm shadow-[0_10px_24px_-22px_rgba(15,23,42,0.7)] transition hover:bg-white dark:border-slate-700 dark:bg-slate-800/70 dark:hover:bg-slate-800"
+            :aria-label="`${commerciauxEnTournee} commercial(aux) en ligne, ouvrir le suivi terrain`"
+          >
+            <span class="relative flex h-2.5 w-2.5">
+              <span
+                v-if="commerciauxEnTournee > 0"
+                class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"
+              />
+              <span
+                class="relative inline-flex h-2.5 w-2.5 rounded-full"
+                :class="commerciauxEnTournee > 0 ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'"
+              />
             </span>
-          </div>
+            <span class="text-gray-500 dark:text-gray-400 hidden sm:inline">
+              {{ commerciauxEnTournee }} en ligne
+            </span>
+          </NuxtLink>
 
           <!-- Sync pending -->
           <div v-if="pendingCount > 0" class="flex h-10 items-center gap-1 rounded-xl border border-amber-200 bg-amber-50 px-3 text-sm font-medium text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
@@ -144,12 +155,30 @@
 <script setup lang="ts">
 const route = useRoute()
 const authStore = useAuthStore()
-const { isOnline, pendingCount, errorCount } = useOfflineSync()
+const { pendingCount, errorCount } = useOfflineSync()
 const visitesStore = useVisitesStore()
+const supabase = useSupabaseClient()
 
 const sidebarCollapsed = ref(false)
 const mobileSidebarOpen = ref(false)
 const numberFormatter = new Intl.NumberFormat('fr-FR')
+
+// Commerciaux « en tournée » : un point GPS envoyé dans les 10 dernières
+// minutes (l'app mobile émet un point toutes les 1–2 min pendant une tournée).
+// Distinct du témoin « En ligne » du header, qui reflète le réseau de ce poste.
+const PRESENCE_WINDOW_MIN = 10
+const commerciauxEnTournee = ref(0)
+let presenceTimer: ReturnType<typeof setInterval> | null = null
+
+async function fetchCommerciauxEnTournee() {
+  const since = new Date(Date.now() - PRESENCE_WINDOW_MIN * 60_000).toISOString()
+  const { data, error } = await supabase
+    .from('position_tournee')
+    .select('user_id')
+    .gte('captured_at', since)
+  if (error) return
+  commerciauxEnTournee.value = new Set((data || []).map((r: any) => r.user_id)).size
+}
 
 const pageTitle = computed(() => {
   const titles: Record<string, string> = {
@@ -203,7 +232,7 @@ const headerMetrics = computed(() => {
   return [
     { label: 'Visites mois', value: numberFormatter.format(stats?.visites_month ?? 0) },
     { label: 'PDV actifs', value: numberFormatter.format(stats?.total_pdv ?? 0) },
-    { label: 'Commerciaux', value: numberFormatter.format(stats?.total_commerciaux ?? 0) },
+    { label: 'Commerciaux actifs', value: `${commerciauxEnTournee.value} / ${numberFormatter.format(stats?.total_commerciaux ?? 0)}` },
   ]
 })
 
@@ -213,5 +242,11 @@ watch(mobileSidebarOpen, (opened) => {
 
 onMounted(() => {
   visitesStore.fetchStats().catch(() => {})
+  fetchCommerciauxEnTournee()
+  presenceTimer = setInterval(fetchCommerciauxEnTournee, 60_000)
+})
+
+onBeforeUnmount(() => {
+  if (presenceTimer) clearInterval(presenceTimer)
 })
 </script>

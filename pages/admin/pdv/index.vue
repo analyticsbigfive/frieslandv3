@@ -1,23 +1,26 @@
 <template>
   <div>
-    <!-- Header actions -->
-    <div class="admin-toolbar mb-6 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-      <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-        <UInput
-          v-model="searchQuery"
-          placeholder="Rechercher un PDV..."
-          icon="i-heroicons-magnifying-glass"
-          size="sm"
-          class="w-full sm:w-64"
-          @input="debouncedSearch"
-        />
+    <AdminListToolbar
+      :search="searchQuery"
+      search-placeholder="Nom, code ou adressage…"
+      result-label="PDV"
+      :result-count="total"
+      :chips="filterChips"
+      @update:search="updateSearch"
+      @reset="resetListFilters"
+      @remove-chip="removeFilterChip"
+    >
+      <template #filters>
         <USelectMenu
           v-model="selectedZone"
           :options="zoneOptions"
           placeholder="Territoire"
           size="sm"
           class="w-40"
-          @update:model-value="loadPDV"
+          searchable
+          searchable-placeholder="Rechercher…"
+          :loading="!refsLoaded"
+          @update:model-value="applyListScope"
         />
         <USelectMenu
           v-model="selectedRegion"
@@ -25,11 +28,14 @@
           placeholder="Sous-région"
           size="sm"
           class="w-40"
-          @update:model-value="loadPDV"
+          searchable
+          searchable-placeholder="Rechercher…"
+          :loading="!refsLoaded"
+          @update:model-value="applyListScope"
         />
-      </div>
+      </template>
 
-      <div class="flex flex-wrap gap-2">
+      <template #actions>
         <UButton size="sm" variant="outline" @click="handleExport" icon="i-heroicons-arrow-down-tray">
           Export
         </UButton>
@@ -39,8 +45,8 @@
         <UButton size="sm" @click="openCreatePDV" icon="i-heroicons-plus" class="bg-fc-blue">
           Nouveau PDV
         </UButton>
-      </div>
-    </div>
+      </template>
+    </AdminListToolbar>
 
     <!-- PDV Table -->
     <div class="admin-surface overflow-hidden">
@@ -57,8 +63,7 @@
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Quartier</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Distributeur</th>
               <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Perfect Store</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">GPS</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
@@ -82,7 +87,7 @@
                 </div>
               </td>
               <td class="px-4 py-3 text-sm text-gray-600">{{ pdv.canal }}</td>
-              <td class="px-4 py-3 text-sm text-gray-600">{{ pdv.sous_categorie_pdv }}</td>
+              <td class="px-4 py-3 text-sm text-gray-600">{{ typePdvLabel(pdv.sous_categorie_pdv) }}</td>
               <td class="px-4 py-3 text-sm text-gray-600">{{ pdv.region }}</td>
               <td class="px-4 py-3 text-sm text-gray-600">{{ pdv.zone }}</td>
               <td class="px-4 py-3 font-mono text-xs text-gray-500">{{ pdv.area_code || '—' }}</td>
@@ -97,16 +102,36 @@
                 <span v-else class="text-xs text-gray-300">—</span>
               </td>
               <td class="px-4 py-3 text-center">
-                <UIcon
-                  :name="pdv.geolocation_lat ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
-                  :class="pdv.geolocation_lat ? 'text-emerald-500' : 'text-gray-300'"
-                  class="w-5 h-5"
-                />
-              </td>
-              <td class="px-4 py-3 text-center">
-                <UDropdown :items="getPDVActions(pdv)">
-                  <UButton variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" />
-                </UDropdown>
+                <div class="flex items-center justify-center gap-1">
+                  <UButton
+                    variant="ghost"
+                    size="xs"
+                    icon="i-heroicons-pencil"
+                    class="text-slate-500 hover:bg-slate-100 hover:text-fc-blue dark:hover:bg-slate-800"
+                    aria-label="Modifier"
+                    title="Modifier"
+                    @click="editPDV(pdv)"
+                  />
+                  <UButton
+                    variant="ghost"
+                    size="xs"
+                    icon="i-heroicons-map-pin"
+                    class="text-slate-500 hover:bg-slate-100 hover:text-fc-blue disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-slate-800"
+                    :disabled="!hasCoordinates(pdv)"
+                    aria-label="Voir sur la carte"
+                    :title="hasCoordinates(pdv) ? 'Voir sur la carte' : 'Coordonnées manquantes'"
+                    @click="openPDVOnMap(pdv)"
+                  />
+                  <UButton
+                    variant="ghost"
+                    size="xs"
+                    icon="i-heroicons-trash"
+                    class="text-red-500 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/30"
+                    aria-label="Supprimer"
+                    title="Supprimer"
+                    @click="deletePDV(pdv)"
+                  />
+                </div>
               </td>
             </tr>
           </tbody>
@@ -122,28 +147,15 @@
         <p>Aucun PDV trouvé</p>
       </div>
 
-      <!-- Pagination -->
-      <div class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-        <p class="text-sm text-gray-500 dark:text-gray-400">{{ total }} PDV trouvé(s)</p>
-        <div class="flex gap-2">
-          <UButton
-            size="xs"
-            variant="outline"
-            :disabled="pdvStore.filters.page <= 1"
-            @click="pdvStore.filters.page--; loadPDV()"
-          >
-            Précédent
-          </UButton>
-          <UButton
-            size="xs"
-            variant="outline"
-            :disabled="pdvList.length < pdvStore.filters.perPage"
-            @click="pdvStore.filters.page++; loadPDV()"
-          >
-            Suivant
-          </UButton>
-        </div>
-      </div>
+      <AdminPagination
+        :total="total"
+        :page="pdvStore.filters.page"
+        :page-size="pdvStore.filters.perPage"
+        :loading="loading"
+        item-label="PDV"
+        @previous="pdvStore.filters.page--; loadPDV()"
+        @next="pdvStore.filters.page++; loadPDV()"
+      />
     </div>
 
     <!-- Create/Edit Modal -->
@@ -182,6 +194,8 @@
                   <USelectMenu
                     v-model="pdvForm.categorie_pdv"
                     :options="categorieOptions"
+                    value-attribute="value"
+                    option-attribute="label"
                     searchable
                     searchable-placeholder="Rechercher une catégorie..."
                     placeholder="Sélectionner une catégorie"
@@ -194,6 +208,8 @@
                   <USelectMenu
                     v-model="pdvForm.sous_categorie_pdv"
                     :options="sousCategorieOptions"
+                    value-attribute="value"
+                    option-attribute="label"
                     :disabled="!pdvForm.categorie_pdv"
                     searchable
                     searchable-placeholder="Rechercher un type..."
@@ -419,6 +435,19 @@ const loading = computed(() => pdvStore.loading)
 const searchQuery = ref('')
 const selectedZone = ref('')
 const selectedRegion = ref('')
+
+// Chips des filtres actifs (sous la barre) — clic = retirer ce filtre seul.
+const filterChips = computed(() => {
+  const chips: { key: string; label: string }[] = []
+  if (selectedZone.value) chips.push({ key: 'zone', label: `Territoire : ${selectedZone.value}` })
+  if (selectedRegion.value) chips.push({ key: 'region', label: `Sous-région : ${selectedRegion.value}` })
+  return chips
+})
+function removeFilterChip(key: string) {
+  if (key === 'zone') selectedZone.value = ''
+  if (key === 'region') selectedRegion.value = ''
+  applyListScope()
+}
 const showCreate = ref(false)
 const showImport = ref(false)
 const editingPDV = ref<PDV | null>(null)
@@ -445,14 +474,23 @@ const pdvForm = ref({
   objectif_perfect_store: '',
 })
 
-const zoneOptions = computed(() => ['', ...pdvStore.uniqueZones])
-const regionOptions = computed(() => ['', ...pdvStore.uniqueRegions])
+// Options depuis les facettes (tout le parc scopé), pas la page paginée courante.
+const zoneOptions = computed(() => ['', ...pdvStore.facetZones])
+const regionOptions = computed(() => ['', ...pdvStore.facetRegions])
 
 // Référentiels géo (Système B) : hiérarchie Region → Sous-région → Territoire → Area.
-const { distributeurs, regions, territories, areas, quartiers, subRegions, posTypes, territoireDistributeurs, fetchReferentiels } = useReferentiels()
+const { distributeurs, regions, territories, areas, quartiers, subRegions, posTypes, territoireDistributeurs, zoneDistributeurs, fetchReferentiels, loaded: refsLoaded } = useReferentiels()
+const { typePdvLabel, fetchTypePdvLabels } = useTypePdvLabels()
 
 // Cascade Catégorie (level3 / groupe) → Sous-catégorie (level4 / type de PDV).
-const categorieOptions = computed(() => [...new Set(posTypes.value.map(p => p.level3_group).filter(Boolean))].sort())
+// Options {label: nom_fr, value: nom EN} : affichage français, valeur stockée
+// inchangée (nom EN du référentiel, utilisé par le matching Perfect Store).
+const categorieOptions = computed(() => {
+  const byNom = new Map(posTypes.value.filter(p => p.level3_group).map(p => [p.level3_group, p.level3_fr]))
+  return [...byNom.entries()]
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'fr'))
+})
 // Canal dérivé de la catégorie (categorie_pdv.canal), aligné sur le calcul
 // Perfect Store — plus de saisie manuelle.
 const derivedCanal = computed(() => {
@@ -461,10 +499,10 @@ const derivedCanal = computed(() => {
 })
 const sousCategorieOptions = computed(() => posTypes.value
   .filter(p => !pdvForm.value.categorie_pdv || p.level3_group === pdvForm.value.categorie_pdv)
-  .map(p => p.level4_type))
+  .map(p => ({ value: p.level4_type, label: p.level4_fr })))
 function onCategorieChange() {
   // Réinitialise la sous-catégorie si elle n'appartient plus à la catégorie choisie.
-  if (!sousCategorieOptions.value.includes(pdvForm.value.sous_categorie_pdv)) {
+  if (!sousCategorieOptions.value.some(o => o.value === pdvForm.value.sous_categorie_pdv)) {
     pdvForm.value.sous_categorie_pdv = ''
   }
 }
@@ -498,7 +536,11 @@ const quartierCascadeOptions = computed(() => quartiers.value
 // Reset des niveaux enfants quand un parent change.
 function onRegionChange() { pdvForm.value.sub_region_code = ''; pdvForm.value.territory_code = ''; pdvForm.value.area_code = ''; pdvForm.value.quartier_nom = '' }
 function onSousRegionChange() { pdvForm.value.territory_code = ''; pdvForm.value.area_code = ''; pdvForm.value.quartier_nom = '' }
-function onAreaChange() { pdvForm.value.quartier_nom = '' }
+function onAreaChange() {
+  pdvForm.value.quartier_nom = ''
+  // Le distributeur découle de l'area choisie (repli territoire puis national).
+  pdvForm.value.distributor_name = localDistributors.value[0]?.name || nationalDistributors.value[0]?.name || ''
+}
 function onTerritoryChange() {
   pdvForm.value.area_code = ''
   pdvForm.value.quartier_nom = ''
@@ -519,7 +561,9 @@ function hydrateGeoCascade() {
   pdvForm.value.region_code = sr?.region_code || ''
 }
 
-// Distributeurs : nationaux (toujours) + ceux liés au territoire sélectionné.
+// Distributeurs : nationaux (toujours) + ceux liés au périmètre. Priorité à
+// l'AREA sélectionnée (zone_distributeur, permet de varier d'une area à l'autre
+// dans un même territoire), repli sur le territoire.
 const nationalDistributors = computed(() => distributeurs.value.filter(d => d.national))
 const territoryDistributors = computed(() => {
   if (!pdvForm.value.territory_code) return []
@@ -528,10 +572,21 @@ const territoryDistributors = computed(() => {
     .map(td => td.distributor_name))
   return distributeurs.value.filter(d => linked.has(d.name) && !d.national)
 })
+const areaDistributors = computed(() => {
+  if (!selectedZoneId.value) return []
+  const linked = new Set(zoneDistributeurs.value
+    .filter(zd => zd.zone_id === selectedZoneId.value)
+    .map(zd => zd.distributor_name))
+  return distributeurs.value.filter(d => linked.has(d.name) && !d.national)
+})
+// Portée locale = area si elle a des distributeurs propres, sinon repli territoire.
+const localDistributors = computed(() =>
+  areaDistributors.value.length ? areaDistributors.value : territoryDistributors.value)
+const distributorScopeLabel = computed(() => areaDistributors.value.length ? 'Area' : 'Territoire')
 const distributorOptions = computed(() => {
   const seen = new Set<string>()
   const out: { value: string; label: string }[] = [{ value: '', label: '—' }]
-  for (const d of territoryDistributors.value) { if (!seen.has(d.name)) { seen.add(d.name); out.push({ value: d.name, label: `${d.name} (Territoire)` }) } }
+  for (const d of localDistributors.value) { if (!seen.has(d.name)) { seen.add(d.name); out.push({ value: d.name, label: `${d.name} (${distributorScopeLabel.value})` }) } }
   for (const d of nationalDistributors.value) { if (!seen.has(d.name)) { seen.add(d.name); out.push({ value: d.name, label: `${d.name} (National)` }) } }
   // Conserve la valeur courante si hors liste (édition d'un ancien PDV).
   if (pdvForm.value.distributor_name && !seen.has(pdvForm.value.distributor_name)) {
@@ -551,54 +606,63 @@ function debouncedSearch() {
   }, 300)
 }
 
-function getPDVActions(pdv: PDV) {
-  return [[
-    {
-      label: 'Modifier',
-      icon: 'i-heroicons-pencil',
-      click: async () => {
-        editingPDV.value = pdv
-        Object.assign(pdvForm.value, pdv)
-        // Reset référentiels (absents de LIST_COLUMNS), puis préremplir via la ligne complète
-        pdvForm.value.territory_code = ''
-        pdvForm.value.area_code = ''
-        pdvForm.value.quartier_nom = ''
-        pdvForm.value.distributor_name = ''
-        pdvForm.value.objectif_perfect_store = ''
-        showCreate.value = true
-        try {
-          const full: any = await pdvStore.fetchPDVById(pdv.pdv_id)
-          if (full) {
-            pdvForm.value.territory_code = full.territory_code || ''
-            pdvForm.value.area_code = full.area_code || ''
-            pdvForm.value.distributor_name = full.distributor_name || ''
-            pdvForm.value.objectif_perfect_store = full.objectif_perfect_store || ''
-            hydrateGeoCascade()
-            // Préselection quartier si présent dans les options de l'area (byte-exact).
-            pdvForm.value.quartier_nom = quartierCascadeOptions.value.some(o => o.value === full.quartier)
-              ? full.quartier
-              : ''
-          }
-        } catch { /* colonnes absentes avant migration 020 — ignorer */ }
-      },
-    },
-    {
-      label: 'Voir sur la carte',
-      icon: 'i-heroicons-map-pin',
-      click: () => navigateTo(`/admin/map?lat=${pdv.geolocation_lat}&lng=${pdv.geolocation_lng}`),
-    },
-    {
-      label: 'Supprimer',
-      icon: 'i-heroicons-trash',
-      click: async () => {
-        if (confirm('Supprimer ce PDV ?')) {
-          await pdvStore.deletePDV(pdv.pdv_id)
-          toast.add({ title: 'PDV supprimé' })
-          loadPDV()
-        }
-      },
-    },
-  ]]
+function updateSearch(value: string) {
+  searchQuery.value = value
+  debouncedSearch()
+}
+
+function resetListFilters() {
+  searchQuery.value = ''
+  selectedZone.value = ''
+  selectedRegion.value = ''
+  pdvStore.filters.search = ''
+  pdvStore.filters.zone = ''
+  pdvStore.filters.region = ''
+  pdvStore.filters.page = 1
+  loadPDV()
+}
+
+function applyListScope() {
+  pdvStore.filters.page = 1
+  loadPDV()
+}
+
+async function editPDV(pdv: PDV) {
+  editingPDV.value = pdv
+  Object.assign(pdvForm.value, pdv)
+  // Reset référentiels (absents de LIST_COLUMNS), puis préremplir via la ligne complète
+  pdvForm.value.territory_code = ''
+  pdvForm.value.area_code = ''
+  pdvForm.value.quartier_nom = ''
+  pdvForm.value.distributor_name = ''
+  pdvForm.value.objectif_perfect_store = ''
+  showCreate.value = true
+  try {
+    const full: any = await pdvStore.fetchPDVById(pdv.pdv_id)
+    if (full) {
+      pdvForm.value.territory_code = full.territory_code || ''
+      pdvForm.value.area_code = full.area_code || ''
+      pdvForm.value.distributor_name = full.distributor_name || ''
+      pdvForm.value.objectif_perfect_store = full.objectif_perfect_store || ''
+      hydrateGeoCascade()
+      // Préselection quartier si présent dans les options de l'area (byte-exact).
+      pdvForm.value.quartier_nom = quartierCascadeOptions.value.some(o => o.value === full.quartier)
+        ? full.quartier
+        : ''
+    }
+  } catch { /* colonnes absentes avant migration 020 — ignorer */ }
+}
+
+function openPDVOnMap(pdv: PDV) {
+  if (!hasCoordinates(pdv)) return
+  navigateTo(`/admin/map?lat=${pdv.geolocation_lat}&lng=${pdv.geolocation_lng}`)
+}
+
+async function deletePDV(pdv: PDV) {
+  if (!confirm('Supprimer ce PDV ?')) return
+  await pdvStore.deletePDV(pdv.pdv_id)
+  toast.add({ title: 'PDV supprimé' })
+  loadPDV()
 }
 
 function openCreatePDV() {
@@ -706,6 +770,19 @@ function tierDotClass(tier: string): string {
   return 'bg-amber-500'
 }
 
+function hasCoordinates(pdv: PDV): boolean {
+  if (pdv.geolocation_lat == null || pdv.geolocation_lng == null) return false
+  if (String(pdv.geolocation_lat).trim() === '' || String(pdv.geolocation_lng).trim() === '') return false
+  const latitude = Number(pdv.geolocation_lat)
+  const longitude = Number(pdv.geolocation_lng)
+  return Number.isFinite(latitude)
+    && Number.isFinite(longitude)
+    && latitude >= -90
+    && latitude <= 90
+    && longitude >= -180
+    && longitude <= 180
+}
+
 async function loadPerfectStoreForList() {
   const pdvIds = pdvList.value.map(p => p.pdv_id)
   if (!pdvIds.length) {
@@ -739,6 +816,8 @@ onMounted(() => {
     pdvStore.filters.page = 1
   }
   loadPDV()
+  pdvStore.fetchFilterFacets()
   fetchReferentiels()
+  fetchTypePdvLabels()
 })
 </script>

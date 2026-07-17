@@ -1,0 +1,11 @@
+﻿KPI,Définition
+1. Couverture,Nombre de points de vente réellement visités par les merchandisers.
+2. Perfect Store,"Point de vente qui atteint l'un des 4 niveaux : Flagship, VIP, Core ou Basic (voir feuille Niveaux)."
+UN PERFECT STORE = DISPONIBILITÉ  +  VISIBILITÉ PARFAITE  +  PROMOTION EFFECTIVE,
+Composante,Comment elle se mesure
+Disponibilité (OSA),Par SKU : le produit est présent en quantité ≥ au standard défini (voir Standards Dispo GT/MT). Par catégorie : moyenne pondérée des SKU (voir Pondérations).
+Visibilité parfaite,100 % du planogramme respecté = visibilité intérieure + visibilité extérieure. Calculée selon le type de PDV (voir feuilles Critères).
+Promotion effective,"Le PDV bénéficie-t-il de la promo en cours ? Indicateur OPTIONNEL : s'il n'y a pas de promo active, il n'entre pas dans le score."
+⚠ Disponibilité ≠ Présence,
+Présence = au moins 1 unité du SKU dans le PDV.  Disponibilité = le SKU existe en quantité minimale définie par le standard (à paramétrer dans Big Five).,
+Source,Onglets « KPI MERCHANDISING » et « PERFECT STORE » du fichier client.

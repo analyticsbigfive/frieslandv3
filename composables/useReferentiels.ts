@@ -15,9 +15,9 @@ export interface GeoSubRegion { code: string; name: string; nom_affichage: strin
 export interface GeoTerritory { code: string; name: string; sub_region_code: string | null }
 export interface GeoArea { id: number; code: string; name: string; territory_code: string }
 export interface GeoQuartier { id: number; zone_id: number; nom: string; ordre: number }
-export interface PosType { level4_type: string; level3_group: string; tier: string | null; canal: 'GT' | 'MT' | null }
+export interface PosType { level4_type: string; level3_group: string; level4_fr: string; level3_fr: string; tier: string | null; canal: 'GT' | 'MT' | null }
 export interface ReferenceProduit { id: number; nom: string; category: string }
-export interface CategoriePdvRef { id: number; nom: string; canal: 'GT' | 'MT' | null }
+export interface CategoriePdvRef { id: number; nom: string; nom_fr: string; canal: 'GT' | 'MT' | null }
 export interface TerritoireDistributeur { territory_code: string; territory_name: string; distributor_name: string }
 export interface ZoneDistributeur { zone_id: number; distributor_name: string }
 // AvailabilityWeight / AvailabilityStandard : types auto-importés de utils/perfectStore.
@@ -62,7 +62,9 @@ export function useReferentiels() {
         supabase.from('territoire').select('code, nom, sous_region_code').order('nom'),
         supabase.from('zone').select('id, code, nom, territoire_code').order('territoire_code').order('nom'),
         supabase.from('quartier').select('id, zone_id, nom, ordre').order('zone_id').order('ordre'),
-        supabase.from('type_pdv').select('nom, categorie_pdv(id, nom, canal)').order('nom'),
+        // select('*') : tolère l'absence de la colonne nom_fr tant que la
+        // migration 20260717130000 n'est pas appliquée.
+        supabase.from('type_pdv').select('*, categorie_pdv(*)').order('nom'),
         supabase.from('reference_produit').select('id, nom, categorie_produit(code)').order('nom'),
         supabase.from('poids_reference').select('canal, base_calcul, poids, reference_produit(nom, categorie_produit(code))'),
         supabase.from('seuil_disponibilite').select('segment, grade, quantite_min, reference_produit(nom, categorie_produit(code))'),
@@ -92,12 +94,19 @@ export function useReferentiels() {
 
       posTypes.value = (tp.data || []).map((r: any) => {
         const cp = one(r.categorie_pdv)
-        return { level4_type: r.nom, level3_group: cp?.nom ?? '', tier: null, canal: cp?.canal ?? null }
+        return {
+          level4_type: r.nom,
+          level3_group: cp?.nom ?? '',
+          level4_fr: r.nom_fr || r.nom,
+          level3_fr: cp?.nom_fr || cp?.nom || '',
+          tier: null,
+          canal: cp?.canal ?? null,
+        }
       })
       categoriesPdv.value = [...new Map((tp.data || [])
         .map((r: any) => one(r.categorie_pdv))
         .filter(Boolean)
-        .map((cp: any) => [cp.id, { id: cp.id, nom: cp.nom, canal: cp.canal ?? null }]),
+        .map((cp: any) => [cp.id, { id: cp.id, nom: cp.nom, nom_fr: cp.nom_fr || cp.nom, canal: cp.canal ?? null }]),
       ).values()] as CategoriePdvRef[]
 
       references.value = (rp.data || []).map((r: any) => ({ id: r.id, nom: r.nom, category: catCode(r) }))

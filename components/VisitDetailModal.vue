@@ -179,6 +179,8 @@ const isOpen = computed({
 })
 
 const { refs } = usePerfectStore()
+const { typePdvLabel, fetchTypePdvLabels } = useTypePdvLabels()
+onMounted(() => { void fetchTypePdvLabels() })
 
 const productLabels: Record<string, string> = { evap: 'Lait évaporé (EVAP)', imp: 'Lait en poudre (IMP)', scm: 'Lait concentré sucré (SCM)' }
 
@@ -258,7 +260,7 @@ const generalInfo = computed(() => [
   { label: 'Date', value: formatDate(props.visite?.date_visite) },
   { label: 'Point de vente', value: props.visite?.pdv?.nom_pdv || props.visite?.pdv_id?.substring(0, 8) || '—' },
   { label: 'Canal', value: props.visite?.pdv?.canal || '—' },
-  { label: 'Type PDV', value: props.visite?.pdv?.sous_categorie_pdv || '—' },
+  { label: 'Type PDV', value: typePdvLabel(props.visite?.pdv?.sous_categorie_pdv) || '—' },
   { label: 'Région', value: props.visite?.pdv?.region || '—' },
   { label: 'Zone', value: props.visite?.pdv?.zone || '—' },
   { label: 'Quartier', value: props.visite?.pdv?.quartier || '—' },

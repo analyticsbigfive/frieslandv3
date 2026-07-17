@@ -1,0 +1,205 @@
+﻿Famille,Niveau,Pilier,Élément,Requis
+Boutique,Flagship Store,Disponibilité,,Requis
+Boutique,Flagship Store,Visibilité extérieure,Affiche,Requis
+Boutique,Flagship Store,Visibilité extérieure,Flèche,Optionnel
+Boutique,Flagship Store,Visibilité extérieure,Guirlande,Optionnel
+Boutique,Flagship Store,Visibilité extérieure,sign board,Requis
+Boutique,Flagship Store,Visibilité extérieure,Panneau privilège,Requis
+Boutique,Flagship Store,Visibilité extérieure,Full branding,Requis
+Boutique,Flagship Store,Visibilité intérieure,Reglette,Requis
+Boutique,Flagship Store,Visibilité intérieure,Maison BR,Requis
+Boutique,Flagship Store,Visibilité intérieure,Hanger,Optionnel
+Boutique,Flagship Store,Visibilité intérieure,Wobler,Optionnel
+Boutique,Flagship Store,Visibilité intérieure,Présentoire,Optionnel
+Boutique,Flagship Store,Visibilité intérieure,TG,Optionnel
+Boutique,Flagship Store,Visibilité intérieure,Plaque BR,Optionnel
+Boutique,Flagship Store,Visibilité intérieure,Merchandising,Requis
+Boutique,Flagship Store,Promotion,Standard,Requis
+Boutique,Flagship Store,Promotion,Hotesses,Requis
+Boutique,Flagship Store,Promotion,Dégustation,Requis
+Boutique,Vip Perfect Store,Disponibilité,,Requis
+Boutique,Vip Perfect Store,Visibilité extérieure,Affiche,Requis
+Boutique,Vip Perfect Store,Visibilité extérieure,Flèche,Optionnel
+Boutique,Vip Perfect Store,Visibilité extérieure,Guirlande,Optionnel
+Boutique,Vip Perfect Store,Visibilité extérieure,sign board,Requis
+Boutique,Vip Perfect Store,Visibilité extérieure,Panneau privilège,Requis
+Boutique,Vip Perfect Store,Visibilité intérieure,Reglette,Requis
+Boutique,Vip Perfect Store,Visibilité intérieure,Maison BR,Requis
+Boutique,Vip Perfect Store,Visibilité intérieure,Hanger,Optionnel
+Boutique,Vip Perfect Store,Visibilité intérieure,Wobler,Optionnel
+Boutique,Vip Perfect Store,Visibilité intérieure,Présentoire,Optionnel
+Boutique,Vip Perfect Store,Visibilité intérieure,TG,Optionnel
+Boutique,Vip Perfect Store,Visibilité intérieure,Merchandising,Requis
+Boutique,Vip Perfect Store,Promotion,Standard,Requis
+Boutique,Vip Perfect Store,Promotion,Hotesses,Requis
+Boutique,Vip Perfect Store,Promotion,Dégustation,Requis
+Boutique,Core Perfect Store,Disponibilité,,Requis
+Boutique,Core Perfect Store,Visibilité extérieure,Affiche,Requis
+Boutique,Core Perfect Store,Visibilité extérieure,Flèche,Optionnel
+Boutique,Core Perfect Store,Visibilité intérieure,Reglette,Requis
+Boutique,Core Perfect Store,Visibilité intérieure,Maison BR,Requis
+Boutique,Core Perfect Store,Visibilité intérieure,Hanger,Optionnel
+Boutique,Core Perfect Store,Visibilité intérieure,Wobler,Optionnel
+Boutique,Core Perfect Store,Visibilité intérieure,Merchandising,Requis
+Boutique,Core Perfect Store,Promotion,Standard,Requis
+Boutique,Basic Perfect Store,Disponibilité,,Requis
+Boutique,Basic Perfect Store,Visibilité extérieure,Affiche,Requis
+Boutique,Basic Perfect Store,Visibilité intérieure,Reglette,Requis
+Boutique,Basic Perfect Store,Visibilité intérieure,Maison BR,Requis
+Boutique,Basic Perfect Store,Visibilité intérieure,Hanger,Optionnel
+Boutique,Basic Perfect Store,Visibilité intérieure,Merchandising,Requis
+Boutique,Basic Perfect Store,Promotion,Standard,Requis
+Supérette,Flagship Store,Disponibilité,,Requis
+Supérette,Flagship Store,Visibilité extérieure,Affiche,Optionnel
+Supérette,Flagship Store,Visibilité extérieure,Flèche,Optionnel
+Supérette,Flagship Store,Visibilité extérieure,sign board lumineux,Optionnel
+Supérette,Flagship Store,Visibilité extérieure,Panneau privilège lumineux,Optionnel
+Supérette,Flagship Store,Visibilité intérieure,Reglette,Optionnel
+Supérette,Flagship Store,Visibilité intérieure,Espace BR,Requis
+Supérette,Flagship Store,Visibilité intérieure,Wobler rayon,Optionnel
+Supérette,Flagship Store,Visibilité intérieure,Présentoire,Optionnel
+Supérette,Flagship Store,Visibilité intérieure,TG,Optionnel
+Supérette,Flagship Store,Visibilité intérieure,Plaque BR,Optionnel
+Supérette,Flagship Store,Visibilité intérieure,Merchandising,Requis
+Supérette,Flagship Store,Promotion,Standard,Requis
+Supérette,Flagship Store,Promotion,Hotesses,Requis
+Supérette,Flagship Store,Promotion,Dégustation,Requis
+Supérette,Vip Perfect Store,Disponibilité,,Requis
+Supérette,Vip Perfect Store,Visibilité extérieure,Affiche,Optionnel
+Supérette,Vip Perfect Store,Visibilité extérieure,Flèche,Optionnel
+Supérette,Vip Perfect Store,Visibilité intérieure,Reglette,Optionnel
+Supérette,Vip Perfect Store,Visibilité intérieure,Espace BR,Requis
+Supérette,Vip Perfect Store,Visibilité intérieure,Wobler rayon,Optionnel
+Supérette,Vip Perfect Store,Visibilité intérieure,Présentoire,Optionnel
+Supérette,Vip Perfect Store,Visibilité intérieure,Plaque BR,Optionnel
+Supérette,Vip Perfect Store,Visibilité intérieure,Merchandising,Requis
+Supérette,Vip Perfect Store,Promotion,Standard,Requis
+Supérette,Vip Perfect Store,Promotion,Hotesses,Requis
+Supérette,Vip Perfect Store,Promotion,Dégustation,Requis
+Supérette,Core Perfect Store,Disponibilité,,Requis
+Supérette,Core Perfect Store,Visibilité extérieure,Affiche,Optionnel
+Supérette,Core Perfect Store,Visibilité extérieure,Flèche,Optionnel
+Supérette,Core Perfect Store,Visibilité intérieure,Reglette,Optionnel
+Supérette,Core Perfect Store,Visibilité intérieure,Espace BR,Requis
+Supérette,Core Perfect Store,Visibilité intérieure,Wobler rayon,Optionnel
+Supérette,Core Perfect Store,Visibilité intérieure,Merchandising,Requis
+Supérette,Core Perfect Store,Promotion,Standard,Requis
+Supérette,Core Perfect Store,Promotion,Hotesses,Requis
+Supérette,Basic Perfect Store,Disponibilité,,Requis
+Supérette,Basic Perfect Store,Visibilité extérieure,Affiche,Optionnel
+Supérette,Basic Perfect Store,Visibilité intérieure,Reglette,Optionnel
+Supérette,Basic Perfect Store,Visibilité intérieure,Espace BR,Requis
+Supérette,Basic Perfect Store,Visibilité intérieure,Merchandising,Requis
+Supérette,Basic Perfect Store,Promotion,Standard,Requis
+Table Top,Flagship Store,Disponibilité,,Requis
+Table Top,Flagship Store,Visibilité,PARASOLS,Requis
+Table Top,Flagship Store,Visibilité,NAPPE,Requis
+Table Top,Flagship Store,Visibilité,HANGER,Requis
+Table Top,Flagship Store,Visibilité,TABLIER,Optionnel
+Table Top,Flagship Store,Promotion,,Requis
+Table Top,Vip Perfect Store,Disponibilité,,Requis
+Table Top,Vip Perfect Store,Visibilité,NAPPE,Requis
+Table Top,Vip Perfect Store,Visibilité,HANGER,Requis
+Table Top,Vip Perfect Store,Visibilité,TABLIER,Optionnel
+Table Top,Vip Perfect Store,Promotion,,Requis
+Table Top,Core Perfect Store,Disponibilité,,Requis
+Table Top,Core Perfect Store,Visibilité,NAPPE,Requis
+Table Top,Core Perfect Store,Visibilité,HANGER,Requis
+Table Top,Core Perfect Store,Promotion,,Requis
+Table Top,Basic Perfect Store,Disponibilité,,Requis
+Table Top,Basic Perfect Store,Visibilité,HANGER,Requis
+Pushcart,Flagship Store,Disponibilité,,Requis
+Pushcart,Flagship Store,Visibilité,THERMOS,Requis
+Pushcart,Flagship Store,Visibilité,VERRE JETABLE,Optionnel
+Pushcart,Flagship Store,Visibilité,CHASUBLE,Requis
+Pushcart,Flagship Store,Visibilité,FULL BRANDING,Requis
+Pushcart,Flagship Store,Promotion,,Requis
+Pushcart,Vip Perfect Store,Disponibilité,,Requis
+Pushcart,Vip Perfect Store,Visibilité,AFFICHE,Requis
+Pushcart,Vip Perfect Store,Visibilité,THERMOS,Requis
+Pushcart,Vip Perfect Store,Visibilité,VERRE JETABLE,Optionnel
+Pushcart,Vip Perfect Store,Visibilité,CHASUBLE,Requis
+Pushcart,Vip Perfect Store,Promotion,,Requis
+Pushcart,Core Perfect Store,Disponibilité,,Requis
+Pushcart,Core Perfect Store,Visibilité,AFFICHE,Requis
+Pushcart,Core Perfect Store,Visibilité,THERMOS,Requis
+Pushcart,Core Perfect Store,Visibilité,VERRE JETABLE,Optionnel
+Pushcart,Core Perfect Store,Promotion,,Requis
+Pushcart,Basic Perfect Store,Disponibilité,,Requis
+Pushcart,Basic Perfect Store,Visibilité,AFFICHE,Requis
+Pushcart,Basic Perfect Store,Promotion,,Requis
+Porridge,Flagship Store,Disponibilité,,Requis
+Porridge,Flagship Store,Visibilité,PARASOLS,Requis
+Porridge,Flagship Store,Visibilité,NAPPE,Requis
+Porridge,Flagship Store,Visibilité,HANGER,Requis
+Porridge,Flagship Store,Visibilité,VERRE JETABLE,Optionnel
+Porridge,Flagship Store,Visibilité,TABLIER,Requis
+Porridge,Flagship Store,Promotion,STANDARD,Requis
+Porridge,Flagship Store,Promotion,DEGUSTATION,Requis
+Porridge,Vip Perfect Store,Disponibilité,,Requis
+Porridge,Vip Perfect Store,Visibilité,PARASOLS,Requis
+Porridge,Vip Perfect Store,Visibilité,NAPPE,Requis
+Porridge,Vip Perfect Store,Visibilité,HANGER,Requis
+Porridge,Vip Perfect Store,Visibilité,VERRE JETABLE,Optionnel
+Porridge,Vip Perfect Store,Promotion,STANDARD,Requis
+Porridge,Core Perfect Store,Disponibilité,,Requis
+Porridge,Core Perfect Store,Visibilité,NAPPE,Requis
+Porridge,Core Perfect Store,Visibilité,HANGER,Requis
+Porridge,Core Perfect Store,Visibilité,VERRE JETABLE,Optionnel
+Porridge,Core Perfect Store,Promotion,STANDARD,Requis
+Porridge,Basic Perfect Store,Disponibilité,,Requis
+Porridge,Basic Perfect Store,Visibilité,HANGER,Requis
+Porridge,Basic Perfect Store,Promotion,STANDARD,Requis
+Kiosque & Aboki,Flagship Store,Disponibilité,,Requis
+Kiosque & Aboki,Flagship Store,Visibilité,AFFICHE,Requis
+Kiosque & Aboki,Flagship Store,Visibilité,THERMOS Brandé,Requis
+Kiosque & Aboki,Flagship Store,Visibilité,VERRE Brandé,Requis
+Kiosque & Aboki,Flagship Store,Visibilité,CARAFE Brandéé,Requis
+Kiosque & Aboki,Flagship Store,Visibilité,MAISON Brandéé,Requis
+Kiosque & Aboki,Flagship Store,Visibilité,CHASUBLE Brandé,Requis
+Kiosque & Aboki,Flagship Store,Visibilité,FULL BRANDING,Requis
+Kiosque & Aboki,Flagship Store,Visibilité,NAPPE Brandéé,Requis
+Kiosque & Aboki,Flagship Store,Promotion,,Requis
+Kiosque & Aboki,Vip Perfect Store,Disponibilité,,Requis
+Kiosque & Aboki,Vip Perfect Store,Visibilité,AFFICHE,Requis
+Kiosque & Aboki,Vip Perfect Store,Visibilité,THERMOS Brandé,Requis
+Kiosque & Aboki,Vip Perfect Store,Visibilité,VERRE Brandé,Requis
+Kiosque & Aboki,Vip Perfect Store,Visibilité,CARAFE Brandéé,Requis
+Kiosque & Aboki,Vip Perfect Store,Visibilité,MAISON Brandéé,Requis
+Kiosque & Aboki,Vip Perfect Store,Visibilité,CHASUBLE Brandé,Requis
+Kiosque & Aboki,Vip Perfect Store,Visibilité,NAPPE Brandéé,Requis
+Kiosque & Aboki,Vip Perfect Store,Promotion,,Requis
+Kiosque & Aboki,Core Perfect Store,Disponibilité,,Requis
+Kiosque & Aboki,Core Perfect Store,Visibilité,AFFICHE,Requis
+Kiosque & Aboki,Core Perfect Store,Visibilité,VERRE Brandé,Requis
+Kiosque & Aboki,Core Perfect Store,Visibilité,CARAFE Brandéé,Requis
+Kiosque & Aboki,Core Perfect Store,Visibilité,MAISON Brandéé,Requis
+Kiosque & Aboki,Core Perfect Store,Promotion,,Requis
+Kiosque & Aboki,Basic Perfect Store,Disponibilité,,Requis
+Kiosque & Aboki,Basic Perfect Store,Visibilité,AFFICHE,Requis
+Modern Trade,Flagship Store,Disponibilité,,Requis
+Modern Trade,Flagship Store,Visibilité intérieure,Niche,Requis
+Modern Trade,Flagship Store,Visibilité intérieure,Wobbler,Requis
+Modern Trade,Flagship Store,Visibilité intérieure,Top shelf,Requis
+Modern Trade,Flagship Store,Visibilité intérieure,Bacs,Requis
+Modern Trade,Flagship Store,Visibilité intérieure,Réglettes,Requis
+Modern Trade,Flagship Store,Promotion,TG,Requis
+Modern Trade,Flagship Store,Promotion,plot,Requis
+Modern Trade,Flagship Store,Promotion,Hôtesses,Requis
+Modern Trade,Vip Perfect Store,Disponibilité,,Requis
+Modern Trade,Vip Perfect Store,Visibilité intérieure,Wobbler,Requis
+Modern Trade,Vip Perfect Store,Visibilité intérieure,Bacs,Requis
+Modern Trade,Vip Perfect Store,Visibilité intérieure,Réglettes,Requis
+Modern Trade,Vip Perfect Store,Promotion,TG,Requis
+Modern Trade,Vip Perfect Store,Promotion,Hôtesses,Requis
+Modern Trade,Core Perfect Store,Disponibilité,,Requis
+Modern Trade,Core Perfect Store,Visibilité intérieure,Wobbler,Requis
+Modern Trade,Core Perfect Store,Visibilité intérieure,Bacs,Requis
+Modern Trade,Core Perfect Store,Visibilité intérieure,Réglettes,Requis
+Modern Trade,Core Perfect Store,Promotion,TG,Requis
+Modern Trade,Core Perfect Store,Promotion,Hôtesses,Requis
+Modern Trade,Basic Perfect Store,Disponibilité,,Requis
+Modern Trade,Basic Perfect Store,Visibilité intérieure,Wobbler,Requis
+Modern Trade,Basic Perfect Store,Visibilité intérieure,Réglettes,Requis
+Modern Trade,Basic Perfect Store,Promotion,TG,Requis
+Modern Trade,Basic Perfect Store,Promotion,Hôtesses,Requis
