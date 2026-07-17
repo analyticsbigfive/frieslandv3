@@ -4,9 +4,27 @@
     <div id="mobile-map" class="w-full h-full" />
 
     <!-- Controls overlay -->
-    <div class="absolute top-3 right-3 z-[1000] flex flex-col gap-2">
+    <div class="absolute top-3 right-3 z-[1000]">
+      <button
+        v-if="!showMapControls"
+        type="button"
+        class="flex min-h-11 items-center gap-2 rounded-xl bg-white/95 px-3 text-xs font-semibold text-gray-700 shadow-lg backdrop-blur transition hover:bg-white dark:bg-gray-800/95 dark:text-gray-200 dark:hover:bg-gray-800"
+        :aria-expanded="showMapControls"
+        aria-controls="mobile-map-controls"
+        @click="showMapControls = true"
+      >
+        <UIcon name="i-heroicons-adjustments-horizontal" class="h-4 w-4 text-fc-red" aria-hidden="true" />
+        Carte
+      </button>
+
       <!-- Radius filter -->
-      <div class="rounded-xl bg-white/95 p-3 shadow-lg backdrop-blur dark:bg-gray-800/95 space-y-2 min-w-[180px]">
+      <div v-else id="mobile-map-controls" class="w-[min(18rem,calc(100vw-1.5rem))] rounded-xl bg-white/95 p-3 shadow-lg backdrop-blur dark:bg-gray-800/95">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <span class="text-xs font-semibold text-gray-700 dark:text-gray-200">Filtres de carte</span>
+          <button type="button" class="touch-target inline-flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700" aria-label="Masquer les filtres de carte" @click="showMapControls = false">
+            <UIcon name="i-heroicons-x-mark" class="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
         <div class="flex items-center justify-between">
           <label for="radius-filter" class="text-xs font-medium text-gray-600 dark:text-gray-300">Rayon</label>
           <span class="text-xs font-bold text-fc-red">{{ radiusKm }} km</span>
@@ -21,22 +39,22 @@
           class="w-full accent-fc-red"
           @change="updateMarkers"
         />
-      </div>
 
-      <!-- Legend -->
-      <div class="rounded-xl bg-white/95 p-3 shadow-lg backdrop-blur dark:bg-gray-800/95 space-y-1.5">
-        <p class="text-[10px] font-medium text-gray-400 uppercase">Légende</p>
-        <div class="flex items-center gap-2">
-          <span class="w-3 h-3 rounded-full bg-[#C8102E]" />
-          <span class="text-xs text-gray-600">Ma position</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="w-3 h-3 rounded-full bg-[#22c55e]" />
-          <span class="text-xs text-gray-600">Routing du jour</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="w-3 h-3 rounded-full bg-[#3b82f6]" />
-          <span class="text-xs text-gray-600">PDV à proximité</span>
+        <!-- Legend -->
+        <div class="mt-3 space-y-1.5 border-t border-gray-100 pt-3 dark:border-gray-700">
+          <p class="text-[10px] font-medium uppercase text-gray-400">Légende</p>
+          <div class="flex items-center gap-2">
+            <span class="h-3 w-3 rounded-full bg-[#C8102E]" />
+            <span class="text-xs text-gray-600">Ma position</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="h-3 w-3 rounded-full bg-[#22c55e]" />
+            <span class="text-xs text-gray-600">Routing du jour</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="h-3 w-3 rounded-full bg-[#3b82f6]" />
+            <span class="text-xs text-gray-600">PDV à proximité</span>
+          </div>
         </div>
       </div>
     </div>
@@ -81,6 +99,7 @@ let radiusCircle: any = null
 let userPosition: { lat: number; lng: number } | null = null
 
 const radius = ref(2000) // default 2km
+const showMapControls = ref(false)
 const radiusKm = computed(() => (radius.value / 1000).toFixed(1))
 const routingPdvCount = ref(0)
 const nearbyPdvCount = ref(0)

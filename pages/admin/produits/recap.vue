@@ -1,6 +1,10 @@
 <template>
   <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">RÉCAPITULATIF PRODUITS</h1>
+    <AdminPageHeader
+      title="Récapitulatif produits"
+      description="Présence, prix respectés et détail par famille de produit."
+      eyebrow="Domaine produits"
+    />
 
     <DashboardFilters
       v-model="dashboard.filters.value"
@@ -21,10 +25,10 @@
       </div>
 
       <!-- Pie charts côte à côte -->
-      <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100">Présence par famille de produit</h2>
+      <h2 class="text-base font-semibold text-slate-900 dark:text-white">Présence par famille de produit</h2>
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <ClientOnly>
-          <div v-for="cat in productCategories" :key="cat.key" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
+          <div v-for="cat in productCategories" :key="cat.key" class="admin-surface p-4">
             <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 text-center">{{ cat.label }}</h4>
             <ChartsPieChart
               :labels="['Absent', 'Présent']"
@@ -38,10 +42,10 @@
       </div>
 
       <!-- Prix respectés par famille -->
-      <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100">Prix respectés</h2>
+      <h2 class="text-base font-semibold text-slate-900 dark:text-white">Prix respectés</h2>
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <ClientOnly>
-          <div v-for="cat in productCategories" :key="cat.key + '_prix'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
+          <div v-for="cat in productCategories" :key="cat.key + '_prix'" class="admin-surface p-4">
             <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 text-center">{{ cat.label }} prix</h4>
             <ChartsPieChart
               :labels="['Non respecté', 'Respecté']"
@@ -55,9 +59,9 @@
       </div>
 
       <!-- Tableau récapitulatif global -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-        <div class="p-4 border-b">
-          <h3 class="font-bold text-gray-900 dark:text-gray-100">Tableau récapitulatif</h3>
+      <div class="admin-surface overflow-hidden">
+        <div class="border-b border-slate-100 px-5 py-4 dark:border-slate-700">
+          <h3 class="font-semibold text-slate-900 dark:text-white">Tableau récapitulatif</h3>
         </div>
         <table class="w-full">
           <thead class="bg-gray-50">

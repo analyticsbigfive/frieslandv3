@@ -20,15 +20,24 @@
             <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">{{ pdv.nom_pdv }}</h2>
             <p class="text-xs text-gray-400 mt-0.5">{{ pdv.pdv_id }}</p>
           </div>
-          <UButton
-            v-if="!editing"
-            size="sm"
-            icon="i-heroicons-pencil"
-            class="bg-fc-red"
-            @click="startEditing"
-          >
-            Modifier
-          </UButton>
+          <div v-if="!editing" class="flex shrink-0 items-center gap-2">
+            <UButton
+              :to="{ path: '/mobile/visites/new', query: { pdv_id: pdv.pdv_id } }"
+              size="sm"
+              icon="i-heroicons-clipboard-document-check"
+              class="bg-fc-red"
+            >
+              Visiter
+            </UButton>
+            <UButton
+              variant="soft"
+              color="gray"
+              size="sm"
+              icon="i-heroicons-pencil"
+              aria-label="Modifier le PDV"
+              @click="startEditing"
+            />
+          </div>
         </div>
         <div class="flex gap-2 mt-3">
           <UBadge variant="subtle" color="red" size="xs">{{ pdv.canal }}</UBadge>

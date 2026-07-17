@@ -4,12 +4,12 @@
     <div class="sticky top-0 z-30 border-b border-gray-200 bg-white shadow-sm dark:border-gray-600 dark:bg-gray-800">
       <!-- Step indicators -->
       <div class="px-4 pt-3 pb-1">
-        <div class="flex items-center justify-between mb-2">
+        <div class="mb-2 flex items-center justify-between gap-3">
           <span class="text-xs font-semibold text-gray-500 dark:text-gray-400" aria-live="polite">
             Étape {{ currentStep + 1 }} sur {{ steps.length }}
           </span>
-          <span class="text-xs font-medium text-fc-red">
-            {{ Math.round(progressPercent) }}%
+          <span class="truncate text-right text-[11px] font-semibold text-fc-red">
+            <span v-if="currentPhaseNumber">Phase {{ currentPhaseNumber }}/{{ phases.length }} · </span>{{ currentPhaseLabel }}
           </span>
         </div>
         <!-- Animated progress bar -->
@@ -146,6 +146,7 @@
 export interface WizardStep {
   key: string
   label: string
+  phase?: string
   /** Optional: check if this step has been filled/completed */
   validate?: () => boolean
 }
@@ -186,6 +187,20 @@ const transitionName = computed(() =>
 const progressPercent = computed(() =>
   ((currentStep.value + 1) / props.steps.length) * 100,
 )
+
+const phases = computed(() => {
+  const unique = new Set<string>()
+  props.steps.forEach((step) => {
+    if (step.phase) unique.add(step.phase)
+  })
+  return [...unique]
+})
+
+const currentPhaseLabel = computed(() => props.steps[currentStep.value]?.phase || '')
+const currentPhaseNumber = computed(() => {
+  if (!currentPhaseLabel.value) return 0
+  return phases.value.indexOf(currentPhaseLabel.value) + 1
+})
 
 function isStepCompleted(idx: number) {
   if (idx >= currentStep.value) return false

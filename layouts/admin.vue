@@ -26,7 +26,7 @@
     >
       <!-- Top Header -->
       <header class="sticky top-0 z-30 border-b border-slate-200/80 bg-white/[0.82] px-4 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90 sm:px-6 lg:px-8">
-        <div class="flex min-h-20 flex-col gap-3 py-3 lg:flex-row lg:items-center lg:justify-between">
+        <div class="flex min-h-16 flex-col gap-2.5 py-2.5 lg:flex-row lg:items-center lg:justify-between">
           <div class="flex min-w-0 items-center gap-4">
           <button
             type="button"
@@ -55,7 +55,7 @@
                au suivi des tournées. -->
           <NuxtLink
             to="/admin/trajets"
-            class="flex h-10 items-center gap-2 rounded-xl border border-slate-200/80 bg-white/70 px-3 text-sm shadow-[0_10px_24px_-22px_rgba(15,23,42,0.7)] transition hover:bg-white dark:border-slate-700 dark:bg-slate-800/70 dark:hover:bg-slate-800"
+            class="flex h-9 items-center gap-2 rounded-xl border border-slate-200/80 bg-white/70 px-3 text-sm shadow-[0_10px_24px_-22px_rgba(15,23,42,0.7)] transition hover:bg-white dark:border-slate-700 dark:bg-slate-800/70 dark:hover:bg-slate-800"
             :aria-label="`${commerciauxEnTournee} commercial(aux) en ligne, ouvrir le suivi terrain`"
           >
             <span class="relative flex h-2.5 w-2.5">
@@ -74,7 +74,7 @@
           </NuxtLink>
 
           <!-- Sync pending -->
-          <div v-if="pendingCount > 0" class="flex h-10 items-center gap-1 rounded-xl border border-amber-200 bg-amber-50 px-3 text-sm font-medium text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
+          <div v-if="pendingCount > 0" class="flex h-9 items-center gap-1 rounded-xl border border-amber-200 bg-amber-50 px-3 text-sm font-medium text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
             <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -85,7 +85,7 @@
           <NuxtLink
             v-if="errorCount > 0"
             to="/admin/visites"
-            class="flex h-10 items-center gap-1 rounded-xl border border-red-200 bg-red-50 px-3 text-sm font-medium text-red-700 transition hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-950/50"
+            class="flex h-9 items-center gap-1 rounded-xl border border-red-200 bg-red-50 px-3 text-sm font-medium text-red-700 transition hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-950/50"
             :aria-label="`${errorCount} synchronisation(s) en erreur sur cet appareil, ouvrir les visites`"
           >
             <UIcon name="i-heroicons-exclamation-triangle" class="h-4 w-4" aria-hidden="true" />
@@ -100,7 +100,7 @@
             :items="userMenuItems"
             :popper="{ placement: 'bottom-end' }"
           >
-            <button class="flex h-10 items-center gap-2 rounded-xl border border-slate-200/80 bg-white/70 px-2.5 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.7)] transition hover:bg-white dark:border-slate-700 dark:bg-slate-800/70 dark:hover:bg-slate-800">
+            <button class="flex h-9 items-center gap-2 rounded-xl border border-slate-200/80 bg-white/70 px-2.5 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.7)] transition hover:bg-white dark:border-slate-700 dark:bg-slate-800/70 dark:hover:bg-slate-800">
               <div class="w-8 h-8 rounded-lg bg-fc-red flex items-center justify-center">
                 <span class="text-white text-sm font-medium">
                   {{ userInitials }}
@@ -114,7 +114,7 @@
       </header>
 
       <!-- Page content -->
-      <main id="admin-main-content" class="flex-1 px-4 py-6 dark:text-slate-200 sm:px-6 lg:px-8 lg:py-8">
+      <main id="admin-main-content" class="flex-1 px-4 py-5 dark:text-slate-200 sm:px-6 lg:px-8 lg:py-7">
         <div class="mx-auto w-full max-w-[1600px]">
           <AdminSectionTabs class="mb-6" />
           <AdminTableEnhancer>
@@ -198,7 +198,22 @@ const pageTitle = computed(() => {
     '/admin/map': 'Carte',
     '/admin/trajets': 'Suivi commerciaux',
   }
-  return titles[route.path] || 'Dashboard'
+  if (titles[route.path]) return titles[route.path]
+
+  const prefixes: Array<[string, string]> = [
+    ['/admin/perfect-store', 'Perfect Store'],
+    ['/admin/visites', 'Visites'],
+    ['/admin/pdv', 'Points de vente'],
+    ['/admin/distributeurs', 'Distributeurs'],
+    ['/admin/visibilite', 'Visibilité'],
+    ['/admin/concurrence', 'Concurrence'],
+    ['/admin/produits', 'Produits'],
+    ['/admin/actions', 'Actions'],
+    ['/admin/users', 'Utilisateurs'],
+    ['/admin/permissions', 'Permissions & accès'],
+    ['/admin/referentiels', 'Référentiels'],
+  ]
+  return prefixes.find(([prefix]) => route.path.startsWith(prefix))?.[1] || 'Dashboard'
 })
 
 const userInitials = computed(() => {

@@ -1,5 +1,11 @@
 <template>
-  <div>
+  <div class="space-y-5">
+    <AdminPageHeader
+      title="Points de vente"
+      description="Recherchez, filtrez et gérez les points de vente du périmètre courant."
+      eyebrow="Domaine PDV"
+    />
+
     <AdminListToolbar
       :search="searchQuery"
       search-placeholder="Nom, code ou adressage…"
@@ -144,7 +150,11 @@
 
       <div v-if="!loading && !pdvList.length" class="p-12 text-center text-gray-400">
         <MapPin class="w-12 h-12 mx-auto mb-3 opacity-50" />
-        <p>Aucun PDV trouvé</p>
+        <p class="font-medium">Aucun PDV trouvé</p>
+        <p class="mt-1 text-sm text-slate-400">Modifiez la recherche ou réinitialisez les filtres.</p>
+        <UButton class="mt-4" size="xs" variant="outline" icon="i-heroicons-arrow-path" @click="resetListFilters">
+          Réinitialiser
+        </UButton>
       </div>
 
       <AdminPagination

@@ -730,17 +730,17 @@ const saveProgress = ref(0)
 
 // Wizard steps — one per product type for Dispo & Prix
 const wizardSteps = [
-  { key: 'general', label: 'Général' },
-  { key: 'evap', label: 'EVAP' },
-  { key: 'imp', label: 'IMP' },
-  { key: 'scm', label: 'SCM' },
-  { key: 'uht', label: 'UHT' },
-  { key: 'yaourt', label: 'Yaourt' },
-  { key: 'cereales', label: 'Céréales' },
-  { key: 'concurrence', label: 'Concurrence' },
-  { key: 'visibilite', label: 'Visibilité' },
-  { key: 'actions', label: 'Actions' },
-  { key: 'photos', label: 'Photos' },
+  { key: 'general', label: 'Général', phase: 'Général' },
+  { key: 'evap', label: 'EVAP', phase: 'Produits' },
+  { key: 'imp', label: 'IMP', phase: 'Produits' },
+  { key: 'scm', label: 'SCM', phase: 'Produits' },
+  { key: 'uht', label: 'UHT', phase: 'Produits' },
+  { key: 'yaourt', label: 'Yaourt', phase: 'Produits' },
+  { key: 'cereales', label: 'Céréales', phase: 'Produits' },
+  { key: 'concurrence', label: 'Concurrence', phase: 'Visibilité & concurrence' },
+  { key: 'visibilite', label: 'Visibilité', phase: 'Visibilité & concurrence' },
+  { key: 'actions', label: 'Actions', phase: 'Actions & photos' },
+  { key: 'photos', label: 'Photos', phase: 'Actions & photos' },
 ]
 
 // Form state

@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Prototype appliqué — app mobile simplifiée</title>
+  <style>
+    :root {
+      --red: #c8102e;
+      --red-dark: #9b0d23;
+      --red-soft: #fde8ec;
+      --ink: #17202c;
+      --muted: #687384;
+      --line: #e7e9ee;
+      --canvas: #f6f7f9;
+      --surface: #fff;
+      --green: #15803d;
+      --amber: #a16207;
+      --shadow: 0 18px 50px rgba(29, 37, 51, .14);
+    }
+
+    * { box-sizing: border-box; }
+    html { background: #e9ebef; color: var(--ink); font-family: "Avenir Next", Avenir, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { margin: 0; min-height: 100vh; }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+
+    .prototype-bar {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      max-width: 1120px; margin: 0 auto; padding: 24px 24px 16px;
+    }
+    .prototype-bar h1 { margin: 0; font-size: 18px; letter-spacing: -.02em; }
+    .prototype-bar p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+    .prototype-note { color: var(--muted); font-size: 12px; text-align: right; }
+
+    .switcher {
+      display: flex; gap: 8px; max-width: 1120px; margin: 0 auto 24px; padding: 0 24px;
+      overflow-x: auto;
+    }
+    .switcher button {
+      flex: 0 0 auto; border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.72);
+      color: var(--muted); padding: 10px 13px; font-size: 12px; font-weight: 700;
+    }
+    .switcher button[aria-selected="true"] { border-color: var(--red); background: var(--red); color: #fff; }
+
+    .stage { display: flex; justify-content: center; padding: 0 24px 48px; }
+    .phone {
+      position: relative; width: min(390px, 100%); min-height: 844px; overflow: hidden;
+      border: 10px solid #20252d; border-radius: 34px; background: var(--canvas); box-shadow: var(--shadow);
+    }
+    .phone::before { content: ""; position: absolute; z-index: 10; top: -2px; left: 50%; width: 110px; height: 22px; transform: translateX(-50%); border-radius: 0 0 16px 16px; background: #20252d; }
+    .screen { min-height: 824px; padding-bottom: 76px; }
+    .screen[hidden] { display: none; }
+
+    .app-header {
+      position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      min-height: 58px; padding: 12px 14px 10px; background: var(--red); color: #fff;
+    }
+    .header-main { display: flex; min-width: 0; align-items: center; gap: 9px; }
+    .logo { display: grid; width: 27px; height: 27px; place-items: center; border-radius: 7px; background: #fff; color: var(--red); font-size: 11px; font-weight: 900; }
+    .app-header h2 { overflow: hidden; margin: 0; font-size: 16px; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
+    .header-status { display: flex; align-items: center; gap: 5px; border: 1px solid rgba(255,255,255,.22); border-radius: 8px; padding: 7px 8px; color: #fff; background: rgba(255,255,255,.1); font-size: 10px; font-weight: 800; white-space: nowrap; }
+    button.header-status { cursor: pointer; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #86efac; }
+    .icon-button { display: inline-grid; width: 36px; height: 36px; place-items: center; border: 0; border-radius: 10px; background: transparent; color: inherit; font-size: 20px; }
+    .icon-button:hover, .icon-button:focus-visible { background: rgba(255,255,255,.14); outline: none; }
+
+    .content { padding: 16px; }
+    .eyebrow { margin: 0 0 4px; color: var(--red); font-size: 10px; font-weight: 900; letter-spacing: .11em; text-transform: uppercase; }
+    .title { margin: 0; font-size: 22px; letter-spacing: -.04em; line-height: 1.1; }
+    .subtle { color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .section-head { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin: 22px 0 9px; }
+    .section-head h3 { margin: 0; font-size: 14px; letter-spacing: -.01em; }
+    .text-action { border: 0; background: transparent; color: var(--red); font-size: 11px; font-weight: 800; }
+
+    .primary-card { border-radius: 17px; background: var(--red); color: #fff; padding: 16px; box-shadow: 0 12px 26px rgba(200,16,46,.18); }
+    .primary-card .eyebrow { color: #ffd6dd; }
+    .primary-card h3 { margin: 0; font-size: 19px; letter-spacing: -.03em; }
+    .primary-card p { margin: 6px 0 0; color: #ffecef; font-size: 12px; }
+    .card-action { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; margin-top: 14px; border: 0; border-radius: 11px; background: #fff; color: var(--red-dark); padding: 0 14px; font-size: 12px; font-weight: 900; }
+
+    .progress-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 15px; font-size: 12px; }
+    .progress-track { height: 6px; margin-top: 7px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.24); }
+    .progress-track span { display: block; width: 0%; height: 100%; border-radius: inherit; background: #fff; }
+
+    .surface { border: 1px solid var(--line); border-radius: 15px; background: var(--surface); }
+    .compact-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; overflow: hidden; margin-top: 12px; background: var(--line); }
+    .compact-stat { min-height: 66px; padding: 12px; background: var(--surface); }
+    .compact-stat strong { display: block; font-size: 18px; letter-spacing: -.03em; }
+    .compact-stat span { color: var(--muted); font-size: 10px; }
+
+    .search-row { display: flex; gap: 8px; }
+    .search { flex: 1; min-width: 0; min-height: 42px; border: 1px solid var(--line); border-radius: 11px; background: #fff; padding: 0 12px; color: var(--ink); font-size: 12px; outline: none; }
+    .search:focus { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-soft); }
+    .filter-button { min-width: 42px; min-height: 42px; border: 1px solid var(--line); border-radius: 11px; background: #fff; color: var(--ink); font-weight: 800; }
+    .result-line { display: flex; justify-content: space-between; gap: 8px; margin-top: 10px; color: var(--muted); font-size: 11px; }
+
+    .visit-row, .route-row { display: flex; align-items: flex-start; gap: 11px; padding: 13px; }
+    .visit-row + .visit-row, .route-row + .route-row { border-top: 1px solid var(--line); }
+    .row-icon, .step { display: grid; flex: 0 0 auto; width: 33px; height: 33px; place-items: center; border-radius: 10px; background: var(--red-soft); color: var(--red); font-size: 13px; font-weight: 900; }
+    .row-main { min-width: 0; flex: 1; }
+    .row-main strong { display: block; overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+    .row-main span { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .row-side { display: flex; flex: 0 0 auto; flex-direction: column; align-items: flex-end; gap: 6px; }
+    .badge { border-radius: 7px; padding: 4px 6px; font-size: 9px; font-weight: 900; }
+    .badge.green { background: #dcfce7; color: var(--green); }
+    .badge.amber { background: #fef3c7; color: var(--amber); }
+    .badge.gray { background: #f0f1f4; color: #697284; }
+    .row-link { border: 0; background: transparent; color: var(--red); font-size: 10px; font-weight: 900; }
+
+    .bottom-nav { position: absolute; right: 0; bottom: 0; left: 0; z-index: 8; display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; border-top: 1px solid var(--line); background: rgba(255,255,255,.96); padding: 7px 6px 10px; }
+    .bottom-nav button { min-height: 48px; border: 0; border-radius: 11px; background: transparent; color: var(--muted); font-size: 10px; font-weight: 800; }
+    .bottom-nav button[aria-current="page"] { background: var(--red-soft); color: var(--red); }
+    .bottom-nav span { display: block; margin-bottom: 2px; font-size: 17px; }
+
+    .phase-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin: 14px 0 16px; }
+    .phase { min-height: 48px; border: 1px solid var(--line); border-radius: 10px; background: #fff; padding: 7px 5px; color: var(--muted); font-size: 9px; font-weight: 800; text-align: center; }
+    .phase.active { border-color: var(--red); background: var(--red-soft); color: var(--red); }
+    .phase.done { color: var(--green); }
+    .phase span { display: block; margin-bottom: 3px; font-size: 13px; }
+    .step-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 11px; color: var(--muted); font-size: 11px; font-weight: 800; }
+    .step-progress { height: 5px; margin-bottom: 16px; overflow: hidden; border-radius: 999px; background: #eceef2; }
+    .step-progress span { display: block; width: 18%; height: 100%; border-radius: inherit; background: var(--red); }
+    .field-label { display: block; margin-bottom: 6px; color: var(--ink); font-size: 12px; font-weight: 800; }
+    .select { width: 100%; min-height: 44px; border: 1px solid var(--line); border-radius: 11px; background: #fff; padding: 0 12px; color: var(--ink); font-size: 12px; }
+    .group { margin-top: 13px; padding: 13px; }
+    .group-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+    .group-head h3 { margin: 0; font-size: 14px; }
+    .quantity-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; border-top: 1px solid var(--line); color: var(--ink); font-size: 12px; }
+    .quantity-row:first-of-type { border-top: 0; }
+    .quantity-control { display: flex; align-items: center; gap: 5px; }
+    .quantity-control button { width: 30px; height: 30px; border: 0; border-radius: 8px; background: #f0f1f4; color: var(--ink); font-weight: 900; }
+    .quantity-control output { display: grid; width: 34px; height: 30px; place-items: center; border: 1px solid var(--line); border-radius: 8px; background: #fff; font-size: 12px; font-weight: 800; }
+    .wizard-actions { position: absolute; right: 10px; bottom: 0; left: 10px; z-index: 9; display: grid; grid-template-columns: auto 1fr; gap: 9px; border-top: 1px solid var(--line); background: rgba(255,255,255,.97); padding: 10px 10px 12px; }
+    .wizard-actions button { min-height: 44px; border-radius: 11px; padding: 0 13px; font-size: 12px; font-weight: 900; }
+    .wizard-actions .secondary { border: 1px solid var(--line); background: #fff; color: var(--muted); }
+    .wizard-actions .primary { border: 0; background: var(--red); color: #fff; }
+
+    .more-list { display: grid; gap: 8px; margin-top: 16px; }
+    .more-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 54px; border: 1px solid var(--line); border-radius: 13px; background: #fff; padding: 10px 12px; color: var(--ink); text-align: left; }
+    .more-item strong { display: block; font-size: 12px; }
+    .more-item span { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; }
+    .more-item b { color: var(--red); font-size: 18px; }
+    .status-panel { position: absolute; top: 58px; right: 12px; left: 12px; z-index: 7; border: 1px solid var(--line); border-radius: 15px; background: rgba(255,255,255,.98); padding: 13px; box-shadow: 0 16px 34px rgba(29,37,51,.16); }
+    .status-panel[hidden] { display: none; }
+    .status-panel-head { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+    .status-panel-head strong { display: block; font-size: 12px; }
+    .status-panel-head span { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; }
+    .status-items { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 11px; }
+    .status-item { min-height: 48px; border-radius: 10px; background: #f4f5f7; padding: 9px; font-size: 10px; }
+    .status-item strong { display: block; font-size: 11px; }
+    .status-item span { display: block; margin-top: 3px; color: var(--muted); }
+    .pdv-row { display: flex; align-items: center; gap: 10px; padding: 13px; }
+    .pdv-row + .pdv-row { border-top: 1px solid var(--line); }
+    .pdv-row .row-main { min-width: 0; flex: 1; }
+    .pdv-row .row-main strong { display: block; overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+    .pdv-row .row-main span { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .pdv-filter { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; color: var(--muted); font-size: 11px; }
+    .pdv-filter button { border: 0; border-radius: 8px; background: #f0f1f4; color: var(--ink); padding: 7px 9px; font-size: 10px; font-weight: 800; }
+
+    @media (max-width: 560px) {
+      .prototype-bar { align-items: flex-start; flex-direction: column; padding: 18px 16px 12px; }
+      .prototype-note { text-align: left; }
+      .switcher { padding: 0 16px; }
+      .stage { padding: 0; }
+      .phone { width: 100%; min-height: 100dvh; border: 0; border-radius: 0; box-shadow: none; }
+      .phone::before { display: none; }
+      .screen { min-height: 100dvh; }
+    }
+  </style>
+</head>
+<body>
+  <header class="prototype-bar">
+    <div>
+      <h1>Prototype appliqué — app mobile simplifiée</h1>
+      <p>Hiérarchie et parcours, sans suppression de contenu métier.</p>
+    </div>
+    <div class="prototype-note">Prototype autonome · données affichées à titre de structure</div>
+  </header>
+
+  <nav class="switcher" aria-label="Écrans du prototype">
+    <button type="button" data-screen="home" aria-selected="true">Aujourd’hui</button>
+    <button type="button" data-screen="routing" aria-selected="false">Routing</button>
+    <button type="button" data-screen="pdv" aria-selected="false">PDV</button>
+    <button type="button" data-screen="visit" aria-selected="false">Nouvelle visite</button>
+    <button type="button" data-screen="more" aria-selected="false">Plus</button>
+  </nav>
+
+  <main class="stage">
+    <div class="phone" aria-label="Prototype de l'application mobile">
+      <section id="screen-home" class="screen">
+        <header class="app-header">
+          <div class="header-main"><span class="logo">FC</span><h2>Visites</h2></div>
+          <button class="header-status" type="button" data-toggle-status aria-expanded="false"><span class="status-dot"></span> En ligne</button>
+          <button class="icon-button" type="button" aria-label="Ouvrir l’état de l’application">⋯</button>
+        </header>
+        <div id="home-status-panel" class="status-panel" hidden>
+          <div class="status-panel-head"><div><strong>État de l’application</strong></div><span class="badge green">En ligne</span></div>
+          <div class="status-items">
+            <div class="status-item"><strong>GPS</strong><span>Position disponible</span></div>
+            <div class="status-item"><strong>Synchronisation</strong><span>Aucune attente</span></div>
+            <div class="status-item"><strong>Tournée</strong><span>Suivi disponible</span></div>
+            <div class="status-item"><strong>Compte</strong><span>Menu utilisateur</span></div>
+          </div>
+        </div>
+
+        <div class="content">
+          <p class="eyebrow">Aujourd’hui</p>
+          <h1 class="title">Votre prochaine action</h1>
+
+          <section class="primary-card" aria-label="Action principale">
+            <p class="eyebrow">Visite terrain</p>
+            <h3>Nouvelle visite</h3>
+            <p>Sélectionnez un PDV et reprenez les étapes existantes.</p>
+            <button class="card-action" type="button" data-screen="visit">Commencer</button>
+            <div class="progress-line"><span>Visites du jour</span><strong>— / 10</strong></div>
+            <div class="progress-track" aria-label="Progression des visites"><span></span></div>
+          </section>
+
+          <div class="compact-stats surface" aria-label="États de l’application">
+            <div class="compact-stat"><strong>GPS</strong><span>Position disponible</span></div>
+            <div class="compact-stat"><strong>Sync</strong><span>Aucune attente affichée</span></div>
+          </div>
+
+          <div class="section-head"><h3>Mes visites</h3><button class="text-action" type="button">Voir le détail</button></div>
+          <div class="search-row">
+            <input class="search" type="search" placeholder="Rechercher un PDV, commercial…" aria-label="Rechercher une visite">
+            <button class="filter-button" type="button" aria-label="Ouvrir les filtres">⌕</button>
+          </div>
+          <div class="result-line"><span>Résultats selon les filtres actifs</span><button class="text-action" type="button">Filtres</button></div>
+
+          <section class="surface" style="margin-top: 10px; overflow: hidden;" aria-label="Liste des visites">
+            <div class="visit-row">
+              <div class="row-icon">V</div>
+              <div class="row-main"><strong>Nom du PDV</strong><span>Date de visite · Commercial</span></div>
+              <div class="row-side"><span class="badge green">GPS validé</span><button class="row-link" type="button">Détail</button></div>
+            </div>
+            <div class="visit-row">
+              <div class="row-icon">V</div>
+              <div class="row-main"><strong>Nom du PDV</strong><span>Date de visite · Commercial</span></div>
+              <div class="row-side"><span class="badge amber">En attente</span><button class="row-link" type="button">Détail</button></div>
+            </div>
+          </section>
+        </div>
+
+        <nav class="bottom-nav" aria-label="Navigation principale">
+          <button type="button" aria-current="page" data-screen="home"><span>▣</span>Visites</button>
+          <button type="button" data-screen="routing"><span>↗</span>Routing</button>
+          <button type="button" data-screen="pdv"><span>⌖</span>PDV</button>
+          <button type="button" data-screen="more"><span>•••</span>Plus</button>
+        </nav>
+      </section>
+
+      <section id="screen-pdv" class="screen" hidden>
+        <header class="app-header">
+          <div class="header-main"><button class="icon-button" type="button" aria-label="Retour" data-screen="home">‹</button><h2>Points de vente</h2></div>
+          <button class="header-status" type="button"><span class="status-dot"></span> En ligne</button>
+          <button class="icon-button" type="button" aria-label="Compte">◎</button>
+        </header>
+
+        <div class="content">
+          <p class="eyebrow">Domaine PDV</p>
+          <h1 class="title">Points de vente</h1>
+          <div class="search-row" style="margin-top: 16px;">
+            <input class="search" type="search" placeholder="Rechercher un PDV…" aria-label="Rechercher un PDV">
+            <button class="filter-button" type="button" aria-label="Ouvrir les filtres">⌘</button>
+          </div>
+          <div class="result-line"><span>50 sur tous les PDV</span><button class="text-action" type="button">Tri : proximité</button></div>
+          <div class="pdv-filter"><span>Zone non sélectionnée</span><button type="button">Filtres</button></div>
+
+          <section class="surface" style="margin-top: 10px; overflow: hidden;">
+            <div class="pdv-row"><div class="row-icon">⌖</div><div class="row-main"><strong>Nom du PDV</strong><span>Zone · Région · Canal</span></div><button class="row-link" type="button">Ouvrir</button></div>
+            <div class="pdv-row"><div class="row-icon">⌖</div><div class="row-main"><strong>Nom du PDV</strong><span>Zone · Région · Canal</span></div><button class="row-link" type="button">Ouvrir</button></div>
+            <div class="pdv-row"><div class="row-icon">⌖</div><div class="row-main"><strong>Nom du PDV</strong><span>Zone · Région · Canal</span></div><button class="row-link" type="button">Ouvrir</button></div>
+          </section>
+          <button class="card-action" style="width: 100%; margin-top: 12px; border: 1px solid var(--line); background: #fff; color: var(--ink);" type="button">Afficher les 50 suivants</button>
+        </div>
+
+        <nav class="bottom-nav" aria-label="Navigation principale">
+          <button type="button" data-screen="home"><span>▣</span>Visites</button>
+          <button type="button" data-screen="routing"><span>↗</span>Routing</button>
+          <button type="button" aria-current="page" data-screen="pdv"><span>⌖</span>PDV</button>
+          <button type="button" data-screen="more"><span>•••</span>Plus</button>
+        </nav>
+      </section>
+
+      <section id="screen-routing" class="screen" hidden>
+        <header class="app-header">
+          <div class="header-main"><button class="icon-button" type="button" aria-label="Retour" data-screen="home">‹</button><h2>Mon routing</h2></div>
+          <div class="header-status"><span class="status-dot"></span> En ligne</div>
+          <button class="icon-button" type="button" aria-label="Actualiser">↻</button>
+        </header>
+
+        <div class="content">
+          <p class="eyebrow">Aujourd’hui</p>
+          <h1 class="title">Mon routing</h1>
+          <section class="surface" style="margin-top: 16px; padding: 13px;">
+            <div class="result-line" style="margin-top: 0;"><span>Progression</span><strong>— / —</strong></div>
+            <div class="step-progress" style="margin: 8px 0 0;"><span style="width: 0;"></span></div>
+            <div style="margin-top: 9px;"><span class="badge gray">En attente</span></div>
+          </section>
+
+          <div class="section-head"><h3>PDV à visiter</h3></div>
+          <section class="surface" style="overflow: hidden;">
+            <div class="route-row">
+              <div class="step">1</div>
+              <div class="row-main"><strong>Nom du PDV</strong><span>Zone · Quartier · Objectifs existants</span><span>GPS non validé</span></div>
+              <div class="row-side"><span class="badge gray">En attente</span><button class="row-link" type="button" data-screen="visit">Démarrer</button></div>
+            </div>
+            <div class="route-row">
+              <div class="step" style="background:#fef3c7;color:#a16207">2</div>
+              <div class="row-main"><strong>Nom du PDV</strong><span>Zone · Quartier · Objectifs existants</span><span>Arrivée · heure existante</span></div>
+              <div class="row-side"><span class="badge amber">En cours</span><button class="row-link" type="button" data-screen="visit">Remplir</button></div>
+            </div>
+            <div class="route-row">
+              <div class="step" style="background:#dcfce7;color:#15803d">✓</div>
+              <div class="row-main"><strong>Nom du PDV</strong><span>Zone · Quartier · Objectifs existants</span><span>Terminé · heure existante</span></div>
+              <div class="row-side"><span class="badge green">Fait</span><button class="row-link" type="button">Détail</button></div>
+            </div>
+          </section>
+        </div>
+
+        <nav class="bottom-nav" aria-label="Navigation principale">
+          <button type="button" data-screen="home"><span>▣</span>Visites</button>
+          <button type="button" aria-current="page" data-screen="routing"><span>↗</span>Routing</button>
+          <button type="button" data-screen="pdv"><span>⌖</span>PDV</button>
+          <button type="button" data-screen="more"><span>•••</span>Plus</button>
+        </nav>
+      </section>
+
+      <section id="screen-visit" class="screen" hidden>
+        <header class="app-header">
+          <div class="header-main"><button class="icon-button" type="button" aria-label="Retour" data-screen="home">‹</button><h2>Nouvelle visite</h2></div>
+          <div class="header-status"><span class="status-dot"></span> Brouillon</div>
+          <button class="icon-button" type="button" aria-label="Plus d’options">⋯</button>
+        </header>
+
+        <div class="content" style="padding-bottom: 88px;">
+          <div class="step-meta"><span>Étape 2 sur 11 · Produits</span><span>En cours</span></div>
+          <div class="step-progress"><span></span></div>
+          <div class="phase-strip" aria-label="Phases de la visite">
+            <div class="phase done"><span>✓</span>Général</div>
+            <div class="phase active"><span>2</span>Produits</div>
+            <div class="phase"><span>3</span>Visibilité & concurrence</div>
+            <div class="phase"><span>4</span>Actions & photos</div>
+          </div>
+
+          <p class="eyebrow">Produits</p>
+          <h1 class="title">Relevé du rayon</h1>
+
+          <section class="surface group">
+            <div class="group-head"><h3>EVAP — Évaporé</h3><span class="badge gray">À vérifier</span></div>
+            <p class="subtle" style="margin: 3px 0 9px;">Quantité en rayon. 0 = rupture.</p>
+            <div class="quantity-row"><span>BR Gold</span><div class="quantity-control"><button type="button" aria-label="Diminuer">−</button><output>0</output><button type="button" aria-label="Augmenter">+</button></div></div>
+            <div class="quantity-row"><span>BR 150g</span><div class="quantity-control"><button type="button" aria-label="Diminuer">−</button><output>0</output><button type="button" aria-label="Augmenter">+</button></div></div>
+            <div class="quantity-row"><span>BRB 150g</span><div class="quantity-control"><button type="button" aria-label="Diminuer">−</button><output>0</output><button type="button" aria-label="Augmenter">+</button></div></div>
+          </section>
+
+          <section class="surface group">
+            <div class="group-head"><h3>Autres catégories</h3><button class="text-action" type="button">Ouvrir</button></div>
+            <p class="subtle" style="margin: 3px 0 0;">IMP · SCM · UHT · Yaourt · Céréales</p>
+          </section>
+        </div>
+
+        <div class="wizard-actions">
+          <button class="secondary" type="button" data-screen="home">Annuler</button>
+          <button class="primary" type="button">Suivant&nbsp; →</button>
+        </div>
+      </section>
+
+      <section id="screen-more" class="screen" hidden>
+        <header class="app-header">
+          <div class="header-main"><button class="icon-button" type="button" aria-label="Retour" data-screen="home">‹</button><h2>Plus</h2></div>
+          <div class="header-status"><span class="status-dot"></span> En ligne</div>
+          <button class="icon-button" type="button" aria-label="Compte">◎</button>
+        </header>
+        <div class="content">
+          <p class="eyebrow">Autres écrans</p>
+          <h1 class="title">Retrouver les outils</h1>
+          <div class="more-list">
+            <button class="more-item" type="button"><div><strong>Points de vente</strong><span>Recherche, zone, proximité et création</span></div><b>›</b></button>
+            <button class="more-item" type="button"><div><strong>Calendrier</strong><span>Visites récentes et navigation par mois</span></div><b>›</b></button>
+            <button class="more-item" type="button"><div><strong>Contacts</strong><span>Annuaire, téléphone et email</span></div><b>›</b></button>
+            <button class="more-item" type="button"><div><strong>Carte</strong><span>Routing, PDV proches et rayon</span></div><b>›</b></button>
+          </div>
+        </div>
+        <nav class="bottom-nav" aria-label="Navigation principale">
+          <button type="button" data-screen="home"><span>▣</span>Visites</button>
+          <button type="button" data-screen="routing"><span>↗</span>Routing</button>
+          <button type="button" data-screen="pdv"><span>⌖</span>PDV</button>
+          <button type="button" aria-current="page" data-screen="more"><span>•••</span>Plus</button>
+        </nav>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const screens = [...document.querySelectorAll('.screen')]
+    const buttons = [...document.querySelectorAll('[data-screen]')]
+    const statusToggle = document.querySelector('[data-toggle-status]')
+    const statusPanel = document.querySelector('#home-status-panel')
+
+    function showScreen(name) {
+      screens.forEach(screen => { screen.hidden = screen.id !== `screen-${name}` })
+      document.querySelectorAll('.switcher button').forEach(button => {
+        button.setAttribute('aria-selected', String(button.dataset.screen === name))
+      })
+      document.querySelector('.phone').scrollTop = 0
+    }
+
+    buttons.forEach(button => button.addEventListener('click', () => showScreen(button.dataset.screen)))
+    statusToggle?.addEventListener('click', () => {
+      const isOpen = statusPanel.hidden
+      statusPanel.hidden = !isOpen
+      statusToggle.setAttribute('aria-expanded', String(isOpen))
+    })
+  </script>
+</body>
+</html>

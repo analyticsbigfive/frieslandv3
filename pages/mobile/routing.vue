@@ -136,15 +136,9 @@
               >
                 Démarrer
               </UButton>
-              <UButton
-                size="sm"
-                variant="soft"
-                color="gray"
-                icon="i-heroicons-forward"
-                @click="handleSkip(rp)"
-              >
-                Passer
-              </UButton>
+              <UDropdown :items="missionMenuItems(rp)" :popper="{ placement: 'bottom-end' }">
+                <UButton size="sm" variant="soft" color="gray" icon="i-heroicons-ellipsis-horizontal" aria-label="Autres actions pour ce PDV" />
+              </UDropdown>
             </template>
             <template v-if="rp.status === 'in_progress'">
               <UButton
@@ -155,15 +149,9 @@
               >
                 Remplir la visite
               </UButton>
-              <UButton
-                size="sm"
-                variant="soft"
-                color="green"
-                icon="i-heroicons-check"
-                @click="handleCompleteDirect(rp)"
-              >
-                Terminer
-              </UButton>
+              <UDropdown :items="missionMenuItems(rp)" :popper="{ placement: 'bottom-end' }">
+                <UButton size="sm" variant="soft" color="gray" icon="i-heroicons-ellipsis-horizontal" aria-label="Autres actions pour ce PDV" />
+              </UDropdown>
             </template>
           </div>
         </div>
@@ -258,6 +246,22 @@ function pdvStatusLabel(s: string) {
 function hasObjectifs(rp: RoutingPDV) {
   const o = rp.objectifs
   return o && (o.releve_stock || o.encaissement || o.photos || o.merchandising || o.prospection || o.custom)
+}
+
+function missionMenuItems(rp: RoutingPDV) {
+  if (rp.status === 'pending') {
+    return [[{
+      label: 'Passer ce PDV',
+      icon: 'i-heroicons-forward',
+      click: () => handleSkip(rp),
+    }]]
+  }
+
+  return [[{
+    label: 'Terminer directement',
+    icon: 'i-heroicons-check',
+    click: () => handleCompleteDirect(rp),
+  }]]
 }
 
 function formatTime(ts: string) {

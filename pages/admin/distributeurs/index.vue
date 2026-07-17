@@ -1,5 +1,11 @@
 <template>
   <div class="space-y-6">
+    <AdminPageHeader
+      title="Distributeurs"
+      description="Chaque distributeur regroupe les visites et les PDV des territoires qui lui sont rattachés."
+      eyebrow="Domaine PDV"
+    />
+
     <div class="admin-toolbar flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <UInput
         v-model="search"

@@ -2,50 +2,69 @@
   <div class="mobile-page">
     <!-- Search & Filters -->
     <div class="p-4 space-y-3">
-      <UInput
-        v-model="search"
-        icon="i-heroicons-magnifying-glass"
-        placeholder="Rechercher un PDV..."
-        size="lg"
-        class="w-full"
-        aria-label="Rechercher un point de vente"
-      />
-
-      <!-- Sort toggle: proximity vs alphabetical -->
       <div class="flex items-center gap-2">
+        <UInput
+          v-model="search"
+          icon="i-heroicons-magnifying-glass"
+          placeholder="Rechercher un PDV..."
+          size="lg"
+          class="min-w-0 flex-1"
+          aria-label="Rechercher un point de vente"
+        />
+        <UButton
+          variant="soft"
+          color="gray"
+          icon="i-heroicons-adjustments-horizontal"
+          size="lg"
+          :aria-label="showFilters ? 'Masquer les filtres' : 'Afficher les filtres'"
+          :aria-pressed="showFilters"
+          @click="showFilters = !showFilters"
+        >
+          <span class="hidden sm:inline">Filtres</span>
+          <span v-if="activeFilterCount" class="rounded-full bg-fc-red px-1.5 py-0.5 text-[10px] font-bold text-white">{{ activeFilterCount }}</span>
+        </UButton>
+      </div>
+
+      <div class="flex items-center justify-between gap-3 text-xs text-gray-500 dark:text-gray-400">
+        <span>{{ filteredPDV.length }} sur {{ totalFilteredPDV }} PDV</span>
+        <span v-if="sortByProximity && !userPosition" class="text-amber-600 dark:text-amber-300">
+          <UIcon name="i-heroicons-exclamation-triangle" class="mr-0.5 inline h-3 w-3" /> GPS indisponible
+        </span>
+        <span v-else-if="sortByProximity && isLocating" class="animate-pulse">Localisation…</span>
+      </div>
+
+      <div v-if="showFilters" class="rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-xs font-semibold text-gray-700 dark:text-gray-200">Trier et filtrer</span>
+          <UButton v-if="activeFilterCount" variant="ghost" size="xs" @click="resetFilters">Réinitialiser</UButton>
+        </div>
+        <!-- Sort toggle: proximity vs alphabetical -->
         <button
           type="button"
-          class="touch-target flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition-colors"
-          :class="sortByProximity ? 'bg-fc-red text-white' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'"
+          class="mt-3 flex min-h-10 w-full items-center justify-between rounded-xl border px-3 text-left text-xs font-semibold transition-colors"
+          :class="sortByProximity ? 'border-red-100 bg-red-50 text-fc-red dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200' : 'border-gray-200 bg-gray-50 text-gray-700 dark:border-gray-700 dark:bg-gray-700/60 dark:text-gray-300'"
           :aria-pressed="sortByProximity"
           @click="sortByProximity = !sortByProximity"
         >
-          <UIcon name="i-heroicons-map-pin" class="w-3.5 h-3.5" />
-          {{ sortByProximity ? 'Tri par proximité' : 'Tri alphabétique' }}
+          <span class="flex items-center gap-2"><UIcon name="i-heroicons-map-pin" class="h-4 w-4" />{{ sortByProximity ? 'Tri par proximité' : 'Tri alphabétique' }}</span>
+          <UIcon name="i-heroicons-chevron-down" class="h-4 w-4" aria-hidden="true" />
         </button>
-        <span v-if="sortByProximity && !userPosition" class="text-xs text-amber-500">
-          <UIcon name="i-heroicons-exclamation-triangle" class="w-3 h-3 inline" />
-          GPS indisponible
-        </span>
-        <span v-if="sortByProximity && isLocating" class="text-xs text-gray-400 animate-pulse">
-          Localisation…
-        </span>
-      </div>
 
-      <div class="flex gap-2 overflow-x-auto pb-1" aria-label="Filtrer par zone">
-        <button
-          v-for="zone in zones"
-          :key="zone"
-          type="button"
-          class="min-h-9 shrink-0 rounded-full px-3 text-xs font-semibold transition-colors"
-          :class="selectedZone === zone
-            ? 'bg-fc-red text-white'
-            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'"
-          :aria-pressed="selectedZone === zone"
-          @click="selectedZone = selectedZone === zone ? '' : zone"
-        >
-          {{ zone }}
-        </button>
+        <div class="mt-3 flex gap-2 overflow-x-auto pb-1" aria-label="Filtrer par zone">
+          <button
+            v-for="zone in zones"
+            :key="zone"
+            type="button"
+            class="min-h-9 shrink-0 rounded-full px-3 text-xs font-semibold transition-colors"
+            :class="selectedZone === zone
+              ? 'bg-fc-red text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'"
+            :aria-pressed="selectedZone === zone"
+            @click="selectedZone = selectedZone === zone ? '' : zone"
+          >
+            {{ zone }}
+          </button>
+        </div>
       </div>
 
       <UButton
@@ -111,6 +130,17 @@
           </NuxtLink>
         </div>
       </article>
+
+      <UButton
+        v-if="hasMore"
+        block
+        variant="soft"
+        color="gray"
+        size="sm"
+        @click="visibleLimit += 50"
+      >
+        Afficher les {{ Math.min(50, totalFilteredPDV - filteredPDV.length) }} suivants
+      </UButton>
     </div>
 
     <div v-else class="px-4 py-14 text-center">
@@ -143,6 +173,8 @@ const search = ref('')
 const selectedZone = ref('')
 const sortByProximity = ref(true)
 const showCreatePDV = ref(false)
+const showFilters = ref(false)
+const visibleLimit = ref(50)
 const loading = ref(true)
 
 const allPDV = ref<any[]>([])
@@ -150,6 +182,7 @@ const zones = computed(() => [...new Set(allPDV.value.map(p => p.zone).filter(Bo
 const canCreatePDV = computed(() => authStore.profile?.role === 'merchandiser')
 
 const userPosition = computed(() => currentPosition.value)
+const activeFilterCount = computed(() => Number(Boolean(selectedZone.value)) + Number(!sortByProximity.value))
 
 /**
  * Calcul haversine de distance en mètres
@@ -186,7 +219,7 @@ function handlePDVCreated(pdv: PDV) {
   search.value = pdv.nom_pdv || ''
 }
 
-const filteredPDV = computed(() => {
+function getFilteredPDV() {
   let list = allPDV.value
 
   // Filtrage par recherche
@@ -216,7 +249,21 @@ const filteredPDV = computed(() => {
     list.sort((a, b) => (a.nom_pdv || '').localeCompare(b.nom_pdv || ''))
   }
 
-  return list.slice(0, 50)
+  return list
+}
+
+const totalFilteredPDV = computed(() => getFilteredPDV().length)
+const filteredPDV = computed(() => getFilteredPDV().slice(0, visibleLimit.value))
+const hasMore = computed(() => filteredPDV.value.length < totalFilteredPDV.value)
+
+function resetFilters() {
+  selectedZone.value = ''
+  sortByProximity.value = true
+  visibleLimit.value = 50
+}
+
+watch([search, selectedZone, sortByProximity], () => {
+  visibleLimit.value = 50
 })
 
 onMounted(async () => {

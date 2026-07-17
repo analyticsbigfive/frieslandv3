@@ -1,13 +1,10 @@
 <template>
   <div class="space-y-5">
-    <div class="flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Perfect Store — liste par niveau</h1>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Un point de vente par ligne, avec le niveau obtenu à sa dernière visite scorée.
-        </p>
-      </div>
-    </div>
+    <AdminPageHeader
+      title="Perfect Store — liste par niveau"
+      description="Un point de vente par ligne, avec le niveau obtenu à sa dernière visite scorée."
+      eyebrow="Perfect Store"
+    />
 
     <AdminListToolbar
       :search="search"
@@ -64,8 +61,10 @@
               v-for="row in items"
               v-else
               :key="row.pdv_id"
-              class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50"
+              class="cursor-pointer hover:bg-gray-50 focus-visible:bg-gray-50 dark:hover:bg-gray-700/50 dark:focus-visible:bg-gray-700/50"
+              tabindex="0"
               @click="openDetail(row)"
+              @keydown.enter="openDetail(row)"
             >
               <td class="px-4 py-2.5">
                 <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ row.nom_pdv || row.pdv_id }}</p>
@@ -87,7 +86,12 @@
               </td>
             </tr>
             <tr v-if="!loading && !items.length">
-              <td colspan="8" class="px-4 py-10 text-center text-sm text-gray-400">Aucun magasin pour ce filtre.</td>
+              <td colspan="8" class="px-4 py-10 text-center text-sm text-gray-400">
+                <p>Aucun magasin pour ce filtre.</p>
+                <UButton class="mt-3" size="xs" variant="outline" icon="i-heroicons-arrow-path" @click="resetListFilters">
+                  Réinitialiser
+                </UButton>
+              </td>
             </tr>
           </tbody>
         </table>

@@ -1,5 +1,11 @@
 <template>
   <div class="space-y-6">
+    <AdminPageHeader
+      title="Visites"
+      description="Consultez les relevés, les résultats Perfect Store et le détail de chaque visite."
+      eyebrow="Domaine visites"
+    />
+
     <AdminListToolbar
       :result-count="total"
       result-label="visite(s)"
@@ -138,6 +144,10 @@
       <div v-if="!loading && !visites.length" class="px-6 py-14 text-center">
         <UIcon name="i-heroicons-clipboard-document-list" class="mx-auto h-10 w-10 text-slate-300" />
         <p class="mt-3 text-sm font-medium text-slate-500">Aucune visite trouvée</p>
+        <p class="mt-1 text-xs text-slate-400">Modifiez les critères ou réinitialisez les filtres.</p>
+        <UButton class="mt-4" size="xs" variant="outline" icon="i-heroicons-arrow-path" @click="resetFilters">
+          Réinitialiser
+        </UButton>
       </div>
 
       <div v-if="loading" class="space-y-2 px-5 py-6">

@@ -52,7 +52,7 @@
             class="absolute inset-y-2 left-0 w-1 rounded-r-full bg-fc-red"
             aria-hidden="true"
           />
-          <component :is="item.icon" class="h-5 w-5 flex-shrink-0" :class="isActive(item.to) ? 'text-fc-red' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200'" />
+          <component :is="item.icon" class="h-5 w-5 flex-shrink-0" :class="isActive(item.to, item.activePaths) ? 'text-fc-red' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200'" />
           <span v-if="!collapsed" class="truncate">{{ item.label }}</span>
           <span
             v-if="item.badge && !collapsed"

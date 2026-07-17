@@ -1,6 +1,10 @@
 <template>
   <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">ACTIONS</h1>
+    <AdminPageHeader
+      title="Actions"
+      description="Suivez les actions déclarées et leur taux de réalisation par période."
+      eyebrow="Domaine actions"
+    />
 
     <DashboardFilters
       v-model="dashboard.filters.value"

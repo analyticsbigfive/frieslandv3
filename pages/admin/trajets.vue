@@ -7,6 +7,26 @@
         <UInput v-model="selectedDate" type="date" size="xs" class="w-32" @update:model-value="loadPositions" />
       </div>
 
+      <!-- Jours réellement tracés : évite de chercher une tournée un jour sans données. -->
+      <div v-if="activityDates.length" class="border-b border-gray-100 p-3 dark:border-gray-700">
+        <p class="mb-1.5 text-[11px] text-gray-400">
+          {{ selectedUser ? 'Jours tracés pour ce commercial' : 'Jours tracés (30 derniers jours)' }}
+        </p>
+        <div class="flex flex-wrap gap-1">
+          <button
+            v-for="day in activityDates"
+            :key="day.date"
+            class="rounded px-1.5 py-0.5 text-[11px] font-medium transition-colors"
+            :class="day.date === selectedDate
+              ? 'bg-fc-red text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'"
+            @click="goToDate(day.date)"
+          >
+            {{ day.label }}
+          </button>
+        </div>
+      </div>
+
       <div v-if="loading" class="p-4 text-sm text-gray-400">Chargement…</div>
       <ul v-else class="flex-1 divide-y divide-gray-100 overflow-auto dark:divide-gray-700">
         <li
@@ -83,9 +103,105 @@
         <span v-if="searchInfo" class="text-xs" :class="searchFound ? 'text-gray-600 dark:text-gray-300' : 'text-amber-600'">{{ searchInfo }}</span>
       </div>
 
-      <ClientOnly>
-        <div ref="mapContainer" class="w-full flex-1" />
-      </ClientOnly>
+      <!-- Fiche journée du commercial sélectionné -->
+      <div v-if="dayFiche" class="flex flex-wrap items-stretch gap-2 border-b border-gray-100 p-2 dark:border-gray-700">
+        <div class="flex flex-col justify-center pr-2">
+          <span class="text-sm font-semibold text-gray-800 dark:text-gray-100">{{ dayFiche.nom }}</span>
+          <span class="text-[11px] text-gray-400">{{ formatDay(selectedDate) }}</span>
+        </div>
+        <div v-if="dayFiche.noGps" class="flex items-center gap-1.5 rounded-lg bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-700 dark:bg-orange-900/20 dark:text-orange-300">
+          <UIcon name="i-heroicons-signal-slash" class="h-4 w-4" />Suivi GPS non démarré ce jour
+        </div>
+        <template v-else>
+          <div class="rounded-lg bg-gray-50 px-2.5 py-1 text-center dark:bg-gray-700/50">
+            <p class="text-sm font-semibold tabular-nums text-gray-800 dark:text-gray-100">{{ dayFiche.firstLabel }} → {{ dayFiche.lastLabel }}</p>
+            <p class="text-[10px] text-gray-400">amplitude</p>
+          </div>
+          <div class="rounded-lg bg-gray-50 px-2.5 py-1 text-center dark:bg-gray-700/50">
+            <p class="text-sm font-semibold tabular-nums text-gray-800 dark:text-gray-100">{{ dayFiche.durationLabel }}</p>
+            <p class="text-[10px] text-gray-400">terrain</p>
+          </div>
+          <div class="rounded-lg bg-gray-50 px-2.5 py-1 text-center dark:bg-gray-700/50">
+            <p class="text-sm font-semibold tabular-nums text-gray-800 dark:text-gray-100">{{ dayFiche.km }} km</p>
+            <p class="text-[10px] text-gray-400">distance</p>
+          </div>
+        </template>
+        <div class="rounded-lg bg-blue-50 px-2.5 py-1 text-center dark:bg-blue-900/20">
+          <p class="text-sm font-semibold tabular-nums text-blue-700 dark:text-blue-300">{{ dayFiche.validated }}<span v-if="dayFiche.offGeofence" class="text-amber-600 dark:text-amber-400">+{{ dayFiche.offGeofence }}</span> / {{ dayFiche.visitCount }}</p>
+          <p class="text-[10px] text-gray-400">visites{{ dayFiche.offGeofence ? ' · hors géof.' : '' }}</p>
+        </div>
+      </div>
+
+      <div class="relative min-h-0 flex-1">
+        <ClientOnly>
+          <div ref="mapContainer" class="h-full w-full" />
+        </ClientOnly>
+
+        <!-- Légende : rend la carte lisible sans deviner les codes couleur. -->
+        <div
+          v-if="!emptyState"
+          class="pointer-events-none absolute bottom-3 left-3 z-[500] rounded-lg border border-gray-200 bg-white/90 px-2.5 py-2 text-[11px] shadow backdrop-blur dark:border-gray-600 dark:bg-gray-800/90"
+        >
+          <div class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full" style="background:#0E9F6E" />Départ</div>
+          <div class="mt-1 flex items-center gap-1.5"><span class="h-0.5 w-3.5" style="background:#C8102E" />Trajet GPS</div>
+          <div class="mt-1 flex items-center gap-1.5"><span class="h-2.5 w-2.5" style="background:#003DA5;transform:rotate(45deg)" />Visite PDV</div>
+          <div class="mt-1 flex items-center gap-1.5"><span class="h-2.5 w-2.5" style="background:#D97706;transform:rotate(45deg)" />Visite hors géofence</div>
+        </div>
+
+        <!-- Navigation jour précédent / suivant + pagination des jours tracés. -->
+        <div
+          v-if="activityDays.length"
+          class="absolute bottom-3 left-1/2 z-[500] flex -translate-x-1/2 items-center gap-1 rounded-full border border-gray-200 bg-white/95 p-1 shadow-lg backdrop-blur dark:border-gray-600 dark:bg-gray-800/95"
+        >
+          <UButton
+            icon="i-heroicons-chevron-left"
+            size="xs"
+            color="gray"
+            variant="ghost"
+            :disabled="!hasPrevDay"
+            aria-label="Jour précédent"
+            @click="stepDay(-1)"
+          />
+          <div class="min-w-[104px] px-1 text-center">
+            <p class="text-xs font-semibold tabular-nums text-gray-800 dark:text-gray-100">{{ formatDay(selectedDate) }}</p>
+            <p class="text-[10px] text-gray-400">
+              <template v-if="activityIndex >= 0">jour {{ activityDays.length - activityIndex }} / {{ activityDays.length }}</template>
+              <template v-else>hors jours tracés</template>
+            </p>
+          </div>
+          <UButton
+            icon="i-heroicons-chevron-right"
+            size="xs"
+            color="gray"
+            variant="ghost"
+            :disabled="!hasNextDay"
+            aria-label="Jour suivant"
+            @click="stepDay(1)"
+          />
+        </div>
+
+        <!-- Sans données, la carte reste figée sur la vue précédente : on le dit explicitement. -->
+        <div
+          v-if="emptyState"
+          class="pointer-events-none absolute inset-0 z-[500] flex items-center justify-center p-4"
+        >
+          <div class="pointer-events-auto max-w-sm rounded-xl border border-gray-200 bg-white/95 p-4 text-center shadow-lg backdrop-blur dark:border-gray-600 dark:bg-gray-800/95">
+            <UIcon :name="emptyState.icon" class="mx-auto h-8 w-8 text-gray-300 dark:text-gray-500" />
+            <p class="mt-2 text-sm font-semibold text-gray-700 dark:text-gray-200">{{ emptyState.title }}</p>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ emptyState.detail }}</p>
+            <UButton
+              v-if="emptyState.suggestDate"
+              size="xs"
+              color="red"
+              variant="soft"
+              class="mt-3"
+              @click="goToDate(emptyState.suggestDate)"
+            >
+              Voir le {{ formatDay(emptyState.suggestDate) }}
+            </UButton>
+          </div>
+        </div>
+      </div>
 
       <!-- Barre de rejeu temporel -->
       <div v-if="timeRange" class="flex items-center gap-3 border-t border-gray-100 p-3 dark:border-gray-700">
@@ -138,7 +254,18 @@ interface RepSummary {
 const supabase = useSupabaseClient()
 
 const mapContainer = ref<HTMLElement | null>(null)
+interface VisitMarker {
+  user_id: string
+  pdv_id: string | null
+  nom_pdv: string
+  lat: number
+  lng: number
+  date_visite: string
+  geofence_validated: boolean | null
+}
+
 const allPoints = ref<TrajetPoint[]>([])
+const allVisits = ref<VisitMarker[]>([])
 const commerciaux = ref<{ id: string, nom: string | null, email: string | null }[]>([])
 const visitCountByUser = ref<Record<string, number>>({})
 const selectedDate = ref(new Date().toISOString().slice(0, 10))
@@ -164,6 +291,10 @@ const radiusOptions = [
 interface PdvGeo { pdv_id: string, nom_pdv: string, lat: number, lng: number }
 const allPdv = ref<PdvGeo[]>([])
 
+// Jours ayant au moins un point sur les 30 derniers jours, par commercial.
+const activityByUser = ref<Record<string, string[]>>({})
+const activityAll = ref<string[]>([])
+
 let map: any = null
 let trailGroup: any = null
 let searchGroup: any = null
@@ -177,6 +308,11 @@ const isToday = computed(() => selectedDate.value === new Date().toISOString().s
 const filteredPoints = computed(() => {
   if (!selectedUser.value) return allPoints.value
   return allPoints.value.filter(p => p.user_id === selectedUser.value)
+})
+
+const filteredVisits = computed(() => {
+  if (!selectedUser.value) return allVisits.value
+  return allVisits.value.filter(v => v.user_id === selectedUser.value)
 })
 
 const tournees = computed(() => {
@@ -252,11 +388,18 @@ const reps = computed<RepSummary[]>(() => {
     const nom = profile.nom || profile.email || profile.id.slice(0, 8)
     const alerts: RepSummary['alerts'] = []
 
+    const visitCount = visitCountByUser.value[profile.id] ?? 0
+
     if (points.length === 0) {
-      if (isToday.value) {
+      // Visites saisies mais zéro point GPS = suivi jamais démarré sur le
+      // téléphone (permission « toujours » refusée), pas une absence terrain.
+      if (visitCount > 0) {
+        alerts.push({ kind: 'no-gps', label: 'GPS non démarré', icon: 'i-heroicons-signal-slash', class: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' })
+      }
+      else if (isToday.value) {
         alerts.push({ kind: 'no-tournee', label: 'Pas de tournée', icon: 'i-heroicons-no-symbol', class: 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300' })
       }
-      return { userId: profile.id, nom, pointCount: 0, km: 0, durationLabel: '—', visitCount: visitCountByUser.value[profile.id] ?? 0, lastAtMs: null, statusLabel: isToday.value ? 'inactif' : '—', live: false, alerts }
+      return { userId: profile.id, nom, pointCount: 0, km: 0, durationLabel: '—', visitCount, lastAtMs: null, statusLabel: visitCount > 0 ? `${visitCount} visite(s), sans GPS` : (isToday.value ? 'inactif' : '—'), live: false, alerts }
     }
 
     const first = points[0]
@@ -280,7 +423,7 @@ const reps = computed<RepSummary[]>(() => {
       pointCount: points.length,
       km: trailDistance(points) / 1000,
       durationLabel: durationLabel(durMs),
-      visitCount: visitCountByUser.value[profile.id] ?? 0,
+      visitCount,
       lastAtMs,
       statusLabel: live ? 'en tournée' : timeAgo(lastAtMs),
       live,
@@ -295,9 +438,106 @@ const reps = computed<RepSummary[]>(() => {
   })
 })
 
+// Fiche synthèse de la journée du commercial sélectionné : première/dernière
+// position, temps terrain, distance, et qualité des visites (géofence).
+const dayFiche = computed(() => {
+  if (!selectedUser.value) return null
+
+  const pts = filteredPoints.value
+    .slice()
+    .sort((a, b) => new Date(a.captured_at).getTime() - new Date(b.captured_at).getTime())
+  const visits = filteredVisits.value
+  if (pts.length === 0 && visits.length === 0) return null
+
+  const validated = visits.filter(v => v.geofence_validated !== false).length
+  const first = pts[0]
+  const last = pts[pts.length - 1]
+
+  return {
+    nom: selectedRepName.value,
+    firstLabel: first ? formatTime(first.captured_at) : '—',
+    lastLabel: last ? formatTime(last.captured_at) : '—',
+    durationLabel: first && last
+      ? durationLabel(new Date(last.captured_at).getTime() - new Date(first.captured_at).getTime())
+      : '—',
+    km: pts.length > 1 ? (trailDistance(pts) / 1000).toFixed(1) : '0.0',
+    pointCount: pts.length,
+    visitCount: visits.length,
+    validated,
+    offGeofence: visits.length - validated,
+    noGps: pts.length === 0 && visits.length > 0,
+  }
+})
+
 const searchUserOptions = computed(() =>
   commerciaux.value.map(c => ({ value: c.id, label: c.nom || c.email || c.id.slice(0, 8) })),
 )
+
+function formatDay(iso: string): string {
+  return new Date(`${iso}T12:00:00Z`).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
+}
+
+const activityDays = computed<string[]>(() =>
+  selectedUser.value
+    ? (activityByUser.value[selectedUser.value] ?? [])
+    : activityAll.value,
+)
+
+const activityDates = computed(() =>
+  activityDays.value.map(date => ({ date, label: formatDay(date) })),
+)
+
+// Position de la date courante dans les jours tracés (triés du + récent au +
+// ancien). -1 si la date sélectionnée n'a aucune donnée.
+const activityIndex = computed(() => activityDays.value.indexOf(selectedDate.value))
+
+// Précédent = jour tracé plus ancien, suivant = plus récent.
+const hasPrevDay = computed(() => activityIndex.value >= 0 && activityIndex.value < activityDays.value.length - 1)
+const hasNextDay = computed(() => activityIndex.value > 0)
+
+function stepDay(dir: -1 | 1) {
+  const days = activityDays.value
+  if (days.length === 0) return
+  const idx = activityIndex.value
+  // Hors liste : on entre par l'extrémité la plus proche.
+  const target = idx < 0 ? days[0] : days[idx - dir]
+  if (target) goToDate(target)
+}
+
+const selectedRepName = computed(() => {
+  if (!selectedUser.value) return ''
+  const rep = commerciaux.value.find(c => c.id === selectedUser.value)
+  return rep?.nom || rep?.email || 'ce commercial'
+})
+
+// Distingue « rien ce jour-là » de « rien du tout » : sans ça, la carte reste
+// sur la vue précédente et le trajet manquant passe pour un bug d'affichage.
+const emptyState = computed(() => {
+  if (loading.value || filteredPoints.value.length > 0) return null
+
+  const days = activityDates.value
+  const suggestDate = days.find(d => d.date !== selectedDate.value)?.date
+
+  if (selectedUser.value) {
+    return {
+      icon: 'i-heroicons-map',
+      title: `Aucune position pour ${selectedRepName.value}`,
+      detail: days.length
+        ? `Rien d'enregistré le ${formatDay(selectedDate.value)}. Jours tracés : ${days.map(d => d.label).join(', ')}.`
+        : `Aucun point GPS sur les 30 derniers jours — le suivi de tournée n'a probablement jamais démarré sur son téléphone.`,
+      suggestDate,
+    }
+  }
+
+  return {
+    icon: 'i-heroicons-signal-slash',
+    title: 'Aucune tournée ce jour',
+    detail: days.length
+      ? `Aucun point GPS le ${formatDay(selectedDate.value)}. Jours tracés : ${days.map(d => d.label).join(', ')}.`
+      : 'Aucun point GPS sur les 30 derniers jours.',
+    suggestDate,
+  }
+})
 
 function statusDotClass(rep: RepSummary): string {
   if (rep.live) return 'bg-emerald-500 animate-pulse'
@@ -311,8 +551,36 @@ function statusColorForUser(userId: string): string {
   return PALETTE[(idx < 0 ? 0 : idx) % PALETTE.length]
 }
 
+// Jours ayant au moins un point sur 30 jours : alimente les raccourcis et
+// permet de dire « ce jour est vide » plutôt que de laisser la carte muette.
+async function loadActivityDates() {
+  const since = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10)
+  const { data, error } = await supabase
+    .from('position_tournee')
+    .select('user_id, captured_at')
+    .gte('captured_at', `${since}T00:00:00Z`)
+    .limit(50000)
+
+  if (error) return
+
+  const perUser: Record<string, Set<string>> = {}
+  const all = new Set<string>()
+  for (const row of (data ?? []) as { user_id: string, captured_at: string }[]) {
+    const day = row.captured_at.slice(0, 10)
+    all.add(day)
+    ;(perUser[row.user_id] ??= new Set()).add(day)
+  }
+
+  const desc = (a: string, b: string) => (a < b ? 1 : -1)
+  activityAll.value = [...all].sort(desc)
+  activityByUser.value = Object.fromEntries(
+    Object.entries(perUser).map(([id, days]) => [id, [...days].sort(desc)]),
+  )
+}
+
 async function loadPositions() {
   loading.value = true
+  resetSearchLayer()
   const dayStart = `${selectedDate.value}T00:00:00Z`
   const dayEnd = `${selectedDate.value}T23:59:59.999Z`
   try {
@@ -325,7 +593,7 @@ async function loadPositions() {
         .limit(10000),
       supabase
         .from('visites')
-        .select('user_id')
+        .select('user_id, pdv_id, date_visite, geolocation_lat, geolocation_lng, geofence_validated')
         .gte('date_visite', dayStart).lt('date_visite', dayEnd)
         .limit(10000),
     ])
@@ -333,15 +601,30 @@ async function loadPositions() {
     if (posRes.error) throw posRes.error
     allPoints.value = (posRes.data ?? []) as unknown as TrajetPoint[]
 
+    const pdvNameById = new Map(allPdv.value.map(p => [p.pdv_id, p.nom_pdv]))
     const counts: Record<string, number> = {}
-    for (const row of (visitRes.data ?? []) as { user_id: string }[]) {
+    const visits: VisitMarker[] = []
+    for (const row of (visitRes.data ?? []) as any[]) {
       if (row.user_id) counts[row.user_id] = (counts[row.user_id] ?? 0) + 1
+      if (row.geolocation_lat && row.geolocation_lng) {
+        visits.push({
+          user_id: row.user_id,
+          pdv_id: row.pdv_id,
+          nom_pdv: pdvNameById.get(row.pdv_id) || row.pdv_id || 'PDV',
+          lat: row.geolocation_lat,
+          lng: row.geolocation_lng,
+          date_visite: row.date_visite,
+          geofence_validated: row.geofence_validated,
+        })
+      }
     }
     visitCountByUser.value = counts
+    allVisits.value = visits
   }
   catch (err) {
     console.error('Erreur chargement positions:', err)
     allPoints.value = []
+    allVisits.value = []
     visitCountByUser.value = {}
   }
   finally {
@@ -388,7 +671,9 @@ function locateAtTime() {
 
   searchGroup.clearLayers()
 
-  const target = new Date(`${selectedDate.value}T${searchTime.value}:00`).getTime()
+  // UTC comme la fenêtre de chargement : sinon le fuseau du navigateur admin
+  // décale l'heure cherchée par rapport aux points interrogés.
+  const target = new Date(`${selectedDate.value}T${searchTime.value}:00Z`).getTime()
   const userPoints = allPoints.value
     .filter(p => p.user_id === searchUser.value)
     .map(p => ({ ...p, t: new Date(p.captured_at).getTime() }))
@@ -435,12 +720,23 @@ function locateAtTime() {
   map.setView([nearest.lat, nearest.lng], searchRadius.value <= 500 ? 16 : 15)
 }
 
-function clearSearch() {
+// Les repères d'une recherche précédente survivaient à un changement de date
+// ou de commercial et se lisaient comme la position du jour affiché.
+function resetSearchLayer() {
   searchGroup?.clearLayers()
   searchInfo.value = ''
   searchFound.value = false
+}
+
+function clearSearch() {
+  resetSearchLayer()
   searchUser.value = ''
   searchTime.value = ''
+}
+
+function goToDate(date: string) {
+  selectedDate.value = date
+  void loadPositions()
 }
 
 function resetCursor() {
@@ -504,6 +800,27 @@ function drawTrails() {
     })
   })
 
+  // Marqueurs de visite PDV : donne le sens métier au trajet (« pourquoi il
+  // était là »). Étoile = visite validée par géofence, sinon losange ambre.
+  filteredVisits.value
+    .filter(v => new Date(v.date_visite).getTime() <= cursor)
+    .forEach((visit) => {
+      const validated = visit.geofence_validated !== false
+      const color = validated ? '#003DA5' : '#D97706'
+      const icon = L.divIcon({
+        className: 'trajet-visit-marker',
+        html: `<div style="width:16px;height:16px;border-radius:4px;transform:rotate(45deg);background:${color};border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div>`,
+        iconSize: [16, 16],
+        iconAnchor: [8, 8],
+      })
+      L.marker([visit.lat, visit.lng], { icon })
+        .bindTooltip(
+          `<b>${visit.nom_pdv}</b><br>Visite à ${formatTime(visit.date_visite)}${validated ? '' : '<br><span style="color:#D97706">hors géofence</span>'}`,
+          { direction: 'top', offset: [0, -6] },
+        )
+        .addTo(trailGroup)
+    })
+
   const bounds = trailGroup.getBounds?.()
   if (bounds?.isValid?.()) {
     map.fitBounds(bounds, { padding: [30, 30] })
@@ -512,6 +829,7 @@ function drawTrails() {
 
 function selectRep(userId: string) {
   selectedUser.value = userId
+  resetSearchLayer()
   resetCursor()
   drawTrails()
 }
@@ -566,7 +884,7 @@ async function initMap() {
   trailGroup = L.featureGroup().addTo(map)
   searchGroup = L.layerGroup().addTo(map)
 
-  await Promise.all([loadCommerciaux(), loadPdv()])
+  await Promise.all([loadCommerciaux(), loadPdv(), loadActivityDates()])
   await loadPositions()
 }
 

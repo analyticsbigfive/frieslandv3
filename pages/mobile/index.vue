@@ -17,33 +17,51 @@
       </div>
     </Transition>
 
-    <!-- Mini Dashboard -->
+    <!-- Today's context and primary action -->
     <div class="px-4 pt-3 pb-2">
-      <section class="mobile-card p-4" aria-label="Progression des visites du jour">
-        <div class="flex items-center justify-between mb-2">
+      <section class="mobile-card p-3" aria-label="Progression des visites du jour">
+        <div class="flex items-center justify-between gap-3">
           <div>
-            <p class="text-xs text-gray-400 uppercase tracking-wide">Aujourd'hui</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ todayCount }}<span class="text-sm font-normal text-gray-400"> / {{ dailyTarget }} visites</span></p>
+            <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Aujourd'hui</p>
+            <p class="text-xl font-bold tabular-nums text-gray-900 dark:text-gray-100">{{ todayCount }}<span class="text-sm font-normal text-gray-400"> / {{ dailyTarget }} visites</span></p>
           </div>
-          <div class="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center">
-            <UIcon name="i-heroicons-clipboard-document-check" class="w-6 h-6 text-fc-red" />
-          </div>
+          <UButton
+            size="sm"
+            icon="i-heroicons-plus"
+            class="shrink-0 bg-fc-red"
+            @click="navigateTo('/mobile/visites/new')"
+          >
+            Nouvelle visite
+          </UButton>
         </div>
-        <div class="w-full bg-gray-100 rounded-full h-2">
+        <div class="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
           <div
-            class="h-2 rounded-full transition-all duration-500"
+            class="h-full rounded-full transition-all duration-500"
             :class="progressPercent >= 100 ? 'bg-emerald-500' : 'bg-fc-red'"
             :style="{ width: `${Math.min(progressPercent, 100)}%` }"
           />
         </div>
-        <p class="mt-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+        <p class="mt-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">
           {{ progressPercent >= 100 ? 'Objectif atteint' : `${Math.round(progressPercent)}% de l'objectif` }}
         </p>
       </section>
 
-      <!-- Tournée GPS (app native uniquement) -->
-      <TourneeCard :visit-count="todayCount" :daily-target="dailyTarget" />
-      <TourneeMiniMap v-if="tournee.isTracking.value" />
+      <!-- Secondary terrain tracking: available without competing with the visit list. -->
+      <template v-if="tournee.isNative">
+        <button
+          type="button"
+          class="mt-2 flex min-h-10 w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-3 text-left text-xs font-semibold text-gray-700 transition hover:border-red-100 hover:bg-red-50/40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-red-900/50 dark:hover:bg-red-950/20"
+          :aria-expanded="showTourneeDetails"
+          @click="showTourneeDetails = !showTourneeDetails"
+        >
+          <span class="flex items-center gap-2"><span class="h-2 w-2 rounded-full" :class="tournee.isTracking.value ? 'bg-emerald-500 animate-pulse' : 'bg-gray-300 dark:bg-gray-600'" aria-hidden="true" /> Suivi de tournée</span>
+          <span class="flex items-center gap-1 text-gray-400"><span>{{ tournee.isTracking.value ? 'En cours' : 'Afficher' }}</span><UIcon name="i-heroicons-chevron-down" class="h-4 w-4 transition-transform" :class="showTourneeDetails ? 'rotate-180' : ''" aria-hidden="true" /></span>
+        </button>
+        <div v-if="showTourneeDetails || tournee.isTracking.value">
+          <TourneeCard :visit-count="todayCount" :daily-target="dailyTarget" />
+          <TourneeMiniMap v-if="tournee.isTracking.value" />
+        </div>
+      </template>
     </div>
 
     <!-- Search & Filter -->
@@ -62,6 +80,7 @@
         variant="ghost"
         icon="i-heroicons-funnel"
         size="sm"
+        :label="activeFilterCount ? `Filtres (${activeFilterCount})` : 'Filtres'"
         :aria-label="showFilters ? 'Masquer les filtres' : 'Afficher les filtres'"
         :aria-pressed="showFilters"
         @click="showFilters = !showFilters"
@@ -83,14 +102,21 @@
     </div>
 
     <!-- Filter panel -->
-    <div v-if="showFilters" class="px-4 pb-3 space-y-2">
-      <UFormGroup label="Date de visite">
-        <UInput v-model="dateFilter" type="date" size="sm" aria-label="Filtrer par date de visite" />
-      </UFormGroup>
+    <div v-if="showFilters" class="mx-4 mb-2 rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
+      <div class="flex items-center justify-between gap-3">
+        <UFormGroup label="Date de visite" class="min-w-0 flex-1">
+          <UInput v-model="dateFilter" type="date" size="sm" aria-label="Filtrer par date de visite" />
+        </UFormGroup>
+        <UButton v-if="dateFilter" variant="ghost" size="xs" class="mt-5 shrink-0" @click="dateFilter = ''">Réinitialiser</UButton>
+      </div>
     </div>
 
     <!-- Visites List -->
     <div class="px-4 py-2 space-y-3">
+      <div class="flex items-center justify-between gap-3 text-xs text-gray-500 dark:text-gray-400">
+        <span>{{ filteredVisites.length }} visite{{ filteredVisites.length > 1 ? 's' : '' }}</span>
+        <span v-if="isOfflineData" class="font-medium text-amber-700 dark:text-amber-300">Cache hors ligne</span>
+      </div>
       <!-- Skeleton loaders -->
       <template v-if="loading">
         <div
@@ -185,17 +211,6 @@
       </template>
     </div>
 
-    <!-- FAB: New Visit -->
-    <button
-      type="button"
-      class="fixed bottom-24 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-fc-red text-white shadow-lg transition-transform hover:bg-fc-red-600 active:scale-95"
-      aria-label="Créer une nouvelle visite"
-      @click="navigateTo('/mobile/visites/new')"
-    >
-      <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
-      </svg>
-    </button>
   </div>
 </template>
 
@@ -220,6 +235,7 @@ const refreshing = ref(false)
 const search = ref('')
 const dateFilter = ref('')
 const showFilters = ref(false)
+const showTourneeDetails = ref(false)
 const isOfflineData = ref(false)
 
 // Pull-to-refresh state
@@ -235,6 +251,8 @@ const todayCount = computed(() => {
 })
 
 const progressPercent = computed(() => (todayCount.value / dailyTarget) * 100)
+
+const activeFilterCount = computed(() => Number(Boolean(dateFilter.value)))
 
 const filteredVisites = computed(() => {
   let result = visites.value

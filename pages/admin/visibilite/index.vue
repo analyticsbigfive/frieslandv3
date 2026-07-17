@@ -1,14 +1,10 @@
 <template>
   <div class="space-y-6">
-    <!-- En-tête -->
-    <header class="space-y-1">
-      <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-fc-red">Perfect Store · Visibilité</p>
-      <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Visibilité extérieure</h1>
-      <p class="max-w-2xl text-sm text-slate-500 dark:text-slate-400">
-        Taux de présence des éléments extérieurs mesurés, issus du référentiel Perfect Store
-        (<code class="rounded bg-slate-100 px-1 py-0.5 text-[11px] dark:bg-slate-700">data.visibilite.standards</code>).
-      </p>
-    </header>
+    <AdminPageHeader
+      title="Visibilité extérieure"
+      description="Taux de présence des éléments extérieurs mesurés, issus du référentiel Perfect Store (data.visibilite.standards)."
+      eyebrow="Perfect Store · Visibilité"
+    />
 
     <DashboardFilters
       v-model="dashboard.filters.value"

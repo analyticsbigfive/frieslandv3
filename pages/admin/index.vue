@@ -1,11 +1,10 @@
 <template>
   <div class="space-y-6">
-    <div>
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Perfect Store</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-        Suivez la conformité globale et les résultats par type de magasin.
-      </p>
-    </div>
+    <AdminPageHeader
+      title="Perfect Store"
+      description="Suivez la conformité globale et les résultats par type de magasin."
+      eyebrow="Vue de synthèse"
+    />
 
     <!-- Filtres cascade Division → Territoire → Quartier + Distributeur (pilotent KPI + tableaux) -->
     <div class="admin-toolbar">

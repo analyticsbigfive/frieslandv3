@@ -1,5 +1,11 @@
 <template>
   <div class="space-y-6">
+    <AdminPageHeader
+      title="Utilisateurs"
+      description="Gérez les comptes, rôles et accès existants."
+      eyebrow="Paramètres"
+    />
+
     <!-- Header -->
     <div class="admin-toolbar flex-col items-stretch sm:flex-row sm:items-center sm:justify-between">
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center">

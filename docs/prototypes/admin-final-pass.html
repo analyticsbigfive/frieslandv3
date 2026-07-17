@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prototype — dernière passe admin</title>
+  <style>
+    :root {
+      --ink: #17231d;
+      --muted: #718078;
+      --line: #dfe8e1;
+      --paper: #f5f8f4;
+      --surface: #fff;
+      --accent: #c8102e;
+      --accent-soft: #fff1f3;
+      --blue: #245d9b;
+      --blue-soft: #edf4fd;
+      --green: #237a57;
+      --green-soft: #eaf6ef;
+      --amber: #9a641b;
+      --amber-soft: #fff7e3;
+      --shadow: 0 14px 34px rgba(35, 59, 43, .06);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; color: var(--ink); background: var(--paper); font: 14px/1.45 "Avenir Next", "Helvetica Neue", Arial, sans-serif; }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible, tr:focus-visible { outline: 3px solid rgba(200, 16, 46, .25); outline-offset: 2px; }
+    .mono, .kpi-value, td.score { font-variant-numeric: tabular-nums; }
+    .shell { min-height: 100dvh; display: grid; grid-template-columns: 224px minmax(0, 1fr); }
+    .sidebar { position: sticky; top: 0; height: 100dvh; padding: 22px 14px; border-right: 1px solid var(--line); background: #fafcf9; display: flex; flex-direction: column; gap: 28px; }
+    .brand { display: flex; align-items: center; gap: 10px; padding: 0 9px; }
+    .brand-mark { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px 10px 10px 3px; background: var(--accent); color: #fff; font-weight: 900; }
+    .brand strong { display: block; font-size: 14px; letter-spacing: -.02em; }
+    .brand small { display: block; color: var(--muted); font-size: 10px; }
+    .nav { display: grid; gap: 4px; }
+    .nav-label { padding: 0 10px 5px; color: #99a69d; font-size: 10px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+    .nav button { width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 11px; border: 0; border-radius: 9px; color: #617067; background: transparent; text-align: left; transition: background .2s, color .2s, transform .2s; }
+    .nav button:hover { color: var(--ink); background: #edf3ee; transform: translateX(2px); }
+    .nav button.active { color: var(--accent); background: var(--accent-soft); font-weight: 700; }
+    .nav-icon { width: 19px; color: currentColor; text-align: center; font-weight: 800; }
+    .sidebar-note { margin-top: auto; padding: 13px 10px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+    .main { min-width: 0; }
+    .topbar { position: sticky; top: 0; z-index: 5; min-height: 68px; padding: 14px 36px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.9); display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+    .crumb { color: var(--muted); font-size: 12px; }
+    .crumb strong { color: var(--ink); }
+    .top-actions { display: flex; align-items: center; gap: 11px; }
+    .presence { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; }
+    .presence i { width: 7px; height: 7px; border-radius: 50%; background: #38a56f; box-shadow: 0 0 0 4px var(--green-soft); }
+    .avatar { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 9px; background: var(--ink); color: #fff; font-size: 10px; font-weight: 800; }
+    .content { width: min(1420px, 100%); margin: 0 auto; padding: 34px 36px 62px; }
+    .view[hidden] { display: none; }
+    .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 22px; }
+    .eyebrow { margin: 0 0 6px; color: var(--accent); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 6px; font-size: clamp(28px, 4vw, 42px); line-height: 1; letter-spacing: -.06em; text-wrap: balance; }
+    h2 { margin-bottom: 4px; font-size: 17px; line-height: 1.15; letter-spacing: -.035em; }
+    h3 { margin-bottom: 3px; font-size: 13px; }
+    .lede { max-width: 620px; margin-bottom: 0; color: var(--muted); }
+    .head-actions, .row-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+    .button { min-height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font-size: 12px; font-weight: 700; transition: background .2s, border-color .2s, transform .2s; }
+    .button:hover { border-color: #c5d3c8; background: #fbfdfb; transform: translateY(-1px); }
+    .button:active { transform: translateY(1px) scale(.99); }
+    .button.primary { border-color: var(--accent); background: var(--accent); color: #fff; }
+    .button.primary:hover { border-color: #a50d25; background: #a50d25; }
+    .button.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+    .tabs { display: flex; gap: 20px; overflow-x: auto; margin: 0 0 20px; border-bottom: 1px solid var(--line); scrollbar-width: thin; }
+    .tabs button { position: relative; min-height: 38px; padding: 0 1px; border: 0; background: transparent; color: var(--muted); font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .tabs button:hover { color: var(--ink); }
+    .tabs button.active { color: var(--accent); }
+    .tabs button.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--accent); }
+    .filter-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; padding: 10px; border: 1px solid var(--line); border-radius: 11px; background: rgba(255,255,255,.72); }
+    .filter-bar input, .filter-bar select { min-height: 32px; padding: 0 9px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: var(--ink); font-size: 12px; }
+    .filter-bar input { min-width: 210px; }
+    .filter-bar select { min-width: 135px; }
+    .filter-bar .button { min-height: 32px; margin-left: auto; }
+    .filter-label { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; padding-top: 2px; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 24px; padding: 0 8px; border: 1px solid #e7c5cc; border-radius: 6px; background: var(--accent-soft); color: #9e1530; font-size: 11px; font-weight: 700; }
+    .chip button { padding: 0; border: 0; background: transparent; color: inherit; line-height: 1; }
+    .advanced { display: none; width: 100%; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding-top: 9px; border-top: 1px solid var(--line); }
+    .advanced.open { display: grid; }
+    .advanced label { display: grid; gap: 4px; color: var(--muted); font-size: 10px; font-weight: 800; }
+    .advanced input, .advanced select { min-height: 32px; padding: 0 8px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: var(--ink); font-size: 12px; }
+    .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 20px; }
+    .kpi { min-height: 126px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); }
+    .kpi-label { color: var(--muted); font-size: 11px; font-weight: 700; }
+    .kpi-value { margin-top: 10px; font-size: 30px; font-weight: 800; letter-spacing: -.07em; }
+    .kpi-note { margin-top: 4px; color: var(--muted); font-size: 11px; }
+    .kpi.green { border-top: 3px solid var(--green); } .kpi.blue { border-top: 3px solid var(--blue); } .kpi.amber { border-top: 3px solid var(--amber); } .kpi.red { border-top: 3px solid var(--accent); }
+    .grid-2 { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: 12px; }
+    .panel { overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); }
+    .panel-pad { padding: 18px; }
+    .panel-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; padding: 17px 18px; border-bottom: 1px solid var(--line); }
+    .panel-head p { margin-bottom: 0; color: var(--muted); font-size: 11px; }
+    .simple-list { display: grid; gap: 0; padding: 0; margin: 0; list-style: none; }
+    .simple-list li { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; border-top: 1px solid #edf2ee; }
+    .simple-list li:first-child { border-top: 0; }
+    .simple-list small { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; }
+    .simple-list strong { font-size: 12px; }
+    .score { font-weight: 800; }
+    .badge { display: inline-flex; align-items: center; min-height: 23px; padding: 0 7px; border-radius: 6px; font-size: 10px; font-weight: 800; white-space: nowrap; }
+    .badge.green { color: var(--green); background: var(--green-soft); } .badge.blue { color: var(--blue); background: var(--blue-soft); } .badge.amber { color: var(--amber); background: var(--amber-soft); } .badge.red { color: var(--accent); background: var(--accent-soft); }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; min-width: 720px; border-collapse: collapse; }
+    th { padding: 10px 16px; color: #8b998f; background: #fbfdfb; font-size: 10px; font-weight: 800; letter-spacing: .09em; text-align: left; text-transform: uppercase; white-space: nowrap; }
+    td { padding: 12px 16px; border-top: 1px solid #edf2ee; vertical-align: middle; font-size: 12px; }
+    tbody tr { cursor: pointer; transition: background .18s; }
+    tbody tr:hover { background: #fbfdfb; }
+    .pdv-name { font-weight: 800; } .pdv-meta { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; }
+    .table-action { color: var(--accent); font-size: 11px; font-weight: 800; }
+    .icon-button { width: 28px; height: 28px; display: inline-grid; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 7px; background: transparent; color: #68776d; font-weight: 800; }
+    .icon-button:hover { border-color: var(--line); background: #f3f7f3; color: var(--accent); }
+    .icon-button.danger:hover { color: var(--accent); background: var(--accent-soft); }
+    .pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+    .pagination .button { min-height: 30px; font-size: 11px; }
+    .empty { padding: 42px 20px; color: var(--muted); text-align: center; }
+    .settings-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .settings-card { min-height: 132px; padding: 16px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); color: inherit; text-align: left; transition: transform .2s, box-shadow .2s; }
+    .settings-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+    .settings-icon { width: 28px; height: 28px; display: grid; place-items: center; margin-bottom: 16px; border-radius: 7px; background: var(--accent-soft); color: var(--accent); font-weight: 800; }
+    .settings-card strong { display: block; font-size: 12px; } .settings-card small { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; }
+    .drawer-backdrop { position: fixed; inset: 0; z-index: 20; background: rgba(23,35,29,.28); opacity: 0; pointer-events: none; transition: opacity .2s; }
+    .drawer { position: fixed; top: 0; right: 0; z-index: 21; width: min(420px, 92vw); height: 100dvh; padding: 22px; overflow-y: auto; background: var(--surface); box-shadow: -18px 0 45px rgba(23,35,29,.15); transform: translateX(100%); transition: transform .24s; }
+    body.drawer-open .drawer-backdrop { opacity: 1; pointer-events: auto; } body.drawer-open .drawer { transform: translateX(0); }
+    .drawer-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+    .close { width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 7px; background: transparent; color: var(--muted); }
+    .detail-list { display: grid; gap: 12px; margin: 20px 0; } .detail-row { display: flex; justify-content: space-between; gap: 14px; padding-bottom: 10px; border-bottom: 1px solid #edf2ee; font-size: 12px; } .detail-row span { color: var(--muted); } .detail-row strong { text-align: right; }
+    .drawer-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-start; margin-top: 20px; }
+    @media (max-width: 900px) { .shell { grid-template-columns: 70px minmax(0, 1fr); } .sidebar { padding: 20px 10px; } .brand > div:last-child, .nav-label, .nav button span:not(.nav-icon), .sidebar-note { display: none; } .nav button { justify-content: center; } .content { padding: 28px 22px 50px; } .topbar { padding-inline: 22px; } .settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 650px) { .shell { display: block; } .sidebar { position: static; width: 100%; height: auto; padding: 12px 14px; flex-direction: row; align-items: center; gap: 12px; border-right: 0; border-bottom: 1px solid var(--line); } .brand { padding: 0; } .nav { display: flex; overflow-x: auto; flex: 1; } .nav-label, .sidebar-note, .nav button span:not(.nav-icon) { display: none; } .nav button { flex: 0 0 auto; width: 36px; padding: 9px; } .topbar { min-height: 58px; padding: 10px 16px; } .presence { display: none; } .content { padding: 24px 14px 42px; } .page-head { align-items: flex-start; flex-direction: column; } .head-actions { justify-content: flex-start; } .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .grid-2 { grid-template-columns: 1fr; } .advanced.open { grid-template-columns: 1fr 1fr; } .filter-bar .button { margin-left: 0; } .settings-grid { grid-template-columns: 1fr 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Navigation principale">
+      <div class="brand"><div class="brand-mark">F</div><div><strong>Friesland</strong><small>Bonnet Rouge · prototype</small></div></div>
+      <nav class="nav" id="main-nav">
+        <span class="nav-label">Travail</span>
+        <button class="active" type="button" data-view="dashboard"><span class="nav-icon">◈</span><span>Dashboard</span></button>
+        <button type="button" data-view="visites"><span class="nav-icon">✓</span><span>Visites</span></button>
+        <button type="button" data-view="pdv"><span class="nav-icon">⌂</span><span>Points de vente</span></button>
+        <button type="button" data-view="visibilite"><span class="nav-icon">⊙</span><span>Visibilité</span></button>
+        <button type="button" data-view="produits"><span class="nav-icon">▦</span><span>Produits</span></button>
+        <button type="button" data-view="parametres"><span class="nav-icon">⚙</span><span>Paramètres</span></button>
+      </nav>
+      <p class="sidebar-note">Un niveau de navigation par intention. Les détails restent dans la vue.</p>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="crumb">Administration <span aria-hidden="true">/</span> <strong id="crumb-view">Dashboard</strong></div>
+        <div class="top-actions"><span class="presence"><i></i> 3 en ligne</span><span class="avatar" aria-label="Profil administrateur">JD</span></div>
+      </header>
+
+      <div class="content">
+        <section class="view" id="view-dashboard">
+          <div class="page-head"><div><p class="eyebrow">Vue de synthèse</p><h1>Perfect Store</h1><p class="lede">Le contexte, les quatre indicateurs prioritaires et la liste à lire en premier.</p></div><div class="head-actions"><button class="button" type="button" data-export>Exporter</button><button class="button primary" type="button" data-view-link="pdv">Voir les PDV</button></div></div>
+          <nav class="tabs" aria-label="Navigation Perfect Store"><button class="active" type="button">Tableau de bord</button><button type="button">Liste par niveau</button><button type="button">Visites</button></nav>
+          <div class="filter-bar" data-filter-bar>
+            <span class="filter-label">Périmètre</span><select aria-label="Territoire"><option>Tous les territoires</option><option>Cocody 1</option><option>Yopougon 1</option></select><select aria-label="Canal"><option>Tous les canaux</option><option>General trade</option><option>Modern trade</option></select><button class="button ghost" type="button" data-toggle-advanced>Plus de filtres</button><button class="button" type="button" data-reset>Réinitialiser</button>
+            <div class="advanced"><label>Division<select><option>Toutes</option><option>Abidjan</option><option>Intérieur</option></select></label><label>Quartier<input placeholder="Tous les quartiers"></label><label>Distributeur<select><option>Tous</option><option>DYNAMIS</option></select></label><label>Type de PDV<select><option>Tous</option><option>Boutique</option><option>Supermarché</option></select></label></div>
+            <div class="chips"><span class="chip">Période : mois en cours <button type="button" aria-label="Retirer le filtre période">×</button></span><span class="chip">4 filtres actifs <button type="button" aria-label="Retirer les filtres">×</button></span></div>
+          </div>
+          <div class="kpis"><article class="kpi red"><div class="kpi-label">Performance réseau</div><div class="kpi-value">84 %</div><div class="kpi-note">18 / 21 visites conformes</div></article><article class="kpi blue"><div class="kpi-label">Couverture du mois</div><div class="kpi-value">72 %</div><div class="kpi-note">PDV distincts visités</div></article><article class="kpi green"><div class="kpi-label">Score global moyen</div><div class="kpi-value">78 %</div><div class="kpi-note">Dernière visite scorée</div></article><article class="kpi amber"><div class="kpi-label">OSA pondérée moyenne</div><div class="kpi-value">63 %</div><div class="kpi-note">Disponibilité au seuil</div></article></div>
+          <div class="grid-2"><section class="panel"><div class="panel-head"><div><h2>PDV à prioriser</h2><p>Dernière visite · périmètre courant</p></div><button class="button ghost" type="button" data-view-link="pdv">Voir la liste →</button></div><div class="table-wrap"><table><thead><tr><th>Point de vente</th><th>Niveau</th><th>Score</th><th>Action</th></tr></thead><tbody><tr tabindex="0" data-detail="Boutique Cocody Palmeraie"><td><span class="pdv-name">Boutique Cocody Palmeraie</span><span class="pdv-meta">PS-001 · PALMERAIE</span></td><td><span class="badge amber">Basic</span></td><td class="score">58 %</td><td class="table-action">Voir le détail</td></tr><tr tabindex="0" data-detail="Boutique Yopougon Wassakara"><td><span class="pdv-name">Boutique Yopougon Wassakara</span><span class="pdv-meta">PS-007 · WASSAKARA</span></td><td><span class="badge blue">Core</span></td><td class="score">71 %</td><td class="table-action">Voir le détail</td></tr></tbody></table></div></section><section class="panel panel-pad"><h2>Lecture rapide</h2><p class="lede">Les indicateurs secondaires restent accessibles sans prendre la place du premier écran.</p><ul class="simple-list"><li><span><strong>Assortiment moyen</strong><small>Références attendues présentes</small></span><span class="score">76 %</span></li><li><span><strong>Visibilité</strong><small>Critères du niveau atteint</small></span><span class="score">69 %</span></li><li><span><strong>Promotion</strong><small>Uniquement lorsque applicable</small></span><span class="badge green">À jour</span></li></ul></section></div>
+        </section>
+
+        <section class="view" id="view-pdv" hidden>
+          <div class="page-head"><div><p class="eyebrow">Domaine PDV</p><h1>Points de vente</h1><p class="lede">Une liste lisible, filtrable et actionnable sans menu secondaire.</p></div><div class="head-actions"><button class="button" type="button" data-export>Exporter</button><button class="button primary" type="button">Nouveau PDV</button></div></div>
+          <nav class="tabs" aria-label="Navigation PDV"><button class="active" type="button">Liste</button><button type="button">Répartition</button><button type="button">Évolution</button><button type="button">Distributeurs</button></nav>
+          <div class="filter-bar"><span class="filter-label">Liste</span><input id="pdv-search" type="search" placeholder="Nom, code ou adressage…" aria-label="Rechercher un PDV"><select><option>Territoire</option><option>Cocody 1</option><option>Treichville</option></select><select><option>Sous-région</option><option>Abidjan</option></select><button class="button ghost" type="button" data-toggle-advanced>Plus de filtres</button><button class="button" type="button" data-reset>Réinitialiser</button><div class="chips"><span class="chip">0 filtre actif <button type="button" aria-label="Retirer le filtre">×</button></span></div></div>
+          <section class="panel"><div class="panel-head"><div><h2>Liste des PDV</h2><p><strong id="pdv-count">4</strong> points de vente · tri par nom</p></div><span class="badge blue">Page 1 / 1</span></div><div class="table-wrap"><table id="pdv-table"><thead><tr><th>Nom</th><th>Canal</th><th>Quartier</th><th>Perfect Store</th><th>Actions</th></tr></thead><tbody><tr data-row tabindex="0" data-detail="Boutique Cocody Palmeraie"><td><span class="pdv-name">Boutique Cocody Palmeraie</span><span class="pdv-meta">PS-001</span></td><td>General trade</td><td>PALMERAIE</td><td><span class="badge amber">Basic · 58 %</span></td><td><div class="row-actions"><button class="icon-button" type="button" title="Modifier" aria-label="Modifier">✎</button><button class="icon-button" type="button" title="Voir sur la carte" aria-label="Voir sur la carte">⌖</button><button class="icon-button danger" type="button" title="Supprimer" aria-label="Supprimer">×</button></div></td></tr><tr data-row tabindex="0" data-detail="Superette Treichville Zone 3"><td><span class="pdv-name">Superette Treichville Zone 3</span><span class="pdv-meta">PS-002</span></td><td>Modern trade</td><td>ZONE 3</td><td><span class="badge blue">Core · 71 %</span></td><td><div class="row-actions"><button class="icon-button" type="button" title="Modifier" aria-label="Modifier">✎</button><button class="icon-button" type="button" title="Voir sur la carte" aria-label="Voir sur la carte">⌖</button><button class="icon-button danger" type="button" title="Supprimer" aria-label="Supprimer">×</button></div></td></tr><tr data-row tabindex="0" data-detail="Supermarché Bouaké Koko"><td><span class="pdv-name">Supermarché Bouaké Koko</span><span class="pdv-meta">PS-003</span></td><td>Modern trade</td><td>Koko</td><td><span class="badge green">VIP · 86 %</span></td><td><div class="row-actions"><button class="icon-button" type="button" title="Modifier" aria-label="Modifier">✎</button><button class="icon-button" type="button" title="Voir sur la carte" aria-label="Voir sur la carte">⌖</button><button class="icon-button danger" type="button" title="Supprimer" aria-label="Supprimer">×</button></div></td></tr><tr data-row tabindex="0" data-detail="Boutique Marcory Hibiscus"><td><span class="pdv-name">Boutique Marcory Hibiscus</span><span class="pdv-meta">PS-004</span></td><td>General trade</td><td>HIBISCUS</td><td><span class="badge red">Non scoré</span></td><td><div class="row-actions"><button class="icon-button" type="button" title="Modifier" aria-label="Modifier">✎</button><button class="icon-button" type="button" title="Voir sur la carte" aria-label="Voir sur la carte">⌖</button><button class="icon-button danger" type="button" title="Supprimer" aria-label="Supprimer">×</button></div></td></tr></tbody></table></div><div class="pagination"><span id="pdv-pagination">4 PDV · page 1 / 1</span><div class="row-actions"><button class="button" type="button" disabled>Précédent</button><button class="button" type="button" disabled>Suivant</button></div></div></section>
+        </section>
+
+        <section class="view" id="view-visites" hidden>
+          <div class="page-head"><div><p class="eyebrow">Domaine visites</p><h1>Visites</h1><p class="lede">Même ordre de lecture : périmètre, filtres, liste, détail.</p></div><div class="head-actions"><button class="button" type="button" data-export>Exporter</button><button class="button primary" type="button">Filtrer</button></div></div>
+          <nav class="tabs" aria-label="Navigation visites"><button class="active" type="button">Toutes les visites</button><button type="button">Évolution</button><button type="button">Par catégorie</button><button type="button">Commerciaux</button></nav>
+          <div class="filter-bar"><span class="filter-label">Période</span><input type="date" value="2026-07-01" aria-label="Date de début"><input type="date" value="2026-07-31" aria-label="Date de fin"><select><option>Tous les commerciaux</option><option>Démo Commercial</option></select><select><option>Tous les canaux</option><option>General trade</option><option>Modern trade</option></select><button class="button" type="button" data-reset>Réinitialiser</button></div>
+          <section class="panel"><div class="panel-head"><div><h2>Visites et résultats Perfect Store</h2><p>Les colonnes secondaires restent dans le détail de la visite.</p></div><span class="badge blue">21 visites</span></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Commercial</th><th>Point de vente</th><th>Niveau</th><th>Score</th><th>Actions</th></tr></thead><tbody><tr tabindex="0" data-detail="Visite · PS-001"><td>17 juil. 2026</td><td>Démo Commercial</td><td><span class="pdv-name">Boutique Cocody Palmeraie</span><span class="pdv-meta">PS-001</span></td><td><span class="badge amber">Basic</span></td><td class="score">58 %</td><td class="table-action">Voir le détail</td></tr><tr tabindex="0" data-detail="Visite · PS-003"><td>16 juil. 2026</td><td>Démo Commercial</td><td><span class="pdv-name">Supermarché Bouaké Koko</span><span class="pdv-meta">PS-003</span></td><td><span class="badge green">VIP</span></td><td class="score">86 %</td><td class="table-action">Voir le détail</td></tr></tbody></table></div><div class="pagination"><span>21 visites · page 1 / 2</span><div class="row-actions"><button class="button" type="button">Précédent</button><button class="button" type="button">Suivant</button></div></div></section>
+        </section>
+
+        <section class="view" id="view-visibilite" hidden>
+          <div class="page-head"><div><p class="eyebrow">Domaine visibilité</p><h1>Visibilité</h1><p class="lede">Une synthèse courte, puis les vues extérieure, intérieure et promotion.</p></div><div class="head-actions"><button class="button" type="button" data-export>Exporter</button></div></div>
+          <nav class="tabs" aria-label="Navigation visibilité"><button class="active" type="button">Synthèse</button><button type="button">Extérieure</button><button type="button">Intérieure</button><button type="button">Promotion</button><button type="button">Évolution</button></nav>
+          <div class="kpis"><article class="kpi green"><div class="kpi-label">Visibilité moyenne</div><div class="kpi-value">69 %</div><div class="kpi-note">Périmètre courant</div></article><article class="kpi blue"><div class="kpi-label">Critères intérieurs</div><div class="kpi-value">8</div><div class="kpi-note">Matrice MT existante</div></article><article class="kpi amber"><div class="kpi-label">Promotion</div><div class="kpi-value">—</div><div class="kpi-note">Selon applicabilité</div></article><article class="kpi red"><div class="kpi-label">À vérifier</div><div class="kpi-value">—</div><div class="kpi-note">Détail dans la liste</div></article></div>
+          <div class="grid-2"><section class="panel panel-pad"><h2>Filtres actifs</h2><ul class="simple-list"><li><span><strong>Canal</strong><small>Le même contrôle que dans les autres domaines</small></span><span class="badge blue">Tous</span></li><li><span><strong>Périmètre</strong><small>Territoire et quartier</small></span><span class="badge blue">Tous</span></li></ul></section><section class="panel panel-pad"><h2>Accès rapide</h2><ul class="simple-list"><li><span><strong>Visibilité extérieure</strong><small>Présence en façade et supports</small></span><button class="button ghost" type="button">Ouvrir →</button></li><li><span><strong>Visibilité intérieure</strong><small>GT / MT dans le second niveau</small></span><button class="button ghost" type="button">Ouvrir →</button></li></ul></section></div>
+        </section>
+
+        <section class="view" id="view-produits" hidden>
+          <div class="page-head"><div><p class="eyebrow">Domaine produits</p><h1>Produits</h1><p class="lede">Le récapitulatif reste la porte d’entrée ; les familles et seuils sont dans le contenu.</p></div><div class="head-actions"><button class="button" type="button" data-export>Exporter</button></div></div>
+          <nav class="tabs" aria-label="Navigation produits"><button class="active" type="button">Récapitulatif</button><button type="button">Disponibilité</button><button type="button">Inventaire SKU</button><button type="button">Seuils</button></nav>
+          <div class="kpis"><article class="kpi green"><div class="kpi-label">Disponibilité globale</div><div class="kpi-value">—</div><div class="kpi-note">Valeur du calcul existant</div></article><article class="kpi"><div class="kpi-label">EVAP</div><div class="kpi-value">—</div><div class="kpi-note">Références existantes</div></article><article class="kpi blue"><div class="kpi-label">IMP</div><div class="kpi-value">—</div><div class="kpi-note">Références existantes</div></article><article class="kpi amber"><div class="kpi-label">SCM</div><div class="kpi-value">—</div><div class="kpi-note">Références existantes</div></article></div>
+          <section class="panel panel-pad"><h2>Chemin de lecture</h2><ul class="simple-list"><li><span><strong>Disponibilité</strong><small>Quantité observée comparée au seuil existant</small></span><span class="table-action">Voir la liste →</span></li><li><span><strong>Inventaire SKU</strong><small>Détail des références et niveaux</small></span><span class="table-action">Ouvrir →</span></li><li><span><strong>Seuils</strong><small>Paramètres réservés aux rôles autorisés</small></span><span class="table-action">Paramétrer →</span></li></ul></section>
+        </section>
+
+        <section class="view" id="view-parametres" hidden>
+          <div class="page-head"><div><p class="eyebrow">Administration</p><h1>Paramètres</h1><p class="lede">Les réglages sont regroupés par objet métier, sans ajouter d’outil intermédiaire.</p></div><div class="head-actions"><button class="button" type="button">Journal des changements</button></div></div>
+          <div class="settings-grid"><button class="settings-card" type="button"><span class="settings-icon">◆</span><strong>Standards Perfect Store</strong><small>Niveaux, critères et règles existantes</small></button><button class="settings-card" type="button"><span class="settings-icon">▥</span><strong>Disponibilité</strong><small>SKU, seuils et pondérations</small></button><button class="settings-card" type="button"><span class="settings-icon">⊙</span><strong>Visibilité</strong><small>Critères extérieurs et intérieurs</small></button><button class="settings-card" type="button"><span class="settings-icon">⌘</span><strong>Référentiels</strong><small>Types, territoires et distributeurs</small></button></div>
+          <section class="panel panel-pad"><h2>État des sources</h2><ul class="simple-list"><li><span><strong>Types de PDV</strong><small>Référentiel chargé</small></span><span class="badge green">Disponible</span></li><li><span><strong>Territoires et quartiers</strong><small>Référentiel utilisé par les filtres</small></span><span class="badge green">Disponible</span></li><li><span><strong>Import / Export</strong><small>Accès conservé dans les paramètres</small></span><span class="table-action">Ouvrir →</span></li></ul></section>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="drawer-backdrop" data-close></div>
+  <aside class="drawer" aria-label="Détail du point de vente">
+    <div class="drawer-head"><div><p class="eyebrow">Détail</p><h2 id="drawer-title">Point de vente</h2></div><button class="close" type="button" data-close aria-label="Fermer">×</button></div>
+    <div class="detail-list"><div class="detail-row"><span>Identifiant</span><strong id="drawer-id">PS-001</strong></div><div class="detail-row"><span>Quartier</span><strong>PALMERAIE</strong></div><div class="detail-row"><span>Dernier niveau</span><strong><span class="badge amber">Basic</span></strong></div><div class="detail-row"><span>Coordonnées</span><strong>Voir sur la carte</strong></div></div>
+    <h3>Actions visibles</h3><p class="lede">Le détail complète la ligne sans remplacer les actions principales.</p><div class="drawer-actions"><button class="button primary" type="button" data-close>Ouvrir la fiche</button><button class="button" type="button" data-close>Fermer</button></div>
+  </aside>
+
+  <script>
+    const labels = { dashboard: 'Dashboard', visites: 'Visites', pdv: 'Points de vente', visibilite: 'Visibilité', produits: 'Produits', parametres: 'Paramètres' }
+    const crumb = document.getElementById('crumb-view')
+    const drawer = document.querySelector('.drawer')
+    const body = document.body
+
+    function showView(name) {
+      document.querySelectorAll('.view').forEach((view) => { view.hidden = view.id !== `view-${name}` })
+      document.querySelectorAll('#main-nav button').forEach((button) => { button.classList.toggle('active', button.dataset.view === name) })
+      crumb.textContent = labels[name] || name
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+    function openDrawer(title) {
+      document.getElementById('drawer-title').textContent = title || 'Point de vente'
+      body.classList.add('drawer-open')
+    }
+    function closeDrawer() { body.classList.remove('drawer-open') }
+
+    document.querySelectorAll('#main-nav button, [data-view-link]').forEach((control) => control.addEventListener('click', () => showView(control.dataset.view || control.dataset.viewLink)))
+    document.querySelectorAll('[data-toggle-advanced]').forEach((button) => button.addEventListener('click', () => button.closest('.filter-bar').querySelector('.advanced')?.classList.toggle('open')))
+    document.querySelectorAll('[data-reset]').forEach((button) => button.addEventListener('click', () => { const bar = button.closest('.filter-bar'); bar.querySelectorAll('input').forEach((input) => { if (input.type !== 'date') input.value = '' }); bar.querySelectorAll('select').forEach((select) => { select.selectedIndex = 0 }) }))
+    document.querySelectorAll('[data-close]').forEach((control) => control.addEventListener('click', closeDrawer))
+    document.querySelectorAll('[data-detail]').forEach((row) => { const open = () => openDrawer(row.dataset.detail); row.addEventListener('click', (event) => { if (!event.target.closest('button')) open() }); row.addEventListener('keydown', (event) => { if (event.key === 'Enter') open() }) })
+    document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeDrawer() })
+    const search = document.getElementById('pdv-search')
+    const pdvRows = [...document.querySelectorAll('#pdv-table tbody tr[data-row]')]
+    search?.addEventListener('input', () => { const query = search.value.trim().toLowerCase(); let visible = 0; pdvRows.forEach((row) => { const match = row.textContent.toLowerCase().includes(query); row.hidden = !match; if (match) visible++ }); document.getElementById('pdv-count').textContent = visible; document.getElementById('pdv-pagination').textContent = `${visible} PDV · page 1 / 1` })
+    document.querySelectorAll('[data-export]').forEach((button) => button.addEventListener('click', () => { button.textContent = 'Export prêt'; setTimeout(() => { button.textContent = 'Exporter' }, 1300) }))
+  </script>
+</body>
+</html>

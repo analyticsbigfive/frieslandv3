@@ -3,7 +3,7 @@
     class="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/95 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur dark:border-gray-700 dark:bg-gray-900/95 safe-area-bottom"
     aria-label="Navigation mobile principale"
   >
-    <div class="grid grid-cols-5 px-1 pt-1">
+    <div class="grid grid-cols-4 px-1 pt-1">
       <NuxtLink
         v-for="item in navItems"
         :key="item.to"
@@ -25,10 +25,9 @@
 <script setup lang="ts">
 import {
   ClipboardList,
-  MapPin,
-  Users,
   Route,
-  Map,
+  MapPin,
+  MoreHorizontal,
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -40,9 +39,8 @@ function isActive(path: string) {
 
 const navItems = [
   { label: 'Visites', to: '/mobile', icon: ClipboardList, ariaLabel: 'Voir les visites' },
-  { label: 'PDV', to: '/mobile/pdv', icon: MapPin, ariaLabel: 'Voir les points de vente' },
-  { label: 'Contacts', to: '/mobile/contacts', icon: Users, ariaLabel: 'Voir les contacts' },
   { label: 'Routing', to: '/mobile/routing', icon: Route, ariaLabel: 'Voir le routing' },
-  { label: 'Carte', to: '/mobile/map', icon: Map, ariaLabel: 'Voir la carte' },
+  { label: 'PDV', to: '/mobile/pdv', icon: MapPin, ariaLabel: 'Voir les points de vente' },
+  { label: 'Plus', to: '/mobile/more', icon: MoreHorizontal, ariaLabel: 'Voir les autres écrans' },
 ]
 </script>

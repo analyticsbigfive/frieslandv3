@@ -37,7 +37,7 @@
     </div>
 
     <div class="admin-list-toolbar__footer">
-      <span v-if="resultCount !== undefined" class="admin-list-toolbar__count">
+      <span v-if="resultCount !== undefined" class="admin-list-toolbar__count" aria-live="polite">
         {{ formattedResultCount }}
       </span>
       <UButton
