@@ -147,12 +147,12 @@
             <h3 id="user-scope-title" class="text-sm font-semibold text-slate-900 dark:text-white">
               Périmètre terrain
             </h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400">Définissez le territoire et les quartiers accessibles à l’utilisateur.</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Définissez les territoires et les quartiers accessibles à l’utilisateur.</p>
           </div>
         </div>
 
         <div class="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2">
-          <UFormGroup label="Région" size="md">
+          <UFormGroup label="Région" help="Filtre d’affichage — n’efface pas les territoires cochés." size="md">
             <USelectMenu
               v-model="userForm.region_code"
               :options="regionOptions"
@@ -167,7 +167,7 @@
             />
           </UFormGroup>
 
-          <UFormGroup label="Sous-région" size="md">
+          <UFormGroup label="Sous-région" help="Filtre d’affichage — n’efface pas les territoires cochés." size="md">
             <USelectMenu
               v-model="userForm.sub_region_code"
               :options="subRegionOptions"
@@ -179,11 +179,10 @@
               searchable-placeholder="Rechercher..."
               size="md"
               class="w-full"
-              @update:model-value="onSubRegionChange"
             />
           </UFormGroup>
 
-          <UFormGroup label="Territoires assignés" help="Cochez un ou plusieurs territoires." size="md" class="sm:col-span-2">
+          <UFormGroup label="Territoires assignés" help="Cochez un ou plusieurs territoires, y compris dans plusieurs sous-régions : changer les filtres ci-dessus ne désélectionne rien." size="md" class="sm:col-span-2">
             <div
               v-if="!userForm.sub_region_code"
               class="rounded-lg border border-dashed border-slate-300 px-4 py-3 text-xs text-slate-400 dark:border-slate-600"
@@ -196,21 +195,28 @@
             >
               Aucun territoire pour cette sous-région.
             </div>
-            <div
-              v-else
-              class="grid max-h-56 grid-cols-1 gap-1.5 overflow-y-auto rounded-lg border border-slate-200 p-3 sm:grid-cols-2 dark:border-slate-700"
-            >
-              <label
-                v-for="opt in territoryOptions"
-                :key="opt.value"
-                class="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50"
-              >
-                <UCheckbox
-                  :model-value="userForm.territory_codes.includes(opt.value)"
-                  @update:model-value="toggleTerritory(opt.value)"
-                />
-                <span class="text-slate-700 dark:text-slate-200">{{ opt.label }}</span>
-              </label>
+            <div v-else>
+              <div class="mb-2 flex items-center justify-end gap-3 text-xs">
+                <button type="button" class="font-medium text-fc-blue hover:underline" @click="toggleAllVisibleTerritories(true)">
+                  Tout cocher
+                </button>
+                <button type="button" class="font-medium text-slate-500 hover:underline dark:text-slate-400" @click="toggleAllVisibleTerritories(false)">
+                  Tout décocher
+                </button>
+              </div>
+              <div class="grid max-h-56 grid-cols-1 gap-1.5 overflow-y-auto rounded-lg border border-slate-200 p-3 sm:grid-cols-2 dark:border-slate-700">
+                <label
+                  v-for="opt in territoryOptions"
+                  :key="opt.value"
+                  class="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                >
+                  <UCheckbox
+                    :model-value="userForm.territory_codes.includes(opt.value)"
+                    @update:model-value="toggleTerritory(opt.value)"
+                  />
+                  <span class="text-slate-700 dark:text-slate-200">{{ opt.label }}</span>
+                </label>
+              </div>
             </div>
             <p v-if="userForm.territory_codes.length" class="mt-2 flex flex-wrap gap-1.5">
               <span
@@ -218,11 +224,14 @@
                 :key="code"
                 class="inline-flex items-center gap-1 rounded-full bg-fc-blue/10 px-2.5 py-0.5 text-xs font-medium text-fc-blue"
               >
-                {{ territoryLabel(code) }}
+                {{ territoryChipLabel(code) }}
                 <button type="button" class="hover:text-fc-red" @click="toggleTerritory(code)">
                   <UIcon name="i-heroicons-x-mark-20-solid" class="h-3.5 w-3.5" />
                 </button>
               </span>
+            </p>
+            <p v-if="unmatchedTerritories.length" class="mt-2 text-xs text-amber-600 dark:text-amber-400">
+              Territoires hors référentiel, conservés tels quels : {{ unmatchedTerritories.join(', ') }}
             </p>
           </UFormGroup>
 
@@ -330,8 +339,14 @@ const quartierOptions = computed(() => {
   return [...new Set(quartiers.value.filter(q => zoneIds.has(q.zone_id)).map(q => q.nom).filter(Boolean))].sort()
 })
 
-function territoryLabel(code: string) {
-  return territories.value.find(t => t.code === code)?.name || code
+// Chip : le territoire peut venir d'une autre sous-région que celle filtrée,
+// on rappelle donc son rattachement pour lever l'ambiguïté.
+function territoryChipLabel(code: string) {
+  const t = territories.value.find(t => t.code === code)
+  if (!t) return code
+  const sr = subRegions.value.find(s => s.code === t.sub_region_code)
+  const srLabel = sr?.nom_affichage || sr?.name
+  return srLabel ? `${t.name} · ${srLabel}` : t.name
 }
 
 // Coche/décoche un territoire. À la décoche, purge les quartiers devenus orphelins.
@@ -343,6 +358,20 @@ function toggleTerritory(code: string) {
   const valid = new Set(quartierOptions.value)
   userForm.value.quartiers_assignes = userForm.value.quartiers_assignes.filter(q => valid.has(q))
 }
+
+// Coche/décoche uniquement les territoires visibles (sous-région filtrée) :
+// les sélections des autres sous-régions ne bougent pas.
+function toggleAllVisibleTerritories(select: boolean) {
+  const visible = territoryOptions.value.map(o => o.value)
+  const current = new Set(userForm.value.territory_codes)
+  for (const code of visible) {
+    if (select) current.add(code)
+    else current.delete(code)
+  }
+  userForm.value.territory_codes = [...current]
+  const valid = new Set(quartierOptions.value)
+  userForm.value.quartiers_assignes = userForm.value.quartiers_assignes.filter(q => valid.has(q))
+}
 function toggleQuartier(q: string) {
   const list = userForm.value.quartiers_assignes
   const idx = list.indexOf(q)
@@ -350,28 +379,27 @@ function toggleQuartier(q: string) {
   else list.splice(idx, 1)
 }
 
+// Région/sous-région = filtres d'affichage de la liste des territoires. Ils ne
+// vident JAMAIS la sélection : un utilisateur peut couvrir des territoires de
+// plusieurs sous-régions.
 function onRegionChange() {
   userForm.value.sub_region_code = ''
-  userForm.value.territory_codes = []
-  userForm.value.zone_assignee = ''
-  userForm.value.quartiers_assignes = []
 }
-function onSubRegionChange() {
-  userForm.value.territory_codes = []
-  userForm.value.zone_assignee = ''
-  userForm.value.quartiers_assignes = []
-}
+
+// Territoires enregistrés mais absents du référentiel : conservés à l'identique
+// au save plutôt que silencieusement perdus.
+const unmatchedTerritories = ref<string[]>([])
+
 // Édition : reconstruit region_code/sub_region_code/territory_codes depuis territoires_assignes (noms).
 // Fallback legacy : si territoires_assignes vide, part de zone_assignee (mono-territoire).
 function hydrateUserGeo() {
   const names = userForm.value.territoires_assignes.length
     ? userForm.value.territoires_assignes
     : (userForm.value.zone_assignee ? [userForm.value.zone_assignee] : [])
-  const matched = names
-    .map(n => territories.value.find(t => t.name === n))
-    .filter(Boolean) as { code: string, sub_region_code: string }[]
-  userForm.value.territory_codes = matched.map(t => t.code)
-  const first = matched[0]
+  const matched = names.map(n => ({ name: n, terr: territories.value.find(t => t.name === n) }))
+  userForm.value.territory_codes = matched.filter(m => m.terr).map(m => m.terr!.code)
+  unmatchedTerritories.value = matched.filter(m => !m.terr).map(m => m.name)
+  const first = matched.find(m => m.terr)?.terr
   const sr = first ? subRegions.value.find(s => s.code === first.sub_region_code) : null
   userForm.value.sub_region_code = sr?.code || ''
   userForm.value.region_code = sr?.region_code || ''
@@ -379,6 +407,7 @@ function hydrateUserGeo() {
 
 function openCreateUser() {
   editingUser.value = null
+  unmatchedTerritories.value = []
   userForm.value = {
     nom: '', email: '', password: '', role: 'merchandiser',
     zone_assignee: '', region: '', territoires_assignes: [], quartiers_assignes: [], telephone: '',
@@ -476,10 +505,16 @@ async function handleSaveUser() {
   saving.value = true
   try {
     // Dérive territoires (noms) depuis les codes cochés ; zone_assignee = 1er (compat legacy).
-    const terrs = userForm.value.territory_codes
-      .map(code => territories.value.find(t => t.code === code)?.name)
-      .filter(Boolean) as string[]
-    const sr = subRegions.value.find(s => s.code === userForm.value.sub_region_code)
+    const terrs = [
+      ...userForm.value.territory_codes
+        .map(code => territories.value.find(t => t.code === code)?.name)
+        .filter(Boolean) as string[],
+      ...unmatchedTerritories.value,
+    ]
+    // Région dérivée du 1er territoire coché (et non du filtre affiché, qui peut
+    // pointer une autre sous-région que celle du périmètre réel).
+    const firstTerr = territories.value.find(t => t.code === userForm.value.territory_codes[0])
+    const sr = subRegions.value.find(s => s.code === (firstTerr?.sub_region_code || userForm.value.sub_region_code))
     const zoneAssignee = terrs[0] || userForm.value.zone_assignee || null
     const region = sr?.nom_affichage || sr?.name || userForm.value.region || null
     const quartiers = (userForm.value.quartiers_assignes || []).filter(Boolean)
@@ -502,18 +537,19 @@ async function handleSaveUser() {
       toast.add({ title: 'Utilisateur mis à jour' })
     }
     else {
-      await authStore.register(
-        userForm.value.email,
-        userForm.value.password,
-        userForm.value.nom,
-        userForm.value.role
-      )
-      // register ne pose pas la géo : on complète le profil créé (repéré par email).
-      const { error: geoErr } = await supabase
-        .from('profiles')
-        .update({ zone_assignee: zoneAssignee, territoires_assignes: terrs, region, quartiers_assignes: quartiers, telephone: userForm.value.telephone })
-        .eq('email', userForm.value.email)
-      if (geoErr) throw geoErr
+      // Compte + profil créés en une passe côté serveur (service_role) : pas de
+      // mail de confirmation, donc pas de 429, et le rôle choisi est bien appliqué.
+      await authStore.register({
+        email: userForm.value.email,
+        password: userForm.value.password,
+        nom: userForm.value.nom,
+        role: userForm.value.role,
+        telephone: userForm.value.telephone,
+        zone_assignee: zoneAssignee,
+        territoires_assignes: terrs,
+        quartiers_assignes: quartiers,
+        region,
+      })
       toast.add({ title: 'Utilisateur créé' })
     }
 
@@ -542,20 +578,19 @@ async function toggleUserActive(user: Profile) {
   fetchUsers()
 }
 
+// Supprime le compte auth ET le profil (cascade FK). Supprimer le seul profil
+// laissait un compte auth orphelin encore capable de se connecter.
 async function deleteUser(user: Profile) {
-  if (!confirm('Supprimer cet utilisateur ?')) return
+  if (!confirm(`Supprimer définitivement ${user.nom || user.email} ? Le compte de connexion est également supprimé.`)) return
 
-  const { error } = await supabase
-    .from('profiles')
-    .delete()
-    .eq('id', user.id)
-
-  if (error) {
-    toast.add({ title: 'Erreur', description: error.message, color: 'red' })
-    return
+  try {
+    await authStore.deleteUser(user.id)
+    toast.add({ title: 'Utilisateur supprimé' })
+    fetchUsers()
   }
-  toast.add({ title: 'Utilisateur supprimé' })
-  fetchUsers()
+  catch (err: any) {
+    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+  }
 }
 
 onMounted(() => {

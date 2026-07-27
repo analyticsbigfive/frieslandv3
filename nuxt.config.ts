@@ -32,6 +32,9 @@ export default defineNuxtConfig({
   supabase: {
     url: process.env.SUPABASE_URL,
     key: process.env.SUPABASE_KEY,
+    // Utilisée uniquement par les routes serveur /api/admin/* (bypass RLS).
+    // Le module attend SUPABASE_SERVICE_KEY par défaut : on mappe notre variable.
+    serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
     redirect: false,
     redirectOptions: {
       login: '/login',

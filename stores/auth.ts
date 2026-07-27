@@ -104,47 +104,52 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function register(email: string, password: string, nom: string, role: UserRole = 'merchandiser') {
-    // Security: only admin/superviseur can create users
-    if (!isAdmin.value && !isSuperviseur.value) {
+  // Création d'un compte : passe par /api/admin/users (service_role côté serveur).
+  // Surtout pas auth.signUp() ici — ça envoie un mail de confirmation (SMTP intégré
+  // limité à 2/heure -> 429) et ça remplacerait la session de l'admin connecté.
+  async function register(payload: {
+    email: string
+    password: string
+    nom: string
+    role?: UserRole
+    telephone?: string | null
+    zone_assignee?: string | null
+    territoires_assignes?: string[]
+    quartiers_assignes?: string[]
+    region?: string | null
+  }) {
+    if (!isAdmin.value) {
       throw new Error('Permission refusée : seuls les administrateurs peuvent créer des utilisateurs')
     }
-
-    // Input validation
-    if (!email || !password || !nom) {
-      throw new Error('Email, mot de passe et nom sont requis')
-    }
-    if (password.length < 8) {
-      throw new Error('Le mot de passe doit contenir au moins 8 caractères')
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
-      throw new Error('Format d\'email invalide')
-    }
-    // Sanitize inputs
-    const sanitizedNom = nom.trim().substring(0, 100)
-    const sanitizedEmail = email.trim().toLowerCase()
 
     loading.value = true
     error.value = null
 
     try {
-      const { data, error: err } = await supabase.auth.signUp({
-        email: sanitizedEmail,
-        password,
-        options: {
-          data: { nom: sanitizedNom, role },
-        },
+      return await $fetch<Profile>('/api/admin/users', {
+        method: 'POST',
+        body: { role: 'merchandiser', ...payload },
       })
-      if (err) throw err
-      return data
     }
     catch (err: any) {
-      error.value = err.message
-      throw err
+      const message = err?.data?.statusMessage || err?.data?.message || err?.message || 'Création impossible'
+      error.value = message
+      throw new Error(message)
     }
     finally {
       loading.value = false
+    }
+  }
+
+  async function deleteUser(id: string) {
+    if (!isAdmin.value) {
+      throw new Error('Permission refusée : seuls les administrateurs peuvent supprimer des utilisateurs')
+    }
+    try {
+      await $fetch(`/api/admin/users/${id}`, { method: 'DELETE' })
+    }
+    catch (err: any) {
+      throw new Error(err?.data?.statusMessage || err?.data?.message || err?.message || 'Suppression impossible')
     }
   }
 
@@ -231,6 +236,7 @@ export const useAuthStore = defineStore('auth', () => {
     userRole,
     login,
     register,
+    deleteUser,
     logout,
     fetchProfile,
     updateProfile,
