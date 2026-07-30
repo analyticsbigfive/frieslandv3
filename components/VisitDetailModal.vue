@@ -103,12 +103,35 @@
           <strong :class="visite.data.concurrence.presence_concurrents ? 'text-fc-red' : 'text-emerald-600'">
             {{ visite.data.concurrence.presence_concurrents ? 'Oui' : 'Non' }}
           </strong>
-          <div v-if="visite.data.concurrence.presence_concurrents" class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div v-if="visite.data.concurrence.presence_concurrents" class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div v-for="category in competitorCategories" :key="category.key" class="text-xs">
               <span class="font-medium text-slate-600 dark:text-slate-300">{{ category.label }}</span>
               <span :class="competitorPresent(category.key) ? 'ml-1 font-semibold text-fc-red' : 'ml-1 text-slate-400'">
                 {{ competitorPresent(category.key) ? 'Présent' : 'Absent' }}
               </span>
+              <span v-if="competitorActive(category.key)" class="mt-0.5 block font-medium text-amber-600">En activité</span>
+              <span v-if="competitorAction(category.key)" class="mt-0.5 block text-slate-500 dark:text-slate-400">
+                {{ competitorAction(category.key) }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Concurrents signalés en texte libre, ancien et nouveau format -->
+          <div v-if="freeCompetitors.length" class="mt-4 border-t border-slate-200 pt-3 dark:border-slate-600">
+            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Autres concurrents signalés</p>
+            <div class="flex flex-wrap gap-3">
+              <div
+                v-for="(c, index) in freeCompetitors"
+                :key="`${c.nom}-${index}`"
+                class="flex items-start gap-2 rounded-lg bg-white px-3 py-2 text-xs dark:bg-slate-800"
+              >
+                <img v-if="c.photo_url" :src="c.photo_url" alt="" class="h-10 w-10 shrink-0 rounded object-cover" />
+                <div>
+                  <p class="font-semibold text-slate-900 dark:text-white">{{ c.nom }}</p>
+                  <p v-if="c.en_activite" class="font-medium text-amber-600">En activité</p>
+                  <p v-if="c.action_concurrence" class="text-slate-500 dark:text-slate-400">{{ c.action_concurrence }}</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -302,6 +325,18 @@ function formatDate(value: string | null | undefined): string {
 function competitorPresent(key: string): boolean {
   return !!(props.visite?.data?.concurrence as any)?.[key]?.present
 }
+
+function competitorActive(key: string): boolean {
+  return !!(props.visite?.data?.concurrence as any)?.[key]?.en_activite
+}
+
+function competitorAction(key: string): string {
+  return (props.visite?.data?.concurrence as any)?.[key]?.action_concurrence || ''
+}
+
+// Ancien format (nom_concurrent à plat) + nouveau format (autres[]) : sans les
+// deux, les visites antérieures n'affichent plus leurs concurrents libres.
+const freeCompetitors = computed(() => concurrentsDeLaVisite(props.visite?.data?.concurrence as any))
 
 function actionValue(key: string): boolean {
   return !!(props.visite?.data?.actions as any)?.[key]

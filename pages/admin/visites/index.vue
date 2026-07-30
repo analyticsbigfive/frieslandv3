@@ -13,12 +13,10 @@
       @remove-chip="removeFilterChip"
     >
       <template #filters>
-        <UFormGroup label="Date début">
-          <UInput v-model="filters.dateFrom" type="date" size="sm" />
-        </UFormGroup>
-        <UFormGroup label="Date fin">
-          <UInput v-model="filters.dateTo" type="date" size="sm" />
-        </UFormGroup>
+        <!-- Jour / semaine / mois : suivre les merchandisers au quotidien
+             (réunion du 23 juillet, tâches 2.3 et 6). Le mode « Personnalisé »
+             réaffiche les deux bornes libres. -->
+        <PeriodFilter v-model="periode" />
         <UFormGroup label="Commercial" class="min-w-64 flex-1">
           <USelectMenu
             v-model="filters.commercial"
@@ -206,12 +204,15 @@
 </template>
 
 <script setup lang="ts">
+import type { PeriodeValue } from '~/components/PeriodFilter.vue'
 import type { Visite } from '~/types'
 import type { PerfectStoreResultB } from '~/utils/perfectStore'
+import { plageDePeriode } from '~/utils/periode'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const visitesStore = useVisitesStore()
+const toast = useToast()
 const { exportVisitesToExcel } = useCsvExport()
 const { users: cachedUsers, fetchUsers: fetchCachedUsers, loading: usersLoading } = useUsersCache()
 const { refs, fetchRefs, scoreVisite } = usePerfectStore()
@@ -221,6 +222,16 @@ const visites = computed(() => visitesStore.visites)
 const total = computed(() => visitesStore.total)
 const loading = computed(() => visitesStore.loading)
 const filters = visitesStore.filters
+
+// Période : source de vérité de l'UI, recopiée dans les filtres du store (qui
+// ne connaît que dateFrom / dateTo). Défaut au mois en cours — la maille de
+// suivi demandée en réunion ; les chips affichent toujours la plage active,
+// donc rien n'est masqué en silence.
+const periode = ref<PeriodeValue>({ preset: 'mois', ...plageDePeriode('mois') })
+watch(periode, (p) => {
+  filters.dateFrom = p.debut
+  filters.dateTo = p.fin
+}, { deep: true, immediate: true })
 
 const showDetail = ref(false)
 const selectedVisite = ref<Visite | null>(null)
@@ -320,12 +331,19 @@ async function handleDelete(visite: Visite) {
 }
 
 async function handleExport() {
-  await exportVisitesToExcel(visites.value)
+  // Toutes les visites de la période filtrée, pas seulement la page affichée.
+  const { rows, tronque } = await visitesStore.fetchVisitesForExport()
+  await exportVisitesToExcel(rows)
+  toast.add({
+    title: `${rows.length} visite(s) exportée(s)`,
+    description: tronque ? 'Plafond de 5000 lignes atteint : réduisez la période pour tout obtenir.' : undefined,
+    color: tronque ? 'amber' : 'green',
+  })
 }
 
 function resetFilters() {
-  filters.dateFrom = ''
-  filters.dateTo = ''
+  // Le watch sur `periode` réécrit dateFrom / dateTo.
+  periode.value = { preset: 'mois', ...plageDePeriode('mois') }
   filters.commercial = ''
   filters.email = ''
   filters.page = 1
@@ -333,10 +351,10 @@ function resetFilters() {
 }
 
 // Chips des filtres actifs (sous la barre) — clic = retirer ce filtre seul.
+// Les bornes de date n'y figurent pas : elles sont pilotées par PeriodFilter,
+// qui affiche déjà la plage. Un chip « retirer » les désynchroniserait.
 const filterChips = computed(() => {
   const chips: { key: string; label: string }[] = []
-  if (filters.dateFrom) chips.push({ key: 'dateFrom', label: `Début : ${formatDate(filters.dateFrom)}` })
-  if (filters.dateTo) chips.push({ key: 'dateTo', label: `Fin : ${formatDate(filters.dateTo)}` })
   if (filters.commercial) {
     const opt = commercialOptions.value.find(o => o.value === filters.commercial)
     chips.push({ key: 'commercial', label: `Commercial : ${opt?.label || filters.commercial}` })

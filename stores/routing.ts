@@ -1,7 +1,7 @@
 // stores/routing.ts
 import { defineStore, skipHydrate } from 'pinia'
 import { markRaw } from 'vue'
-import type { Routing, RoutingPDV, RoutingObjectives, RoutingTemplate, RoutingTemplatePDV, Profile } from '~/types'
+import type { Routing, RoutingPDV, RoutingObjectives, RoutingTemplate, RoutingTemplatePDV, RoutingTemplateException, Profile } from '~/types'
 
 export const useRoutingStore = defineStore('routing', () => {
   const supabase = skipHydrate(markRaw(useSupabaseClient()))
@@ -49,7 +49,33 @@ export const useRoutingStore = defineStore('routing', () => {
   async function fetchTodayRouting(userId: string) {
     loading.value = true
     try {
-      const today = new Date().toISOString().slice(0, 10)
+      // toIsoJour et non toISOString() : ce dernier bascule en UTC et renverrait
+      // la veille pour tout fuseau à l'est de Greenwich.
+      const today = toIsoJour(new Date())
+
+      // Rattrapage : si la pré-génération (J → J+7) n'a pas eu lieu — première
+      // connexion, règle créée le matin même — on matérialise la tournée du jour
+      // à la volée. La RPC est idempotente : si la tournée existe, elle est
+      // renvoyée telle quelle, sans toucher à l'avancement terrain.
+      // Hors ligne, l'appel échoue silencieusement et on lit le cache.
+      try {
+        await (supabase.rpc as any)('materialiser_routing_jour', { p_user_id: userId, p_date: today })
+
+        // Pendant qu'on est en ligne, on pousse aussi l'horizon à J+7 : c'est ce
+        // qui permet au merchandiser d'ouvrir l'app demain matin sans réseau et
+        // d'y trouver quand même sa tournée. Sans attendre — la tournée du jour,
+        // seule bloquante pour l'affichage, est déjà créée.
+        const horizon = new Date()
+        horizon.setDate(horizon.getDate() + 7)
+        void (supabase.rpc as any)('materialiser_routings_periode', {
+          p_user_id: userId,
+          p_date_debut: today,
+          p_date_fin: toIsoJour(horizon),
+        })
+      }
+      catch (err) {
+        console.warn('[Routing] matérialisation du jour impossible (hors ligne ?)', err)
+      }
 
       const { data, error } = await (supabase
         .from('routings') as any)
@@ -272,8 +298,15 @@ export const useRoutingStore = defineStore('routing', () => {
   async function updateRouting(
     routingId: string,
     updates: { user_id?: string; date_routing?: string; notes?: string | null; status?: string },
-    pdvItems?: { pdv_id: string; objectifs: RoutingObjectives }[]
+    pdvItems?: { pdv_id: string; objectifs: RoutingObjectives }[],
+    // supprimerAbsents = false : mode FUSION. Les PDV absents de `pdvItems`
+    // sont conservés. Utilisé par l'import CSV en mode « mise à jour » : le
+    // client corrige un routing d'un mois déjà importé sans que les PDV hors
+    // fichier disparaissent. L'édition manuelle garde le mode remplacement,
+    // sinon retirer un PDV de la modale n'aurait aucun effet.
+    options: { supprimerAbsents?: boolean } = {}
   ) {
+    const supprimerAbsents = options.supprimerAbsents !== false
     // Garde périmètre : si la liste PDV change, valide contre le user (nouveau ou courant).
     if (pdvItems) {
       let targetUser = updates.user_id
@@ -309,8 +342,10 @@ export const useRoutingStore = defineStore('routing', () => {
     const existingByPdv = new Map<string, any>((existing || []).map((r: any) => [r.pdv_id, r]))
     const desiredPdvIds = new Set(pdvItems.map(i => i.pdv_id))
 
-    // Delete PDV removed from the list
-    const toDelete = (existing || []).filter((r: any) => !desiredPdvIds.has(r.pdv_id))
+    // Delete PDV removed from the list (mode remplacement uniquement)
+    const toDelete = supprimerAbsents
+      ? (existing || []).filter((r: any) => !desiredPdvIds.has(r.pdv_id))
+      : []
     if (toDelete.length) {
       const { error } = await (supabase
         .from('routing_pdv') as any)
@@ -346,7 +381,17 @@ export const useRoutingStore = defineStore('routing', () => {
 
   // ---- Admin: bulk import routings from CSV (1 ligne = 1 PDV) ----
   // Upsert basé sur email + date (contrainte UNIQUE(user_id, date_routing)).
-  async function importRoutingsFromCSV(rows: Record<string, string>[], createdBy: string) {
+  //
+  // mode 'fusion' (défaut) : les PDV déjà présents et absents du fichier sont
+  // CONSERVÉS. C'est la demande du client — réimporter pour corriger un mois
+  // déjà chargé ne doit rien effacer.
+  // mode 'remplacement' : la tournée du jour devient exactement le contenu du
+  // fichier. À choisir explicitement dans la modale d'import.
+  async function importRoutingsFromCSV(
+    rows: Record<string, string>[],
+    createdBy: string,
+    mode: 'fusion' | 'remplacement' = 'fusion'
+  ) {
     const summary = { created: 0, updated: 0, pdvCount: 0, errors: [] as string[] }
     if (!rows.length) return summary
 
@@ -453,7 +498,12 @@ export const useRoutingStore = defineStore('routing', () => {
 
       try {
         if (existing?.id) {
-          await updateRouting(existing.id, { notes: g.notes || null, status: validStatus }, items)
+          await updateRouting(
+            existing.id,
+            { notes: g.notes || null, status: validStatus },
+            items,
+            { supprimerAbsents: mode === 'remplacement' },
+          )
           summary.updated++
         } else {
           const created = await createRouting(userId, g.date, items, createdBy, g.notes || undefined)
@@ -508,10 +558,11 @@ export const useRoutingStore = defineStore('routing', () => {
           routing_template_pdv(
             id, pdv_id, position_order, objectifs,
             pdv:pdv_id(pdv_id, nom_pdv, zone, quartier)
-          )
+          ),
+          routing_template_exception(id, template_id, pdv_id, date_debut, date_fin, motif)
         `)
         .eq('is_active', true)
-        .order('day_of_week', { ascending: true })
+        .order('created_at', { ascending: true })
 
       if (userId) query = query.eq('user_id', userId)
 
@@ -527,20 +578,38 @@ export const useRoutingStore = defineStore('routing', () => {
     }
   }
 
-  // ---- Create a new template ----
+  // ---- Create a new template (règle récurrente) ----
+  // `days_of_week` remplace le jour unique : « chaque lundi ET chaque jeudi ».
+  // `territoire` / `distributeur` sont portés par la règle, pas par le profil :
+  // c'est ce qui permet à un merchandiser de couvrir Abobo/Distributeur A une
+  // semaine et Adjamé/Distributeur B la suivante.
   async function createTemplate(
     userId: string,
-    dayOfWeek: number,
+    daysOfWeek: number[],
     label: string,
     createdBy: string,
-    notes?: string
+    options: {
+      notes?: string
+      territoire?: string
+      distributeur?: string
+      dateDebut?: string
+      dateFin?: string
+    } = {}
   ) {
+    if (!daysOfWeek.length) throw new Error('Sélectionnez au moins un jour de la semaine')
+
     const { data, error } = await (supabase.from('routing_templates') as any)
       .insert({
         user_id: userId,
-        day_of_week: dayOfWeek,
+        days_of_week: daysOfWeek,
+        // Renseigné pour rester lisible par tout code n'ayant pas encore migré.
+        day_of_week: daysOfWeek[0],
         label: label || null,
-        notes: notes || null,
+        notes: options.notes || null,
+        territoire: options.territoire || null,
+        distributeur: options.distributeur || null,
+        date_debut: options.dateDebut || null,
+        date_fin: options.dateFin || null,
         is_active: true,
         created_by: createdBy,
       })
@@ -552,12 +621,99 @@ export const useRoutingStore = defineStore('routing', () => {
   }
 
   // ---- Update template metadata ----
-  async function updateTemplate(templateId: string, updates: { label?: string; notes?: string; is_active?: boolean }) {
+  async function updateTemplate(
+    templateId: string,
+    updates: {
+      label?: string
+      notes?: string
+      is_active?: boolean
+      days_of_week?: number[]
+      territoire?: string | null
+      distributeur?: string | null
+      date_debut?: string | null
+      date_fin?: string | null
+    }
+  ) {
+    const payload: any = { ...updates }
+    if (updates.days_of_week) {
+      if (!updates.days_of_week.length) throw new Error('Sélectionnez au moins un jour de la semaine')
+      payload.day_of_week = updates.days_of_week[0]
+    }
     const { error } = await (supabase.from('routing_templates') as any)
-      .update(updates)
+      .update(payload)
       .eq('id', templateId)
 
     if (error) throw error
+  }
+
+  // ---- Exceptions : « cette semaine, il ne visite pas ce PDV » ----
+  // pdvId omis = toute la tournée suspendue sur la période. La règle n'est
+  // jamais supprimée : elle reprend d'elle-même après la fenêtre.
+  async function addTemplateException(
+    templateId: string,
+    dateDebut: string,
+    dateFin: string,
+    options: { pdvId?: string; motif?: string; createdBy?: string } = {}
+  ) {
+    const { data, error } = await (supabase.from('routing_template_exception') as any)
+      .insert({
+        template_id: templateId,
+        pdv_id: options.pdvId || null,
+        date_debut: dateDebut,
+        date_fin: dateFin,
+        motif: options.motif || null,
+        created_by: options.createdBy || null,
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+    return data as RoutingTemplateException
+  }
+
+  async function removeTemplateException(exceptionId: string) {
+    const { error } = await (supabase.from('routing_template_exception') as any)
+      .delete()
+      .eq('id', exceptionId)
+
+    if (error) throw error
+  }
+
+  /**
+   * Pré-génère les tournées d'un merchandiser sur une fenêtre glissante.
+   *
+   * C'est le chemin principal de matérialisation : l'app mobile est
+   * offline-first, un merchandiser qui ouvre l'app sans réseau doit trouver sa
+   * tournée déjà créée et mise en cache. Idempotent : les tournées existantes
+   * sont laissées intactes, avancement terrain compris.
+   */
+  async function materialiserPeriode(userId: string, dateDebut: string, dateFin: string): Promise<number> {
+    const { data, error } = await (supabase.rpc as any)('materialiser_routings_periode', {
+      p_user_id: userId,
+      p_date_debut: dateDebut,
+      p_date_fin: dateFin,
+    })
+    if (error) throw error
+    return (data as number) || 0
+  }
+
+  /** Pré-génération J → J+jours pour tous les merchandisers ayant une règle active. */
+  async function preGenererHorizon(jours = 7): Promise<{ users: number; tournees: number }> {
+    const { data: regles, error } = await (supabase.from('routing_templates') as any)
+      .select('user_id')
+      .eq('is_active', true)
+    if (error) throw error
+
+    const userIds = [...new Set((regles || []).map((r: any) => r.user_id).filter(Boolean))] as string[]
+    const debut = new Date()
+    const fin = new Date()
+    fin.setDate(fin.getDate() + jours)
+
+    let tournees = 0
+    for (const userId of userIds) {
+      tournees += await materialiserPeriode(userId, toIsoJour(debut), toIsoJour(fin))
+    }
+    return { users: userIds.length, tournees }
   }
 
   // ---- Delete template ----
@@ -569,12 +725,46 @@ export const useRoutingStore = defineStore('routing', () => {
     if (error) throw error
   }
 
+  /**
+   * Garde de périmètre côté RÈGLE (tâche 4.4).
+   *
+   * Les tournées ponctuelles restent validées contre `profiles.territoires_assignes`
+   * (voir assertScopedPDV) : c'est leur seul filet. Mais une règle récurrente
+   * porte SON territoire, précisément pour qu'un merchandiser puisse couvrir
+   * Abobo une semaine et Adjamé la suivante — un contrôle contre le profil figé
+   * rejetterait le second cas. On valide donc contre le territoire de la règle.
+   * Règle sans territoire = pas de contrainte (l'admin assume).
+   */
+  async function assertScopedPDVForRegle(templateId: string, pdvIds: string[]) {
+    const ids = [...new Set(pdvIds.filter(Boolean))]
+    if (!ids.length) return
+
+    const { data: tpl, error: tplErr } = await (supabase.from('routing_templates') as any)
+      .select('territoire')
+      .eq('id', templateId)
+      .single()
+    if (tplErr) throw tplErr
+    if (!tpl?.territoire) return
+
+    const { data: pdvs, error: pdvErr } = await (supabase.from('pdv') as any)
+      .select('pdv_id, zone')
+      .in('pdv_id', ids)
+    if (pdvErr) throw pdvErr
+
+    const hors = (pdvs || []).filter((p: any) => p.zone !== tpl.territoire).map((p: any) => p.pdv_id)
+    if (hors.length) {
+      throw new Error(`${hors.length} PDV hors du territoire de la règle (${tpl.territoire}) : ${hors.slice(0, 5).join(', ')}${hors.length > 5 ? '…' : ''}`)
+    }
+  }
+
   // ---- Add PDV to template ----
   async function addTemplatePDV(
     templateId: string,
     pdvId: string,
     objectifs: RoutingObjectives = { releve_stock: true, photos: true }
   ) {
+    await assertScopedPDVForRegle(templateId, [pdvId])
+
     // Get current max position
     const template = templates.value.find(t => t.id === templateId)
     const maxPos = template?.routing_template_pdv
@@ -653,49 +843,22 @@ export const useRoutingStore = defineStore('routing', () => {
     if (error) throw error
   }
 
-  // ---- Generate daily routings from templates for a date range ----
+  /**
+   * Matérialise les tournées d'un merchandiser sur une plage de dates, depuis
+   * ses règles récurrentes.
+   *
+   * Remplace l'ancienne boucle côté client (un seul jour de semaine par règle,
+   * et un `catch` nu qui classait toute erreur en « existe déjà » — une panne
+   * réseau ou un PDV supprimé passait pour un doublon). La RPC SQL gère les
+   * règles multi-jours, les exceptions, et l'idempotence.
+   */
   async function generateFromTemplates(
     userId: string,
     dateFrom: string,
     dateTo: string,
-    createdBy: string
-  ) {
-    // Fetch user's active templates
-    const { data: userTemplates, error: tErr } = await (supabase.from('routing_templates') as any)
-      .select('*, routing_template_pdv(*)')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-
-    if (tErr) throw tErr
-    if (!userTemplates?.length) throw new Error('Aucun template actif pour cet utilisateur')
-
-    const results: { date: string; status: string }[] = []
-    const start = new Date(dateFrom + 'T00:00:00')
-    const end = new Date(dateTo + 'T00:00:00')
-
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      const dayOfWeek = d.getDay() // 0=Sun, 1=Mon...
-      const dateStr = d.toISOString().slice(0, 10)
-
-      const template = userTemplates.find((t: any) => t.day_of_week === dayOfWeek)
-      if (!template || !template.routing_template_pdv?.length) {
-        results.push({ date: dateStr, status: 'skipped' })
-        continue
-      }
-
-      try {
-        const pdvItems = (template.routing_template_pdv as any[])
-          .sort((a: any, b: any) => a.position_order - b.position_order)
-          .map((p: any) => ({ pdv_id: p.pdv_id, objectifs: p.objectifs || {} }))
-
-        await createRouting(userId, dateStr, pdvItems, createdBy, template.notes || template.label)
-        results.push({ date: dateStr, status: 'created' })
-      } catch {
-        results.push({ date: dateStr, status: 'exists' })
-      }
-    }
-
-    return results
+  ): Promise<{ crees: number }> {
+    const crees = await materialiserPeriode(userId, dateFrom, dateTo)
+    return { crees }
   }
 
   return {
@@ -716,7 +879,7 @@ export const useRoutingStore = defineStore('routing', () => {
     deleteRouting,
     duplicateRouting,
     importRoutingsFromCSV,
-    // Templates
+    // Règles récurrentes (ex-« templates »)
     templates,
     templateLoading,
     fetchTemplates,
@@ -728,5 +891,10 @@ export const useRoutingStore = defineStore('routing', () => {
     reorderTemplatePDV,
     updateTemplatePDVObjectifs,
     generateFromTemplates,
+    // Exceptions ponctuelles + matérialisation
+    addTemplateException,
+    removeTemplateException,
+    materialiserPeriode,
+    preGenererHorizon,
   }
 })

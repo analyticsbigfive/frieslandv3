@@ -27,10 +27,34 @@ export interface PerfectStoreGlobalKpi {
 
 export interface PerfectStoreTypeKpi {
   type_pdv: string
-  visites_scorees: number
-  perfect_stores: number
+  /** PDV distincts scorés (dernière visite de la période). Base de comptage du dashboard. */
+  pdv_scores: number
+  pdv_perfect_stores: number
   perfect_store_pct: number | null
   score_global_moyen_pct: number | null
+  /** Nombre de passages, doublons compris. Suivi d'activité, pas base du taux. */
+  visites_scorees: number
+}
+
+/** Ventilation Flagship / VIP / Core / Basic, du niveau le plus exigeant au moins exigeant. */
+export interface PerfectStoreNiveauCount {
+  niveau: string
+  nb_pdv: number
+}
+
+/** Couverture des visites d'un merchandiser sur la période (tâche 2.2). */
+export interface CouvertureCommercial {
+  commercial: string
+  email: string
+  /** Tous les passages, y compris plusieurs sur le même PDV. */
+  nb_visites: number
+  /** PDV distincts touchés. */
+  nb_pdv: number
+  /** Jours pendant lesquels au moins une visite a été faite. */
+  nb_jours: number
+  /** nb_visites / nb_jours — à comparer à l'objectif journalier. */
+  visites_par_jour: number | null
+  pdv_visites: { pdv_id: string; nom_pdv: string; passages: number; derniere_visite: string }[]
 }
 
 export interface CoverageKpi {
@@ -40,10 +64,51 @@ export interface CoverageKpi {
   couverture_pct: number | null
 }
 
+/**
+ * Retour de dashboard_perfect_store_filtre : les KPI Perfect Store en base PDV
+ * distincts (un PDV = sa dernière visite scorée de la période), la couverture
+ * effective (PDV uniques / parc) et la couverture des visites (tous passages).
+ */
+export interface PerfectStoreDashboardKpi extends PerfectStoreGlobalKpi {
+  pdv_scores: number
+  pdv_perfect_stores: number
+  pdv_perfect_store_pct: number | null
+  pdv_non_conformes: number
+  par_niveau: PerfectStoreNiveauCount[]
+  pdv_vus: number
+  pdv_total: number
+  couverture_pct: number | null
+  /** Nombre total de passages sur la période — les visites répétées comptent. */
+  visites_total: number
+  /** Distribution numérique : part des SKU relevés à quantité >= 1. */
+  presence_moyenne_pct: number | null
+  par_categorie: PresenceCategorie[]
+}
+
+/** Présence vs disponibilité pour une famille de produits (evap / imp / scm). */
+export interface PresenceCategorie {
+  categorie: string
+  presence_pct: number | null
+  disponibilite_pct: number | null
+}
+
+/** Présence vs disponibilité pour un SKU clé (rôle phare ou nouveauté). */
+export interface PresenceSku {
+  reference_nom: string
+  role: string
+  categorie: string
+  releves: number
+  presents: number
+  disponibles: number
+  presence_pct: number | null
+  disponibilite_pct: number | null
+}
+
 export interface PerfectStoreEvolutionPoint {
   date: string
   perfect_stores: number
-  visites_scorees: number
+  /** PDV distincts scorés ce jour-là. */
+  pdv_scores: number
   perfect_store_pct: number | null
 }
 
@@ -198,14 +263,41 @@ export function usePerfectStore() {
     return data as PerfectStoreGlobalKpi | null
   }
 
-  /** Filtres Division / Territoire / Area / Distributeur du dashboard. */
-  type DashFilters = { division?: string; territoire?: string; area?: string; distributeur?: string }
-  const hasDashFilters = (f?: DashFilters) => !!(f && (f.division || f.territoire || f.area || f.distributeur))
+  /**
+   * Filtres du dashboard : géographie + période.
+   * dateDebut / dateFin sont des bornes INCLUSIVES au format AAAA-MM-JJ.
+   * Les vues globales sans paramètre ne savent pas filtrer par date : dès qu'une
+   * borne est posée, il faut passer par la RPC — d'où leur présence dans
+   * hasDashFilters.
+   */
+  type DashFilters = {
+    division?: string
+    territoire?: string
+    area?: string
+    distributeur?: string
+    dateDebut?: string
+    dateFin?: string
+  }
+  /**
+   * Vrai dès que l'appelant fournit un objet de filtres, même vide.
+   *
+   * Le test portait avant sur « au moins un filtre non vide », ce qui renvoyait
+   * le dashboard vers les vues globales dès que l'utilisateur choisissait la
+   * période « Tout » sans filtre géographique. Or ces vues comptent des VISITES
+   * là où les RPC comptent des PDV distincts : la même page affichait alors deux
+   * dénominateurs contradictoires. Les RPC acceptent tous leurs paramètres à
+   * null — passer par elles en permanence ne coûte rien et garantit une base de
+   * comptage unique. Les vues ne servent plus qu'aux écrans qui n'ont pas de
+   * filtres du tout (perfect-store/liste.vue et sa recherche texte).
+   */
+  const hasDashFilters = (f?: DashFilters) => !!f
   const dashFilterParams = (f: DashFilters) => ({
     p_division: f.division || null,
     p_territoire: f.territoire || null,
     p_area: f.area || null,
     p_distributeur: f.distributeur || null,
+    p_date_debut: f.dateDebut || null,
+    p_date_fin: f.dateFin || null,
   })
 
   /** KPI par catégorie de PDV (RPC filtrée si un filtre dashboard est actif). */
@@ -215,13 +307,22 @@ export function usePerfectStore() {
       if (!error) return (data || []) as PerfectStoreTypeKpi[]
       console.warn('perfect_store_par_type_filtre indisponible (migration 20260717140000 ?), repli non filtré', error.message)
     }
+    // Repli sans filtre : la vue compte des visites, pas des PDV distincts.
+    // On la remappe pour que l'appelant n'ait qu'une seule forme à gérer.
     const { data, error } = await supabase.from('v_perfect_store_par_categorie_pdv')
       .select('type_pdv, visites_scorees, perfect_stores, perfect_store_pct, score_global_moyen_pct')
     if (error) {
       console.warn('v_perfect_store_par_categorie_pdv (B) indisponible', error.message)
       return []
     }
-    return (data || []) as PerfectStoreTypeKpi[]
+    return (data || []).map((row: any) => ({
+      type_pdv: row.type_pdv,
+      pdv_scores: row.visites_scorees,
+      pdv_perfect_stores: row.perfect_stores,
+      perfect_store_pct: row.perfect_store_pct,
+      score_global_moyen_pct: row.score_global_moyen_pct,
+      visites_scorees: row.visites_scorees,
+    })) as PerfectStoreTypeKpi[]
   }
 
   async function fetchCoverage(): Promise<CoverageKpi | null> {
@@ -281,13 +382,13 @@ export function usePerfectStore() {
     const page = opts.page && opts.page > 0 ? opts.page : 1
     const perPage = opts.perPage || 20
     if (hasDashFilters(opts.filters)) {
-      // RPC filtrée (pas de recherche texte côté RPC — non utilisée avec filtres).
       const { data, error } = await (supabase.rpc as any)('perfect_store_liste_filtre', {
         p_niveau: opts.niveau && opts.niveau !== 'TOUS' ? opts.niveau : null,
         p_type: opts.type || null,
         p_page: page,
         p_per_page: perPage,
         p_order: 'score',
+        p_search: opts.search?.trim() || null,
         ...dashFilterParams(opts.filters!),
       })
       if (error) throw error
@@ -301,7 +402,10 @@ export function usePerfectStore() {
         'visite_id, pdv_id, nom_pdv, type_pdv, zone, date_visite, commercial, niveau, score_global, dispo_rayon, assortiment, visibilite, promotion',
         { count: 'exact' },
       )
-    if (opts.niveau && opts.niveau !== 'TOUS') query = query.eq('niveau', opts.niveau)
+    // 'CONFORMES' est une sentinelle comprise par la RPC (tous niveaux Perfect
+    // Store confondus) ; la vue ne connaît que les codes réels et 'NON CONFORME'.
+    if (opts.niveau === 'CONFORMES') query = query.neq('niveau', 'NON CONFORME')
+    else if (opts.niveau && opts.niveau !== 'TOUS') query = query.eq('niveau', opts.niveau)
     if (opts.type) query = query.eq('type_pdv', opts.type)
     const search = opts.search?.trim()
     if (search) query = query.or(`nom_pdv.ilike.%${search}%,pdv_id.ilike.%${search}%,zone.ilike.%${search}%`)
@@ -327,35 +431,65 @@ export function usePerfectStore() {
       console.warn('v_perfect_store_evolution indisponible', error.message)
       return []
     }
-    return (data || []) as PerfectStoreEvolutionPoint[]
+    return (data || []).map((row: any) => ({
+      date: row.date,
+      perfect_stores: row.perfect_stores,
+      pdv_scores: row.visites_scorees,
+      perfect_store_pct: row.perfect_store_pct,
+    })) as PerfectStoreEvolutionPoint[]
   }
 
-  /** KPI globaux filtrés par Division / Territoire / Area / Distributeur (RPC). */
-  async function fetchGlobalKpiFiltre(f: { division?: string; territoire?: string; area?: string; distributeur?: string }): Promise<PerfectStoreGlobalKpi & { pdv_vus: number; pdv_total: number; couverture_pct: number | null } | null> {
-    const { data, error } = await (supabase.rpc as any)('dashboard_perfect_store_filtre', {
-      p_division: f.division || null,
-      p_territoire: f.territoire || null,
-      p_area: f.area || null,
-      p_distributeur: f.distributeur || null,
-    })
+  /** KPI globaux filtrés par géographie + période (RPC). */
+  async function fetchGlobalKpiFiltre(f: DashFilters): Promise<PerfectStoreDashboardKpi | null> {
+    const { data, error } = await (supabase.rpc as any)('dashboard_perfect_store_filtre', dashFilterParams(f))
     if (error) {
       console.warn('dashboard_perfect_store_filtre indisponible', error.message)
       return null
     }
-    return data as any
+    return data as PerfectStoreDashboardKpi
   }
 
-  /** PDV avec leurs critères manquants pour atteindre le niveau supérieur. */
-  async function fetchPerfectStoreManques(limit = 50): Promise<PerfectStoreManqueItem[]> {
-    const { data, error } = await supabase
-      .from('v_perfect_store_manques')
-      .select('visite_id, pdv_id, nom_pdv, type_pdv, division, zone, quartier, distributor_name, niveau_actuel, niveau_cible, dispo_manque, dispo_rayon, dispo_rayon_min, assortiment_manque, visibilite_manques, promotion_manques')
-      // Les moins conformes d'abord : non conformes (niveau_actuel null), puis dispo manquante.
-      .order('niveau_actuel', { ascending: true, nullsFirst: true })
-      .order('dispo_manque', { ascending: false })
-      .limit(limit)
+  /**
+   * Couverture des visites détaillée par merchandiser (tâche 2.2) : nombre de
+   * passages, PDV distincts touchés, et la liste des PDV avec leur nombre de
+   * passages — pour suivre l'objectif journalier (ex. 20 visites/jour).
+   */
+  async function fetchCouvertureParCommercial(f: DashFilters = {}): Promise<CouvertureCommercial[]> {
+    const { data, error } = await (supabase.rpc as any)('couverture_visites_par_commercial', dashFilterParams(f))
     if (error) {
-      console.warn('v_perfect_store_manques indisponible', error.message)
+      console.warn('couverture_visites_par_commercial indisponible', error.message)
+      return []
+    }
+    return (data || []) as CouvertureCommercial[]
+  }
+
+  /**
+   * Présence vs disponibilité par SKU clé (tâche 3.3) : les références de rôle
+   * « phare » (2 SKU clés) et « nouveaute » (gamme Délice). La liste est pilotée
+   * par reference_produit.role, pas codée en dur.
+   */
+  async function fetchPresenceSkus(f: DashFilters = {}): Promise<PresenceSku[]> {
+    const { data, error } = await (supabase.rpc as any)('dashboard_presence_skus', dashFilterParams(f))
+    if (error) {
+      console.warn('dashboard_presence_skus indisponible', error.message)
+      return []
+    }
+    return (data || []) as PresenceSku[]
+  }
+
+  /**
+   * PDV avec leurs critères manquants pour atteindre le niveau supérieur.
+   * Filtré géographie + période comme le reste du dashboard : la RPC ne garde
+   * que la dernière visite de chaque PDV dans la période (la vue brute émet
+   * une ligne par visite, tri déjà appliqué côté SQL).
+   */
+  async function fetchPerfectStoreManques(f: DashFilters = {}, limit = 50): Promise<PerfectStoreManqueItem[]> {
+    const { data, error } = await (supabase.rpc as any)('perfect_store_manques_filtre', {
+      ...dashFilterParams(f),
+      p_limit: limit,
+    })
+    if (error) {
+      console.warn('perfect_store_manques_filtre indisponible', error.message)
       return []
     }
     return (data || []) as PerfectStoreManqueItem[]
@@ -373,5 +507,7 @@ export function usePerfectStore() {
     fetchPerfectStoreEvolution,
     fetchPerfectStoreManques,
     fetchGlobalKpiFiltre,
+    fetchCouvertureParCommercial,
+    fetchPresenceSkus,
   }
 }

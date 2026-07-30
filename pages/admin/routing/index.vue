@@ -4,7 +4,9 @@
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Routing & Planning</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Gérez les itinéraires ponctuels et les templates permanents</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          Les règles récurrentes génèrent les tournées automatiquement, mois suivant compris.
+        </p>
       </div>
     </div>
 
@@ -194,11 +196,14 @@
           </UButton>
         </div>
         <div class="flex gap-2">
+          <UButton icon="i-heroicons-bolt" variant="outline" :loading="preGenerating" @click="handlePreGenerer">
+            Pré-générer 7 jours
+          </UButton>
           <UButton icon="i-heroicons-calendar-days" variant="outline" @click="showGenerateModal = true">
-            Générer routings
+            Générer sur une période
           </UButton>
           <UButton icon="i-heroicons-plus" class="bg-fc-red hover:bg-fc-red/90" @click="showTemplateCreateModal = true">
-            Nouveau template
+            Nouvelle règle
           </UButton>
         </div>
       </div>
@@ -210,8 +215,10 @@
 
       <div v-else-if="groupedTemplates.length === 0" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-12 text-center">
         <UIcon name="i-heroicons-calendar" class="w-12 h-12 text-gray-300 mx-auto mb-3" />
-        <p class="text-gray-500 dark:text-gray-400 font-medium">Aucun template permanent</p>
-        <p class="text-gray-400 text-sm mt-1">Créez un template pour définir les routings récurrents par jour de semaine</p>
+        <p class="text-gray-500 dark:text-gray-400 font-medium">Aucune règle récurrente</p>
+        <p class="text-gray-400 text-sm mt-1">
+          Créez une règle (« ce merchandiser visite ces PDV chaque lundi et jeudi ») : les tournées se génèrent ensuite toutes seules.
+        </p>
       </div>
 
       <div v-else class="space-y-4">
@@ -221,20 +228,32 @@
           class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden"
         >
           <!-- Template header -->
-          <div class="px-5 py-4 flex items-center justify-between border-b border-gray-100 dark:border-gray-700">
+          <div class="px-5 py-4 flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-700">
             <div class="flex items-center gap-4">
-              <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
-                :class="dayColors[tpl.day_of_week]">
-                {{ dayShort[tpl.day_of_week] }}
+              <div class="flex gap-1">
+                <span
+                  v-for="j in joursDeRegle(tpl)"
+                  :key="j"
+                  class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold"
+                  :class="dayColors[j]"
+                >
+                  {{ dayShort[j] }}
+                </span>
               </div>
               <div>
                 <h3 class="font-bold text-gray-900 dark:text-gray-100">
-                  {{ dayNames[tpl.day_of_week] }}
+                  {{ libelleJours(tpl) }}
                   <span v-if="tpl.label" class="font-normal text-gray-500 dark:text-gray-400"> — {{ tpl.label }}</span>
                 </h3>
                 <p class="text-xs text-gray-400">
                   {{ tpl.user?.nom || tpl.user?.email }}
                   · {{ tpl.routing_template_pdv?.length || 0 }} PDV
+                  <template v-if="tpl.territoire"> · {{ tpl.territoire }}</template>
+                  <template v-if="tpl.distributeur"> · {{ tpl.distributeur }}</template>
+                </p>
+                <p class="text-xs text-gray-400">
+                  <template v-if="tpl.date_fin">Du {{ tpl.date_debut || '—' }} au {{ tpl.date_fin }}</template>
+                  <template v-else>À partir du {{ tpl.date_debut || '—' }} · sans date de fin</template>
                 </p>
               </div>
             </div>
@@ -242,9 +261,48 @@
               <UBadge :color="tpl.is_active ? 'green' : 'gray'" variant="soft" size="sm">
                 {{ tpl.is_active ? 'Actif' : 'Inactif' }}
               </UBadge>
+              <UButton size="xs" variant="outline" icon="i-heroicons-no-symbol" @click="openExceptionModal(tpl)">
+                Décocher une semaine
+              </UButton>
               <UDropdown :items="templateActions(tpl)" :popper="{ placement: 'bottom-end' }">
                 <UButton variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" />
               </UDropdown>
+            </div>
+          </div>
+
+          <!-- Prochaines dates couvertes + exceptions en vigueur -->
+          <div class="flex flex-wrap items-start gap-x-6 gap-y-2 border-b border-gray-100 px-5 py-3 dark:border-gray-700">
+            <div class="min-w-0">
+              <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Prochaines tournées</p>
+              <div class="mt-1 flex flex-wrap gap-1.5">
+                <span
+                  v-for="d in prochainesOccurrences(tpl).slice(0, 8)"
+                  :key="d"
+                  class="rounded-md bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+                >
+                  {{ d }}
+                </span>
+                <span v-if="!prochainesOccurrences(tpl).length" class="text-xs text-gray-400">
+                  Aucune sur les 4 prochaines semaines.
+                </span>
+              </div>
+            </div>
+
+            <div v-if="tpl.routing_template_exception?.length" class="min-w-0">
+              <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Exceptions</p>
+              <div class="mt-1 flex flex-wrap gap-1.5">
+                <button
+                  v-for="e in tpl.routing_template_exception"
+                  :key="e.id"
+                  type="button"
+                  class="inline-flex items-center gap-1.5 rounded-md bg-amber-50 px-2 py-0.5 text-xs text-amber-700 hover:bg-amber-100 dark:bg-amber-950/30 dark:text-amber-300"
+                  title="Retirer cette exception"
+                  @click="handleRemoveException(e.id)"
+                >
+                  {{ exceptionLabel(e, tpl) }}
+                  <UIcon name="i-heroicons-x-mark" class="h-3 w-3" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -604,14 +662,14 @@
     <!-- ==================== CREATE TEMPLATE MODAL ==================== -->
     <AdminFormModal
       v-model="showTemplateCreateModal"
-      title="Nouveau template permanent"
-      description="Créez une tournée récurrente associée à un utilisateur et un jour de la semaine."
-      icon="i-heroicons-calendar"
+      title="Nouvelle règle récurrente"
+      description="« Ce merchandiser visite ces PDV chaque lundi et chaque jeudi. » La règle se répète d'elle-même, mois suivant compris."
+      icon="i-heroicons-arrow-path-rounded-square"
       width="sm:max-w-2xl"
       body-class="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2"
       required-note
     >
-        <UFormGroup label="Utilisateur" required size="md">
+        <UFormGroup label="Merchandiser" required size="md">
           <USelectMenu
             v-model="newTemplate.userId"
             :options="merchandiserOptions"
@@ -624,20 +682,52 @@
             class="w-full"
           />
         </UFormGroup>
-        <UFormGroup label="Jour de la semaine" required size="md">
+        <UFormGroup label="Nom de la règle" size="md">
+          <UInput v-model="newTemplate.label" placeholder="Ex. Tournée Appolo" size="md" class="w-full" />
+        </UFormGroup>
+
+        <UFormGroup label="Jours de la semaine" required size="md" class="sm:col-span-2">
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="j in JOURS_SEMAINE"
+              :key="j.value"
+              type="button"
+              class="rounded-lg border px-3 py-1.5 text-sm font-medium transition"
+              :class="newTemplate.daysOfWeek.includes(j.value)
+                ? 'border-fc-red bg-fc-red text-white'
+                : 'border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700'"
+              :aria-pressed="newTemplate.daysOfWeek.includes(j.value)"
+              @click="toggleJour(j.value)"
+            >
+              {{ j.label }}
+            </button>
+          </div>
+        </UFormGroup>
+
+        <!-- Territoire et distributeur portés par LA RÈGLE : un merchandiser peut
+             couvrir Abobo/Distributeur A une semaine, Adjamé/Distributeur B la
+             suivante. Il suffit de créer deux règles. -->
+        <UFormGroup label="Territoire" help="Restreint les PDV que cette règle peut contenir." size="md">
           <USelectMenu
-            v-model="newTemplate.dayOfWeek"
-            :options="dayOfWeekOptions"
-            placeholder="Choisir le jour"
-            option-attribute="label"
-            value-attribute="value"
+            v-model="newTemplate.territoire"
+            :options="territoireOptionsRegle"
+            placeholder="Tous"
             size="md"
+            searchable
             class="w-full"
           />
         </UFormGroup>
-        <UFormGroup label="Nom du template" size="md" class="sm:col-span-2">
-          <UInput v-model="newTemplate.label" placeholder="Ex. Tournée Appolo" size="md" class="w-full" />
+        <UFormGroup label="Distributeur" size="md">
+          <UInput v-model="newTemplate.distributeur" placeholder="Ex. Distributeur A" size="md" class="w-full" />
         </UFormGroup>
+
+        <UFormGroup label="À partir du" size="md">
+          <UInput v-model="newTemplate.dateDebut" type="date" size="md" class="w-full" />
+        </UFormGroup>
+        <UFormGroup label="Jusqu'au" help="Vide = la règle court indéfiniment." size="md">
+          <UInput v-model="newTemplate.dateFin" type="date" size="md" class="w-full" />
+        </UFormGroup>
+
         <UFormGroup label="Notes" size="md" class="sm:col-span-2">
           <UTextarea v-model="newTemplate.notes" placeholder="Instructions récurrentes..." :rows="2" />
         </UFormGroup>
@@ -647,12 +737,63 @@
           <UButton
             icon="i-heroicons-check"
             class="bg-fc-red text-white hover:bg-fc-red-600 disabled:bg-fc-red-300 aria-disabled:bg-fc-red-300 focus-visible:outline-fc-red-500 dark:bg-fc-red dark:text-white dark:hover:bg-fc-red-600 dark:disabled:bg-fc-red-700 dark:aria-disabled:bg-fc-red-700 dark:focus-visible:outline-fc-red-400"
-            :disabled="!newTemplate.userId || newTemplate.dayOfWeek === undefined"
+            :disabled="!newTemplate.userId || !newTemplate.daysOfWeek.length"
             :loading="creating"
             @click="handleCreateTemplate"
           >
-            Créer le template
+            Créer la règle
           </UButton>
+      </template>
+    </AdminFormModal>
+
+    <!-- ==================== EXCEPTION (décocher une semaine) ==================== -->
+    <AdminFormModal
+      v-model="showExceptionModal"
+      title="Décocher une période"
+      description="Suspend la tournée, ou un PDV seul, sur une période donnée. La règle n'est pas supprimée : elle reprend d'elle-même après."
+      icon="i-heroicons-no-symbol"
+      width="sm:max-w-xl"
+      body-class="space-y-5"
+    >
+      <UFormGroup label="Portée" size="md">
+        <USelectMenu
+          v-model="newException.pdvId"
+          :options="exceptionPdvOptions"
+          option-attribute="label"
+          value-attribute="value"
+          size="md"
+          class="w-full"
+        />
+      </UFormGroup>
+
+      <div class="flex gap-2">
+        <UButton size="xs" variant="outline" @click="setSemaineException(0)">Cette semaine</UButton>
+        <UButton size="xs" variant="outline" @click="setSemaineException(1)">Semaine prochaine</UButton>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <UFormGroup label="Du" required size="md">
+          <UInput v-model="newException.dateDebut" type="date" size="md" class="w-full" />
+        </UFormGroup>
+        <UFormGroup label="Au" required size="md">
+          <UInput v-model="newException.dateFin" type="date" size="md" class="w-full" />
+        </UFormGroup>
+      </div>
+
+      <UFormGroup label="Motif" size="md">
+        <UInput v-model="newException.motif" placeholder="Ex. congés, PDV fermé" size="md" class="w-full" />
+      </UFormGroup>
+
+      <template #footer>
+        <UButton type="button" color="gray" variant="ghost" @click="showExceptionModal = false">Annuler</UButton>
+        <UButton
+          icon="i-heroicons-check"
+          class="bg-fc-red text-white hover:bg-fc-red-600"
+          :disabled="!newException.dateDebut || !newException.dateFin"
+          @click="handleAddException"
+        >
+          Enregistrer l'exception
+        </UButton>
       </template>
     </AdminFormModal>
 
@@ -687,22 +828,12 @@
           </UFormGroup>
         </div>
 
-        <div v-if="generateResults.length" class="max-h-48 space-y-1 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-700/50">
-          <div v-for="r in generateResults" :key="r.date" class="flex items-center gap-2 text-sm">
-            <UIcon
-              :name="r.status === 'created' ? 'i-heroicons-check-circle' : r.status === 'exists' ? 'i-heroicons-exclamation-triangle' : 'i-heroicons-minus-circle'"
-              :class="r.status === 'created' ? 'text-emerald-500' : r.status === 'exists' ? 'text-amber-500' : 'text-gray-400'"
-              class="w-4 h-4"
-            />
-            <span class="text-gray-700 dark:text-gray-300">{{ r.date }}</span>
-            <span :class="r.status === 'created' ? 'text-emerald-600' : r.status === 'exists' ? 'text-amber-600' : 'text-gray-400'" class="text-xs">
-              {{ r.status === 'created' ? 'Créé' : r.status === 'exists' ? 'Existe déjà' : 'Pas de template' }}
-            </span>
-          </div>
-        </div>
+        <p v-if="generateMessage" class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-gray-700 dark:border-slate-700 dark:bg-slate-700/50 dark:text-gray-300">
+          {{ generateMessage }}
+        </p>
 
       <template #footer>
-          <UButton type="button" color="gray" variant="ghost" @click="showGenerateModal = false; generateResults = []">Fermer</UButton>
+          <UButton type="button" color="gray" variant="ghost" @click="showGenerateModal = false; generateMessage = ''">Fermer</UButton>
           <UButton
             icon="i-heroicons-sparkles"
             class="bg-fc-red text-white hover:bg-fc-red-600 disabled:bg-fc-red-300 aria-disabled:bg-fc-red-300 focus-visible:outline-fc-red-500 dark:bg-fc-red dark:text-white dark:hover:bg-fc-red-600 dark:disabled:bg-fc-red-700 dark:aria-disabled:bg-fc-red-700 dark:focus-visible:outline-fc-red-400"
@@ -721,8 +852,31 @@
         <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Importer des routings (CSV)</h2>
         <p class="text-sm text-gray-500 dark:text-gray-400">
           Format : <strong>1 ligne = 1 PDV</strong>. Plusieurs lignes même <em>email + date</em> = un routing ordonné (colonne <em>ordre</em>).
-          Un routing existant (même utilisateur + date) est <strong>mis à jour</strong>, pas dupliqué (progression terrain préservée).
+          Un routing existant (même utilisateur + date) est <strong>mis à jour</strong>, jamais dupliqué (progression terrain préservée).
         </p>
+
+        <UFormGroup label="Que faire des PDV déjà présents et absents du fichier ?" size="sm">
+          <div class="space-y-2">
+            <label class="flex items-start gap-2 cursor-pointer">
+              <input v-model="importMode" type="radio" value="fusion" class="mt-1 text-fc-red focus:ring-fc-red" />
+              <span class="text-sm">
+                <strong class="text-gray-900 dark:text-gray-100">Fusionner</strong>
+                <span class="block text-xs text-gray-500 dark:text-gray-400">
+                  Les conserver. À utiliser pour corriger un mois déjà importé sans rien perdre.
+                </span>
+              </span>
+            </label>
+            <label class="flex items-start gap-2 cursor-pointer">
+              <input v-model="importMode" type="radio" value="remplacement" class="mt-1 text-fc-red focus:ring-fc-red" />
+              <span class="text-sm">
+                <strong class="text-gray-900 dark:text-gray-100">Remplacer</strong>
+                <span class="block text-xs text-gray-500 dark:text-gray-400">
+                  Les supprimer. La tournée devient exactement le contenu du fichier.
+                </span>
+              </span>
+            </label>
+          </div>
+        </UFormGroup>
 
         <UButton variant="link" size="sm" icon="i-heroicons-arrow-down-tray" class="px-0" @click="downloadRoutingTemplate">
           Télécharger le modèle CSV
@@ -761,7 +915,9 @@
 </template>
 
 <script setup lang="ts">
-import type { Routing, RoutingPDV, RoutingObjectives, RoutingTemplate, RoutingTemplatePDV } from '~/types'
+import type { Routing, RoutingPDV, RoutingObjectives, RoutingTemplate, RoutingTemplatePDV, RoutingTemplateException } from '~/types'
+import { toIsoJour, debutDeSemaine } from '~/utils/periode'
+import { JOURS_SEMAINE, joursDeRegle, libelleJours, datesDeRegle } from '~/utils/routingRecurrence'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
@@ -776,6 +932,9 @@ const showImportModal = ref(false)
 const importFile = ref<File | null>(null)
 const importing = ref(false)
 const importSummary = ref<{ created: number; updated: number; pdvCount: number; errors: string[] } | null>(null)
+// Fusion par défaut : réimporter pour corriger un mois déjà chargé ne doit
+// jamais supprimer les PDV absents du fichier (demande client du 23 juillet).
+const importMode = ref<'fusion' | 'remplacement'>('fusion')
 
 function handleImportFileSelect(e: Event) {
   const target = e.target as HTMLInputElement
@@ -795,7 +954,7 @@ async function handleImportRoutings() {
   try {
     const text = await importFile.value.text()
     const rows = parseCsv(text)
-    const result = await routingStore.importRoutingsFromCSV(rows, authStore.profile!.id)
+    const result = await routingStore.importRoutingsFromCSV(rows, authStore.profile!.id, importMode.value)
     importSummary.value = result
     toast.add({
       title: 'Import terminé',
@@ -812,8 +971,8 @@ async function handleImportRoutings() {
 
 // ---- Tabs ----
 const tabs = [
-  { key: 'routings', label: '📋 Routings ponctuels' },
-  { key: 'templates', label: '🔁 Templates permanents' },
+  { key: 'routings', label: '📋 Tournées planifiées' },
+  { key: 'templates', label: '🔁 Règles récurrentes' },
 ]
 const activeTab = ref('routings')
 
@@ -854,16 +1013,120 @@ const templateLoading = computed(() => routingStore.templateLoading)
 const showTemplateCreateModal = ref(false)
 const showGenerateModal = ref(false)
 const generating = ref(false)
-const generateResults = ref<{ date: string; status: string }[]>([])
+const generateMessage = ref('')
 const templateFilterUser = ref('')
 const templateAddPdvId = reactive<Record<string, string>>({})
 
 const newTemplate = reactive({
   userId: '',
-  dayOfWeek: undefined as number | undefined,
+  // Multi-jours : « chaque lundi ET chaque jeudi » en une seule règle.
+  daysOfWeek: [] as number[],
   label: '',
   notes: '',
+  // Portés par la règle, pas par le profil : un merchandiser peut changer de
+  // zone et de distributeur en cours de mois (tâche 4.4).
+  territoire: '',
+  distributeur: '',
+  dateDebut: toIsoJour(new Date()),
+  dateFin: '',
 })
+
+// ---- Exceptions : « cette semaine, il ne visite pas ce PDV » ----
+const showExceptionModal = ref(false)
+const exceptionTemplate = ref<RoutingTemplate | null>(null)
+const newException = reactive({
+  pdvId: '',
+  dateDebut: '',
+  dateFin: '',
+  motif: '',
+})
+
+function openExceptionModal(tpl: RoutingTemplate) {
+  exceptionTemplate.value = tpl
+  const lundi = debutDeSemaine(new Date())
+  const dimanche = new Date(lundi)
+  dimanche.setDate(lundi.getDate() + 6)
+  newException.pdvId = ''
+  newException.dateDebut = toIsoJour(lundi)
+  newException.dateFin = toIsoJour(dimanche)
+  newException.motif = ''
+  showExceptionModal.value = true
+}
+
+// Raccourcis : la demande type est « cette semaine » ou « la semaine prochaine ».
+function setSemaineException(decalage: number) {
+  const lundi = debutDeSemaine(new Date())
+  lundi.setDate(lundi.getDate() + decalage * 7)
+  const dimanche = new Date(lundi)
+  dimanche.setDate(lundi.getDate() + 6)
+  newException.dateDebut = toIsoJour(lundi)
+  newException.dateFin = toIsoJour(dimanche)
+}
+
+async function handleAddException() {
+  if (!exceptionTemplate.value) return
+  try {
+    await routingStore.addTemplateException(
+      exceptionTemplate.value.id,
+      newException.dateDebut,
+      newException.dateFin,
+      { pdvId: newException.pdvId || undefined, motif: newException.motif, createdBy: authStore.profile!.id },
+    )
+    toast.add({
+      title: 'Exception enregistrée',
+      description: newException.pdvId ? 'Ce PDV est retiré sur la période.' : 'La tournée est suspendue sur la période.',
+      color: 'green',
+    })
+    showExceptionModal.value = false
+    loadTemplates()
+  } catch (err: any) {
+    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+  }
+}
+
+async function handleRemoveException(exceptionId: string) {
+  try {
+    await routingStore.removeTemplateException(exceptionId)
+    toast.add({ title: 'Exception retirée', color: 'green' })
+    loadTemplates()
+  } catch (err: any) {
+    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+  }
+}
+
+// Prochaines occurrences d'une règle sur 4 semaines, exceptions déduites.
+function prochainesOccurrences(tpl: RoutingTemplate): string[] {
+  const debut = new Date()
+  const fin = new Date()
+  fin.setDate(fin.getDate() + 28)
+  return datesDeRegle(tpl, toIsoJour(debut), toIsoJour(fin), tpl.routing_template_exception || [])
+}
+
+function exceptionLabel(e: RoutingTemplateException, tpl: RoutingTemplate): string {
+  const cible = e.pdv_id
+    ? (tpl.routing_template_pdv?.find(p => p.pdv_id === e.pdv_id)?.pdv?.nom_pdv || e.pdv_id)
+    : 'Toute la tournée'
+  return `${cible} — du ${e.date_debut} au ${e.date_fin}`
+}
+
+// ---- Pré-génération de l'horizon (chemin principal de matérialisation) ----
+const preGenerating = ref(false)
+async function handlePreGenerer() {
+  preGenerating.value = true
+  try {
+    const { users, tournees } = await routingStore.preGenererHorizon(7)
+    toast.add({
+      title: `${tournees} tournée(s) pré-générée(s)`,
+      description: `${users} merchandiser(s) couverts sur les 7 prochains jours.`,
+      color: 'green',
+    })
+    loadRoutings()
+  } catch (err: any) {
+    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+  } finally {
+    preGenerating.value = false
+  }
+}
 
 const generateConfig = reactive({
   userId: '',
@@ -890,10 +1153,6 @@ const statusOptions = [
 
 const editStatusOptions = statusOptions.filter(o => o.value)
 
-const dayNames: Record<number, string> = {
-  0: 'Dimanche', 1: 'Lundi', 2: 'Mardi', 3: 'Mercredi',
-  4: 'Jeudi', 5: 'Vendredi', 6: 'Samedi',
-}
 const dayShort: Record<number, string> = {
   0: 'Dim', 1: 'Lun', 2: 'Mar', 3: 'Mer', 4: 'Jeu', 5: 'Ven', 6: 'Sam',
 }
@@ -907,15 +1166,19 @@ const dayColors: Record<number, string> = {
   6: 'bg-orange-100 text-orange-700',
 }
 
-const dayOfWeekOptions = [
-  { value: 1, label: 'Lundi' },
-  { value: 2, label: 'Mardi' },
-  { value: 3, label: 'Mercredi' },
-  { value: 4, label: 'Jeudi' },
-  { value: 5, label: 'Vendredi' },
-  { value: 6, label: 'Samedi' },
-  { value: 0, label: 'Dimanche' },
-]
+// Territoires proposés pour une règle : ceux réellement portés par des PDV actifs.
+const territoireOptionsRegle = computed(() =>
+  ['', ...[...new Set(pdvList.value.map(p => p.zone).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr'))]
+)
+
+// Portée d'une exception : toute la tournée, ou un PDV précis de la règle.
+const exceptionPdvOptions = computed(() => [
+  { value: '', label: 'Toute la tournée' },
+  ...(exceptionTemplate.value?.routing_template_pdv || []).map(p => ({
+    value: p.pdv_id,
+    label: p.pdv?.nom_pdv || p.pdv_id,
+  })),
+])
 
 // ---- Computed ----
 const userOptions = computed(() => [
@@ -1070,14 +1333,14 @@ const canCreate = computed(() => {
   return newRouting.pdvItems.every(i => scopedIds.has(i.pdv_id))
 })
 
+// Tri par premier jour d'application (lundi → dimanche), une règle pouvant
+// désormais couvrir plusieurs jours.
 const groupedTemplates = computed(() => {
-  const list = routingStore.templates || []
-  return [...list].sort((a, b) => {
-    // Sort Mon-Sun (1,2,3,4,5,6,0)
-    const orderA = a.day_of_week === 0 ? 7 : a.day_of_week
-    const orderB = b.day_of_week === 0 ? 7 : b.day_of_week
-    return orderA - orderB
-  })
+  const rang = (t: RoutingTemplate) => {
+    const jours = joursDeRegle(t).map(j => (j === 0 ? 7 : j))
+    return jours.length ? Math.min(...jours) : 99
+  }
+  return [...(routingStore.templates || [])].sort((a, b) => rang(a) - rang(b))
 })
 
 // ---- Helper functions ----
@@ -1227,10 +1490,14 @@ function templatePDVObjectifActions(tpl: RoutingTemplate, tp: RoutingTemplatePDV
   }))]
 }
 
+// Le PDV reste choisi dans une liste fermée, jamais saisi en texte libre.
+// Si la règle porte un territoire, la liste s'y restreint : c'est le garde de
+// périmètre côté règle (le store le revalide de toute façon avant insertion).
 function availableTemplatePdvOptions(tpl: RoutingTemplate) {
   const usedIds = new Set((tpl.routing_template_pdv || []).map(p => p.pdv_id))
   return pdvList.value
     .filter(p => !usedIds.has(p.pdv_id))
+    .filter(p => !tpl.territoire || p.zone === tpl.territoire)
     .map(p => ({ value: p.pdv_id, label: `${p.nom_pdv} (${p.zone || ''})` }))
 }
 
@@ -1360,24 +1627,37 @@ async function handleDuplicate() {
   }
 }
 
-// ---- Create template ----
+// ---- Create template (règle récurrente) ----
 async function handleCreateTemplate() {
-  if (!newTemplate.userId || newTemplate.dayOfWeek === undefined) return
+  if (!newTemplate.userId || !newTemplate.daysOfWeek.length) return
   creating.value = true
   try {
     await routingStore.createTemplate(
       newTemplate.userId,
-      newTemplate.dayOfWeek,
+      [...newTemplate.daysOfWeek],
       newTemplate.label,
       authStore.profile!.id,
-      newTemplate.notes
+      {
+        notes: newTemplate.notes,
+        territoire: newTemplate.territoire,
+        distributeur: newTemplate.distributeur,
+        dateDebut: newTemplate.dateDebut,
+        dateFin: newTemplate.dateFin,
+      },
     )
-    toast.add({ title: 'Template créé', description: `${dayNames[newTemplate.dayOfWeek]} — Ajoutez des PDV maintenant`, color: 'green' })
+    toast.add({
+      title: 'Règle créée',
+      description: `${libelleJours({ days_of_week: newTemplate.daysOfWeek })} — ajoutez maintenant les PDV`,
+      color: 'green',
+    })
     showTemplateCreateModal.value = false
     newTemplate.userId = ''
-    newTemplate.dayOfWeek = undefined
+    newTemplate.daysOfWeek = []
     newTemplate.label = ''
     newTemplate.notes = ''
+    newTemplate.territoire = ''
+    newTemplate.distributeur = ''
+    newTemplate.dateFin = ''
     loadTemplates()
   } catch (err: any) {
     toast.add({ title: 'Erreur', description: err.message, color: 'red' })
@@ -1386,24 +1666,28 @@ async function handleCreateTemplate() {
   }
 }
 
+function toggleJour(jour: number) {
+  const idx = newTemplate.daysOfWeek.indexOf(jour)
+  if (idx === -1) newTemplate.daysOfWeek.push(jour)
+  else newTemplate.daysOfWeek.splice(idx, 1)
+}
+
 // ---- Generate routings from templates ----
 async function handleGenerate() {
   generating.value = true
-  generateResults.value = []
+  generateMessage.value = ''
   try {
-    const results = await routingStore.generateFromTemplates(
+    // La RPC est idempotente : les tournées déjà créées sont laissées telles
+    // quelles, avancement terrain compris. Seules les manquantes sont ajoutées.
+    const { crees } = await routingStore.generateFromTemplates(
       generateConfig.userId,
       generateConfig.dateFrom,
       generateConfig.dateTo,
-      authStore.profile!.id
     )
-    generateResults.value = results
-    const created = results.filter(r => r.status === 'created').length
-    toast.add({
-      title: `${created} routing(s) généré(s)`,
-      description: `${results.filter(r => r.status === 'exists').length} déjà existants, ${results.filter(r => r.status === 'skipped').length} jours sans template`,
-      color: 'green'
-    })
+    generateMessage.value = crees
+      ? `${crees} tournée(s) créée(s). Les journées déjà planifiées n'ont pas été touchées.`
+      : 'Aucune tournée à créer : soit elles existent déjà, soit aucune règle ne couvre cette période.'
+    toast.add({ title: `${crees} tournée(s) générée(s)`, color: 'green' })
     loadRoutings()
   } catch (err: any) {
     toast.add({ title: 'Erreur', description: err.message, color: 'red' })

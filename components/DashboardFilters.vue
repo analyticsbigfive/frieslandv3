@@ -20,14 +20,14 @@
       </button>
     </div>
 
-    <div class="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-6">
-      <UFormGroup label="Date de début" size="sm">
-        <UInput v-model="model.dateFrom" type="date" size="sm" />
-      </UFormGroup>
-      <UFormGroup label="Date de fin" size="sm">
-        <UInput v-model="model.dateTo" type="date" size="sm" />
-      </UFormGroup>
+    <!-- Période : mêmes raccourcis jour / semaine / mois sur tous les écrans
+         (réunion du 23 juillet, tâche 6). « Personnalisé » réaffiche les deux
+         bornes libres, qui restent la source de vérité envoyée au serveur. -->
+    <div class="mt-4">
+      <PeriodFilter v-model="periode" />
+    </div>
 
+    <div class="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
       <UFormGroup v-if="showCanal" label="Canal" size="sm">
         <USelectMenu v-model="model.canal" :options="['', 'General trade', 'Modern trade']" placeholder="Tous" size="sm" />
       </UFormGroup>
@@ -117,6 +117,8 @@
 </template>
 
 <script setup lang="ts">
+import type { PeriodeValue } from '~/components/PeriodFilter.vue'
+
 export interface DashboardFilterValues {
   dateFrom: string
   dateTo: string
@@ -163,6 +165,26 @@ const model = computed({
 })
 
 const advancedOpen = ref(false)
+
+// Période : la source de vérité reste model.dateFrom / model.dateTo (c'est ce
+// que consomment les RPC). `periode` n'est que l'état du sélecteur, initialisé
+// sur « personnalisé » puisque les bornes par défaut (3 mois glissants) ne
+// correspondent à aucun preset.
+const periode = ref<PeriodeValue>({
+  preset: 'personnalise',
+  debut: props.modelValue.dateFrom,
+  fin: props.modelValue.dateTo,
+})
+watch(periode, (p) => {
+  model.value.dateFrom = p.debut
+  model.value.dateTo = p.fin
+}, { deep: true })
+// Un reset externe (bouton « Réinitialiser ») réécrit les bornes : on resynchronise.
+watch(() => [props.modelValue.dateFrom, props.modelValue.dateTo], ([debut, fin]) => {
+  if (debut !== periode.value.debut || fin !== periode.value.fin) {
+    periode.value = { preset: 'personnalise', debut, fin }
+  }
+})
 
 const hasAdvancedFields = computed(() => [
   props.showCategorie,

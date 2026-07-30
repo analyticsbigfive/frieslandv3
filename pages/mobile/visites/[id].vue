@@ -79,6 +79,29 @@
             >
               {{ visite.data?.concurrence?.[cat.key]?.present ? 'Présent' : 'Absent' }}
             </p>
+            <p v-if="visite.data?.concurrence?.[cat.key]?.en_activite" class="mt-0.5 text-xs font-medium text-amber-600">
+              En activité
+            </p>
+            <p v-if="visite.data?.concurrence?.[cat.key]?.action_concurrence" class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+              {{ visite.data.concurrence[cat.key].action_concurrence }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Concurrents signalés hors liste -->
+        <div v-if="concurrentsLibres.length" class="space-y-2 border-t border-gray-100 pt-3 dark:border-gray-700">
+          <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Autres concurrents signalés</p>
+          <div
+            v-for="(c, idx) in concurrentsLibres"
+            :key="`${c.nom}-${idx}`"
+            class="flex items-start gap-3 rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-700/50"
+          >
+            <img v-if="c.photo_url" :src="c.photo_url" alt="" class="h-12 w-12 shrink-0 rounded object-cover" />
+            <div class="min-w-0">
+              <p class="text-sm font-bold text-gray-900 dark:text-gray-100">{{ c.nom }}</p>
+              <p v-if="c.en_activite" class="text-xs font-medium text-amber-600">En activité</p>
+              <p v-if="c.action_concurrence" class="text-xs text-gray-500 dark:text-gray-400">{{ c.action_concurrence }}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -149,6 +172,11 @@ const concurrenceCategories = [
   { key: 'scm', label: 'SCM' },
   { key: 'uht', label: 'UHT' },
 ]
+
+// Lit les deux formats : `autres[]` (depuis juillet 2026) et l'ancien
+// `<cat>.autre = 'Présent'` + `nom_concurrent`, pour que les visites déjà
+// enregistrées continuent d'afficher leurs concurrents.
+const concurrentsLibres = computed(() => concurrentsDeLaVisite(visite.value?.data?.concurrence))
 
 const actionsList = [
   { key: 'referencement_produits', label: 'Référencement produits' },

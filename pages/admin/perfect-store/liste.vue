@@ -31,6 +31,10 @@
             </button>
           </div>
         </div>
+
+        <!-- Filtre période (réunion 23/07) : un PDV Perfect Store cette semaine
+             peut ne plus l'être la suivante. -->
+        <PeriodFilter v-model="periode" :show-resume="false" />
       </template>
     </AdminListToolbar>
 
@@ -117,6 +121,7 @@
 
 <script setup lang="ts">
 import type { PerfectStoreListItem } from '~/composables/usePerfectStore'
+import type { PeriodeValue } from '~/components/PeriodFilter.vue'
 import type { Visite } from '~/types'
 import type { PerfectStoreResultB } from '~/utils/perfectStore'
 
@@ -134,6 +139,9 @@ const loading = ref(true)
 const error = ref(false)
 const search = ref('')
 const niveau = ref('TOUS')
+// Toute la période par défaut : cette page est un catalogue, la borne est un
+// filtre optionnel — contrairement au dashboard qui démarre sur le mois.
+const periode = ref<PeriodeValue>({ preset: 'tout', debut: '', fin: '' })
 
 const showDetail = ref(false)
 const selectedVisite = ref<Visite | null>(null)
@@ -172,7 +180,18 @@ let searchTimer: ReturnType<typeof setTimeout> | null = null
 async function load() {
   loading.value = true
   try {
-    const res = await fetchPerfectStoreListe({ niveau: niveau.value, search: search.value, page: page.value, perPage })
+    const res = await fetchPerfectStoreListe({
+      niveau: niveau.value,
+      search: search.value,
+      page: page.value,
+      perPage,
+      // Toujours par la RPC filtrée : elle gère période ET recherche, et compte
+      // sur la même base (dernière visite par PDV) que le dashboard.
+      filters: {
+        dateDebut: periode.value.debut || undefined,
+        dateFin: periode.value.fin || undefined,
+      },
+    })
     items.value = res.items
     total.value = res.total
     error.value = false
@@ -200,9 +219,12 @@ function updateSearch(value: string) {
 function resetListFilters() {
   search.value = ''
   niveau.value = 'TOUS'
+  periode.value = { preset: 'tout', debut: '', fin: '' }
   page.value = 1
   load()
 }
+
+watch(periode, () => { page.value = 1; load() }, { deep: true })
 
 // Chips des filtres actifs — clic = retirer ce filtre seul.
 const filterChips = computed(() => {

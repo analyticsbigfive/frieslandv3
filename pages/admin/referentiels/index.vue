@@ -599,6 +599,33 @@ const defs: Def[] = [
       : supabase.from('correspondance_reference').insert({ reference_produit_id: f.reference_produit_id, categorie_jsonb: f.categorie_jsonb, sku_key: f.sku_key }),
     del: r => supabase.from('correspondance_reference').delete().eq('reference_produit_id', r.reference_produit_id),
   },
+  {
+    id: 'marque_concurrente', section: 'produit', label: 'Marques concurrentes', table: 'marque_concurrente',
+    select: 'id, famille, code, nom, actif, ordre', order: q => q.order('famille').order('ordre').order('nom'),
+    columns: [
+      { label: 'Famille', cell: r => r.famille?.toUpperCase(), align: 'c', kind: 'badge' },
+      { label: 'Marque', cell: r => r.nom },
+      { label: 'Clé JSONB', cell: r => r.code, kind: 'mono', muted: true },
+      { label: 'Ordre', cell: r => r.ordre, align: 'c', kind: 'num' },
+      { label: 'Actif', cell: r => r.actif, align: 'c', kind: 'bool' },
+    ],
+    fields: [
+      { key: 'famille', label: 'Famille', type: 'select', opts: () => FAMILLES_CONCURRENCE.map(f => ({ value: f.key, label: f.key.toUpperCase() })), required: true, lockEdit: true },
+      { key: 'nom', label: 'Nom de la marque', type: 'text', required: true, hint: 'ex. Cowmilk — apparaît tel quel dans le formulaire mobile' },
+      { key: 'ordre', label: 'Ordre d\'affichage', type: 'num', min: 0 },
+      { key: 'actif', label: 'Actif', type: 'bool' },
+    ],
+    blank: () => ({ famille: 'evap', nom: '', ordre: 0, actif: true }),
+    fill: r => ({ ...r }),
+    rowKey: r => String(r.id), search: r => `${r.famille} ${r.nom} ${r.code}`.toLowerCase(),
+    valid: f => !!f.famille && !!f.nom,
+    // La clé JSONB est dérivée du nom à la création puis figée : en changer
+    // orphelinerait les statuts déjà relevés sous l'ancienne clé.
+    save: (f, e) => e
+      ? supabase.from('marque_concurrente').update({ nom: f.nom, ordre: f.ordre ?? 0, actif: !!f.actif }).eq('id', f.id)
+      : supabase.from('marque_concurrente').insert({ famille: f.famille, code: normaliserNomConcurrent(f.nom), nom: f.nom, ordre: f.ordre ?? 0, actif: f.actif !== false }),
+    del: r => supabase.from('marque_concurrente').delete().eq('id', r.id),
+  },
   // ===== PERFECT STORE =====
   {
     id: 'niveau_perfect_store', section: 'ps', label: 'Niveaux Perfect Store', table: 'niveau_perfect_store',

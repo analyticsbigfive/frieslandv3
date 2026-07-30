@@ -148,10 +148,25 @@ export interface RoutingTemplatePDV {
   pdv?: PDV
 }
 
+/**
+ * Règle de routing récurrente (réunion du 23 juillet).
+ * « Ce PDV, ce merchandiser le visite chaque lundi et chaque jeudi » — la règle
+ * se répète indéfiniment, mois suivant compris, sans re-paramétrage.
+ */
 export interface RoutingTemplate {
   id: string
   user_id: string
-  day_of_week: DayOfWeek
+  /** Jours d'application, 0 = dimanche … 6 = samedi. */
+  days_of_week?: DayOfWeek[] | null
+  /** Champ historique : une règle ne portait qu'un jour. Conservé pour compat. */
+  day_of_week?: DayOfWeek | null
+  /** Territoire de CETTE règle : un merchandiser peut en changer en cours de mois. */
+  territoire?: string | null
+  /** Distributeur de CETTE règle, même raison. */
+  distributeur?: string | null
+  date_debut?: string | null
+  /** NULL = la règle court indéfiniment (cas nominal). */
+  date_fin?: string | null
   label?: string
   notes?: string
   is_active: boolean
@@ -162,6 +177,22 @@ export interface RoutingTemplate {
   user?: Profile
   creator?: Profile
   routing_template_pdv?: RoutingTemplatePDV[]
+  routing_template_exception?: RoutingTemplateException[]
+}
+
+/**
+ * Désactivation ponctuelle : « cette semaine, il ne visite pas ce PDV ».
+ * `pdv_id` nul = toute la tournée est suspendue sur la période.
+ */
+export interface RoutingTemplateException {
+  id: string
+  template_id: string
+  pdv_id?: string | null
+  date_debut: string
+  date_fin: string
+  motif?: string | null
+  created_by?: string
+  created_at: string
 }
 
 // ---- Visite Data (JSONB) ----
@@ -230,35 +261,53 @@ export interface VisiteProduits {
   }
 }
 
+/**
+ * Champs communs à chaque famille de concurrents (réunion du 23 juillet).
+ * `present` ne suffisait pas : un concurrent en rayon mais inactif n'appelle
+ * pas la même réaction commerciale qu'un concurrent qui pousse une promo.
+ */
+export interface ConcurrenceCategorieBase {
+  present: boolean
+  /** Le concurrent mène-t-il une action sur le PDV ? */
+  en_activite?: boolean
+  /** Nature de l'action : promotion, programme de fidélité, référencement… */
+  action_concurrence?: string
+  /** Champ historique : nom saisi quand « autre » était Présent. */
+  nom_concurrent?: string
+}
+
+/**
+ * Concurrent signalé en texte libre par le merchandiser.
+ * Le nom est obligatoire : sans lui, l'agrégation du dashboard n'a rien à
+ * regrouper. Le regroupement se fait sur une clé normalisée (voir
+ * `normaliserNomConcurrent`), pas sur la graphie saisie.
+ */
+export interface ConcurrentSignale {
+  nom: string
+  categorie?: string
+  en_activite?: boolean
+  action_concurrence?: string
+  photo_url?: string
+}
+
+/**
+ * Une famille de concurrents : les champs communs, la clé fixe `autre`, et un
+ * statut par marque dont la clé vient du référentiel `marque_concurrente`
+ * (colonne `code`). Les marques ne sont plus figées dans le type : l'admin
+ * peut en ajouter depuis les Référentiels sans redéploiement.
+ */
+export type ConcurrenceCategorie = ConcurrenceCategorieBase & {
+  autre: ProductStatus
+} & Record<string, ProductStatus | boolean | string | undefined>
+
 export interface VisiteConcurrence {
   presence_concurrents: boolean
-  evap: {
-    present: boolean
-    cowmilk: ProductStatus
-    nido_150g: ProductStatus
-    autre: ProductStatus
-    nom_concurrent?: string
-  }
-  imp: {
-    present: boolean
-    nido: ProductStatus
-    laity: ProductStatus
-    top_lait: ProductStatus
-    autre: ProductStatus
-    nom_concurrent?: string
-  }
-  scm: {
-    present: boolean
-    top_saho: ProductStatus
-    autre: ProductStatus
-    nom_concurrent?: string
-  }
-  uht: {
-    present: boolean
-    candia: ProductStatus
-    autre: ProductStatus
-    nom_concurrent?: string
-  }
+  evap: ConcurrenceCategorie
+  imp: ConcurrenceCategorie
+  scm: ConcurrenceCategorie
+  uht: ConcurrenceCategorie
+  /** Concurrents hors liste, saisis librement. Absent sur les visites d'avant juillet 2026. */
+  autres?: ConcurrentSignale[]
 }
 
 export interface VisiteVisibilite {
@@ -511,10 +560,11 @@ export function getDefaultVisiteData(): VisiteData {
     },
     concurrence: {
       presence_concurrents: false,
-      evap: { present: false, cowmilk: 'En rupture', nido_150g: 'En rupture', autre: 'En rupture' },
-      imp: { present: false, nido: 'En rupture', laity: 'En rupture', top_lait: 'En rupture', autre: 'En rupture' },
-      scm: { present: false, top_saho: 'En rupture', autre: 'En rupture' },
-      uht: { present: false, candia: 'En rupture', autre: 'En rupture' },
+      evap: { present: false, en_activite: false, action_concurrence: '', cowmilk: 'En rupture', nido_150g: 'En rupture', autre: 'En rupture' },
+      imp: { present: false, en_activite: false, action_concurrence: '', nido: 'En rupture', laity: 'En rupture', top_lait: 'En rupture', autre: 'En rupture' },
+      scm: { present: false, en_activite: false, action_concurrence: '', top_saho: 'En rupture', autre: 'En rupture' },
+      uht: { present: false, en_activite: false, action_concurrence: '', candia: 'En rupture', autre: 'En rupture' },
+      autres: [],
     },
     visibilite: {
       standards: {},

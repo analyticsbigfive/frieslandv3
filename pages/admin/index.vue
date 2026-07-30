@@ -7,6 +7,11 @@
 
     <!-- Filtres cascade Division → Territoire → Quartier + Distributeur (pilotent KPI + tableaux) -->
     <div class="admin-toolbar">
+      <!-- Période : un PDV peut être Perfect Store cette semaine et plus la
+           suivante — le KPI n'a pas de sens sans fenêtre de temps explicite. -->
+      <div class="mb-3 border-b border-slate-100 pb-3 dark:border-slate-700">
+        <PeriodFilter v-model="periode" />
+      </div>
       <div class="grid grid-cols-2 gap-2 sm:grid-cols-5">
         <UFormGroup label="Division (North/South)" size="xs">
           <USelectMenu v-model="fDivision" :options="divisionOptions" placeholder="Toutes" size="xs" searchable :loading="loading" />
@@ -45,30 +50,221 @@
     </div>
 
     <template v-else-if="global">
-      <!-- Compteur global -->
+      <!-- Compteur global : le NOMBRE de Perfect Stores d'abord, le taux ensuite.
+           Un pourcentage seul ne dit pas sur quoi il porte. -->
       <div class="admin-surface relative overflow-hidden p-4 sm:p-5">
         <div class="absolute inset-y-0 left-0 w-1 bg-fc-red" />
-        <div class="flex items-center justify-between flex-wrap gap-4">
+        <div class="flex flex-wrap items-center justify-between gap-x-8 gap-y-4">
           <div>
-            <p class="text-[11px] font-semibold uppercase tracking-[0.12em] text-fc-red">Performance réseau</p>
-            <p class="mt-1.5 text-3xl font-semibold tracking-tight text-slate-950 dark:text-white">{{ fmtPct(global.perfect_store_pct) }}</p>
-            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              {{ global.perfect_stores }} / {{ global.visites_scorees }} visites conformes
+            <p class="text-[11px] font-semibold uppercase tracking-[0.12em] text-fc-red">Perfect Stores · {{ periodeLabel }}</p>
+            <p class="mt-1.5 text-5xl font-semibold leading-none tracking-tight tabular-nums text-slate-950 dark:text-white">
+              {{ global.pdv_perfect_stores }}
+            </p>
+            <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
+              {{ fmtPct(global.pdv_perfect_store_pct) }} des {{ global.pdv_scores }} PDV visités
             </p>
           </div>
+
+          <!-- Ventilation par niveau, remontée de l'onglet « niveaux » -->
+          <div v-if="niveauBreakdown.length" class="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <span v-for="n in niveauBreakdown" :key="n.niveau" class="inline-flex items-baseline gap-1.5">
+              <span class="h-2 w-2 shrink-0 self-center rounded-full" :class="tierDotClass(n.niveau)" />
+              <strong class="text-lg font-semibold tabular-nums text-slate-900 dark:text-white">{{ n.nb_pdv }}</strong>
+              <span class="text-xs text-slate-500 dark:text-slate-400">{{ n.label }}</span>
+            </span>
+            <span v-if="global.pdv_non_conformes" class="inline-flex items-baseline gap-1.5">
+              <span class="h-2 w-2 shrink-0 self-center rounded-full bg-slate-300 dark:bg-slate-600" />
+              <strong class="text-lg font-semibold tabular-nums text-slate-400">{{ global.pdv_non_conformes }}</strong>
+              <span class="text-xs text-slate-400">Non conformes</span>
+            </span>
+          </div>
+
           <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-fc-red dark:bg-red-950/30">
             <UIcon name="i-heroicons-trophy" class="h-5 w-5" />
           </div>
         </div>
       </div>
 
-      <!-- KPI prioritaires -->
-      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatsCard title="Couverture du mois" :value="coverageLabel" :subtitle="coverageSub" format="none" :icon="MapPinned" color="purple" />
+      <!-- Liste des PDV Perfect Store (tâche 1.3 : disponible dès la page 1) -->
+      <section class="admin-surface overflow-hidden" aria-labelledby="ps-liste-heading">
+        <div class="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-700">
+          <h2 id="ps-liste-heading" class="font-bold text-gray-900 dark:text-gray-100">Points de vente Perfect Store</h2>
+          <span class="text-xs text-slate-400">{{ psList.total }} PDV · {{ periodeLabel }}</span>
+        </div>
+
+        <div v-if="psList.loading" class="space-y-2 px-5 py-4">
+          <div v-for="i in 4" :key="i" class="h-12 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-700/60" />
+        </div>
+
+        <ul v-else-if="psList.items.length" class="divide-y divide-slate-100 dark:divide-slate-700">
+          <li v-for="store in psList.items" :key="store.pdv_id">
+            <button
+              type="button"
+              class="flex w-full items-center justify-between gap-4 px-5 py-3 text-left transition hover:bg-slate-50 focus-visible:bg-slate-50 dark:hover:bg-slate-700/40 dark:focus-visible:bg-slate-700/40"
+              @click="openStoreDetail(store)"
+            >
+              <span class="min-w-0 flex-1">
+                <span class="flex items-center gap-2">
+                  <span class="h-2 w-2 shrink-0 rounded-full" :class="tierDotClass(store.niveau)" />
+                  <span class="truncate text-sm font-semibold text-slate-900 dark:text-white">{{ store.nom_pdv || store.pdv_id }}</span>
+                </span>
+                <span class="mt-1 block truncate pl-4 text-xs text-slate-500 dark:text-slate-400">
+                  {{ niveauCourt(store.niveau) }} · {{ typePdvLabel(store.type_pdv) }}<template v-if="store.zone"> · {{ store.zone }}</template>
+                </span>
+              </span>
+              <span class="shrink-0 text-right">
+                <span class="block text-sm font-semibold tabular-nums text-slate-900 dark:text-white">{{ fmtPct(store.score_global) }}</span>
+                <span class="mt-1 block text-xs text-slate-400">{{ formatDate(store.date_visite) }}</span>
+              </span>
+            </button>
+          </li>
+        </ul>
+
+        <div v-else class="px-5 py-10 text-center text-sm text-slate-400">
+          Aucun Perfect Store sur cette période et ce périmètre.
+        </div>
+
+        <div v-if="psList.total > psListPerPage" class="flex items-center justify-between border-t border-slate-100 px-5 py-3 dark:border-slate-700">
+          <span class="text-xs text-slate-400">Page {{ psList.page }} / {{ psListPageCount }}</span>
+          <div class="flex gap-2">
+            <UButton size="xs" variant="outline" :disabled="psList.page <= 1 || psList.loading" @click="loadPerfectStoreList(psList.page - 1)">
+              Précédent
+            </UButton>
+            <UButton size="xs" variant="outline" :disabled="psList.page >= psListPageCount || psList.loading" @click="loadPerfectStoreList(psList.page + 1)">
+              Suivant
+            </UButton>
+          </div>
+        </div>
+      </section>
+
+      <!-- KPI prioritaires.
+           Deux couvertures distinctes, volontairement côte à côte :
+           - effective = combien de PDV du parc ont été touchés (PDV uniques) ;
+           - des visites = combien de passages ont été faits (doublons compris),
+             seule mesure qui reflète l'activité quotidienne d'un merchandiser. -->
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <StatsCard title="Couverture effective" :value="coverageLabel" :subtitle="coverageSub" format="none" :icon="MapPinned" color="purple" />
+        <StatsCard title="Couverture des visites" :value="String(global.visites_total)" :subtitle="visitesSub" format="none" :icon="Footprints" color="red" />
+        <StatsCard title="Taux de présence" :value="fmtPct(global.presence_moyenne_pct)" subtitle="produit relevé (qté ≥ 1)" format="none" :icon="PackageCheck" color="orange" />
+        <StatsCard title="Taux de disponibilité" :value="fmtPct(global.osa_moyen_pct)" subtitle="qté ≥ seuil paramétré" format="none" :icon="Package" color="green" />
         <StatsCard title="Score global moyen" :value="fmtPct(global.score_global_moyen_pct)" format="none" :icon="BarChart3" color="blue" />
-        <StatsCard title="OSA pondérée moyenne" :value="fmtPct(global.osa_moyen_pct)" format="none" :icon="Package" color="green" />
         <StatsCard title="Assortiment moyen" :value="fmtPct(global.assortiment_moyen_pct)" format="none" :icon="ListChecks" color="purple" />
       </div>
+
+      <!-- Présence vs disponibilité : d'abord la catégorie, puis les SKU clés
+           (tâche 3.3). Présence = le produit est là ; disponibilité = il est là
+           en quantité suffisante. L'écart entre les deux est l'information. -->
+      <section class="admin-surface overflow-hidden" aria-labelledby="presence-heading">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-700">
+          <h2 id="presence-heading" class="font-bold text-gray-900 dark:text-gray-100">Présence et disponibilité</h2>
+          <div class="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+            <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-amber-500" />Présence (qté ≥ 1)</span>
+            <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-emerald-500" />Disponibilité (qté ≥ seuil)</span>
+          </div>
+        </div>
+
+        <div class="grid gap-x-8 gap-y-6 p-5 lg:grid-cols-2">
+          <div>
+            <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Par catégorie</h3>
+            <ul class="space-y-3">
+              <li v-for="c in global.par_categorie" :key="c.categorie">
+                <div class="mb-1 flex items-baseline justify-between gap-3">
+                  <span class="text-sm font-medium uppercase text-slate-700 dark:text-slate-300">{{ c.categorie }}</span>
+                  <span class="text-xs tabular-nums text-slate-500 dark:text-slate-400">
+                    <span class="text-amber-600">{{ fmtPct(c.presence_pct) }}</span>
+                    <span class="mx-1 text-slate-300">/</span>
+                    <span class="text-emerald-600">{{ fmtPct(c.disponibilite_pct) }}</span>
+                  </span>
+                </div>
+                <div class="relative h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
+                  <div class="absolute inset-y-0 left-0 rounded-full bg-amber-400" :style="{ width: (c.presence_pct ?? 0) + '%' }" />
+                  <div class="absolute inset-y-0 left-0 rounded-full bg-emerald-500" :style="{ width: (c.disponibilite_pct ?? 0) + '%' }" />
+                </div>
+              </li>
+              <li v-if="!global.par_categorie?.length" class="text-sm text-slate-400">Aucune donnée sur cette période.</li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">SKU clés et gamme Délice</h3>
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="text-xs uppercase text-slate-400">
+                  <th class="pb-2 text-left font-medium">Référence</th>
+                  <th class="pb-2 text-right font-medium">Présence</th>
+                  <th class="pb-2 text-right font-medium">Dispo.</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+                <tr v-for="sku in presenceSkus" :key="sku.reference_nom">
+                  <td class="py-2">
+                    <span class="font-medium text-slate-900 dark:text-white">{{ sku.reference_nom }}</span>
+                    <span class="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] uppercase text-slate-500 dark:bg-slate-700 dark:text-slate-400">
+                      {{ sku.role === 'phare' ? 'SKU clé' : 'Délice' }}
+                    </span>
+                  </td>
+                  <td class="py-2 text-right tabular-nums text-amber-600">{{ fmtPct(sku.presence_pct) }}</td>
+                  <td class="py-2 text-right tabular-nums text-emerald-600">{{ fmtPct(sku.disponibilite_pct) }}</td>
+                </tr>
+                <tr v-if="!presenceSkus.length">
+                  <td colspan="3" class="py-4 text-center text-sm text-slate-400">Aucun relevé sur cette période.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Détail des visites par merchandiser (tâche 2.2) -->
+      <section class="admin-surface overflow-hidden" aria-labelledby="couverture-merch-heading">
+        <div class="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-700">
+          <h2 id="couverture-merch-heading" class="font-bold text-gray-900 dark:text-gray-100">Visites par merchandiser</h2>
+          <span class="text-xs text-slate-400">{{ periodeLabel }}</span>
+        </div>
+
+        <div v-if="!couvertureCommerciaux.length" class="px-5 py-10 text-center text-sm text-slate-400">
+          Aucune visite sur cette période et ce périmètre.
+        </div>
+
+        <div v-else class="divide-y divide-slate-100 dark:divide-slate-700">
+          <div v-for="c in couvertureCommerciaux" :key="c.commercial">
+            <button
+              type="button"
+              class="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-slate-50 dark:hover:bg-slate-700/40"
+              :aria-expanded="openCommerciaux.has(c.commercial)"
+              @click="toggleCommercial(c.commercial)"
+            >
+              <UIcon
+                name="i-heroicons-chevron-right"
+                class="h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200"
+                :class="openCommerciaux.has(c.commercial) ? 'rotate-90 text-fc-red' : ''"
+              />
+              <span class="min-w-0 flex-1">
+                <span class="block truncate text-sm font-semibold text-slate-900 dark:text-white">{{ c.commercial }}</span>
+                <span class="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">
+                  {{ c.nb_pdv }} PDV distincts · {{ c.nb_jours }} jour(s) travaillé(s)
+                </span>
+              </span>
+              <span class="shrink-0 text-right">
+                <span class="block text-sm font-semibold tabular-nums text-slate-900 dark:text-white">{{ c.nb_visites }} visite(s)</span>
+                <span class="mt-0.5 block text-xs tabular-nums text-slate-400">{{ c.visites_par_jour ?? '—' }} / jour</span>
+              </span>
+            </button>
+
+            <div v-show="openCommerciaux.has(c.commercial)" class="bg-slate-50/60 px-5 pb-4 dark:bg-slate-900/20">
+              <ul class="divide-y divide-slate-100 dark:divide-slate-700">
+                <li v-for="p in c.pdv_visites" :key="p.pdv_id" class="flex items-center justify-between gap-4 py-2">
+                  <span class="min-w-0 flex-1 truncate text-sm text-slate-700 dark:text-slate-300">{{ p.nom_pdv }}</span>
+                  <span class="shrink-0 text-xs text-slate-400">
+                    <span v-if="p.passages > 1" class="mr-2 font-medium text-amber-600">{{ p.passages }} passages</span>
+                    {{ formatDate(p.derniere_visite) }}
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <!-- Indicateurs secondaires, conservés sans ajouter deux cartes hautes -->
       <div class="admin-surface flex flex-wrap items-center gap-x-8 gap-y-3 px-4 py-3 sm:px-5">
@@ -118,7 +314,8 @@
               <span class="min-w-0 flex-1">
                 <span class="block truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{{ typePdvLabel(row.type_pdv) }}</span>
                 <span class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
-                  {{ row.visites_scorees }} visite(s) · <span class="text-emerald-600 font-medium">{{ row.perfect_stores }} perfect</span>
+                  {{ row.pdv_scores }} PDV · <span class="text-emerald-600 font-medium">{{ row.pdv_perfect_stores }} perfect</span>
+                  <span class="text-gray-400"> · {{ row.visites_scorees }} visite(s)</span>
                 </span>
               </span>
               <span class="hidden w-44 items-center gap-2 sm:flex">
@@ -354,16 +551,20 @@
 </template>
 
 <script setup lang="ts">
-import { BarChart3, Package, MapPinned, ListChecks } from 'lucide-vue-next'
+import { BarChart3, Package, PackageCheck, MapPinned, ListChecks, Footprints } from 'lucide-vue-next'
 import type {
+  CouvertureCommercial,
   CoverageKpi,
-  PerfectStoreGlobalKpi,
+  PerfectStoreDashboardKpi,
   PerfectStoreListItem,
   PerfectStoreManqueItem,
   PerfectStoreTypeKpi,
+  PresenceSku,
 } from '~/composables/usePerfectStore'
+import type { PeriodeValue } from '~/components/PeriodFilter.vue'
 import type { Visite } from '~/types'
 import type { PerfectStoreResultB } from '~/utils/perfectStore'
+import { plageDePeriode, libellePlage } from '~/utils/periode'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
@@ -373,23 +574,28 @@ const {
   refs,
   fetchRefs,
   scoreVisite,
-  fetchGlobalKpi,
   fetchKpiParType,
-  fetchCoverage,
   fetchStoresByTier,
   fetchPerfectStoreListe,
   fetchPerfectStoreEvolution,
   fetchPerfectStoreManques,
   fetchGlobalKpiFiltre,
+  fetchCouvertureParCommercial,
+  fetchPresenceSkus,
 } = usePerfectStore()
 
 const loading = ref(true)
-const global = ref<PerfectStoreGlobalKpi | null>(null)
+const global = ref<PerfectStoreDashboardKpi | null>(null)
 const parType = ref<PerfectStoreTypeKpi[]>([])
 const coverage = ref<CoverageKpi | null>(null)
 const evolution = ref<{ date: string; count: number }[]>([])
 const manques = ref<PerfectStoreManqueItem[]>([])
 const storesPerPage = 5
+
+// Filtre de période (tâches 1.4 et 6). Défaut : le mois en cours — c'est la
+// maille de pilotage habituelle, le jour et la semaine servent au suivi
+// quotidien des merchandisers.
+const periode = ref<PeriodeValue>({ preset: 'mois', ...plageDePeriode('mois') })
 
 // Filtres cascade Division → Territoire → Quartier + Distributeur.
 // Les options viennent du RÉFÉRENTIEL géographique COMPLET (useReferentiels),
@@ -475,21 +681,32 @@ function removeDashFilterChip(key: string) {
 // Les filtres pilotent les KPI agrégés du haut (RPC serveur) ET les blocs
 // détaillés : évolution, ventilation par type, listes par niveau, accordéons.
 const filtersActive = computed(() => !!(fDivision.value || fTerritoire.value || fArea.value || fDistrib.value))
-// undefined quand aucun filtre actif → les fetchers retombent sur les vues globales.
-const dashFilters = computed(() => filtersActive.value
-  ? { division: fDivision.value, territoire: fTerritoire.value, area: fArea.value, distributeur: fDistrib.value }
-  : undefined)
+// Toujours défini : la période est active par défaut, et les vues globales sans
+// paramètre ne savent pas filtrer par date. Tout passe donc par les RPC.
+const dashFilters = computed(() => ({
+  division: fDivision.value,
+  territoire: fTerritoire.value,
+  area: fArea.value,
+  distributeur: fDistrib.value,
+  dateDebut: periode.value.debut,
+  dateFin: periode.value.fin,
+}))
 async function applyDashboardFilters() {
   const f = dashFilters.value
-  const [k, ev, t] = await Promise.all([
-    fetchGlobalKpiFiltre({
-      division: fDivision.value, territoire: fTerritoire.value, area: fArea.value, distributeur: fDistrib.value,
-    }),
+  const [k, ev, t, cc, skus, mq] = await Promise.all([
+    fetchGlobalKpiFiltre(f),
     fetchPerfectStoreEvolution(f),
     fetchKpiParType(f),
+    fetchCouvertureParCommercial(f),
+    fetchPresenceSkus(f),
+    fetchPerfectStoreManques(f),
+    loadPerfectStoreList(1),
   ])
+  couvertureCommerciaux.value = cc
+  presenceSkus.value = skus
+  manques.value = mq
   if (k) {
-    global.value = k as any
+    global.value = k
     coverage.value = { periode: coverage.value?.periode ?? '', pdv_vus: k.pdv_vus, pdv_total: k.pdv_total, couverture_pct: k.couverture_pct }
   }
   evolution.value = ev.map(p => ({ date: p.date, count: p.perfect_store_pct ?? 0 }))
@@ -503,7 +720,7 @@ async function applyDashboardFilters() {
     ...openList.map(type => loadTypeStores(type, 1)),
   ])
 }
-watch([fDivision, fTerritoire, fArea, fDistrib], applyDashboardFilters)
+watch([fDivision, fTerritoire, fArea, fDistrib, periode], applyDashboardFilters, { deep: true })
 const storesError = ref(false)
 const showStoreDetail = ref(false)
 const selectedStoreVisite = ref<Visite | null>(null)
@@ -515,6 +732,58 @@ const tierStoreState = reactive<Record<string, {
   loading: boolean
 }>>({})
 
+// ---- Liste des PDV Perfect Store, en page 1 du dashboard (tâche 1.3) ----
+// 'CONFORMES' = tous niveaux Perfect Store confondus, non conformes exclus.
+const psListPerPage = 10
+const psList = reactive({
+  items: [] as PerfectStoreListItem[],
+  total: 0,
+  page: 1,
+  loading: true,
+})
+
+async function loadPerfectStoreList(page = 1) {
+  psList.loading = true
+  try {
+    const result = await fetchPerfectStoreListe({
+      niveau: 'CONFORMES',
+      page,
+      perPage: psListPerPage,
+      filters: dashFilters.value,
+    })
+    psList.items = result.items
+    psList.total = result.total
+    psList.page = page
+  }
+  catch {
+    psList.items = []
+    psList.total = 0
+  }
+  finally {
+    psList.loading = false
+  }
+}
+
+const psListPageCount = computed(() => Math.max(1, Math.ceil(psList.total / psListPerPage)))
+
+// ---- Présence vs disponibilité par SKU clé (tâche 3.3) ----
+const presenceSkus = ref<PresenceSku[]>([])
+
+// ---- Visites par merchandiser (tâche 2.2) ----
+const couvertureCommerciaux = ref<CouvertureCommercial[]>([])
+const openCommerciaux = reactive(new Set<string>())
+function toggleCommercial(nom: string) {
+  if (openCommerciaux.has(nom)) openCommerciaux.delete(nom)
+  else openCommerciaux.add(nom)
+}
+
+// Ventilation « 5 Flagship · 3 VIP · 2 Basic » remontée depuis la RPC.
+const niveauBreakdown = computed(() =>
+  (global.value?.par_niveau || []).map(n => ({ ...n, label: niveauCourt(n.niveau) })),
+)
+
+const periodeLabel = computed(() => libellePlage({ debut: periode.value.debut, fin: periode.value.fin }))
+
 // Seuils de tier (live depuis les référentiels), triés du + exigeant au - exigeant
 const tiers = computed(() => [...(refs.value?.tierConfig || [])].sort((a, b) => b.rang - a.rang))
 const tierStoreLists = computed(() => tiers.value.map(tier => ({
@@ -522,14 +791,26 @@ const tierStoreLists = computed(() => tiers.value.map(tier => ({
   ...(tierStoreState[tier.ps_tier] || { items: [], total: 0, page: 1, loading: true }),
 })))
 
+// Couverture effective : PDV UNIQUES visités sur l'univers assigné. Un PDV
+// visité trois fois compte une fois.
 const coverageLabel = computed(() =>
   `${coverage.value?.pdv_vus ?? 0}/${coverage.value?.pdv_total ?? 0}`,
 )
 const coverageSub = computed(() =>
   coverage.value?.couverture_pct != null
-    ? `${coverage.value.couverture_pct} % du parc visités`
-    : 'PDV visités / parc actif',
+    ? `${coverage.value.couverture_pct} % du parc · PDV uniques`
+    : 'PDV uniques visités / parc actif',
 )
+// Couverture des visites : TOUS les passages. Mesure l'activité, pas la
+// couverture du parc.
+const visitesSub = computed(() => {
+  const passages = global.value?.visites_total ?? 0
+  const pdv = global.value?.pdv_vus ?? 0
+  if (!passages) return 'passages, doublons compris'
+  return pdv && passages > pdv
+    ? `passages sur ${pdv} PDV (repassages inclus)`
+    : 'passages, doublons compris'
+})
 
 function fmtPct(v: number | null | undefined): string {
   return v == null ? '—' : `${v}%`
@@ -660,15 +941,13 @@ async function openStoreDetail(store: PerfectStoreListItem) {
 onMounted(async () => {
   void fetchTypePdvLabels()
   void fetchReferentiels()
+  // Les seuils de niveau doivent être chargés avant applyDashboardFilters, qui
+  // itère sur `tiers` pour peupler les listes « PDV par niveau ».
   await fetchRefs()
   try {
-    const [g, t, c, ev, mq] = await Promise.all([fetchGlobalKpi(), fetchKpiParType(), fetchCoverage(), fetchPerfectStoreEvolution(), fetchPerfectStoreManques()])
-    global.value = g
-    parType.value = t
-    coverage.value = c
-    evolution.value = ev.map(p => ({ date: p.date, count: p.perfect_store_pct ?? 0 }))
-    manques.value = mq
-    await Promise.all(tiers.value.map(tier => loadTierStores(tier.ps_tier)))
+    // Un seul chemin de chargement, filtres + période compris (manques inclus) :
+    // les vues globales sans paramètre ne savent pas filtrer par date.
+    await applyDashboardFilters()
   } finally {
     loading.value = false
   }

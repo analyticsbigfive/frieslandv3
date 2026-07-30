@@ -30,30 +30,44 @@ export const useVisitesStore = defineStore('visites', () => {
     perPage: 50,
   })
 
+  const SELECT_VISITE = '*, pdv:pdv_id(pdv_id, nom_pdv, zone, quartier, region, canal, sous_categorie_pdv, image_url, distributor_name)'
+
+  /** Applique les filtres courants à une requête, sans pagination. */
+  function appliquerFiltres(query: any) {
+    if (filters.value.dateFrom) {
+      query = query.gte('date_visite', filters.value.dateFrom)
+    }
+    if (filters.value.dateTo) {
+      // Borne stricte au jour suivant, et non `<= 23:59:59` : une visite
+      // horodatée à 23:59:59.4 tombait hors de la plage ici alors que les RPC
+      // du dashboard (qui font `< fin + 1 jour`) la comptaient. Deux écrans,
+      // deux totaux, sur la même période.
+      // toIsoJour sérialise sur les composantes locales : toISOString()
+      // reculerait d'un jour pour tout fuseau à l'est de Greenwich.
+      const lendemain = new Date(filters.value.dateTo + 'T00:00:00')
+      lendemain.setDate(lendemain.getDate() + 1)
+      query = query.lt('date_visite', toIsoJour(lendemain))
+    }
+    if (filters.value.commercial) {
+      query = query.ilike('commercial', `%${filters.value.commercial}%`)
+    }
+    if (filters.value.email) {
+      query = query.eq('email', filters.value.email)
+    }
+    if (filters.value.pdv_id) {
+      query = query.eq('pdv_id', filters.value.pdv_id)
+    }
+    return query
+  }
+
   async function fetchVisites() {
     loading.value = true
 
     try {
-      let query = supabase
+      let query = appliquerFiltres(supabase
         .from('visites')
-        .select('*, pdv:pdv_id(pdv_id, nom_pdv, zone, quartier, region, canal, sous_categorie_pdv, image_url, distributor_name)', { count: 'exact' })
-        .order('date_visite', { ascending: false })
-
-      if (filters.value.dateFrom) {
-        query = query.gte('date_visite', filters.value.dateFrom)
-      }
-      if (filters.value.dateTo) {
-        query = query.lte('date_visite', filters.value.dateTo + 'T23:59:59')
-      }
-      if (filters.value.commercial) {
-        query = query.ilike('commercial', `%${filters.value.commercial}%`)
-      }
-      if (filters.value.email) {
-        query = query.eq('email', filters.value.email)
-      }
-      if (filters.value.pdv_id) {
-        query = query.eq('pdv_id', filters.value.pdv_id)
-      }
+        .select(SELECT_VISITE, { count: 'exact' })
+        .order('date_visite', { ascending: false }))
 
       const from = (filters.value.page - 1) * filters.value.perPage
       const to = from + filters.value.perPage - 1
@@ -71,6 +85,26 @@ export const useVisitesStore = defineStore('visites', () => {
     finally {
       loading.value = false
     }
+  }
+
+  /**
+   * Toutes les visites correspondant aux filtres, sans pagination.
+   * L'export lisait `visites` (la page affichée, 50 lignes) : depuis que
+   * l'onglet est borné à un mois par défaut, un mois chargé produisait un
+   * fichier tronqué sans le dire. Plafond de sécurité à 5000 lignes, signalé
+   * à l'appelant plutôt que coupé en silence.
+   */
+  async function fetchVisitesForExport(limite = 5000): Promise<{ rows: Visite[]; tronque: boolean }> {
+    const query = appliquerFiltres(supabase
+      .from('visites')
+      .select(SELECT_VISITE)
+      .order('date_visite', { ascending: false }))
+      .limit(limite)
+
+    const { data, error } = await query
+    if (error) throw error
+    const rows = (data || []) as Visite[]
+    return { rows, tronque: rows.length >= limite }
   }
 
   async function fetchVisiteById(id: string) {
@@ -284,6 +318,7 @@ export const useVisitesStore = defineStore('visites', () => {
     stats,
     filters,
     fetchVisites,
+    fetchVisitesForExport,
     fetchVisiteById,
     fetchVisiteByDatabaseId,
     createVisite,

@@ -315,97 +315,33 @@
           </div>
 
           <template v-if="form.concurrence.presence_concurrents">
-            <!-- Concurrent EVAP -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-3 shadow-sm">
-              <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300">Concurrent EVAP présent? *</h4>
-              <ToggleYesNo v-model="form.concurrence.evap.present" />
-              <template v-if="form.concurrence.evap.present">
-                <div class="space-y-1">
-                  <label class="text-sm font-medium text-gray-600">Cowmilk présent? *</label>
-                  <ToggleStatus v-model="form.concurrence.evap.cowmilk" />
-                </div>
-                <div class="space-y-1">
-                  <label class="text-sm font-medium text-gray-600">NIDO 150g présent? *</label>
-                  <ToggleStatus v-model="form.concurrence.evap.nido_150g" />
+            <!-- Une carte par famille ; les marques viennent du référentiel
+                 marque_concurrente (réunion du 23 juillet), plus de liste en dur. -->
+            <div v-for="fam in famillesConcurrence" :key="fam.key" class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-3 shadow-sm">
+              <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300">{{ fam.label }} présent? *</h4>
+              <ToggleYesNo v-model="form.concurrence[fam.key].present" />
+              <template v-if="form.concurrence[fam.key].present">
+                <ConcurrentActivite
+                  v-model:en-activite="form.concurrence[fam.key].en_activite"
+                  v-model:action="form.concurrence[fam.key].action_concurrence"
+                />
+                <div v-for="marque in marquesConcurrence[fam.key] || []" :key="marque.code" class="space-y-1">
+                  <label class="text-sm font-medium text-gray-600">{{ marque.nom }} présent? *</label>
+                  <ToggleStatus v-model="form.concurrence[fam.key][marque.code]" />
                 </div>
                 <div class="space-y-1">
                   <label class="text-sm font-medium text-gray-600">Autre *</label>
-                  <ToggleStatus v-model="form.concurrence.evap.autre" />
+                  <ToggleStatus v-model="form.concurrence[fam.key].autre" />
                 </div>
-                <div v-if="form.concurrence.evap.autre === 'Présent'" class="space-y-1">
-                  <label class="text-sm font-medium text-gray-600">Nom du concurrent EVAP *</label>
-                  <UInput v-model="form.concurrence.evap.nom_concurrent" placeholder="Nom du concurrent" size="lg" />
+                <div v-if="form.concurrence[fam.key].autre === 'Présent'" class="space-y-1">
+                  <label class="text-sm font-medium text-gray-600">Nom du concurrent {{ fam.key.toUpperCase() }} *</label>
+                  <UInput v-model="form.concurrence[fam.key].nom_concurrent" placeholder="Nom du concurrent" size="lg" />
                 </div>
               </template>
             </div>
 
-            <!-- Concurrent IMP -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-3 shadow-sm">
-              <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300">Concurrent IMP présent? *</h4>
-              <ToggleYesNo v-model="form.concurrence.imp.present" />
-              <template v-if="form.concurrence.imp.present">
-                <div class="space-y-1">
-                  <label class="text-sm font-medium text-gray-600">Nido présent? *</label>
-                  <ToggleStatus v-model="form.concurrence.imp.nido" />
-                </div>
-                <div class="space-y-1">
-                  <label class="text-sm font-medium text-gray-600">Laity présent? *</label>
-                  <ToggleStatus v-model="form.concurrence.imp.laity" />
-                </div>
-                <div class="space-y-1">
-                  <label class="text-sm font-medium text-gray-600">Top lait présent? *</label>
-                  <ToggleStatus v-model="form.concurrence.imp.top_lait" />
-                </div>
-                <div class="space-y-1">
-                  <label class="text-sm font-medium text-gray-600">Autre *</label>
-                  <ToggleStatus v-model="form.concurrence.imp.autre" />
-                </div>
-                <div v-if="form.concurrence.imp.autre === 'Présent'" class="space-y-1">
-                  <label class="text-sm font-medium text-gray-600">Nom du concurrent IMP *</label>
-                  <UInput v-model="form.concurrence.imp.nom_concurrent" placeholder="Nom du concurrent" size="lg" />
-                </div>
-              </template>
-            </div>
-
-            <!-- Concurrent SCM -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-3 shadow-sm">
-              <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300">Concurrent SCM présent? *</h4>
-              <ToggleYesNo v-model="form.concurrence.scm.present" />
-              <template v-if="form.concurrence.scm.present">
-                <div class="space-y-1">
-                  <label class="text-sm font-medium text-gray-600">Top Saho présent? *</label>
-                  <ToggleStatus v-model="form.concurrence.scm.top_saho" />
-                </div>
-                <div class="space-y-1">
-                  <label class="text-sm font-medium text-gray-600">Autre *</label>
-                  <ToggleStatus v-model="form.concurrence.scm.autre" />
-                </div>
-                <div v-if="form.concurrence.scm.autre === 'Présent'" class="space-y-1">
-                  <label class="text-sm font-medium text-gray-600">Nom du concurrent SCM *</label>
-                  <UInput v-model="form.concurrence.scm.nom_concurrent" placeholder="Nom du concurrent" size="lg" />
-                </div>
-              </template>
-            </div>
-
-            <!-- Concurrent UHT -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-3 shadow-sm">
-              <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300">Concurrent UHT présent? *</h4>
-              <ToggleYesNo v-model="form.concurrence.uht.present" />
-              <template v-if="form.concurrence.uht.present">
-                <div class="space-y-1">
-                  <label class="text-sm font-medium text-gray-600">Candia présent? *</label>
-                  <ToggleStatus v-model="form.concurrence.uht.candia" />
-                </div>
-                <div class="space-y-1">
-                  <label class="text-sm font-medium text-gray-600">Autre *</label>
-                  <ToggleStatus v-model="form.concurrence.uht.autre" />
-                </div>
-                <div v-if="form.concurrence.uht.autre === 'Présent'" class="space-y-1">
-                  <label class="text-sm font-medium text-gray-600">Nom du concurrent UHT *</label>
-                  <UInput v-model="form.concurrence.uht.nom_concurrent" placeholder="Nom du concurrent" size="lg" />
-                </div>
-              </template>
-            </div>
+            <!-- Concurrents hors liste, saisis librement (réunion du 23 juillet) -->
+            <ConcurrentsLibres v-model="form.concurrence.autres" />
           </template>
         </div>
       </template>
@@ -754,6 +690,24 @@ const form = reactive({
   actions: defaultData.actions,
   images: [] as File[],
 })
+
+// Marques concurrentes : référentiel partagé avec le dashboard, repli sur les
+// marques historiques hors ligne (voir useMarquesConcurrentes).
+const { parFamille: marquesConcurrence, charger: chargerMarquesConcurrence } = useMarquesConcurrentes()
+const famillesConcurrence = FAMILLES_CONCURRENCE
+
+// Chaque marque du référentiel doit exister dans le form avec le même défaut
+// que les marques historiques (« En rupture ») : sans ça, un ToggleStatus sur
+// une marque ajoutée après coup démarrerait sans valeur et la visite
+// l'omettrait du relevé.
+watch(marquesConcurrence, (par) => {
+  for (const fam of famillesConcurrence) {
+    const bloc = form.concurrence[fam.key] as Record<string, unknown>
+    for (const marque of par[fam.key] || []) {
+      if (bloc[marque.code] === undefined) bloc[marque.code] = 'En rupture'
+    }
+  }
+}, { immediate: true })
 
 const draftKey = computed(() => `visit-draft:${user.value?.id || 'anonymous'}:${routingPdvId.value || 'new'}`)
 const lastPdvKey = computed(() => `visit-last-pdv:${user.value?.id || 'anonymous'}`)
@@ -1374,6 +1328,7 @@ onMounted(async () => {
   void fetchThresholds()
   void fetchVisibilityElements()
   void fetchTypePdvLabels()
+  void chargerMarquesConcurrence()
   pdvList.value = await pdvStore.fetchScopedPDV(authStore.profile)
   restoreDraft()
 
