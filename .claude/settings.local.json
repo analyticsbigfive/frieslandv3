@@ -34,7 +34,8 @@
       "Bash(CAPACITOR_BUILD=1 npx nuxt generate)",
       "Bash(npx cap *)",
       "Bash(JAVA_HOME=\"C:/Program Files/Eclipse Adoptium/jdk-21.0.11.10-hotspot\" ./android/gradlew -p android assembleDebug)",
-      "Bash(echo \"GRADLE_EXIT=$?\")"
+      "Bash(echo \"GRADLE_EXIT=$?\")",
+      "Bash(npx vitest *)"
     ]
   }
 }

@@ -284,8 +284,15 @@
       </div>
 
       <!-- Évolution du taux de Perfect Stores -->
-      <div v-if="evolution.length" class="h-80">
-        <ChartsVisitesLineChart title="Évolution du taux de Perfect Stores (%)" :data="evolution" />
+      <div v-if="evolution.length">
+        <ClientOnly>
+          <ChartsVisitesLineChart
+            title="Évolution du taux de Perfect Stores (%)"
+            subtitle="Taux de Perfect Stores par jour sur la période disponible."
+            series-label="Perfect Stores (%)"
+            :data="evolution"
+          />
+        </ClientOnly>
       </div>
 
       <!-- Ventilation par type de PDV (accordéons) -->

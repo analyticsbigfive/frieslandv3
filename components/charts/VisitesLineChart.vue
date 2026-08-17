@@ -2,7 +2,7 @@
   <div class="admin-surface h-full p-6">
     <div class="mb-5">
       <h3 class="font-semibold text-slate-950 dark:text-white">{{ title }}</h3>
-      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Volume quotidien sur la période disponible.</p>
+      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ subtitle }}</p>
     </div>
     <div v-if="chartData" class="h-72">
       <Line v-if="chartData" :data="chartData" :options="chartOptions" />
@@ -16,10 +16,17 @@
 <script setup lang="ts">
 import { Line } from 'vue-chartjs'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   title: string
   data: { date: string; count: number }[]
-}>()
+  /** Sous-titre de la carte ; par défaut le libellé « volume de visites ». */
+  subtitle?: string
+  /** Libellé de la série (visible dans le tooltip). */
+  seriesLabel?: string
+}>(), {
+  subtitle: 'Volume quotidien sur la période disponible.',
+  seriesLabel: 'Visites',
+})
 
 const chartData = computed(() => {
   if (!props.data?.length) return null
@@ -35,7 +42,7 @@ const chartData = computed(() => {
         : d.date,
     ),
     datasets: [{
-      label: 'Visites',
+      label: props.seriesLabel,
       data: sorted.map(d => d.count),
       borderColor: '#C8102E',
       backgroundColor: 'rgba(200, 16, 46, 0.08)',
