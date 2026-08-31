@@ -400,15 +400,28 @@ function onRegionChange() {
 // au save plutôt que silencieusement perdus.
 const unmatchedTerritories = ref<string[]>([])
 
+// Libellé original du profil par code de territoire matché : au save on
+// réécrit ce libellé (ex. "ADJAME") et non le nom du référentiel ("Adjame"),
+// car le scoping SQL compare pdv.zone à l'identique.
+const originalTerrNames = ref<Record<string, string>>({})
+
+// Comparaison de noms de territoires insensible à la casse et aux accents :
+// les zones importées du terrain sont en MAJUSCULES ("ADJAME") alors que le
+// référentiel géo est en casse mixte ("Adjame").
+const normTerrName = (v: string) =>
+  (v || '').trim().toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+
 // Édition : reconstruit region_code/sub_region_code/territory_codes depuis territoires_assignes (noms).
 // Fallback legacy : si territoires_assignes vide, part de zone_assignee (mono-territoire).
 function hydrateUserGeo() {
   const names = userForm.value.territoires_assignes.length
     ? userForm.value.territoires_assignes
     : (userForm.value.zone_assignee ? [userForm.value.zone_assignee] : [])
-  const matched = names.map(n => ({ name: n, terr: territories.value.find(t => t.name === n) }))
+  const matched = names.map(n => ({ name: n, terr: territories.value.find(t => normTerrName(t.name) === normTerrName(n)) }))
   userForm.value.territory_codes = matched.filter(m => m.terr).map(m => m.terr!.code)
   unmatchedTerritories.value = matched.filter(m => !m.terr).map(m => m.name)
+  originalTerrNames.value = Object.fromEntries(
+    matched.filter(m => m.terr).map(m => [m.terr!.code, m.name]))
   const first = matched.find(m => m.terr)?.terr
   const sr = first ? subRegions.value.find(s => s.code === first.sub_region_code) : null
   userForm.value.sub_region_code = sr?.code || ''
@@ -418,6 +431,7 @@ function hydrateUserGeo() {
 function openCreateUser() {
   editingUser.value = null
   unmatchedTerritories.value = []
+  originalTerrNames.value = {}
   userForm.value = {
     nom: '', email: '', password: '', role: 'merchandiser',
     zone_assignee: '', region: '', territoires_assignes: [], quartiers_assignes: [], telephone: '',
@@ -522,9 +536,11 @@ async function handleSaveUser() {
   saving.value = true
   try {
     // Dérive territoires (noms) depuis les codes cochés ; zone_assignee = 1er (compat legacy).
+    // Un territoire déjà présent sur le profil garde son libellé d'origine
+    // (originalTerrNames) pour ne pas casser le scoping exact sur pdv.zone.
     const terrs = [
       ...userForm.value.territory_codes
-        .map(code => territories.value.find(t => t.code === code)?.name)
+        .map(code => originalTerrNames.value[code] || territories.value.find(t => t.code === code)?.name)
         .filter(Boolean) as string[],
       ...unmatchedTerritories.value,
     ]
