@@ -47,6 +47,7 @@
     "@supabase/supabase-js": "^2.110.0",
     "@types/leaflet": "^1.9.14",
     "dotenv": "^17.4.2",
+    "sharp": "^0.35.4",
     "typescript": "^5.7.0",
     "vitest": "^2.1.0"
   }

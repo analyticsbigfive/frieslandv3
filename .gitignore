@@ -63,3 +63,7 @@ android/keystore.properties
 # SQL générés volumineux (régénérables : scripts/generate-seed-sql.mjs + csv/)
 supabase/004_seed_visites.sql
 supabase/004_parts/
+# Images AppSheet locales (uploadées vers Supabase Storage, jamais dans git)
+public/PDV_Images/
+public/VISITE_Images/
+images-source/
