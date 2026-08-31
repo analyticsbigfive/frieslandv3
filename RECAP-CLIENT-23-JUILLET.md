@@ -22,10 +22,10 @@ La liste des Perfect Stores est maintenant visible **dès la première page**, a
 
 # 2. Deux couvertures, parce que ce sont deux choses différentes
 
-| Indicateur | Ce qu'il mesure |
-|---|---|
-| **Couverture effective** | Le nombre de PDV **différents** visités sur votre parc (ex. 14/18 = 77,8 %). Celui que vous aviez déjà : il dit si le réseau est couvert. |
-| **Couverture des visites** *(nouveau)* | Le nombre **total de passages**, repassages compris. C'est lui qui permet de suivre l'objectif de **20 visites/jour/merchandiser**. |
+| Indicateur                             | Ce qu'il mesure                                                                                                                           |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **Couverture effective**               | Le nombre de PDV **différents** visités sur votre parc (ex. 14/18 = 77,8 %). Celui que vous aviez déjà : il dit si le réseau est couvert. |
+| **Couverture des visites** _(nouveau)_ | Le nombre **total de passages**, repassages compris. C'est lui qui permet de suivre l'objectif de **20 visites/jour/merchandiser**.       |
 
 Les deux sont côte à côte sur l'écran principal.
 
@@ -52,7 +52,7 @@ L'écart est déjà visible sur les données actuelles (ex. BR 150g : **83,3 % d
 
 **Avant** — un routing à recréer chaque jour, ou un import CSV qui écrasait tout.
 
-**Maintenant** — vous créez une règle : *« ce merchandiser visite ces PDV chaque lundi et chaque jeudi »*. Vous cochez les jours, vous listez les PDV **une fois**, et c'est fini. Les tournées se créent toutes seules, y compris le mois suivant.
+**Maintenant** — vous créez une règle : _« ce merchandiser visite ces PDV chaque lundi et chaque jeudi »_. Vous cochez les jours, vous listez les PDV **une fois**, et c'est fini. Les tournées se créent toutes seules, y compris le mois suivant.
 
 **Ce qui vient avec :**
 
@@ -104,6 +104,7 @@ L'onglet Visites s'ouvre par défaut sur le **mois en cours**, la plage active e
 - **Carte de suivi** — inchangée. Losange bleu = visite d'un PDV, losange orange = temps passé hors PDV. Le suivi temps réel fonctionne comme avant.
 - **Données de démonstration** — la base ne contient aujourd'hui que 15 visites de test. Les indicateurs fonctionnent et affichent déjà des écarts réels, mais leur intérêt se révélera avec les relevés terrain quotidiens : notamment l'écart présence/disponibilité et le suivi des 20 visites par jour.
 - **Historique préservé** — les concurrents saisis avant cette mise à jour restent visibles : l'ancien et le nouveau format sont lus tous les deux.
+  tesr
 
 ---
 
