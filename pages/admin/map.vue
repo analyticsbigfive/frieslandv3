@@ -178,7 +178,8 @@ async function initMap() {
     maxZoom: 19,
   }).addTo(map)
 
-  markerGroup = L.layerGroup().addTo(map)
+  // featureGroup (et non layerGroup) : nécessaire pour getBounds() plus haut
+  markerGroup = L.featureGroup().addTo(map)
 
   // Load PDV
   allPDV.value = await pdvStore.fetchAllPDV()
