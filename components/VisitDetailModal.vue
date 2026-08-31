@@ -155,11 +155,11 @@
         </div>
       </section>
 
-      <section v-if="visite.image_urls?.length" class="mb-7">
-        <h4 class="mb-3 text-sm font-semibold text-slate-900 dark:text-white">Photos ({{ visite.image_urls.length }})</h4>
+      <section v-if="displayableImages.length" class="mb-7">
+        <h4 class="mb-3 text-sm font-semibold text-slate-900 dark:text-white">Photos ({{ displayableImages.length }})</h4>
         <div class="flex gap-2 overflow-x-auto pb-1">
           <img
-            v-for="(url, index) in visite.image_urls"
+            v-for="(url, index) in displayableImages"
             :key="url"
             :src="url"
             :alt="`Photo de visite ${index + 1}`"
@@ -195,6 +195,12 @@ const emit = defineEmits<{
   'update:modelValue': [value: boolean]
   delete: [visite: Visite]
 }>()
+
+// Les visites importées d'AppSheet peuvent garder des chemins relatifs
+// ("VISITE_Images/x.jpg") quand la photo n'a pas été migrée dans le bucket :
+// on n'affiche que les URLs résolues pour éviter les vignettes cassées.
+const displayableImages = computed(() =>
+  (props.visite?.image_urls || []).filter(u => typeof u === 'string' && u.startsWith('http')))
 
 const isOpen = computed({
   get: () => props.modelValue,

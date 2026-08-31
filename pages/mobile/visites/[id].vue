@@ -126,11 +126,11 @@
       </div>
 
       <!-- Images -->
-      <div v-if="visite.image_urls?.length" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
+      <div v-if="displayableImages.length" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
         <h3 class="font-bold text-sm text-gray-900 dark:text-gray-100">Photos</h3>
         <div class="grid grid-cols-2 gap-2">
           <img
-            v-for="(url, idx) in visite.image_urls"
+            v-for="(url, idx) in displayableImages"
             :key="idx"
             :src="url"
             :alt="`Photo ${idx + 1} de la visite`"
@@ -155,6 +155,10 @@ const user = useSupabaseUser()
 const { isPrivileged, matchesVisiteScope } = useUserScope()
 
 const visite = ref<any>(null)
+// N'affiche que les URLs résolues (les imports AppSheet peuvent garder des
+// chemins relatifs quand la photo n'est pas dans le bucket).
+const displayableImages = computed(() =>
+  (visite.value?.image_urls || []).filter((u: unknown) => typeof u === 'string' && u.startsWith('http')))
 const loading = ref(true)
 const pdvName = ref('')
 

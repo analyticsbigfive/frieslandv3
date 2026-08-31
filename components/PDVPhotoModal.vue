@@ -68,7 +68,10 @@ const imgError = ref(false)
 
 const resolvedUrl = computed(() => {
   if (imgError.value) return null
-  return props.imageUrl || fetchedUrl.value || null
+  const url = props.imageUrl || fetchedUrl.value || null
+  // Chemin AppSheet relatif ("PDV_Images/x.jpg") = photo pas encore migrée
+  // dans le bucket : on affiche "Aucune photo" plutôt qu'une image cassée.
+  return url && url.startsWith('http') ? url : null
 })
 
 async function openModal() {
