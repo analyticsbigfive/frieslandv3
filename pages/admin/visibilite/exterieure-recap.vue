@@ -81,12 +81,14 @@
         </table>
       </div>
 
-      <div class="flex items-center justify-between border-t border-slate-100 px-5 py-3 dark:border-slate-700">
-        <p class="text-sm text-slate-500 dark:text-slate-400">{{ page * 100 - 99 }} - {{ Math.min(page * 100, filteredVisites.length) }} / {{ filteredVisites.length }}</p>
-        <div class="flex gap-2">
-          <UButton size="xs" variant="outline" :disabled="page <= 1" @click="page--">‹</UButton>
-          <UButton size="xs" variant="outline" :disabled="page * 100 >= filteredVisites.length" @click="page++">›</UButton>
-        </div>
+      <div class="border-t border-slate-100 px-5 py-3 dark:border-slate-700">
+        <AdminPagination
+          :total="filteredVisites.length"
+          :page="page"
+          :page-size="100"
+          item-label="ligne(s)"
+          @update:page="(p) => page = p"
+        />
       </div>
     </section>
   </div>

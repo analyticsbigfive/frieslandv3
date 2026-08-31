@@ -82,12 +82,14 @@
         <p>Aucun distributeur trouvé</p>
       </div>
 
-      <div class="flex items-center justify-between border-t border-gray-100 px-4 py-3 dark:border-gray-700">
-        <p class="text-sm text-gray-500 dark:text-gray-400">Page {{ page }} / {{ pageCount }}</p>
-        <div class="flex gap-2">
-          <UButton size="xs" variant="outline" :disabled="page <= 1" @click="page--">Précédent</UButton>
-          <UButton size="xs" variant="outline" :disabled="page >= pageCount" @click="page++">Suivant</UButton>
-        </div>
+      <div class="border-t border-gray-100 px-4 py-3 dark:border-gray-700">
+        <AdminPagination
+          :total="filtered.length"
+          :page="page"
+          :page-size="perPage"
+          item-label="distributeur(s)"
+          @update:page="(p) => page = p"
+        />
       </div>
     </div>
   </div>

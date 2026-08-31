@@ -106,8 +106,7 @@
         :page-size="perPage"
         :loading="loading"
         item-label="magasin(s)"
-        @previous="goto(page - 1)"
-        @next="goto(page + 1)"
+        @update:page="goto"
       />
     </div>
 

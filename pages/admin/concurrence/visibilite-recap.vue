@@ -90,14 +90,13 @@
         </table>
       </div>
 
-      <!-- Pagination -->
-      <div class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-        <span>Page {{ page }} / {{ totalPages }}</span>
-        <div class="flex gap-2">
-          <UButton size="xs" variant="outline" :disabled="page <= 1" @click="page--">Précédent</UButton>
-          <UButton size="xs" variant="outline" :disabled="page >= totalPages" @click="page++">Suivant</UButton>
-        </div>
-      </div>
+      <AdminPagination
+        :total="filteredRows.length"
+        :page="page"
+        :page-size="perPage"
+        item-label="ligne(s)"
+        @update:page="(p) => page = p"
+      />
     </template>
   </div>
 </template>
@@ -191,7 +190,6 @@ const filteredRows = computed(() => {
   return rows
 })
 
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredRows.value.length / perPage)))
 const paginatedRows = computed(() => {
   const start = (page.value - 1) * perPage
   return filteredRows.value.slice(start, start + perPage)

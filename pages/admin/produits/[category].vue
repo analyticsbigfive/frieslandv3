@@ -177,14 +177,13 @@
           </table>
         </div>
 
-        <!-- Pagination -->
-        <div class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-          <span>Page {{ recapPage }} / {{ recapTotalPages }}</span>
-          <div class="flex gap-2">
-            <UButton size="xs" variant="outline" :disabled="recapPage <= 1" @click="recapPage--">Précédent</UButton>
-            <UButton size="xs" variant="outline" :disabled="recapPage >= recapTotalPages" @click="recapPage++">Suivant</UButton>
-          </div>
-        </div>
+        <AdminPagination
+          :total="filteredRecap.length"
+          :page="recapPage"
+          :page-size="perPage"
+          item-label="ligne(s)"
+          @update:page="(p) => recapPage = p"
+        />
       </template>
     </template>
   </div>
@@ -343,7 +342,6 @@ const filteredRecap = computed(() => {
   return rows
 })
 
-const recapTotalPages = computed(() => Math.max(1, Math.ceil(filteredRecap.value.length / perPage)))
 const paginatedRecap = computed(() => {
   const start = (recapPage.value - 1) * perPage
   return filteredRecap.value.slice(start, start + perPage)

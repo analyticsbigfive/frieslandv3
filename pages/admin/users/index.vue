@@ -44,7 +44,7 @@
           </thead>
           <tbody class="divide-y divide-gray-100">
             <tr
-              v-for="user in filteredUsers"
+              v-for="user in paginatedUsers"
               :key="user.id"
               class="hover:bg-gray-50 dark:hover:bg-gray-700"
             >
@@ -82,6 +82,16 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div class="border-t border-gray-100 px-4 py-3 dark:border-gray-700">
+        <AdminPagination
+          :total="filteredUsers.length"
+          :page="usersPage"
+          :page-size="usersPerPage"
+          item-label="utilisateur(s)"
+          @update:page="(p) => usersPage = p"
+        />
       </div>
 
       <div v-if="loading" class="p-8 text-center">
@@ -429,6 +439,13 @@ const filteredUsers = computed(() => {
   }
   return result
 })
+
+const usersPage = ref(1)
+const usersPerPage = 25
+const paginatedUsers = computed(() =>
+  filteredUsers.value.slice((usersPage.value - 1) * usersPerPage, usersPage.value * usersPerPage)
+)
+watch([searchQuery, roleFilter], () => { usersPage.value = 1 })
 
 // Colonne Zone : liste tous les territoires si multi, sinon le mono zone_assignee.
 function zoneLabel(user: Profile) {

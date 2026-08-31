@@ -59,3 +59,7 @@ nul
 android/keystore.properties
 .nuxt-native
 .env*.local
+.env.example
+# SQL générés volumineux (régénérables : scripts/generate-seed-sql.mjs + csv/)
+supabase/004_seed_visites.sql
+supabase/004_parts/

@@ -3,23 +3,16 @@
     <p class="admin-pagination__summary">
       {{ formattedTotal }} {{ itemLabel }}<template v-if="pageCount > 1"> · page {{ page }} / {{ pageCount }}</template>
     </p>
-    <div class="admin-pagination__actions">
-      <UButton
+    <div v-if="pageCount > 1" class="admin-pagination__actions">
+      <UPagination
+        :model-value="page"
+        :total="total"
+        :page-count="pageSize"
+        :max="7"
         size="xs"
-        variant="outline"
-        :disabled="page <= 1 || loading"
-        @click="emit('previous')"
-      >
-        Précédent
-      </UButton>
-      <UButton
-        size="xs"
-        variant="outline"
-        :disabled="page >= pageCount || loading"
-        @click="emit('next')"
-      >
-        Suivant
-      </UButton>
+        :disabled="loading"
+        @update:model-value="onPageChange"
+      />
     </div>
   </div>
 </template>
@@ -37,10 +30,14 @@ const props = withDefaults(defineProps<{
 })
 
 const emit = defineEmits<{
-  (event: 'previous'): void
-  (event: 'next'): void
+  (event: 'update:page', page: number): void
 }>()
 
 const pageCount = computed(() => Math.max(1, Math.ceil(props.total / props.pageSize)))
 const formattedTotal = computed(() => new Intl.NumberFormat('fr-FR').format(props.total))
+
+function onPageChange(newPage: number) {
+  if (newPage === props.page || props.loading) return
+  emit('update:page', newPage)
+}
 </script>

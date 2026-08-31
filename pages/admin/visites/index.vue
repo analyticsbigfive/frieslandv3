@@ -156,8 +156,7 @@
         :page-size="filters.perPage"
         :loading="loading"
         item-label="visite(s)"
-        @previous="filters.page--; loadVisites()"
-        @next="filters.page++; loadVisites()"
+        @update:page="(p) => { filters.page = p; loadVisites() }"
       />
     </div>
 

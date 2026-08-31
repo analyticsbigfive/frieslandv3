@@ -190,8 +190,11 @@ function generateVisites() {
   console.log(`   ${data.length} lignes de visites`)
 
   // Map header indices for safety
+  // Normalise l'apostrophe typographique (’) en apostrophe droite (') pour que
+  // les colonnes « Exécution d’activités promotionnelles » et « Pause d’affiches »
+  // soient bien trouvées par les lookups en apostrophe droite.
   const h = {}
-  header.forEach((col, idx) => { h[col.trim()] = idx })
+  header.forEach((col, idx) => { h[col.trim().replace(/’/g, "'")] = idx })
 
   // Helper to get value by column name
   const get = (row, colName) => {

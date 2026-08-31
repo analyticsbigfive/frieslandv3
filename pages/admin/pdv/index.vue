@@ -162,8 +162,7 @@
         :page-size="pdvStore.filters.perPage"
         :loading="loading"
         item-label="PDV"
-        @previous="pdvStore.filters.page--; loadPDV()"
-        @next="pdvStore.filters.page++; loadPDV()"
+        @update:page="(p) => { pdvStore.filters.page = p; loadPDV() }"
       />
     </div>
 

@@ -124,16 +124,15 @@
           Aucun Perfect Store sur cette période et ce périmètre.
         </div>
 
-        <div v-if="psList.total > psListPerPage" class="flex items-center justify-between border-t border-slate-100 px-5 py-3 dark:border-slate-700">
-          <span class="text-xs text-slate-400">Page {{ psList.page }} / {{ psListPageCount }}</span>
-          <div class="flex gap-2">
-            <UButton size="xs" variant="outline" :disabled="psList.page <= 1 || psList.loading" @click="loadPerfectStoreList(psList.page - 1)">
-              Précédent
-            </UButton>
-            <UButton size="xs" variant="outline" :disabled="psList.page >= psListPageCount || psList.loading" @click="loadPerfectStoreList(psList.page + 1)">
-              Suivant
-            </UButton>
-          </div>
+        <div v-if="psList.total > psListPerPage" class="border-t border-slate-100 px-5 py-3 dark:border-slate-700">
+          <AdminPagination
+            :total="psList.total"
+            :page="psList.page"
+            :page-size="psListPerPage"
+            :loading="psList.loading"
+            item-label="magasin(s)"
+            @update:page="loadPerfectStoreList"
+          />
         </div>
       </section>
 
@@ -370,26 +369,15 @@
 
               <div v-else class="pt-6 pb-2 text-center text-sm text-gray-400">Aucun magasin dans ce type.</div>
 
-              <div v-if="typeState(row.type_pdv).total > typePerPage" class="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-700">
-                <span class="text-xs text-gray-400">Page {{ typeState(row.type_pdv).page }} / {{ typePageCount(typeState(row.type_pdv).total) }} · {{ typeState(row.type_pdv).total }} au total</span>
-                <div class="flex gap-2">
-                  <UButton
-                    size="xs"
-                    variant="outline"
-                    :disabled="typeState(row.type_pdv).page <= 1 || typeState(row.type_pdv).loading"
-                    @click="changeTypePage(row.type_pdv, typeState(row.type_pdv).page - 1)"
-                  >
-                    Précédent
-                  </UButton>
-                  <UButton
-                    size="xs"
-                    variant="outline"
-                    :disabled="typeState(row.type_pdv).page >= typePageCount(typeState(row.type_pdv).total) || typeState(row.type_pdv).loading"
-                    @click="changeTypePage(row.type_pdv, typeState(row.type_pdv).page + 1)"
-                  >
-                    Suivant
-                  </UButton>
-                </div>
+              <div v-if="typeState(row.type_pdv).total > typePerPage" class="mt-3 border-t border-gray-100 pt-3 dark:border-gray-700">
+                <AdminPagination
+                  :total="typeState(row.type_pdv).total"
+                  :page="typeState(row.type_pdv).page"
+                  :page-size="typePerPage"
+                  :loading="typeState(row.type_pdv).loading"
+                  item-label="magasin(s)"
+                  @update:page="(p) => changeTypePage(row.type_pdv, p)"
+                />
               </div>
             </div>
           </div>
@@ -445,16 +433,15 @@
               Aucun magasin dans ce niveau.
             </div>
 
-            <div v-if="tier.total > storesPerPage" class="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-700">
-              <span class="text-xs text-slate-400">Page {{ tier.page }} / {{ tierPageCount(tier.total) }}</span>
-              <div class="flex gap-2">
-                <UButton size="xs" variant="outline" :disabled="tier.page <= 1 || tier.loading" @click="changeTierPage(tier.code, tier.page - 1)">
-                  Précédent
-                </UButton>
-                <UButton size="xs" variant="outline" :disabled="tier.page >= tierPageCount(tier.total) || tier.loading" @click="changeTierPage(tier.code, tier.page + 1)">
-                  Suivant
-                </UButton>
-              </div>
+            <div v-if="tier.total > storesPerPage" class="mt-4 border-t border-slate-100 pt-3 dark:border-slate-700">
+              <AdminPagination
+                :total="tier.total"
+                :page="tier.page"
+                :page-size="storesPerPage"
+                :loading="tier.loading"
+                item-label="magasin(s)"
+                @update:page="(p) => changeTierPage(tier.code, p)"
+              />
             </div>
           </article>
         </div>

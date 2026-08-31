@@ -65,7 +65,7 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-          <tr v-for="row in filteredRows" :key="activeDef.rowKey(row)" class="row">
+          <tr v-for="row in paginatedRefRows" :key="activeDef.rowKey(row)" class="row">
             <td v-for="col in activeDef.columns" :key="col.label" class="px-4 py-2.5 text-sm" :class="col.align === 'c' ? 'text-center' : 'text-gray-900 dark:text-gray-100'">
               <template v-if="col.kind === 'badge'">
                 <UBadge :color="col.color ? col.color(row) : 'gray'" variant="soft" size="xs">{{ col.cell(row) }}</UBadge>
@@ -91,6 +91,15 @@
           </tr>
         </tbody>
       </table>
+      <div class="border-t border-gray-100 px-4 py-3 dark:border-gray-700">
+        <AdminPagination
+          :total="filteredRows.length"
+          :page="refPage"
+          :page-size="refPerPage"
+          item-label="ligne(s)"
+          @update:page="(p) => refPage = p"
+        />
+      </div>
       <div v-if="loading" class="p-8 text-center">
         <UIcon name="i-heroicons-arrow-path" class="mx-auto h-8 w-8 animate-spin text-fc-blue" />
       </div>
@@ -850,6 +859,13 @@ const filteredRows = computed(() => {
   if (!q) return rows
   return rows.filter(r => activeDef.value.search(r).includes(q))
 })
+
+const refPage = ref(1)
+const refPerPage = 50
+const paginatedRefRows = computed(() =>
+  filteredRows.value.slice((refPage.value - 1) * refPerPage, refPage.value * refPerPage)
+)
+watch([activeId, search], () => { refPage.value = 1 })
 
 // USelectMenu reçoit toujours option/value-attribute 'label'/'value' : les
 // listes d'options en chaînes brutes (CANAUX, GRADES, …) doivent être

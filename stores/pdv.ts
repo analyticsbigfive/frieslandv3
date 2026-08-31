@@ -118,7 +118,9 @@ export const usePDVStore = defineStore('pdv', () => {
     try {
       let query = supabase
         .from('pdv')
-        .select(LIST_COLUMNS, { count: 'estimated' })
+        // 'exact' obligatoire : 'estimated' repose sur les stats du planificateur,
+        // fausses après un import massif → total et pagination erronés.
+        .select(LIST_COLUMNS, { count: 'exact' })
         .eq('is_active', true)
         .order('nom_pdv', { ascending: true })
 
