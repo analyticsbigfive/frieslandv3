@@ -124,7 +124,7 @@ const search = ref('')
 const rows = ref<CommercialRow[]>([])
 
 // Même défaut que l'onglet Visites : le mois courant (demande client).
-const periode = ref<PeriodeValue>({ preset: 'mois', ...plageDePeriode('mois') })
+const periode = ref<PeriodeValue>({ preset: '30j', ...plageDePeriode('30j') })
 const periodeLabel = computed(() => libellePlage({ debut: periode.value.debut, fin: periode.value.fin }))
 
 const formatDate = (value: string | null) =>

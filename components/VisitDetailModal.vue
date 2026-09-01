@@ -180,6 +180,7 @@
 import type { Visite } from '~/types'
 import { tradeTypeForCanal, type PerfectStoreResultB } from '~/utils/perfectStore'
 import { visibilityElementObserved, visibilitySegmentForPdv, FALLBACK_VISIBILITY_ELEMENTS } from '~/utils/visibilityStandards'
+import { photosAffichables } from '~/utils/visitePhotos'
 
 const props = withDefaults(defineProps<{
   modelValue: boolean
@@ -196,11 +197,7 @@ const emit = defineEmits<{
   delete: [visite: Visite]
 }>()
 
-// Les visites importées d'AppSheet peuvent garder des chemins relatifs
-// ("VISITE_Images/x.jpg") quand la photo n'a pas été migrée dans le bucket :
-// on n'affiche que les URLs résolues pour éviter les vignettes cassées.
-const displayableImages = computed(() =>
-  (props.visite?.image_urls || []).filter(u => typeof u === 'string' && u.startsWith('http')))
+const displayableImages = computed(() => photosAffichables(props.visite?.image_urls))
 
 const isOpen = computed({
   get: () => props.modelValue,

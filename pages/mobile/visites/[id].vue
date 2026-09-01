@@ -155,10 +155,7 @@ const user = useSupabaseUser()
 const { isPrivileged, matchesVisiteScope } = useUserScope()
 
 const visite = ref<any>(null)
-// N'affiche que les URLs résolues (les imports AppSheet peuvent garder des
-// chemins relatifs quand la photo n'est pas dans le bucket).
-const displayableImages = computed(() =>
-  (visite.value?.image_urls || []).filter((u: unknown) => typeof u === 'string' && u.startsWith('http')))
+const displayableImages = computed(() => photosAffichables(visite.value?.image_urls))
 const loading = ref(true)
 const pdvName = ref('')
 

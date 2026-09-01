@@ -586,10 +586,10 @@ const evolution = ref<{ date: string; count: number }[]>([])
 const manques = ref<PerfectStoreManqueItem[]>([])
 const storesPerPage = 5
 
-// Filtre de période (tâches 1.4 et 6). Défaut : le mois en cours — c'est la
-// maille de pilotage habituelle, le jour et la semaine servent au suivi
-// quotidien des merchandisers.
-const periode = ref<PeriodeValue>({ preset: 'mois', ...plageDePeriode('mois') })
+// Filtre de période (tâches 1.4 et 6). Défaut : 30 derniers jours glissants —
+// le « mois en cours » donnait un dashboard vide chaque début de mois. Le jour
+// et la semaine servent au suivi quotidien des merchandisers.
+const periode = ref<PeriodeValue>({ preset: '30j', ...plageDePeriode('30j') })
 
 // Filtres cascade Division → Territoire → Quartier + Distributeur.
 // Les options viennent du RÉFÉRENTIEL géographique COMPLET (useReferentiels),

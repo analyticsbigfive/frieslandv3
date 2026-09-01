@@ -31,6 +31,21 @@ describe('plageDePeriode', () => {
     expect(plage).toEqual({ debut: '2028-02-01', fin: '2028-02-29' })
   })
 
+  it('30j : 30 jours glissants, référence incluse', () => {
+    const plage = plageDePeriode('30j', new Date(2026, 8, 1))
+    expect(plage).toEqual({ debut: '2026-08-03', fin: '2026-09-01' })
+  })
+
+  it('30j : traverse un 29 février', () => {
+    const plage = plageDePeriode('30j', new Date(2028, 2, 10))
+    expect(plage).toEqual({ debut: '2028-02-10', fin: '2028-03-10' })
+  })
+
+  it('30j : traverse un changement d’année', () => {
+    const plage = plageDePeriode('30j', new Date(2027, 0, 5))
+    expect(plage).toEqual({ debut: '2026-12-07', fin: '2027-01-05' })
+  })
+
   it('tout : aucune borne', () => {
     expect(plageDePeriode('tout', new Date(2026, 6, 30))).toEqual({ debut: '', fin: '' })
   })

@@ -14,7 +14,7 @@
 // tests unitaires qui tournent hors contexte Nuxt.
 import { formatDateFr } from './dates'
 
-export type PeriodePreset = 'jour' | 'semaine' | 'mois' | 'tout' | 'personnalise'
+export type PeriodePreset = 'jour' | 'semaine' | '30j' | 'mois' | 'tout' | 'personnalise'
 
 export interface PlageDates {
   /** Borne basse incluse, format AAAA-MM-JJ. Vide = pas de borne. */
@@ -55,6 +55,14 @@ export function plageDePeriode(preset: PeriodePreset, reference: Date = new Date
     return { debut: toIsoJour(lundi), fin: toIsoJour(dimanche) }
   }
 
+  if (preset === '30j') {
+    // 30 jours glissants, référence incluse : évite l'écran vide du 1er du mois
+    // (le preset « mois » ne contient alors qu'une journée, souvent sans visite).
+    const debut = new Date(ref)
+    debut.setDate(ref.getDate() - 29)
+    return { debut: toIsoJour(debut), fin: toIsoJour(ref) }
+  }
+
   if (preset === 'mois') {
     const premier = new Date(ref.getFullYear(), ref.getMonth(), 1)
     // Jour 0 du mois suivant = dernier jour du mois courant.
@@ -82,6 +90,7 @@ export function libellePlage(plage: PlageDates): string {
 export const PERIODE_OPTIONS: { value: PeriodePreset; label: string }[] = [
   { value: 'jour', label: 'Jour' },
   { value: 'semaine', label: 'Semaine' },
+  { value: '30j', label: '30 jours' },
   { value: 'mois', label: 'Mois' },
   { value: 'tout', label: 'Tout' },
   { value: 'personnalise', label: 'Personnalisé' },

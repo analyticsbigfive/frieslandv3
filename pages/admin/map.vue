@@ -71,11 +71,17 @@ function filterMarkers() {
   addMarkers()
 }
 
+// Seules les images servies par notre projet Supabase sont injectées dans le
+// popup Leaflet (HTML brut) ; le host vient de la config, pas d'une constante.
+const supabaseHost = (() => {
+  try { return new URL(useRuntimeConfig().public.supabase.url as string).hostname } catch { return '' }
+})()
+
 function isSafeImageUrl(u: unknown): u is string {
-  if (typeof u !== 'string') return false
+  if (typeof u !== 'string' || !supabaseHost) return false
   try {
     const url = new URL(u)
-    return url.protocol === 'https:' && url.hostname === 'iirgolfjwdnnesamzcbd.supabase.co'
+    return url.protocol === 'https:' && url.hostname === supabaseHost
   } catch {
     return false
   }

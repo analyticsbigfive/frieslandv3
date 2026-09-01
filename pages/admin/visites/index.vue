@@ -116,12 +116,12 @@
               </td>
               <td class="text-center">
                 <button
-                  v-if="visite.image_urls?.length"
+                  v-if="photosAffichables(visite.image_urls).length"
                   type="button"
                   class="rounded-lg px-2 py-1 text-xs font-semibold text-cyan-600 transition hover:bg-cyan-50 dark:hover:bg-cyan-950/30"
                   @click.stop="openPhotoGallery(visite)"
                 >
-                  {{ visite.image_urls.length }} photo(s)
+                  {{ photosAffichables(visite.image_urls).length }} photo(s)
                 </button>
                 <span v-else class="text-slate-300">—</span>
               </td>
@@ -179,7 +179,7 @@
         </div>
         <div class="grid grid-cols-2 gap-3">
           <button
-            v-for="(url, index) in galleryVisite.image_urls"
+            v-for="(url, index) in galleryPhotos"
             :key="url"
             type="button"
             class="group relative overflow-hidden rounded-xl"
@@ -207,6 +207,7 @@ import type { PeriodeValue } from '~/components/PeriodFilter.vue'
 import type { Visite } from '~/types'
 import type { PerfectStoreResultB } from '~/utils/perfectStore'
 import { plageDePeriode } from '~/utils/periode'
+import { photosAffichables } from '~/utils/visitePhotos'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
@@ -223,10 +224,10 @@ const loading = computed(() => visitesStore.loading)
 const filters = visitesStore.filters
 
 // Période : source de vérité de l'UI, recopiée dans les filtres du store (qui
-// ne connaît que dateFrom / dateTo). Défaut au mois en cours — la maille de
-// suivi demandée en réunion ; les chips affichent toujours la plage active,
-// donc rien n'est masqué en silence.
-const periode = ref<PeriodeValue>({ preset: 'mois', ...plageDePeriode('mois') })
+// ne connaît que dateFrom / dateTo). Défaut : 30 derniers jours glissants — le
+// « mois en cours » donnait un écran vide chaque début de mois ; le preset
+// « Mois » reste à un clic et les chips affichent toujours la plage active.
+const periode = ref<PeriodeValue>({ preset: '30j', ...plageDePeriode('30j') })
 watch(periode, (p) => {
   filters.dateFrom = p.debut
   filters.dateTo = p.fin
@@ -236,6 +237,7 @@ const showDetail = ref(false)
 const selectedVisite = ref<Visite | null>(null)
 const showPhotoGallery = ref(false)
 const galleryVisite = ref<Visite | null>(null)
+const galleryPhotos = computed(() => photosAffichables(galleryVisite.value?.image_urls))
 const zoomedPhoto = ref<string | null>(null)
 const showZoomedPhoto = computed({
   get: () => !!zoomedPhoto.value,
@@ -342,7 +344,7 @@ async function handleExport() {
 
 function resetFilters() {
   // Le watch sur `periode` réécrit dateFrom / dateTo.
-  periode.value = { preset: 'mois', ...plageDePeriode('mois') }
+  periode.value = { preset: '30j', ...plageDePeriode('30j') }
   filters.commercial = ''
   filters.email = ''
   filters.page = 1

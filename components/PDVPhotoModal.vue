@@ -51,6 +51,8 @@
 </template>
 
 <script setup lang="ts">
+import { photosAffichables } from '~/utils/visitePhotos'
+
 const props = defineProps<{
   /** URL directe de l'image (si déjà disponible) */
   imageUrl?: string | null
@@ -68,10 +70,9 @@ const imgError = ref(false)
 
 const resolvedUrl = computed(() => {
   if (imgError.value) return null
-  const url = props.imageUrl || fetchedUrl.value || null
-  // Chemin AppSheet relatif ("PDV_Images/x.jpg") = photo pas encore migrée
-  // dans le bucket : on affiche "Aucune photo" plutôt qu'une image cassée.
-  return url && url.startsWith('http') ? url : null
+  // Même règle que les photos de visite (photosAffichables) : un chemin
+  // AppSheet relatif non migré donne "Aucune photo", pas une vignette cassée.
+  return photosAffichables([props.imageUrl || fetchedUrl.value])[0] ?? null
 })
 
 async function openModal() {
