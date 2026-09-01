@@ -23,9 +23,17 @@
           class="w-full sm:w-40"
         />
       </div>
-      <UButton v-if="authStore.isAdmin" size="sm" @click="openCreateUser" icon="i-heroicons-plus" class="bg-fc-blue">
-        Nouvel utilisateur
-      </UButton>
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <UButton v-if="authStore.isAdmin" size="sm" variant="outline" icon="i-heroicons-arrow-down-tray" @click="exportUsers">
+          Exporter
+        </UButton>
+        <UButton v-if="authStore.isAdmin" size="sm" variant="outline" icon="i-heroicons-arrow-up-tray" @click="showImportModal = true">
+          Importer CSV
+        </UButton>
+        <UButton v-if="authStore.isAdmin" size="sm" @click="openCreateUser" icon="i-heroicons-plus" class="bg-fc-blue">
+          Nouvel utilisateur
+        </UButton>
+      </div>
     </div>
 
     <!-- Users Table -->
@@ -292,6 +300,51 @@
         </UButton>
       </template>
     </AdminFormModal>
+
+    <!-- Import CSV utilisateurs -->
+    <UModal v-model="showImportModal">
+      <div class="p-6 space-y-4">
+        <div>
+          <h3 class="text-lg font-semibold">Importer des utilisateurs (CSV)</h3>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Mise à jour par email ; les emails inconnus créent un compte
+            (colonne <code>mot_de_passe</code>, sinon mot de passe par défaut).
+            Territoires et quartiers séparés par <code>|</code>, libellés préservés tels quels.
+          </p>
+          <UButton variant="link" size="xs" class="px-0" icon="i-heroicons-document-arrow-down" @click="downloadUsersTemplate">
+            Télécharger le modèle
+          </UButton>
+        </div>
+
+        <div>
+          <input ref="importFileInput" type="file" accept=".csv" class="hidden" @change="handleImportFileSelect" />
+          <UButton variant="outline" @click="($refs.importFileInput as HTMLInputElement)?.click()">
+            Choisir un fichier CSV
+          </UButton>
+          <p v-if="importFile" class="text-sm text-gray-600 mt-2">{{ importFile.name }}</p>
+        </div>
+
+        <div v-if="importSummary" class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 space-y-2">
+          <div class="flex flex-wrap gap-3 text-sm">
+            <span class="text-emerald-600 font-medium">{{ importSummary.created }} créé(s)</span>
+            <span class="text-blue-600 font-medium">{{ importSummary.updated }} mis à jour</span>
+            <span v-if="importSummary.errors.length" class="text-red-600 font-medium">{{ importSummary.errors.length }} erreur(s)</span>
+          </div>
+          <div v-if="importSummary.errors.length" class="max-h-40 overflow-y-auto space-y-1 border-t border-gray-200 dark:border-gray-600 pt-2">
+            <p v-for="(e, i) in importSummary.errors" :key="i" class="text-xs text-red-600">
+              ⚠ Ligne {{ e.line }}<template v-if="e.email"> ({{ e.email }})</template> : {{ e.message }}
+            </p>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-4 border-t">
+          <UButton variant="ghost" @click="closeImportModal">Fermer</UButton>
+          <UButton class="bg-fc-blue hover:bg-fc-blue-600 text-white" :disabled="!importFile" :loading="importing" @click="importUsers">
+            Importer
+          </UButton>
+        </div>
+      </div>
+    </UModal>
   </div>
 </template>
 
@@ -529,6 +582,106 @@ async function fetchUsers() {
   }
   finally {
     loading.value = false
+  }
+}
+
+// ---- Export / Import CSV ----
+const { exportToCsv, parseCsv, downloadUsersTemplate } = useCsvExport()
+const showImportModal = ref(false)
+const importFile = ref<File | null>(null)
+const importing = ref(false)
+const importSummary = ref<{ created: number; updated: number; errors: { line: number; email: string; message: string }[] } | null>(null)
+
+// Export de la sélection courante (recherche + filtre rôle), enrichie des
+// division/sous_region dérivées du référentiel (vides si territoire non matché).
+function exportUsers() {
+  const rows = filteredUsers.value.map((u) => {
+    const terrs = (u.territoires_assignes || []).filter(Boolean)
+    const matched = terrs
+      .map(n => territories.value.find(t => normTerrName(t.name) === normTerrName(n)))
+      .filter(Boolean)
+    const srs = [...new Set(matched
+      .map(t => subRegions.value.find(s => s.code === t!.sub_region_code))
+      .filter(Boolean)
+      .map(s => s!.nom_affichage || s!.name))]
+    const divs = [...new Set(matched
+      .map(t => subRegions.value.find(s => s.code === t!.sub_region_code))
+      .filter(Boolean)
+      .map(s => regions.value.find(r => r.code === s!.region_code))
+      .filter(Boolean)
+      .map(r => r!.nom_affichage || r!.name))]
+    return {
+      email: u.email || '',
+      nom: u.nom || '',
+      role: u.role || '',
+      telephone: u.telephone || '',
+      is_active: u.is_active === false ? 'FALSE' : 'TRUE',
+      zone_assignee: u.zone_assignee || '',
+      territoires_assignes: terrs.join('|'),
+      quartiers_assignes: (u.quartiers_assignes || []).filter(Boolean).join('|'),
+      region: u.region || '',
+      division: divs.join('|'),
+      sous_region: srs.join('|'),
+    }
+  })
+  if (!rows.length) {
+    toast.add({ title: 'Aucun utilisateur à exporter', color: 'amber' })
+    return
+  }
+  exportToCsv(rows, `utilisateurs-${new Date().toISOString().slice(0, 10)}.csv`)
+}
+
+function handleImportFileSelect(e: Event) {
+  const target = e.target as HTMLInputElement
+  importFile.value = target.files?.[0] || null
+  importSummary.value = null
+}
+
+function closeImportModal() {
+  showImportModal.value = false
+  importFile.value = null
+  importSummary.value = null
+}
+
+const splitList = (v: string) => (v || '').split('|').map(s => s.trim()).filter(Boolean)
+
+async function importUsers() {
+  if (!importFile.value) return
+  importing.value = true
+  try {
+    const text = (await importFile.value.text()).replace(/^\uFEFF/, '')
+    const parsed = parseCsv(text)
+    if (!parsed.length) throw new Error('Fichier vide ou en-têtes manquants')
+    // line = numéro de ligne dans le fichier (1 = en-têtes) ; colonnes
+    // export-only (division, sous_region) ignorées côté serveur.
+    const rows = parsed.map((r, i) => ({
+      line: i + 2,
+      email: r.email,
+      nom: r.nom,
+      role: r.role,
+      telephone: r.telephone,
+      is_active: r.is_active,
+      zone_assignee: r.zone_assignee,
+      territoires_assignes: splitList(r.territoires_assignes),
+      quartiers_assignes: splitList(r.quartiers_assignes),
+      region: r.region,
+      mot_de_passe: r.mot_de_passe,
+    }))
+    const result = await $fetch<{ created: number; updated: number; errors: { line: number; email: string; message: string }[] }>(
+      '/api/admin/users/import',
+      { method: 'POST', body: { rows } },
+    )
+    importSummary.value = result
+    toast.add({
+      title: 'Import terminé',
+      description: `${result.created} créé(s), ${result.updated} mis à jour, ${result.errors.length} erreur(s)`,
+      color: result.errors.length ? 'amber' : 'green',
+    })
+    await fetchUsers()
+  } catch (err: any) {
+    toast.add({ title: 'Erreur d\'import', description: err?.data?.message || err.message, color: 'red' })
+  } finally {
+    importing.value = false
   }
 }
 

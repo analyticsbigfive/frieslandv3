@@ -10,9 +10,7 @@
 //     ici, sur l'id retourné (et non par un .eq('email') à l'aveugle).
 import { serverSupabaseServiceRole } from '#supabase/server'
 import type { UserRole } from '~/types'
-
-const ROLES: UserRole[] = ['admin', 'superviseur', 'merchandiser', 'commercial']
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+import { createUserWithProfile, USER_ROLES, EMAIL_RE } from '../../utils/adminUsers'
 
 export default defineEventHandler(async (event) => {
   const service = serverSupabaseServiceRole(event) as any
@@ -33,7 +31,7 @@ export default defineEventHandler(async (event) => {
   if (password.length < 8) {
     throw apiError(400, 'Le mot de passe doit contenir au moins 8 caractères')
   }
-  if (!ROLES.includes(role)) {
+  if (!USER_ROLES.includes(role)) {
     throw apiError(400, 'Rôle invalide')
   }
 
@@ -44,51 +42,15 @@ export default defineEventHandler(async (event) => {
   const zoneAssignee = body?.zone_assignee ? String(body.zone_assignee) : (territoires[0] || null)
   const region = body?.region ? String(body.region) : null
 
-  // email_confirm: true -> compte utilisable immédiatement, aucun mail envoyé.
-  const { data, error } = await service.auth.admin.createUser({
+  return await createUserWithProfile(service, {
     email,
     password,
-    email_confirm: true,
-    user_metadata: { nom, role },
+    nom,
+    role,
+    telephone,
+    zone_assignee: zoneAssignee,
+    territoires_assignes: territoires,
+    quartiers_assignes: quartiers,
+    region,
   })
-
-  if (error) {
-    const alreadyExists = /already|exist/i.test(error.message || '')
-    throw apiError(
-      alreadyExists ? 409 : (error.status || 400),
-      alreadyExists ? 'Un compte existe déjà avec cet email' : error.message,
-    )
-  }
-
-  const userId = data?.user?.id
-  if (!userId) {
-    throw apiError(500, 'Compte créé sans identifiant, contactez le support')
-  }
-
-  // upsert : le trigger handle_new_user a normalement déjà inséré la ligne,
-  // on la complète — et on la crée si le trigger venait à manquer.
-  const { data: profile, error: profileError } = await service
-    .from('profiles')
-    .upsert({
-      id: userId,
-      email,
-      nom,
-      role,
-      telephone,
-      zone_assignee: zoneAssignee,
-      territoires_assignes: territoires,
-      quartiers_assignes: quartiers,
-      region,
-      is_active: true,
-    }, { onConflict: 'id' })
-    .select()
-    .single()
-
-  if (profileError) {
-    // Pas de compte auth orphelin sans profil : on annule la création.
-    await service.auth.admin.deleteUser(userId)
-    throw apiError(500, `Profil non enregistré : ${profileError.message}`)
-  }
-
-  return profile
 })

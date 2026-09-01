@@ -178,6 +178,19 @@ export function useCsvExport() {
   }
 
   /**
+   * Télécharge un modèle CSV pour l'import d'utilisateurs (upsert par email).
+   * territoires_assignes / quartiers_assignes : valeurs séparées par |.
+   * mot_de_passe : uniquement pour les créations (défaut serveur sinon).
+   */
+  function downloadUsersTemplate() {
+    const rows = [
+      { email: 'commercial1@exemple.com', nom: 'Prénom Nom', role: 'commercial', telephone: '0701020304', is_active: 'TRUE', zone_assignee: 'ABOBO 1', territoires_assignes: 'ABOBO 1|ABOBO 2', quartiers_assignes: 'ABOBOTE|SAMAKE|ANADOR', region: 'ABIDJAN 2', mot_de_passe: 'MotDePasse8+' },
+      { email: 'merch1@exemple.com', nom: 'Prénom Nom', role: 'merchandiser', telephone: '', is_active: 'TRUE', zone_assignee: 'KOUMASSI', territoires_assignes: 'KOUMASSI', quartiers_assignes: 'MARAIS|SOWETO', region: 'ABIDJAN 1', mot_de_passe: '' },
+    ]
+    exportToCsv(rows, 'modele-import-utilisateurs.csv')
+  }
+
+  /**
    * Parse CSV file to array of objects
    */
   function parseCsv(text: string): Record<string, string>[] {
@@ -238,6 +251,7 @@ export function useCsvExport() {
     exportPDVToExcel,
     exportToCsv,
     downloadRoutingTemplate,
+    downloadUsersTemplate,
     parseCsv,
   }
 }
