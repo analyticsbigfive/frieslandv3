@@ -67,3 +67,6 @@ supabase/004_parts/
 public/PDV_Images/
 public/VISITE_Images/
 images-source/
+
+# Rapports générés par les scripts d'audit/harmonisation
+scripts/out/
