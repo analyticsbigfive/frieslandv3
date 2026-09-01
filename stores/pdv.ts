@@ -7,6 +7,9 @@ import type { PDV, Profile, ZoneSecteur } from '~/types'
 // Évite select('*') qui tire 24 colonnes inutiles (mdm, routing, dates…).
 const LIST_COLUMNS = 'id,pdv_id,nom_pdv,canal,categorie_pdv,sous_categorie_pdv,autre_sous_categorie,zone,quartier,region,territory_code,area_code,distributor_name,adressage,image_url,geolocation_lat,geolocation_lng'
 
+// Valeur sentinelle du filtre zone : PDV dont la zone n'est pas renseignée.
+export const SANS_ZONE = '__SANS_ZONE__'
+
 export const usePDVStore = defineStore('pdv', () => {
   const supabase = skipHydrate(markRaw(useSupabaseClient()))
   const cacheTTL = 5 * 60 * 1000
@@ -130,7 +133,12 @@ export const usePDVStore = defineStore('pdv', () => {
       if (filters.value.search) {
         query = query.or(`nom_pdv.ilike.%${filters.value.search}%,pdv_id.ilike.%${filters.value.search}%,adressage.ilike.%${filters.value.search}%`)
       }
-      if (filters.value.zone) {
+      // Sentinelle : isole les PDV sans zone, invisibles de tout périmètre
+      // terrain tant qu'un admin ne les a pas rattachés à un territoire.
+      if (filters.value.zone === SANS_ZONE) {
+        query = query.or('zone.is.null,zone.eq.')
+      }
+      else if (filters.value.zone) {
         query = query.eq('zone', filters.value.zone)
       }
       if (filters.value.region) {

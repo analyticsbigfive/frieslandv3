@@ -425,6 +425,7 @@
 <script setup lang="ts">
 import { MapPin } from 'lucide-vue-next'
 import type { PDV } from '~/types'
+import { SANS_ZONE } from '~/stores/pdv'
 
 definePageMeta({
   middleware: ['auth', 'admin'],
@@ -483,7 +484,10 @@ const pdvForm = ref({
 })
 
 // Options depuis les facettes (tout le parc scopé), pas la page paginée courante.
-const zoneOptions = computed(() => ['', ...pdvStore.facetZones])
+// SANS_ZONE_LABEL isole les PDV sans territoire : invisibles des commerciaux et
+// merchandisers (le scoping filtre sur zone), ils ne sont rattachables que d'ici.
+const SANS_ZONE_LABEL = '— Sans territoire —'
+const zoneOptions = computed(() => ['', SANS_ZONE_LABEL, ...pdvStore.facetZones])
 const regionOptions = computed(() => ['', ...pdvStore.facetRegions])
 
 // Référentiels géo (Système B) : hiérarchie Region → Sous-région → Territoire → Area.
@@ -809,7 +813,7 @@ async function loadPerfectStoreForList() {
 }
 
 async function loadPDV() {
-  pdvStore.filters.zone = selectedZone.value
+  pdvStore.filters.zone = selectedZone.value === SANS_ZONE_LABEL ? SANS_ZONE : selectedZone.value
   pdvStore.filters.region = selectedRegion.value
   await pdvStore.fetchPDV()
   await loadPerfectStoreForList()

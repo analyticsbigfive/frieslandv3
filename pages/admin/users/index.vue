@@ -593,17 +593,15 @@ const importing = ref(false)
 const importSummary = ref<{ created: number; updated: number; errors: { line: number; email: string; message: string }[] } | null>(null)
 
 // Export de la sélection courante (recherche + filtre rôle), enrichie des
-// division/sous_region dérivées du référentiel (vides si territoire non matché).
+// Colonne sous_region = profiles.region (qui stocke un libellé de sous-région,
+// ex. "ABIDJAN 1"). La division (ABIDJAN / UP COUNTRY) est dérivée du
+// référentiel et n'est pas réimportée.
 function exportUsers() {
   const rows = filteredUsers.value.map((u) => {
     const terrs = (u.territoires_assignes || []).filter(Boolean)
     const matched = terrs
       .map(n => territories.value.find(t => normTerrName(t.name) === normTerrName(n)))
       .filter(Boolean)
-    const srs = [...new Set(matched
-      .map(t => subRegions.value.find(s => s.code === t!.sub_region_code))
-      .filter(Boolean)
-      .map(s => s!.nom_affichage || s!.name))]
     const divs = [...new Set(matched
       .map(t => subRegions.value.find(s => s.code === t!.sub_region_code))
       .filter(Boolean)
@@ -619,9 +617,8 @@ function exportUsers() {
       zone_assignee: u.zone_assignee || '',
       territoires_assignes: terrs.join('|'),
       quartiers_assignes: (u.quartiers_assignes || []).filter(Boolean).join('|'),
-      region: u.region || '',
+      sous_region: u.region || '',
       division: divs.join('|'),
-      sous_region: srs.join('|'),
     }
   })
   if (!rows.length) {
@@ -664,7 +661,8 @@ async function importUsers() {
       zone_assignee: r.zone_assignee,
       territoires_assignes: splitList(r.territoires_assignes),
       quartiers_assignes: splitList(r.quartiers_assignes),
-      region: r.region,
+      // sous_region (nouvel intitulé) ou region (fichiers antérieurs)
+      region: r.sous_region || r.region,
       mot_de_passe: r.mot_de_passe,
     }))
     const result = await $fetch<{ created: number; updated: number; errors: { line: number; email: string; message: string }[] }>(

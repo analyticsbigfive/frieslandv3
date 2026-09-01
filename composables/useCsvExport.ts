@@ -184,8 +184,8 @@ export function useCsvExport() {
    */
   function downloadUsersTemplate() {
     const rows = [
-      { email: 'commercial1@exemple.com', nom: 'Prénom Nom', role: 'commercial', telephone: '0701020304', is_active: 'TRUE', zone_assignee: 'ABOBO 1', territoires_assignes: 'ABOBO 1|ABOBO 2', quartiers_assignes: 'ABOBOTE|SAMAKE|ANADOR', region: 'ABIDJAN 2', mot_de_passe: 'MotDePasse8+' },
-      { email: 'merch1@exemple.com', nom: 'Prénom Nom', role: 'merchandiser', telephone: '', is_active: 'TRUE', zone_assignee: 'KOUMASSI', territoires_assignes: 'KOUMASSI', quartiers_assignes: 'MARAIS|SOWETO', region: 'ABIDJAN 1', mot_de_passe: '' },
+      { email: 'commercial1@exemple.com', nom: 'Prénom Nom', role: 'commercial', telephone: '0701020304', is_active: 'TRUE', zone_assignee: 'ABOBO 1', territoires_assignes: 'ABOBO 1|ABOBO 2', quartiers_assignes: 'ABOBOTE|SAMAKE|ANADOR', sous_region: 'ABIDJAN 2', mot_de_passe: 'MotDePasse8+' },
+      { email: 'merch1@exemple.com', nom: 'Prénom Nom', role: 'merchandiser', telephone: '', is_active: 'TRUE', zone_assignee: 'KOUMASSI', territoires_assignes: 'KOUMASSI', quartiers_assignes: 'MARAIS|SOWETO', sous_region: 'ABIDJAN 1', mot_de_passe: '' },
     ]
     exportToCsv(rows, 'modele-import-utilisateurs.csv')
   }
