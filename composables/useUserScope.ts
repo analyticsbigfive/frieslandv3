@@ -14,6 +14,8 @@ export function profileTerritories(profile?: Profile | null): string[] {
 
 // PDV ∈ périmètre d'un user ? (zone ∈ territoires) ET (quartiers vide OU quartier ∈ quartiers).
 // Aucun territoire ⇒ pas de contrainte de zone (comportement legacy inchangé).
+// Un PDV sans quartier reste visible dès que la zone matche : le filtre quartier
+// ne doit pas exclure les PDV non renseignés (même règle côté serveur dans stores/pdv.ts).
 export function pdvInScope(
   pdv: Partial<Pick<PDV, 'zone' | 'quartier'>>,
   profile?: Profile | null
@@ -21,7 +23,7 @@ export function pdvInScope(
   const terrs = profileTerritories(profile)
   if (terrs.length && !terrs.includes(pdv.zone || '')) return false
   const quartiers = (profile?.quartiers_assignes || []).filter(Boolean)
-  if (quartiers.length && !quartiers.includes(pdv.quartier || '')) return false
+  if (quartiers.length && pdv.quartier && !quartiers.includes(pdv.quartier)) return false
   return true
 }
 

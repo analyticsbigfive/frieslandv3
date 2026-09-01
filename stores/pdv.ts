@@ -46,8 +46,7 @@ export const usePDVStore = defineStore('pdv', () => {
       if (territoires.length === 1) query = query.eq('zone', territoires[0])
       else if (territoires.length > 1) query = query.in('zone', territoires)
       const quartiers = (profile.quartiers_assignes || []).filter(Boolean)
-      if (quartiers.length === 1) query = query.eq('quartier', quartiers[0])
-      else if (quartiers.length > 1) query = query.in('quartier', quartiers)
+      if (quartiers.length) query = query.or(quartierOrFilter(quartiers))
     }
     const { data, error } = await query
     if (error) return
@@ -58,6 +57,13 @@ export const usePDVStore = defineStore('pdv', () => {
 
   function isPrivilegedProfile(profile?: Profile | null) {
     return profile?.role === 'admin' || profile?.role === 'superviseur'
+  }
+
+  // Filtre quartier serveur : quartier ∈ liste OU quartier non renseigné (NULL).
+  // Un PDV sans quartier reste visible dès que la zone matche (même règle que pdvInScope).
+  function quartierOrFilter(quartiers: string[]) {
+    const list = quartiers.map(q => `"${q.replace(/"/g, '\\"')}"`).join(',')
+    return `quartier.is.null,quartier.in.(${list})`
   }
 
   function getScopeKey(profile?: Profile | null) {
@@ -98,11 +104,8 @@ export const usePDVStore = defineStore('pdv', () => {
     }
 
     const quartiers = (profile.quartiers_assignes || []).filter(Boolean)
-    if (quartiers.length === 1) {
-      query = query.eq('quartier', quartiers[0])
-    }
-    else if (quartiers.length > 1) {
-      query = query.in('quartier', quartiers)
+    if (quartiers.length) {
+      query = query.or(quartierOrFilter(quartiers))
     }
 
     return query
