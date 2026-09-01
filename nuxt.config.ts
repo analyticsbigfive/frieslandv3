@@ -164,5 +164,37 @@ export default defineNuxtConfig({
     },
   },
 
+  // Dossiers hors application, mais présents dans l'arborescence : sans cette
+  // exclusion le watcher du serveur de dev ouvre un descripteur par fichier
+  // (images-source contient ~47 000 photos AppSheet) et sature la limite macOS
+  // par processus → EMFILE, puis "spawn EBADF" sur le pool de forks du CLI.
+  ignore: [
+    'images-source/**',
+    '.claude/worktrees/**',
+    'scripts/out/**',
+  ],
+
+  watchers: {
+    chokidar: {
+      ignored: [
+        '**/images-source/**',
+        '**/.claude/worktrees/**',
+        '**/scripts/out/**',
+      ],
+    },
+  },
+
+  vite: {
+    server: {
+      watch: {
+        ignored: [
+          '**/images-source/**',
+          '**/.claude/worktrees/**',
+          '**/scripts/out/**',
+        ],
+      },
+    },
+  },
+
   compatibilityDate: '2025-01-01',
 })
