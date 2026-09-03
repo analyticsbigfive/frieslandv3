@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">Friesland Bonnet Rouge</string>
     <string name="title_activity_main">Friesland Bonnet Rouge</string>
-    <string name="package_name">com.friesland.bonnetrouge</string>
-    <string name="custom_url_scheme">com.friesland.bonnetrouge</string>
+    <string name="package_name">com.bdetco.bonnetrouge</string>
+    <string name="custom_url_scheme">com.bdetco.bonnetrouge</string>
 </resources>

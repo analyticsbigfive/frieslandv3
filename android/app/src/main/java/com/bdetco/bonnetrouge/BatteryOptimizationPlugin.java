@@ -1,4 +1,4 @@
-package com.friesland.bonnetrouge;
+package com.bdetco.bonnetrouge;
 
 import android.content.Context;
 import android.content.Intent;
