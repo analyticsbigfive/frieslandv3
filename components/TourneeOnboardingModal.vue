@@ -4,7 +4,11 @@
       <div>
         <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Activer le suivi de tournée</h2>
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Pour suivre votre tournée même écran éteint, l'application a besoin des autorisations suivantes.
+          Bonnet Rouge collecte votre position GPS pendant la tournée, <strong>y compris lorsque
+          l'application est fermée ou l'écran éteint</strong>, pour reconstituer votre trajet et vos
+          visites dans le tableau de bord de votre organisation. La collecte ne dure que du bouton
+          « Démarrer » au bouton « Terminer la tournée ». Pour cela, l'application a besoin des
+          autorisations suivantes.
         </p>
       </div>
 
