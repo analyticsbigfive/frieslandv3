@@ -6,6 +6,9 @@ const config: CapacitorConfig = {
   webDir: '.output/public',
   android: {
     allowMixedContent: false,
+    // Android 16 (targetSdk 36) impose l'affichage bord à bord : Capacitor
+    // ajoute les marges de la barre de statut / navigation à la WebView.
+    adjustMarginsForEdgeToEdge: 'auto',
   },
 }
 
