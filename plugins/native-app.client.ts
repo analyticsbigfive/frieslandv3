@@ -27,8 +27,16 @@ export default defineNuxtPlugin(() => {
     if (isActive) void processQueue()
   })
 
-  void StatusBar.setOverlaysWebView({ overlay: false })
-  void StatusBar.setBackgroundColor({ color: '#C8102E' })
-  // Style.Dark = fond sombre, icônes claires (lisible sur le rouge Friesland).
-  void StatusBar.setStyle({ style: Style.Dark })
+  // Android 15+/targetSdk 36 : la barre de statut est transparente et bord à bord,
+  // setBackgroundColor / setOverlaysWebView sont sans effet. Capacitor décale la
+  // WebView (adjustMarginsForEdgeToEdge: 'force') et la bande derrière la barre
+  // prend windowBackground (gray-50 le jour, gray-900 la nuit, cf. styles.xml) :
+  // on aligne la couleur des icônes sur ce fond.
+  // Style.Light = icônes sombres sur fond clair ; Style.Dark = icônes claires.
+  const sombre = window.matchMedia?.('(prefers-color-scheme: dark)')
+  const appliquerStyleBarre = () => {
+    void StatusBar.setStyle({ style: sombre?.matches ? Style.Dark : Style.Light })
+  }
+  appliquerStyleBarre()
+  sombre?.addEventListener?.('change', appliquerStyleBarre)
 })

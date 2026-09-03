@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fond derrière les barres système en mode bord à bord (gray-50 / gray-900 de l'app). -->
+    <color name="edgeToEdgeBackground">#111827</color>
+</resources>

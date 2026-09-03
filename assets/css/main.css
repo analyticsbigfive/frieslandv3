@@ -1,3 +1,7 @@
+/* Police de l'app : Nunito Sans (Google Fonts), auto-hébergée via @fontsource pour
+   fonctionner hors ligne et dans l'APK — aucun appel réseau vers fonts.googleapis.com. */
+@import '@fontsource-variable/nunito-sans';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -240,7 +244,7 @@
 }
 
 body {
-  font-family: 'Avenir Next', Avenir, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Nunito Sans Variable', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
