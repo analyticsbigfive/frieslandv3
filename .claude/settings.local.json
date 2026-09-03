@@ -35,7 +35,13 @@
       "Bash(npx cap *)",
       "Bash(JAVA_HOME=\"C:/Program Files/Eclipse Adoptium/jdk-21.0.11.10-hotspot\" ./android/gradlew -p android assembleDebug)",
       "Bash(echo \"GRADLE_EXIT=$?\")",
-      "Bash(npx vitest *)"
+      "Bash(npx vitest *)",
+      "mcp__089acf21-8484-4d37-9ed0-fdf499bce89e__create_draft",
+      "mcp__089acf21-8484-4d37-9ed0-fdf499bce89e__update_draft",
+      "Bash(mkdir -p android/app/src/main/java/com/bdetco/bonnetrouge)",
+      "Bash(git mv *)",
+      "Bash(rmdir android/app/src/main/java/com/friesland/bonnetrouge android/app/src/main/java/com/friesland)",
+      "Bash(LC_ALL=C sed -i '' 's/com\\\\.friesland\\\\.bonnetrouge/com.bdetco.bonnetrouge/g' capacitor.config.ts android/app/build.gradle android/app/src/main/res/values/strings.xml android/app/src/main/java/com/bdetco/bonnetrouge/MainActivity.java android/app/src/main/java/com/bdetco/bonnetrouge/BatteryOptimizationPlugin.java)"
     ]
   }
 }
