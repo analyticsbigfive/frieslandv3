@@ -3,11 +3,10 @@
   "configurations": [
     {
       "name": "dev",
-      "runtimeExecutable": "npm",
+      "runtimeExecutable": "pnpm",
       "runtimeArgs": [
         "run",
         "dev",
-        "--",
         "--no-fork"
       ],
       "port": 3000,

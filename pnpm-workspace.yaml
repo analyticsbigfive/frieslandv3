@@ -1,4 +1,6 @@
+# Gestionnaire de paquets du projet : pnpm (Vercel installe avec pnpm --frozen-lockfile).
+# Ne pas réintroduire package-lock.json : deux verrous désynchronisés cassent le déploiement.
 allowBuilds:
-  '@parcel/watcher': set this to true or false
-  esbuild: set this to true or false
-  vue-demi: set this to true or false
+  '@parcel/watcher': true
+  esbuild: true
+  vue-demi: true
