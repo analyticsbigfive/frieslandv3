@@ -60,6 +60,12 @@
             données personnelles en contactant l'éditeur à l'adresse ci-dessous ; les comptes désactivés n'ont
             plus accès à l'Application.
           </p>
+          <p class="mt-2">
+            <strong>Supprimer son compte</strong> : la demande de suppression du compte et des données associées
+            se fait depuis la page
+            <NuxtLink to="/supprimer-compte" class="text-fc-red underline">Supprimer mon compte</NuxtLink>,
+            accessible sans connexion. Elle est traitée par l'administrateur sous 30 jours.
+          </p>
         </section>
 
         <section>
@@ -83,8 +89,9 @@
         </section>
       </div>
 
-      <p class="mt-10 text-center text-xs text-gray-400">
+      <p class="mt-10 flex flex-wrap justify-center gap-x-4 text-center text-xs text-gray-400">
         <NuxtLink to="/login" class="underline">← Retour à la connexion</NuxtLink>
+        <NuxtLink to="/supprimer-compte" class="underline">Supprimer mon compte</NuxtLink>
       </p>
     </main>
   </div>

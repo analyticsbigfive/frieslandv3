@@ -153,6 +153,27 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /**
+   * Réinitialise le mot de passe d'un utilisateur (admin uniquement).
+   * Sans `password`, le serveur en génère un provisoire. Renvoie le mot de
+   * passe appliqué ; l'utilisateur devra le changer à sa prochaine connexion.
+   */
+  async function resetUserPassword(id: string, password?: string): Promise<string> {
+    if (!isAdmin.value) {
+      throw new Error('Permission refusée : seuls les administrateurs peuvent réinitialiser un mot de passe')
+    }
+    try {
+      const res = await $fetch<{ password: string }>(`/api/admin/users/${id}/password`, {
+        method: 'POST',
+        body: { password: password || '' },
+      })
+      return res.password
+    }
+    catch (err: any) {
+      throw new Error(err?.data?.statusMessage || err?.data?.message || err?.message || 'Réinitialisation impossible')
+    }
+  }
+
   async function logout() {
     await supabase.auth.signOut()
     profile.value = null
@@ -237,6 +258,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     deleteUser,
+    resetUserPassword,
     logout,
     fetchProfile,
     updateProfile,

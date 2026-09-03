@@ -36,6 +36,30 @@
       </div>
     </div>
 
+    <!-- Demandes de suppression de compte (posées depuis /supprimer-compte) -->
+    <div
+      v-if="deletionRequests.length"
+      class="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30"
+    >
+      <div class="flex items-start gap-3">
+        <UIcon name="i-heroicons-exclamation-triangle" class="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-semibold text-amber-900 dark:text-amber-100">
+            {{ deletionRequests.length }} demande(s) de suppression de compte en attente
+          </p>
+          <p class="mt-0.5 text-xs text-amber-800 dark:text-amber-200">
+            À traiter sous 30 jours : menu Actions de la ligne concernée → Supprimer (compte, profil et positions de tournée).
+          </p>
+          <ul class="mt-2 space-y-1">
+            <li v-for="d in deletionRequests" :key="d.id" class="text-xs text-amber-900 dark:text-amber-100">
+              <strong>{{ d.email }}</strong> · demandé le {{ formatDateFr(d.requested_at, { day: '2-digit', month: 'short', year: 'numeric' }) }}
+              <span v-if="d.reason" class="text-amber-700 dark:text-amber-300"> — « {{ d.reason }} »</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
     <!-- Users Table -->
     <div class="admin-surface overflow-hidden">
       <div class="overflow-x-auto">
@@ -63,6 +87,11 @@
                     {{ user.nom?.substring(0, 2).toUpperCase() || '??' }}
                   </div>
                   <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ user.nom || '-' }}</span>
+                  <span
+                    v-if="deletionRequestById.has(user.id)"
+                    class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
+                    title="Suppression du compte demandée par l’utilisateur"
+                  >Suppression demandée</span>
                 </div>
               </td>
               <td class="px-4 py-3 text-sm text-gray-600">{{ user.email }}</td>
@@ -345,6 +374,57 @@
         </div>
       </div>
     </UModal>
+
+    <UModal v-model="showResetPassword">
+      <div v-if="resetTarget" class="p-6 space-y-4">
+        <div>
+          <h3 class="text-lg font-semibold">Réinitialiser le mot de passe</h3>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            {{ resetTarget.nom || 'Utilisateur' }} · {{ resetTarget.email }}
+          </p>
+        </div>
+
+        <template v-if="!resetResult">
+          <p class="text-sm text-gray-600 dark:text-gray-300">
+            Un mot de passe provisoire sera appliqué immédiatement. L’utilisateur devra en
+            choisir un nouveau à sa prochaine connexion. Aucun e-mail n’est envoyé :
+            c’est à vous de lui transmettre le mot de passe affiché à l’étape suivante.
+          </p>
+          <UFormGroup label="Mot de passe provisoire" hint="Laisser vide pour en générer un automatiquement">
+            <UInput
+              v-model="resetCustomPassword"
+              type="text"
+              autocomplete="off"
+              placeholder="Généré automatiquement"
+            />
+          </UFormGroup>
+          <div class="flex justify-end gap-3 pt-4 border-t">
+            <UButton variant="ghost" @click="closeResetPassword">Annuler</UButton>
+            <UButton color="red" icon="i-heroicons-key" :loading="resetting" @click="confirmResetPassword">
+              Réinitialiser
+            </UButton>
+          </div>
+        </template>
+
+        <template v-else>
+          <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/30">
+            <p class="text-xs font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Nouveau mot de passe provisoire</p>
+            <div class="mt-2 flex items-center gap-3">
+              <code class="select-all rounded bg-white px-3 py-2 text-lg font-mono tracking-wider text-gray-900 dark:bg-gray-900 dark:text-gray-100">{{ resetResult }}</code>
+              <UButton size="sm" variant="outline" :icon="resetCopied ? 'i-heroicons-check' : 'i-heroicons-clipboard'" @click="copyResetPassword">
+                {{ resetCopied ? 'Copié' : 'Copier' }}
+              </UButton>
+            </div>
+            <p class="mt-3 text-xs text-emerald-800 dark:text-emerald-200">
+              Affiché une seule fois : notez-le avant de fermer. L’utilisateur devra le changer à sa prochaine connexion.
+            </p>
+          </div>
+          <div class="flex justify-end pt-4 border-t">
+            <UButton class="bg-fc-blue hover:bg-fc-blue-600 text-white" @click="closeResetPassword">Fermer</UButton>
+          </div>
+        </template>
+      </div>
+    </UModal>
   </div>
 </template>
 
@@ -555,6 +635,11 @@ function getUserActions(user: Profile) {
         hydrateUserGeo()
         showCreate.value = true
       },
+    },
+    {
+      label: 'Réinitialiser le mot de passe',
+      icon: 'i-heroicons-key',
+      click: () => openResetPassword(user),
     },
     {
       label: user.is_active ? 'Désactiver' : 'Activer',
@@ -771,14 +856,87 @@ async function deleteUser(user: Profile) {
     await authStore.deleteUser(user.id)
     toast.add({ title: 'Utilisateur supprimé' })
     fetchUsers()
+    fetchDeletionRequests()
   }
   catch (err: any) {
     toast.add({ title: 'Erreur', description: err.message, color: 'red' })
   }
 }
 
+// ---- Demandes de suppression de compte ----
+interface DeletionRequest { id: string; email: string; requested_at: string; reason: string | null }
+const deletionRequests = ref<DeletionRequest[]>([])
+const deletionRequestById = computed(() => new Map(deletionRequests.value.map(d => [d.id, d])))
+
+async function fetchDeletionRequests() {
+  if (!authStore.isAdmin) return
+  try {
+    deletionRequests.value = await $fetch<DeletionRequest[]>('/api/admin/users/deletion-requests')
+  }
+  catch {
+    deletionRequests.value = []
+  }
+}
+
+// ---- Réinitialisation du mot de passe ----
+// Le mot de passe est appliqué côté serveur (service_role) puis affiché UNE fois
+// à l'admin, qui le transmet lui-même : pas de mail, et l'utilisateur devra en
+// choisir un nouveau à sa prochaine connexion.
+const showResetPassword = ref(false)
+const resetTarget = ref<Profile | null>(null)
+const resetCustomPassword = ref('')
+const resetting = ref(false)
+const resetResult = ref<string | null>(null)
+const resetCopied = ref(false)
+
+function openResetPassword(user: Profile) {
+  resetTarget.value = user
+  resetCustomPassword.value = ''
+  resetResult.value = null
+  resetCopied.value = false
+  showResetPassword.value = true
+}
+
+function closeResetPassword() {
+  showResetPassword.value = false
+  resetTarget.value = null
+  resetResult.value = null
+}
+
+async function confirmResetPassword() {
+  if (!resetTarget.value) return
+  if (resetCustomPassword.value && resetCustomPassword.value.length < 8) {
+    toast.add({ title: 'Mot de passe trop court', description: '8 caractères minimum.', color: 'amber' })
+    return
+  }
+  resetting.value = true
+  try {
+    resetResult.value = await authStore.resetUserPassword(resetTarget.value.id, resetCustomPassword.value || undefined)
+    toast.add({ title: 'Mot de passe réinitialisé', description: `${resetTarget.value.nom || resetTarget.value.email} devra le changer à sa prochaine connexion.` })
+  }
+  catch (err: any) {
+    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+  }
+  finally {
+    resetting.value = false
+  }
+}
+
+async function copyResetPassword() {
+  if (!resetResult.value) return
+  try {
+    await navigator.clipboard.writeText(resetResult.value)
+    resetCopied.value = true
+    setTimeout(() => { resetCopied.value = false }, 2000)
+  }
+  catch {
+    toast.add({ title: 'Copie impossible', description: 'Sélectionnez le mot de passe et copiez-le manuellement.', color: 'amber' })
+  }
+}
+
 onMounted(() => {
   fetchUsers()
   fetchReferentiels()
+  fetchDeletionRequests()
 })
 </script>

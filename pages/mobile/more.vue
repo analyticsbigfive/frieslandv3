@@ -32,5 +32,7 @@ const secondaryItems = [
   { label: 'Calendrier', description: 'Visites récentes et navigation par mois', to: '/mobile/calendar', icon: 'i-heroicons-calendar-days' },
   { label: 'Contacts', description: 'Annuaire, téléphone et email', to: '/mobile/contacts', icon: 'i-heroicons-users' },
   { label: 'Carte', description: 'Routing, PDV proches et rayon', to: '/mobile/map', icon: 'i-heroicons-map' },
+  { label: 'Confidentialité', description: 'Politique de confidentialité et données collectées', to: '/privacy-policy', icon: 'i-heroicons-shield-check' },
+  { label: 'Supprimer mon compte', description: 'Demander la suppression du compte et des données associées', to: '/supprimer-compte', icon: 'i-heroicons-trash' },
 ]
 </script>
