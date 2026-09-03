@@ -4,8 +4,14 @@
     {
       "name": "dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "--no-fork"],
-      "port": 3000
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "--no-fork"
+      ],
+      "port": 3000,
+      "autoPort": true
     }
   ]
 }
