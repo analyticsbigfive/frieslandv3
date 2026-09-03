@@ -7,7 +7,7 @@ export default defineNuxtRouteMiddleware((to) => {
   if (!user.value) return
 
   const mustChange = user.value.user_metadata?.must_change_password === true
-  const allowed = ['/changer-mot-de-passe', '/login']
+  const allowed = ['/changer-mot-de-passe', '/login', '/privacy-policy']
 
   if (mustChange && !allowed.includes(to.path)) {
     return navigateTo('/changer-mot-de-passe', { replace: true })
