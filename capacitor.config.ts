@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
-  appId: 'com.bdetco.bonnetrouge',
+  appId: 'com.bdco.bonnetrouge',
   appName: 'Friesland Bonnet Rouge',
   webDir: '.output/public',
   android: {

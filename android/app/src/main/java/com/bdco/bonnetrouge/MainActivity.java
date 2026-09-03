@@ -1,4 +1,4 @@
-package com.bdetco.bonnetrouge;
+package com.bdco.bonnetrouge;
 
 import android.os.Bundle;
 
