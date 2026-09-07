@@ -71,6 +71,7 @@
 </template>
 
 <script setup lang="ts">
+import { agregerParPeriode, clePeriode, type Granularite } from '~/utils/agregation'
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const dashboard = useDashboardDirection()
@@ -93,39 +94,27 @@ const periodLabel = computed(() => {
   return f.dateFrom && f.dateTo ? `${f.dateFrom} → ${f.dateTo}` : '—'
 })
 
-function getWeek(d: Date) {
-  const oneJan = new Date(d.getFullYear(), 0, 1)
-  return Math.ceil(((d.getTime() - oneJan.getTime()) / 86400000 + oneJan.getDay() + 1) / 7)
-}
+// Regroupement par période : utils/agregation.ts (lot 5), même convention de
+// semaine ISO que les autres écrans. Les compteurs annexes (GPS, commerciaux)
+// sont recalculés par clé de période.
+const granularite = computed<Granularite>(() => ({ day: 'jour', week: 'semaine', month: 'mois' } as const)[groupBy.value] || 'jour')
 
 const tableData = computed(() => {
-  const groups = new Map<string, { count: number; gpsOk: number; commerciaux: Set<string> }>()
-
-  dashboard.visites.value.forEach((v: any) => {
-    const d = new Date(v.date_visite)
-    let key = ''
-    if (groupBy.value === 'day') key = d.toISOString().slice(0, 10)
-    else if (groupBy.value === 'week') {
-      const week = getWeek(d)
-      key = `S${week} - ${d.getFullYear()}`
-    }
-    else key = d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
-
-    if (!groups.has(key)) groups.set(key, { count: 0, gpsOk: 0, commerciaux: new Set() })
-    const g = groups.get(key)!
-    g.count++
-    if (v.geofence_validated) g.gpsOk++
-    if (v.commercial) g.commerciaux.add(v.commercial)
-  })
-
-  return Array.from(groups.entries())
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([period, g]) => ({
-      period,
-      count: g.count,
-      gpsOk: g.gpsOk,
-      commerciaux: g.commerciaux.size,
-    }))
+  const visites = dashboard.visites.value as any[]
+  const points = agregerParPeriode(visites, v => v.date_visite, granularite.value)
+  const gpsOk = new Map(agregerParPeriode(visites, v => v.date_visite, granularite.value, v => !!v.geofence_validated).map(p => [p.cle, p.match]))
+  const commerciaux = new Map<string, Set<string>>()
+  for (const v of visites) {
+    if (!v.date_visite || !v.commercial) continue
+    const { cle } = clePeriode(new Date(v.date_visite), granularite.value)
+    ;(commerciaux.get(cle) || commerciaux.set(cle, new Set()).get(cle)!).add(v.commercial)
+  }
+  return points.map(p => ({
+    period: p.label,
+    count: p.total,
+    gpsOk: gpsOk.get(p.cle) || 0,
+    commerciaux: commerciaux.get(p.cle)?.size || 0,
+  }))
 })
 
 const chartData = computed(() =>

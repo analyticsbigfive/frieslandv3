@@ -508,6 +508,32 @@ const defs: Def[] = [
     del: r => supabase.from('type_pdv').delete().eq('id', r.id),
   },
   {
+    id: 'frequence_visite', section: 'pdv', label: 'Fréquence de visite', table: 'frequence_visite',
+    select: 'id, zone, type_pdv, jours', order: q => q.order('zone', { nullsFirst: true }).order('type_pdv', { nullsFirst: true }),
+    columns: [
+      { label: 'Territoire', cell: r => r.zone || 'Tous', muted: true },
+      { label: 'Type de PDV', cell: r => r.type_pdv || 'Tous', muted: true },
+      { label: 'Jours entre deux visites', cell: r => r.jours, align: 'c', kind: 'num' },
+    ],
+    fields: [
+      { key: 'zone', label: 'Territoire', type: 'select', opts: () => [{ value: '', label: 'Tous les territoires' }, ...territoireOpts().map(o => ({ value: o.label.split(' · ')[0], label: o.label }))], lockEdit: true, hint: 'Vide = tous. La surcharge la plus précise (territoire + type) gagne.' },
+      { key: 'type_pdv', label: 'Type de PDV', type: 'select', opts: () => [{ value: '', label: 'Tous les types' }, ...typePdvOpts().map(o => ({ value: o.label, label: o.label }))], lockEdit: true },
+      { key: 'jours', label: 'Jours entre deux visites', type: 'num', required: true, min: 1, hint: '7 = hebdomadaire. Au-delà, le PDV passe « en retard » dans la synthèse par zone.' },
+    ],
+    blank: () => ({ zone: '', type_pdv: '', jours: 7 }),
+    fill: r => ({ ...r, zone: r.zone || '', type_pdv: r.type_pdv || '' }),
+    rowKey: r => String(r.id), search: r => `${r.zone || 'tous'} ${r.type_pdv || 'tous'} ${r.jours}`.toLowerCase(),
+    valid: f => typeof f.jours === 'number' && f.jours >= 1,
+    save: (f, e) => e
+      ? supabase.from('frequence_visite').update({ jours: f.jours }).eq('id', f.id)
+      : supabase.from('frequence_visite').insert({ zone: f.zone || null, type_pdv: f.type_pdv || null, jours: f.jours }),
+    // La ligne par défaut (tous / tous) n'est pas supprimable : sans elle, plus
+    // aucun PDV n'a de fréquence et la fraîcheur devient incalculable.
+    del: async (r) => (!r.zone && !r.type_pdv)
+      ? { error: new Error('La fréquence par défaut ne peut pas être supprimée : modifiez sa valeur.') }
+      : supabase.from('frequence_visite').delete().eq('id', r.id),
+  },
+  {
     id: 'segment_grade_type_pdv', section: 'pdv', label: 'Segment / Grade', table: 'segment_grade_type_pdv',
     select: 'type_pdv_id, segment, grade',
     columns: [

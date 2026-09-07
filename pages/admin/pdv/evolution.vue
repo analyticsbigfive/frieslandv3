@@ -66,6 +66,7 @@
 </template>
 
 <script setup lang="ts">
+import { agregerParPeriode } from '~/utils/agregation'
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const supabase = useSupabaseClient()
@@ -99,22 +100,10 @@ const categorieBreakdown = computed(() => {
   return { labels: sorted.map(([k]) => k), values: sorted.map(([, v]) => v) }
 })
 
-const evoData = computed(() => {
-  const weeks = new Map<string, number>()
-  pdvList.value.forEach(p => {
-    if (!p.date_creation) return
-    const d = new Date(p.date_creation)
-    const weekStart = new Date(d)
-    weekStart.setDate(d.getDate() - d.getDay())
-    const key = weekStart.toISOString().slice(0, 10)
-    weeks.set(key, (weeks.get(key) || 0) + 1)
-  })
-  const sorted = [...weeks.entries()].sort((a, b) => a[0].localeCompare(b[0]))
-  return sorted.map(([k, v]) => ({
-    date: new Date(k).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }),
-    count: v,
-  }))
-})
+// Ajouts par semaine ISO : utils/agregation.ts (lot 5).
+const evoData = computed(() =>
+  agregerParPeriode(pdvList.value, p => p.date_creation, 'semaine').map(p => ({ date: p.label, count: p.total })),
+)
 
 async function fetchPDV() {
   loading.value = true

@@ -28,11 +28,13 @@ export const adminSectionTabs: Record<AdminSection, AdminSectionTab[]> = {
     { label: 'Tableau de bord', to: '/admin', icon: 'i-heroicons-trophy' },
     { label: 'Liste par niveau', to: '/admin/perfect-store/liste', icon: 'i-heroicons-list-bullet' },
     { label: 'Visites', to: '/admin/perfect-store/visites', icon: 'i-heroicons-clipboard-document-list' },
+    { label: 'Synthèse par zone', to: '/admin/perfect-store/zones', icon: 'i-heroicons-map' },
   ],
   pdv: [
     { label: 'Liste', to: '/admin/pdv', icon: 'i-heroicons-map-pin' },
     { label: 'Répartition', to: '/admin/pdv/repartition', icon: 'i-heroicons-chart-bar' },
     { label: 'Évolution', to: '/admin/pdv/evolution', icon: 'i-heroicons-chart-bar' },
+    { label: 'Historique PDV', to: '/admin/pdv/historique', icon: 'i-heroicons-presentation-chart-line' },
     { label: 'Distributeurs', to: '/admin/distributeurs', icon: 'i-heroicons-truck' },
   ],
   visibilite: [

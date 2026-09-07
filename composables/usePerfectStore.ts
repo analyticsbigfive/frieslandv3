@@ -43,6 +43,63 @@ export interface PerfectStoreNiveauCount {
 }
 
 /** Couverture des visites d'un merchandiser sur la période (tâche 2.2). */
+export type FraicheurEtat = 'a_jour' | 'en_retard' | 'jamais_visite'
+
+export interface PdvFraicheur {
+  pdv_id: string
+  nom_pdv: string
+  zone: string | null
+  quartier: string | null
+  sous_categorie_pdv: string | null
+  distributor_name: string | null
+  derniere_visite: string | null
+  jours_depuis: number | null
+  frequence_jours: number | null
+  etat: FraicheurEtat
+  niveau: string | null
+  score_global: number | null
+  visite_id: string | null
+}
+
+export interface SyntheseZone {
+  zone: string
+  pdv_total: number
+  pdv_visites: number
+  pdv_non_visites: number
+  a_jour: number
+  en_retard: number
+  jamais_visites: number
+  alertes: number
+  dispo_moyenne: number | null
+  perfect_store_pct: number | null
+}
+
+export interface PdvHistoriquePoint {
+  visite_id: string
+  date_visite: string
+  commercial: string | null
+  niveau: string | null
+  score_global: number | null
+  dispo_rayon: number | null
+  visibilite: number | null
+  promotion: number | null
+  assortiment: number | null
+}
+
+export interface PeriodeMoyennes {
+  visites: number
+  score_moyen?: number | null
+  dispo_moyenne?: number | null
+  visibilite_moyenne?: number | null
+  promotion_moyenne?: number | null
+  perfect_store_pct?: number | null
+}
+
+export interface PdvComparaison {
+  periode1: PeriodeMoyennes
+  periode2: PeriodeMoyennes
+}
+
 export interface CouvertureCommercial {
   commercial: string
   email: string
@@ -454,6 +511,49 @@ export function usePerfectStore() {
    * passages, PDV distincts touchés, et la liste des PDV avec leur nombre de
    * passages — pour suivre l'objectif journalier (ex. 20 visites/jour).
    */
+  /** Fraîcheur des visites par PDV (lot 5) : état a_jour / en_retard / jamais_visite. */
+  async function fetchPdvFraicheur(f: DashFilters = {}, etat: FraicheurEtat | '' = ''): Promise<PdvFraicheur[]> {
+    const { p_date_debut: _d, p_date_fin: _f, ...geo } = dashFilterParams(f)
+    const { data, error } = await (supabase.rpc as any)('pdv_fraicheur_filtre', { ...geo, p_etat: etat || null })
+    if (error) {
+      console.warn('pdv_fraicheur_filtre indisponible (migration 20260907130000 ?)', error.message)
+      return []
+    }
+    return (data || []) as PdvFraicheur[]
+  }
+
+  /** Synthèse par territoire (lot 5) : visités / non visités, alertes, dispo, PS. */
+  async function fetchSyntheseZones(f: DashFilters = {}): Promise<SyntheseZone[]> {
+    const { data, error } = await (supabase.rpc as any)('synthese_zones_filtre', dashFilterParams(f))
+    if (error) {
+      console.warn('synthese_zones_filtre indisponible (migration 20260907130000 ?)', error.message)
+      return []
+    }
+    return (data || []) as SyntheseZone[]
+  }
+
+  /** Historique Perfect Store d'un PDV, visite par visite (lot 5). */
+  async function fetchPdvHistorique(pdvId: string): Promise<PdvHistoriquePoint[]> {
+    const { data, error } = await (supabase.rpc as any)('pdv_historique_perfect_store', { p_pdv_id: pdvId })
+    if (error) {
+      console.warn('pdv_historique_perfect_store indisponible (migration 20260907130000 ?)', error.message)
+      return []
+    }
+    return (data || []) as PdvHistoriquePoint[]
+  }
+
+  /** Moyennes d'un PDV sur deux périodes (lot 5). */
+  async function fetchPdvComparaison(pdvId: string, p1: { debut: string; fin: string }, p2: { debut: string; fin: string }): Promise<PdvComparaison | null> {
+    const { data, error } = await (supabase.rpc as any)('pdv_comparaison_periodes', {
+      p_pdv_id: pdvId, p_debut1: p1.debut, p_fin1: p1.fin, p_debut2: p2.debut, p_fin2: p2.fin,
+    })
+    if (error) {
+      console.warn('pdv_comparaison_periodes indisponible (migration 20260907130000 ?)', error.message)
+      return null
+    }
+    return (data || null) as PdvComparaison | null
+  }
+
   async function fetchCouvertureParCommercial(f: DashFilters = {}): Promise<CouvertureCommercial[]> {
     const { data, error } = await (supabase.rpc as any)('couverture_visites_par_commercial', dashFilterParams(f))
     if (error) {
@@ -508,6 +608,10 @@ export function usePerfectStore() {
     fetchPerfectStoreManques,
     fetchGlobalKpiFiltre,
     fetchCouvertureParCommercial,
+    fetchPdvFraicheur,
+    fetchSyntheseZones,
+    fetchPdvHistorique,
+    fetchPdvComparaison,
     fetchPresenceSkus,
   }
 }

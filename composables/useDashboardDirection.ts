@@ -4,6 +4,7 @@
  * Fallback automatique si la RPC n'existe pas
  */
 import type { DashboardFilterValues } from '~/components/DashboardFilters.vue'
+import { agregerParPeriode } from '~/utils/agregation'
 
 export interface VisiteWithPDV {
   visite_id: string
@@ -185,30 +186,14 @@ export function useDashboardDirection() {
     }
   }
 
-  // Aggrégation par semaine pour l'évolution
+  // Agrégation par semaine ISO pour l'évolution — implémentation unique dans
+  // utils/agregation.ts (lot 5), partagée avec les écrans d'évolution.
   function evolutionParSemaine(predicate: (v: VisiteWithPDV) => boolean) {
-    const weeks = new Map<string, { total: number; match: number }>()
-
-    visites.value.forEach(v => {
-      const d = new Date(v.date_visite)
-      const weekStart = new Date(d)
-      weekStart.setDate(d.getDate() - d.getDay())
-      const key = weekStart.toISOString().slice(0, 10)
-
-      if (!weeks.has(key)) weeks.set(key, { total: 0, match: 0 })
-      const w = weeks.get(key)!
-      w.total++
-      if (predicate(v)) w.match++
-    })
-
-    const sorted = [...weeks.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+    const points = agregerParPeriode(visites.value, v => v.date_visite, 'semaine', predicate)
     return {
-      labels: sorted.map(([k]) => {
-        const d = new Date(k)
-        return d.toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' })
-      }),
-      counts: sorted.map(([, v]) => v.match),
-      totals: sorted.map(([, v]) => v.total),
+      labels: points.map(p => p.label),
+      counts: points.map(p => p.match),
+      totals: points.map(p => p.total),
     }
   }
 
