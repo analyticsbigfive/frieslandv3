@@ -23,6 +23,9 @@ importers:
       '@capacitor/geolocation':
         specifier: ^7.1.8
         version: 7.1.8(@capacitor/core@7.6.7)
+      '@capacitor/keyboard':
+        specifier: ^7.0.6
+        version: 7.0.6(@capacitor/core@7.6.7)
       '@capacitor/network':
         specifier: ^7.0.4
         version: 7.0.4(@capacitor/core@7.6.7)
@@ -706,6 +709,11 @@ packages:
 
   '@capacitor/geolocation@7.1.8':
     resolution: {integrity: sha512-x/rJieD2N2zlGvXFRD3ru4ArJWTwXAIYmyhfo5zg4F1DKGos7mCCOvIOSVMdfQmt14SCsmJeO9Qe8EtDGNGCrw==}
+    peerDependencies:
+      '@capacitor/core': '>=7.0.0'
+
+  '@capacitor/keyboard@7.0.6':
+    resolution: {integrity: sha512-mH9EHo4EnBA9zJAi6domGVB/PdEkcm0h27nJDHG4Y3fd2oKsheCxDRXlYrbgj8hcyQPe0cGWqAfzfwKzkWQoFQ==}
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
 
@@ -7193,6 +7201,10 @@ snapshots:
     dependencies:
       '@capacitor/core': 7.6.7
       '@capacitor/synapse': 1.0.4
+
+  '@capacitor/keyboard@7.0.6(@capacitor/core@7.6.7)':
+    dependencies:
+      '@capacitor/core': 7.6.7
 
   '@capacitor/network@7.0.4(@capacitor/core@7.6.7)':
     dependencies:

@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex">
+  <div class="min-h-screen flex overflow-y-auto" @focusin="scrollIntoView">
     <!-- Left Panel - Branding -->
     <div class="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-fc-red to-fc-red-700 relative overflow-hidden">
       <div class="absolute inset-0 opacity-10">
@@ -107,6 +107,14 @@ definePageMeta({ layout: false })
 
 const authStore = useAuthStore()
 const router = useRouter()
+
+// Android : le clavier réduit la fenêtre (adjustResize) ; on ramène le champ
+// actif au-dessus du clavier, sinon le mot de passe reste caché.
+function scrollIntoView(e: FocusEvent) {
+  const el = e.target as HTMLElement | null
+  if (!el || !['INPUT', 'TEXTAREA'].includes(el.tagName)) return
+  setTimeout(() => el.scrollIntoView({ block: 'center', behavior: 'smooth' }), 250)
+}
 
 const email = ref('')
 const password = ref('')

@@ -13,6 +13,15 @@ const config: CapacitorConfig = {
     // (styles.xml), claire ou sombre selon le mode.
     adjustMarginsForEdgeToEdge: 'force',
   },
+  plugins: {
+    // Clavier Android : sans ce réglage, en bord à bord (targetSdk 36) le
+    // clavier recouvre les champs au lieu de réduire la page (login : mot de
+    // passe caché). resizeOnFullScreen couvre le cas edge-to-edge.
+    Keyboard: {
+      resize: 'body',
+      resizeOnFullScreen: true,
+    },
+  },
 }
 
 export default config
