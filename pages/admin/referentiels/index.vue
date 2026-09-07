@@ -405,6 +405,27 @@ const defs: Def[] = [
       : supabase.from('quartier').insert({ zone_id: f.zone_id, nom: f.nom, ordre: f.ordre ?? 1 }),
     del: r => supabase.from('quartier').delete().eq('id', r.id),
   },
+  {
+    id: 'territoire_alias', section: 'geo', label: 'Alias de territoire', table: 'territoire_alias',
+    select: 'alias, territoire_code, created_at', order: q => q.order('alias'),
+    columns: [
+      { label: 'Libellé hors référentiel', cell: r => r.alias, kind: 'mono' },
+      { label: 'Territoire réel', cell: r => maps.territoire_code?.get(r.territoire_code)?.nom || r.territoire_code },
+      { label: 'Code', cell: r => r.territoire_code, muted: true },
+    ],
+    fields: [
+      { key: 'alias', label: 'Libellé hors référentiel', type: 'text', required: true, lockEdit: true, hint: 'Tel qu\'il apparaît sur les PDV (pdv.zone) ou les profils, ex. MARCORY TREICHVILLE' },
+      { key: 'territoire_code', label: 'Territoire réel', type: 'select', opts: territoireOpts, required: true },
+    ],
+    blank: () => ({ alias: '', territoire_code: '' }),
+    fill: r => ({ ...r }),
+    rowKey: r => r.alias, search: r => `${r.alias} ${r.territoire_code} ${maps.territoire_code?.get(r.territoire_code)?.nom || ''}`.toLowerCase(),
+    valid: f => !!f.alias?.trim() && !!f.territoire_code,
+    save: (f, e) => e
+      ? supabase.from('territoire_alias').update({ territoire_code: f.territoire_code }).eq('alias', f.alias)
+      : supabase.from('territoire_alias').insert({ alias: f.alias.trim().toUpperCase(), territoire_code: f.territoire_code }),
+    del: r => supabase.from('territoire_alias').delete().eq('alias', r.alias),
+  },
   // ===== DISTRIBUTION =====
   {
     id: 'distributeur', section: 'distrib', label: 'Distributeurs', table: 'distributeur',

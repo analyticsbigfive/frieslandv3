@@ -50,9 +50,20 @@
             <USelectMenu
               v-if="quartierOptions.length > 0"
               v-model="form.quartier"
-              :options="quartierOptions"
+              :options="quartierOptionsGroupees"
+              value-attribute="value"
+              option-attribute="label"
+              searchable
+              searchable-placeholder="Rechercher un quartier…"
               placeholder="Choisir un quartier"
-            />
+            >
+              <template #option="{ option }">
+                <span class="flex min-w-0 items-center gap-2">
+                  <span class="truncate">{{ option.value }}</span>
+                  <span class="ml-auto shrink-0 text-[10px] uppercase text-gray-400">{{ option.territoire }}</span>
+                </span>
+              </template>
+            </USelectMenu>
             <UInput
               v-else
               v-model="form.quartier"
@@ -140,6 +151,7 @@
 </template>
 
 <script setup lang="ts">
+import { grouperQuartiersParTerritoire } from '~/utils/territoires'
 import type { PDV } from '~/types'
 
 const props = defineProps<{
@@ -171,6 +183,12 @@ const isMerchandiser = computed(() => authStore.profile?.role === 'merchandiser'
 const defaultZone = computed(() => authStore.profile?.zone_assignee || '')
 const defaultRegion = computed(() => authStore.profile?.region || '')
 const quartierOptions = computed(() => authStore.profile?.quartiers_assignes?.filter(Boolean) || [])
+// Groupés par territoire (utils/territoires.ts) : un merchandiser multi-
+// territoires retrouve ses quartiers rangés, pas une liste plate de 50 noms.
+const quartierOptionsGroupees = computed(() =>
+  grouperQuartiersParTerritoire(quartierOptions.value, quartiers.value, areas.value, territories.value)
+    .flatMap(g => g.quartiers.map(q => ({ value: q, label: `${q} · ${g.territoire}`, territoire: g.territoire }))),
+)
 
 // Géo Système B : zone = territoire (name), quartier = quartier.nom. L'area est
 // résolue depuis le quartier choisi (quartier -> zone_id -> zone.code) ; le

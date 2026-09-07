@@ -4,9 +4,9 @@
 import type { FieldCoaching } from '~/types'
 import { ENGINS_DEFAUT } from '~/utils/fieldCoaching'
 
-const SELECT = 'id, date_coaching, auteur_id, superviseur_id, assigne_a, distributeur_nom, engin_code, pdv_id, route_jour, type_pdv, '
+const SELECT = 'id, date_coaching, auteur_id, superviseur_id, assigne_a, distributeur_nom, vendeur_nom, engin_code, pdv_id, route_jour, type_pdv, type_pdv_detail, '
   + 'commune, quartier, rue, proche_de, proprietaire_nom, proprietaire_prenom, proprietaire_tel, nb_sku_pdv, nb_sku_dispo, '
-  + 'skus_disponibles, reponses, commentaire, image_urls, statut, created_at, updated_at, '
+  + 'skus_disponibles, reponses, commentaire, motif_non_participation, image_urls, statut, created_at, updated_at, '
   + 'pdv:pdv_id(nom_pdv, zone, quartier), auteur:auteur_id(nom, email), assigne:assigne_a(nom, email), superviseur:superviseur_id(nom, email)'
 
 export function useFieldCoaching() {

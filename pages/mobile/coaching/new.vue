@@ -22,8 +22,12 @@
           </div>
           <div class="space-y-4 rounded-xl bg-white p-4 shadow-sm dark:bg-gray-800">
             <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100">I_2 · Vendeur</h3>
-            <UFormGroup label="Distributeur" required>
+            <UFormGroup label="Distributeur auquel le vendeur est lié" required>
               <USelectMenu v-model="form.distributeur_nom" :options="distributeurs.map(d => d.nom)" searchable placeholder="Choisir…" size="lg" />
+            </UFormGroup>
+            <UFormGroup label="Nom & prénom du vendeur" required>
+              <UInput v-model="form.vendeur_nom" size="lg" placeholder="Ex. KONE MOUSSA" list="vendeurs-connus" />
+              <datalist id="vendeurs-connus"><option v-for="v in vendeursConnus" :key="v" :value="v" /></datalist>
             </UFormGroup>
             <UFormGroup label="Engin" required>
               <div class="flex flex-wrap gap-2">
@@ -52,12 +56,21 @@
                 <button v-for="j in ROUTE_JOURS" :key="j" type="button" class="min-h-9 rounded-full px-3 text-xs font-semibold" :class="form.route_jour === j ? 'bg-fc-red text-white' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200'" @click="form.route_jour = j">{{ j }}</button>
               </div>
             </UFormGroup>
-            <UFormGroup label="Type de PDV"><UInput v-model="form.type_pdv" size="lg" placeholder="Boutique, Aboki, Pushcart, Kiosk, Superette…" /></UFormGroup>
+            <UFormGroup label="Type de PDV">
+              <div class="flex flex-wrap gap-2">
+                <button v-for="f in TYPES_PDV_KOBO" :key="f.famille" type="button" class="min-h-9 rounded-full px-3 text-xs font-semibold" :class="form.type_pdv === f.famille ? 'bg-fc-red text-white' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200'" @click="choisirFamillePdv(f.famille)">{{ f.famille }}</button>
+              </div>
+            </UFormGroup>
+            <UFormGroup v-if="sousTypesPdv.length > 1" :label="form.type_pdv.toUpperCase()">
+              <div class="flex flex-wrap gap-2">
+                <button v-for="st in sousTypesPdv" :key="st" type="button" class="min-h-9 rounded-full px-3 text-xs font-semibold" :class="form.type_pdv_detail === st ? 'bg-fc-red text-white' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200'" @click="form.type_pdv_detail = st">{{ st }}</button>
+              </div>
+            </UFormGroup>
             <div class="grid grid-cols-2 gap-3">
               <UFormGroup label="Commune"><UInput v-model="form.commune" size="lg" /></UFormGroup>
               <UFormGroup label="Quartier"><UInput v-model="form.quartier" size="lg" /></UFormGroup>
               <UFormGroup label="Boulevard / rue"><UInput v-model="form.rue" size="lg" /></UFormGroup>
-              <UFormGroup label="Proche de"><UInput v-model="form.proche_de" size="lg" /></UFormGroup>
+              <UFormGroup label="Proche de / en face de"><UInput v-model="form.proche_de" size="lg" /></UFormGroup>
             </div>
           </div>
           <div class="space-y-4 rounded-xl bg-white p-4 shadow-sm dark:bg-gray-800">
@@ -98,6 +111,9 @@
 
       <template #promotion>
         <CoachingBlocQuestions v-model="form.reponses" bloc="promotion">
+          <UFormGroup v-if="motifRequis(form.reponses)" label="Motif de la non-participation à la promo" required>
+            <UTextarea v-model="form.motif_non_participation" :rows="2" :maxlength="500" />
+          </UFormGroup>
           <UFormGroup label="Commentaire">
             <UTextarea v-model="form.commentaire" :rows="3" :maxlength="1000" placeholder="Observations, engagements pris…" />
           </UFormGroup>
@@ -124,7 +140,7 @@
 // Field coaching (lot 4) : même enveloppe que la saisie de visite (wizard,
 // brouillon local, file hors ligne, overlay), 13 questions Kobo.
 import type { WizardStep } from '~/components/FormWizard.vue'
-import { ROUTE_JOURS, erreursIdentification, evaluationComplete, questionsDuBloc, reponsesVides } from '~/utils/fieldCoaching'
+import { ROUTE_JOURS, TYPES_PDV_KOBO, erreursIdentification, evaluationComplete, motifRequis, questionsDuBloc, reponsesVides } from '~/utils/fieldCoaching'
 
 definePageMeta({ middleware: ['auth', 'coaching-write'], layout: false })
 
@@ -150,10 +166,12 @@ const form = reactive({
   superviseur_id: '' as string,
   date_coaching: new Date().toISOString().slice(0, 16),
   distributeur_nom: '',
+  vendeur_nom: '',
   engin_code: '',
   pdv_id: '',
   route_jour: '',
   type_pdv: '',
+  type_pdv_detail: '',
   commune: '',
   quartier: '',
   rue: '',
@@ -166,9 +184,24 @@ const form = reactive({
   skus: [] as number[],
   reponses: reponsesVides(),
   commentaire: '',
+  motif_non_participation: '',
 })
 
 const superviseurs = ref<{ id: string; nom: string }[]>([])
+// Vendeurs déjà saisis pour ce distributeur (suggestions).
+const vendeursConnus = ref<string[]>([])
+watch(() => form.distributeur_nom, async (d) => {
+  vendeursConnus.value = []
+  if (!d) return
+  const { data } = await supabase.from('field_coaching').select('vendeur_nom').eq('distributeur_nom', d).not('vendeur_nom', 'is', null).limit(200)
+  vendeursConnus.value = [...new Set(((data || []) as any[]).map(r => String(r.vendeur_nom).trim()).filter(Boolean))].sort()
+})
+const sousTypesPdv = computed(() => TYPES_PDV_KOBO.find(f => f.famille === form.type_pdv)?.sousTypes || [])
+function choisirFamillePdv(famille: string) {
+  form.type_pdv = famille
+  const st = TYPES_PDV_KOBO.find(f => f.famille === famille)?.sousTypes || []
+  form.type_pdv_detail = st.length === 1 ? st[0] : ''
+}
 const pdvList = ref<any[]>([])
 const pdvLoading = ref(true)
 
@@ -191,7 +224,6 @@ watch(() => form.pdv_id, (id) => {
   if (!form.quartier) form.quartier = p.quartier || ''
   if (!form.commune) form.commune = p.zone || ''
   if (!form.rue) form.rue = p.adressage || ''
-  if (!form.type_pdv) form.type_pdv = p.sous_categorie_pdv || p.categorie_pdv || ''
 })
 
 // Brouillon local
@@ -220,7 +252,8 @@ const saveProgress = ref(0)
 
 async function handleSave() {
   const erreurs = erreursIdentification(form)
-  if (!evaluationComplete(form.reponses)) erreurs.push('Les 13 questions doivent être renseignées (Oui, Non ou N/A).')
+  if (!evaluationComplete(form.reponses)) erreurs.push('Les 13 questions doivent être renseignées (Oui, Non ou Not Applicable).')
+  if (motifRequis(form.reponses) && !form.motif_non_participation.trim()) erreurs.push('Le motif de la non-participation à la promo est obligatoire.')
   if (erreurs.length) {
     toast.add({ title: 'Formulaire incomplet', description: erreurs.join(' '), color: 'red' })
     return
@@ -237,10 +270,12 @@ async function handleSave() {
     assigne_a: user.value!.id,
     distributeur_id: distributeurs.value.find(d => d.nom === form.distributeur_nom)?.id ?? null,
     distributeur_nom: form.distributeur_nom,
+    vendeur_nom: form.vendeur_nom.trim(),
     engin_code: form.engin_code,
     pdv_id: form.pdv_id,
     route_jour: form.route_jour || null,
     type_pdv: form.type_pdv || null,
+    type_pdv_detail: form.type_pdv_detail || null,
     commune: form.commune || null,
     quartier: form.quartier || null,
     rue: form.rue || null,
@@ -253,6 +288,7 @@ async function handleSave() {
     skus_disponibles: references.value.filter(r => form.skus.includes(r.id)).map(r => ({ id: r.id, nom: r.nom })),
     reponses: { ...form.reponses },
     commentaire: form.commentaire?.trim() || null,
+    motif_non_participation: motifRequis(form.reponses) ? form.motif_non_participation.trim() : null,
     statut: 'soumis',
   }
   try {

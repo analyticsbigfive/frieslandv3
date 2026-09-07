@@ -15,20 +15,39 @@ export const BLOCS_COACHING = {
   promotion: 'II_1.3 — Effective Promotion',
 } as const
 
+// Libellés repris mot pour mot du formulaire Kobo (PDF du 7 sept. 2026).
 export const QUESTIONS_COACHING: QuestionCoaching[] = [
-  { code: 'hot_spot', bloc: 'visibilite', libelle: 'Le PDV dispose-t-il d\'un hot spot Bonnet Rouge ?' },
-  { code: 'maison_br_habillee', bloc: 'visibilite', libelle: 'La Maison Bonnet Rouge est-elle habillée ?' },
-  { code: 'rangement', bloc: 'visibilite', libelle: 'Les produits sont-ils bien rangés ?' },
-  { code: 'presentoir', bloc: 'visibilite', libelle: 'Un présentoir Bonnet Rouge est-il en place ?' },
-  { code: 'emplacement_secondaire', bloc: 'visibilite', libelle: 'Existe-t-il un emplacement secondaire ?' },
-  { code: 'visibilite_exterieure', bloc: 'visibilite', libelle: 'La visibilité extérieure est-elle assurée ?' },
-  { code: 'qr_code', bloc: 'visibilite', libelle: 'Le QR code est-il présent ?' },
-  { code: 'concept_3_hotspots', bloc: 'visibilite', libelle: 'Le concept 3 hotspots est-il appliqué ?' },
-  { code: 'pdv_informe', bloc: 'promotion', libelle: 'Le PDV est-il informé de la promotion en cours ?' },
-  { code: 'participation', bloc: 'promotion', libelle: 'Le PDV participe-t-il à la promotion ?' },
-  { code: 'gratuit_gadget', bloc: 'promotion', libelle: 'Le PDV a-t-il reçu le gratuit ou le gadget ?' },
-  { code: 'respect_mecanisme', bloc: 'promotion', libelle: 'Le mécanisme de la promotion est-il respecté ?' },
-  { code: 'respect_prix', bloc: 'promotion', libelle: 'Les prix sont-ils respectés ?' },
+  { code: 'hot_spot', bloc: 'visibilite', libelle: 'Présence dans le Hot Spot' },
+  { code: 'maison_br_habillee', bloc: 'visibilite', libelle: 'Maison Bonnet Rouge habillé ou délimité' },
+  { code: 'rangement', bloc: 'visibilite', libelle: 'Rangement des produits (catégorie & format)' },
+  { code: 'presentoir', bloc: 'visibilite', libelle: 'Présence de présentoir (Hanger, etc)' },
+  { code: 'emplacement_secondaire', bloc: 'visibilite', libelle: 'Présence emplacement secondaire' },
+  { code: 'visibilite_exterieure', bloc: 'visibilite', libelle: 'Présence visibilité extérieure' },
+  { code: 'qr_code', bloc: 'visibilite', libelle: 'Présence QR code' },
+  { code: 'concept_3_hotspots', bloc: 'visibilite', libelle: 'Présence in 3 hotspot concept' },
+  { code: 'pdv_informe', bloc: 'promotion', libelle: 'PDV informé de la promotion' },
+  { code: 'participation', bloc: 'promotion', libelle: 'Participation à la promo par le PDV' },
+  { code: 'gratuit_gadget', bloc: 'promotion', libelle: 'Réception gratuit ou gadget par PDV' },
+  { code: 'respect_mecanisme', bloc: 'promotion', libelle: 'Respect mécanisme promo' },
+  { code: 'respect_prix', bloc: 'promotion', libelle: 'Respect des prix' },
+]
+
+// Question dont la réponse « Non » exige un motif (Kobo : « Motif de la
+// non-participation à la promo »).
+export const QUESTION_MOTIF = 'participation'
+export function motifRequis(reponses: Record<string, string | undefined>): boolean {
+  return reponses[QUESTION_MOTIF] === 'non'
+}
+
+// Sous-types de PDV du formulaire Kobo (I_3), par famille. Le type de PDV
+// enregistré = famille ; le sous-type détaillé va dans type_pdv_detail.
+export const TYPES_PDV_KOBO: { famille: string; sousTypes: string[] }[] = [
+  { famille: 'Boutique', sousTypes: ['Boutique A', 'Boutique B', 'Boutique C'] },
+  { famille: 'Aboki', sousTypes: ['Aboki A', 'Aboki B'] },
+  { famille: 'Pushcard', sousTypes: ['Pushcard'] },
+  { famille: 'Kiosk', sousTypes: ['Kiosk A', 'Kiosk B'] },
+  { famille: 'Superette', sousTypes: ['Superette A', 'Superette B', 'Superette C'] },
+  { famille: 'Autres', sousTypes: ['Bakery A', 'Bakery B', 'Bakery C', 'Porridge', 'Semi-Wholesalers', 'Table Top', 'Wholesalers'] },
 ]
 
 export const ROUTE_JOURS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
@@ -44,7 +63,7 @@ export const ENGINS_DEFAUT = [
 export const REPONSES: { value: ReponseCoaching; label: string }[] = [
   { value: 'oui', label: 'Oui' },
   { value: 'non', label: 'Non' },
-  { value: 'na', label: 'N/A' },
+  { value: 'na', label: 'Not Applicable' },
 ]
 
 export function reponsesVides(): Record<string, ReponseCoaching | ''> {
@@ -81,6 +100,7 @@ export function scoreCoaching(
 export interface IdentificationCoaching {
   pdv_id?: string
   distributeur_nom?: string
+  vendeur_nom?: string
   engin_code?: string
   nb_sku_pdv?: number | null
   nb_sku_dispo?: number | null
@@ -91,6 +111,7 @@ export function erreursIdentification(f: IdentificationCoaching): string[] {
   const erreurs: string[] = []
   if (!f.pdv_id) erreurs.push('Le point de vente est obligatoire.')
   if (!f.distributeur_nom) erreurs.push('Le distributeur est obligatoire.')
+  if (!f.vendeur_nom?.trim()) erreurs.push('Le nom et prénom du vendeur sont obligatoires.')
   if (!f.engin_code) erreurs.push("L'engin de vente est obligatoire.")
   if (f.nb_sku_pdv != null && f.nb_sku_dispo != null && f.nb_sku_dispo > f.nb_sku_pdv) {
     erreurs.push('Le nombre de SKU disponibles ne peut pas dépasser le nombre de SKU en PDV.')

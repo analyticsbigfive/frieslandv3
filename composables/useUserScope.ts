@@ -1,5 +1,6 @@
 import type { PDV, Profile, Visite } from '~/types'
 import { isCommercialRole, isPrivilegedProfile, isPrivilegedRole } from '~/utils/roles'
+import { etendreTerritoires, type TerritoireAlias, type TerritoireRef } from '~/utils/territoires'
 
 // Territoires effectifs d'un profil : liste multi (territoires_assignes),
 // fallback mono legacy (zone_assignee) si la liste est vide.
@@ -9,15 +10,26 @@ export function profileTerritories(profile?: Profile | null): string[] {
   return profile?.zone_assignee ? [profile.zone_assignee] : []
 }
 
+// Territoires + alias (libellés hors référentiel rattachés) : c'est cette
+// liste qui filtre les PDV, comme pdv_ids_perimetre() côté base.
+export function profileTerritoriesEtendus(
+  profile: Profile | null | undefined,
+  aliases: TerritoireAlias[],
+  territoires: TerritoireRef[],
+): string[] {
+  return etendreTerritoires(profileTerritories(profile), aliases, territoires)
+}
+
 // PDV ∈ périmètre d'un user ? (zone ∈ territoires) ET (quartiers vide OU quartier ∈ quartiers).
 // Aucun territoire ⇒ pas de contrainte de zone (comportement legacy inchangé).
 // Un PDV sans quartier reste visible dès que la zone matche : le filtre quartier
 // ne doit pas exclure les PDV non renseignés (même règle côté serveur dans stores/pdv.ts).
 export function pdvInScope(
   pdv: Partial<Pick<PDV, 'zone' | 'quartier'>>,
-  profile?: Profile | null
+  profile?: Profile | null,
+  geo?: { aliases: TerritoireAlias[]; territoires: TerritoireRef[] },
 ): boolean {
-  const terrs = profileTerritories(profile)
+  const terrs = geo ? profileTerritoriesEtendus(profile, geo.aliases, geo.territoires) : profileTerritories(profile)
   if (terrs.length && !terrs.includes(pdv.zone || '')) return false
   const quartiers = (profile?.quartiers_assignes || []).filter(Boolean)
   if (quartiers.length && pdv.quartier && !quartiers.includes(pdv.quartier)) return false
@@ -27,6 +39,8 @@ export function pdvInScope(
 export function useUserScope() {
   const authStore = useAuthStore()
   const user = useSupabaseUser()
+  const { territoireAliases, territories } = useReferentiels()
+  const geo = () => ({ aliases: territoireAliases.value, territoires: territories.value })
 
   function isPrivileged(profile: Profile | null | undefined = authStore.profile) {
     return isPrivilegedProfile(profile)
@@ -40,7 +54,7 @@ export function useUserScope() {
       return true
     }
 
-    return pdvInScope(pdv, profile)
+    return pdvInScope(pdv, profile, geo())
   }
 
   function filterPDVList<T extends Partial<PDV>>(
@@ -70,7 +84,7 @@ export function useUserScope() {
     // joint, on fait confiance à la ligne que la base a laissée passer.
     if (isCommercialRole(profile.role)) {
       const pdv = (visite as any).pdv
-      return pdv && typeof pdv === 'object' ? pdvInScope(pdv, profile) : true
+      return pdv && typeof pdv === 'object' ? pdvInScope(pdv, profile, geo()) : true
     }
 
     return false

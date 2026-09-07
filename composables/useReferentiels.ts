@@ -20,6 +20,7 @@ export interface ReferenceProduit { id: number; nom: string; category: string }
 export interface CategoriePdvRef { id: number; nom: string; nom_fr: string; canal: 'GT' | 'MT' | null }
 export interface TerritoireDistributeur { territory_code: string; territory_name: string; distributor_name: string }
 export interface ZoneDistributeur { zone_id: number; distributor_name: string }
+export interface TerritoireAliasRef { alias: string; territoire_code: string }
 // AvailabilityWeight / AvailabilityStandard : types auto-importés de utils/perfectStore.
 
 export function useReferentiels() {
@@ -41,6 +42,8 @@ export function useReferentiels() {
   // Distributeur au niveau area (zone) : permet de faire varier le distributeur
   // d'une area à l'autre dans un même territoire. Défaut seedé = hérité du territoire.
   const zoneDistributeurs = useState<ZoneDistributeur[]>('refb-zone-distributeurs', () => [])
+  // Libellés de territoire hors référentiel rattachés à un territoire réel (utils/territoires.ts).
+  const territoireAliases = useState<TerritoireAliasRef[]>('refb-territoire-aliases', () => [])
   const loaded = useState<boolean>('refb-loaded', () => false)
   const error = useState<string | null>('refb-error', () => null)
 
@@ -55,7 +58,7 @@ export function useReferentiels() {
     if (loaded.value && !force) return
     error.value = null
     try {
-      const [d, rg, sr, t, z, qt, tp, rp, pr, sd, td, zd] = await Promise.all([
+      const [d, rg, sr, t, z, qt, tp, rp, pr, sd, td, zd, ta] = await Promise.all([
         supabase.from('distributeur').select('nom, national').order('nom'),
         supabase.from('region').select('code, nom, nom_affichage').order('nom'),
         supabase.from('sous_region').select('code, nom, nom_affichage, region_code').order('nom'),
@@ -70,6 +73,8 @@ export function useReferentiels() {
         supabase.from('seuil_disponibilite').select('segment, grade, quantite_min, reference_produit(nom, categorie_produit(code))'),
         supabase.from('territoire_distributeur').select('territoire(code, nom), distributeur(nom)'),
         supabase.from('zone_distributeur').select('zone_id, distributeur(nom)'),
+        // Tolère l'absence de la table tant que 20260908100000 n'est pas appliquée.
+        supabase.from('territoire_alias').select('alias, territoire_code').then(r => (r.error ? { data: [], error: null } : r)),
       ])
       const firstErr = [d, rg, sr, t, z, qt, tp, rp, pr, sd, td, zd].find(r => r.error)?.error
       if (firstErr) throw firstErr
@@ -126,6 +131,8 @@ export function useReferentiels() {
         return { territory_code: terr?.code ?? '', territory_name: terr?.nom ?? '', distributor_name: one(r.distributeur)?.nom ?? '' }
       })
 
+      territoireAliases.value = ((ta as any).data || []).map((r: any) => ({ alias: r.alias, territoire_code: r.territoire_code }))
+
       zoneDistributeurs.value = (zd.data || []).map((r: any) => ({
         zone_id: Number(r.zone_id),
         distributor_name: one(r.distributeur)?.nom ?? '',
@@ -142,7 +149,7 @@ export function useReferentiels() {
   return {
     distributeurs, regions, subRegions, territories, areas, quartiers, posTypes,
     availabilityWeights, availabilityStandards,
-    references, categoriesPdv, territoireDistributeurs, zoneDistributeurs,
+    references, categoriesPdv, territoireDistributeurs, zoneDistributeurs, territoireAliases,
     loaded, error, fetchReferentiels,
   }
 }

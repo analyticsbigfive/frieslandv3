@@ -1,6 +1,7 @@
 // composables/useGeofencing.ts
 import type { GeofenceResult } from '~/types'
 import type { GeoPositionLike } from '~/composables/useGeoProvider'
+import { haversine } from '~/utils/trajets'
 
 export function useGeofencing() {
   const config = useRuntimeConfig()
@@ -17,24 +18,8 @@ export function useGeofencing() {
   // qu'un stopWatching() appelé entre-temps laisse fuiter le watcher.
   let watchGeneration = 0
 
-  /**
-   * Calculate distance between two GPS points using Haversine formula
-   */
-  function haversineDistance(
-    lat1: number, lng1: number,
-    lat2: number, lng2: number
-  ): number {
-    const R = 6371000 // Earth radius in meters
-    const dLat = (lat2 - lat1) * (Math.PI / 180)
-    const dLng = (lng2 - lng1) * (Math.PI / 180)
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) *
-      Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLng / 2) * Math.sin(dLng / 2)
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-    return R * c
-  }
+  // Haversine partagé (utils/trajets.ts) ; nom conservé pour les appelants.
+  const haversineDistance = haversine
 
   /**
    * Get current position with promise wrapper (natif ou web via useGeoProvider)

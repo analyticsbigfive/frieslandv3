@@ -404,10 +404,12 @@ export interface FieldCoaching {
   assigne_a?: string | null
   distributeur_id?: number | null
   distributeur_nom?: string | null
+  vendeur_nom?: string | null
   engin_code?: string | null
   pdv_id: string
   route_jour?: string | null
   type_pdv?: string | null
+  type_pdv_detail?: string | null
   commune?: string | null
   quartier?: string | null
   rue?: string | null
@@ -420,6 +422,7 @@ export interface FieldCoaching {
   skus_disponibles: { id: number; nom: string }[]
   reponses: Record<string, 'oui' | 'non' | 'na'>
   commentaire?: string | null
+  motif_non_participation?: string | null
   image_urls: string[]
   statut: 'soumis' | 'valide'
   geolocation_lat?: number | null

@@ -1,4 +1,5 @@
 // composables/useTournee.ts
+import { haversine } from '~/utils/trajets'
 import { Capacitor, registerPlugin } from '@capacitor/core'
 import { Preferences } from '@capacitor/preferences'
 import { get, set } from 'idb-keyval'
@@ -52,20 +53,12 @@ const trackingError = ref<string | null>(null)
 
 let watcherId: string | null = null
 let flushTimer: ReturnType<typeof setInterval> | null = null
+const PRECISION_MAX_M = 50
 let pollTimer: ReturnType<typeof setInterval> | null = null
 let lastCapturedAt = 0
 let lastLat: number | null = null
 let lastLng: number | null = null
 let bufferChain: Promise<void> = Promise.resolve()
-
-function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371000
-  const dLat = (lat2 - lat1) * (Math.PI / 180)
-  const dLng = (lng2 - lng1) * (Math.PI / 180)
-  const a = Math.sin(dLat / 2) ** 2
-    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
 
 // Les écritures IndexedDB sont sérialisées pour éviter qu'un flush et une
 // capture simultanés se marchent dessus (lecture-modification-écriture).
@@ -129,15 +122,23 @@ export function useTournee() {
       return
     }
 
+    // Un point imprécis (> 50 m) dessinerait un déplacement fictif : ignoré,
+    // sauf capture forcée (point de départ).
+    if (!force && accuracy != null && accuracy > PRECISION_MAX_M) {
+      return
+    }
+
     const now = Date.now()
     const step = lastLat === null ? Infinity : haversine(lastLat, lastLng!, lat, lng)
-    const movedEnough = step >= distanceM
+    // Le pas doit dépasser à la fois le filtre distance et la précision du
+    // point, sinon c'est du bruit de capteur.
+    const movedEnough = step >= Math.max(distanceM, accuracy ?? 0)
     if (!force && (!movedEnough || now - lastCapturedAt < minIntervalMs)) {
       return
     }
 
-    // Cumule la distance parcourue (ignore le tout premier point).
-    if (lastLat !== null && Number.isFinite(step)) {
+    // Cumule la distance parcourue (ignore le tout premier point et le bruit).
+    if (lastLat !== null && Number.isFinite(step) && step >= Math.max(distanceM, accuracy ?? 0)) {
       totalDistanceM.value += step
     }
 

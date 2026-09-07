@@ -27,10 +27,34 @@
         </div>
       </div>
 
+      <div class="border-b border-gray-100 p-3 dark:border-gray-700">
+        <USelectMenu
+          :model-value="selectedUser"
+          :options="repOptions"
+          value-attribute="value"
+          option-attribute="label"
+          searchable
+          searchable-placeholder="Rechercher un commercial…"
+          placeholder="Tous les commerciaux"
+          size="sm"
+          class="w-full"
+          @update:model-value="selectRep($event || '')"
+        >
+          <template #option="{ option }">
+            <span class="flex w-full items-center gap-2">
+              <span class="h-2 w-2 shrink-0 rounded-full" :class="option.dot" />
+              <span class="truncate">{{ option.label }}</span>
+              <span class="ml-auto shrink-0 text-[10px] text-gray-400">{{ option.meta }}</span>
+            </span>
+          </template>
+        </USelectMenu>
+        <p class="mt-1.5 text-[11px] text-gray-400">{{ reps.filter(r => r.pointCount > 0).length }} avec GPS · {{ reps.filter(r => r.live).length }} en tournée</p>
+      </div>
+
       <div v-if="loading" class="p-4 text-sm text-gray-400">Chargement…</div>
       <ul v-else class="flex-1 divide-y divide-gray-100 overflow-auto dark:divide-gray-700">
         <li
-          v-for="rep in reps"
+          v-for="rep in repsAffiches"
           :key="rep.userId"
           class="cursor-pointer p-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
           :class="{ 'bg-red-50 dark:bg-red-900/20': selectedUser === rep.userId }"
@@ -69,8 +93,9 @@
     <div class="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800">
       <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 p-3 dark:border-gray-700">
         <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Suivi commerciaux — déplacements</h3>
-        <div class="flex items-center gap-2">
-          <span class="text-xs text-gray-400">{{ tournees.length }} tournée(s) · {{ filteredPoints.length }} pt</span>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs text-gray-400" :title="lissageInfo.detail">{{ tournees.length }} tournée(s) · {{ lissageInfo.retenus }} pt retenus / {{ filteredPoints.length }} bruts</span>
+          <UButton size="2xs" :variant="showRaw ? 'solid' : 'ghost'" color="gray" icon="i-heroicons-eye" @click="showRaw = !showRaw; drawTrails()">Points bruts</UButton>
           <UButton v-if="selectedUser" size="2xs" variant="ghost" icon="i-heroicons-x-mark" @click="selectRep('')">Tous</UButton>
         </div>
       </div>
@@ -143,7 +168,8 @@
           class="pointer-events-none absolute bottom-3 left-3 z-[500] rounded-lg border border-gray-200 bg-white/90 px-2.5 py-2 text-[11px] shadow backdrop-blur dark:border-gray-600 dark:bg-gray-800/90"
         >
           <div class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full" style="background:#0E9F6E" />Départ</div>
-          <div class="mt-1 flex items-center gap-1.5"><span class="h-0.5 w-3.5" style="background:#C8102E" />Trajet GPS</div>
+          <div class="mt-1 flex items-center gap-1.5"><span class="h-0.5 w-3.5" style="background:#C8102E" />Trajet GPS (lissé)</div>
+          <div class="mt-1 flex items-center gap-1.5"><span class="h-3 w-3 rounded-full border-2 border-white" style="background:#C8102E;box-shadow:0 0 0 2px #C8102E" />Arrêt (≥ 5 min)</div>
           <div class="mt-1 flex items-center gap-1.5"><span class="h-2.5 w-2.5" style="background:#003DA5;transform:rotate(45deg)" />Visite PDV</div>
           <div class="mt-1 flex items-center gap-1.5"><span class="h-2.5 w-2.5" style="background:#D97706;transform:rotate(45deg)" />Visite hors géofence</div>
         </div>
@@ -203,6 +229,8 @@
         </div>
       </div>
 
+      <VisitDetailModal v-model="showVisitModal" :visite="visitDetail" />
+
       <!-- Barre de rejeu temporel -->
       <div v-if="timeRange" class="flex items-center gap-3 border-t border-gray-100 p-3 dark:border-gray-700">
         <UButton :icon="playing ? 'i-heroicons-pause' : 'i-heroicons-play'" size="xs" color="red" variant="soft" @click="togglePlay" />
@@ -222,6 +250,7 @@
 </template>
 
 <script setup lang="ts">
+import { haversine, lisserTrajet, libelleDuree } from '~/utils/trajets'
 definePageMeta({
   middleware: ['auth', 'admin'],
   layout: 'admin',
@@ -255,6 +284,7 @@ const supabase = useSupabaseClient()
 
 const mapContainer = ref<HTMLElement | null>(null)
 interface VisitMarker {
+  visite_id: string
   user_id: string
   pdv_id: string | null
   nom_pdv: string
@@ -337,25 +367,53 @@ const cursorLabel = computed(() => {
   return new Date(t).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 })
 
-function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371000
-  const dLat = (lat2 - lat1) * (Math.PI / 180)
-  const dLng = (lng2 - lng1) * (Math.PI / 180)
-  const a = Math.sin(dLat / 2) ** 2
-    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
-
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 }
 
+// Distance sur le tracé LISSÉ : le bruit GPS d'un point immobile ne compte
+// plus (retour démo du 7 sept. : déplacements fictifs et km gonflés).
 function trailDistance(points: TrajetPoint[]): number {
-  let d = 0
-  for (let i = 1; i < points.length; i++) {
-    d += haversine(points[i - 1].lat, points[i - 1].lng, points[i].lat, points[i].lng)
+  return lisserTrajet(points).distanceM
+}
+
+const showRaw = ref(false)
+const showVisitModal = ref(false)
+const visitDetail = ref<any>(null)
+
+const lissageInfo = computed(() => {
+  let retenus = 0, precision = 0, vitesse = 0
+  for (const { points } of tournees.value) {
+    const r = lisserTrajet(points)
+    retenus += r.points.length
+    precision += r.rejetes.precision
+    vitesse += r.rejetes.vitesse
   }
-  return d
+  return { retenus, detail: `${precision} point(s) rejeté(s) pour précision > 50 m, ${vitesse} pour saut impossible` }
+})
+
+// Options de la combobox : même ordre que la liste (en tournée d'abord).
+const repOptions = computed(() => [
+  { value: '', label: 'Tous les commerciaux', dot: 'bg-gray-300', meta: `${reps.value.length}` },
+  ...reps.value.map(r => ({
+    value: r.userId,
+    label: r.nom,
+    dot: r.live ? 'bg-emerald-500' : r.pointCount > 0 ? 'bg-gray-400' : 'bg-gray-200',
+    meta: r.pointCount > 0 ? `${r.km.toFixed(1)} km · ${r.visitCount} PDV` : r.statusLabel,
+  })),
+])
+const repsAffiches = computed(() => (selectedUser.value ? reps.value.filter(r => r.userId === selectedUser.value) : reps.value))
+
+// Ouvre la visite complète (même modale que la page Visites) depuis un losange.
+async function openVisit(visiteId: string) {
+  const { data } = await supabase
+    .from('visites')
+    .select('id, visite_id, pdv_id, user_id, commercial, email, date_visite, geofence_validated, data, image_urls, pdv:pdv_id(nom_pdv, canal, sous_categorie_pdv, region, zone, quartier)')
+    .eq('visite_id', visiteId)
+    .maybeSingle()
+  if (!data) return
+  visitDetail.value = data
+  showVisitModal.value = true
 }
 
 function durationLabel(ms: number): string {
@@ -593,7 +651,7 @@ async function loadPositions() {
         .limit(10000),
       supabase
         .from('visites')
-        .select('user_id, pdv_id, date_visite, geolocation_lat, geolocation_lng, geofence_validated')
+        .select('visite_id, user_id, pdv_id, date_visite, geolocation_lat, geolocation_lng, geofence_validated')
         .gte('date_visite', dayStart).lt('date_visite', dayEnd)
         .limit(10000),
     ])
@@ -608,6 +666,7 @@ async function loadPositions() {
       if (row.user_id) counts[row.user_id] = (counts[row.user_id] ?? 0) + 1
       if (row.geolocation_lat && row.geolocation_lng) {
         visits.push({
+          visite_id: row.visite_id,
           user_id: row.user_id,
           pdv_id: row.pdv_id,
           nom_pdv: pdvNameById.get(row.pdv_id) || row.pdv_id || 'PDV',
@@ -758,10 +817,12 @@ function drawTrails() {
     if (points.length === 0) return
 
     const color = statusColorForUser(points[0].user_id)
-    const latlngs = points.map(p => [p.lat, p.lng])
-    const first = points[0]
-    const last = points[points.length - 1]
-    const distance = trailDistance(points)
+    const lisse = lisserTrajet(points)
+    const retenus = lisse.points.map(r => r.point)
+    const latlngs = retenus.map(p => [p.lat, p.lng])
+    const first = retenus[0]
+    const last = retenus[retenus.length - 1]
+    const distance = lisse.distanceM
 
     const el = document.createElement('div')
     el.className = 'text-sm'
@@ -771,28 +832,43 @@ function drawTrails() {
     el.appendChild(nameP)
     const infoP = document.createElement('p')
     infoP.className = 'text-gray-500 text-xs'
-    infoP.textContent = `${formatTime(first.captured_at)} → ${formatTime(last.captured_at)} · ${points.length} pts · ${(distance / 1000).toFixed(1)} km`
+    infoP.textContent = `${formatTime(first.captured_at)} → ${formatTime(last.captured_at)} · ${retenus.length} pts retenus / ${points.length} · ${(distance / 1000).toFixed(1)} km · ${lisse.arrets.length} arrêt(s)`
     el.appendChild(infoP)
 
-    if (points.length > 1) {
+    if (retenus.length > 1) {
       const line = L.polyline(latlngs, { color, weight: 3, opacity: 0.85 })
       line.bindPopup(el)
       trailGroup.addLayer(line)
     }
 
-    points.forEach((point, i) => {
+    // Points bruts (optionnel) : petits, translucides, pour audit du lissage.
+    if (showRaw.value) {
+      points.forEach((point) => {
+        trailGroup.addLayer(L.circleMarker([point.lat, point.lng], {
+          radius: 2.5, fillColor: color, color: color, weight: 0, fillOpacity: 0.35,
+        }).bindTooltip(`Brut · ${formatTime(point.captured_at)} · ±${Math.round(point.accuracy ?? 0)} m`, { direction: 'top' }))
+      })
+    }
+
+    lisse.points.forEach((r, i) => {
+      const point = r.point
       const isStart = i === 0
-      const isEnd = i === points.length - 1
+      const isEnd = i === lisse.points.length - 1
+      const dureeMs = new Date(r.finArret).getTime() - new Date(point.captured_at).getTime()
+      const isArret = lisse.arrets.some(a => a.point === point)
       const dot = L.circleMarker([point.lat, point.lng], {
-        radius: isStart || isEnd ? 7 : 4,
+        radius: isArret ? 8 : isStart || isEnd ? 7 : 4,
         fillColor: isStart ? '#0E9F6E' : color,
         color: '#fff',
-        weight: isStart || isEnd ? 2 : 1,
+        weight: isStart || isEnd || isArret ? 2 : 1,
         fillOpacity: 1,
       })
-      const label = isStart ? 'Départ' : isEnd ? 'Position' : `Point ${i + 1}`
+      const label = isStart ? 'Départ' : isEnd ? 'Dernière position' : isArret ? 'Arrêt' : `Point ${i + 1}`
+      const heure = dureeMs > 60_000
+        ? `${formatTime(point.captured_at)} → ${formatTime(r.finArret)} (${libelleDuree(dureeMs)})`
+        : formatTime(point.captured_at)
       dot.bindTooltip(
-        `${label} · ${formatTime(point.captured_at)}<br>${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}`,
+        `<b>${label}</b> · ${formatDay(selectedDate.value)}<br>${heure}<br>±${Math.round(point.accuracy ?? 0)} m · ${r.absorbes} pt(s) absorbé(s)`,
         { direction: 'top', offset: [0, -4] },
       )
       dot.bindPopup(el)
@@ -813,12 +889,23 @@ function drawTrails() {
         iconSize: [16, 16],
         iconAnchor: [8, 8],
       })
-      L.marker([visit.lat, visit.lng], { icon })
+      const dateLabel = new Date(visit.date_visite).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+      const marker = L.marker([visit.lat, visit.lng], { icon })
         .bindTooltip(
-          `<b>${visit.nom_pdv}</b><br>Visite à ${formatTime(visit.date_visite)}${validated ? '' : '<br><span style="color:#D97706">hors géofence</span>'}`,
+          `<b>${visit.nom_pdv}</b><br>Visite le ${dateLabel} à ${formatTime(visit.date_visite)}${validated ? '' : '<br><span style="color:#D97706">hors géofence</span>'}`,
           { direction: 'top', offset: [0, -6] },
         )
-        .addTo(trailGroup)
+      const pop = document.createElement('div')
+      pop.className = 'text-sm'
+      pop.innerHTML = `<p class="font-bold">${visit.nom_pdv}</p><p class="text-xs text-gray-500">${dateLabel} · ${formatTime(visit.date_visite)}${validated ? '' : ' · <span style="color:#D97706">hors géofence</span>'}</p>`
+      const btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = 'mt-2 rounded-md bg-fc-red px-2.5 py-1 text-xs font-semibold text-white'
+      btn.textContent = 'Ouvrir la visite'
+      btn.addEventListener('click', () => void openVisit(visit.visite_id))
+      pop.appendChild(btn)
+      marker.bindPopup(pop)
+      marker.addTo(trailGroup)
     })
 
   const bounds = trailGroup.getBounds?.()

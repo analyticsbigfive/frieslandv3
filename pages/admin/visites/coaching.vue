@@ -29,13 +29,13 @@
       <table class="admin-table w-full">
         <thead>
           <tr>
-            <th>Date</th><th>PDV</th><th>Zone</th><th>Superviseur</th><th>En charge</th><th>Distributeur</th><th>Engin</th>
+            <th>Date</th><th>PDV</th><th>Zone</th><th>Superviseur</th><th>En charge</th><th>Distributeur</th><th>Vendeur</th><th>Engin</th>
             <th>SKU dispo</th><th>Visibilité</th><th>Promotion</th><th>Score</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-if="loading"><td colspan="11" class="py-8 text-center text-gray-400">Chargement…</td></tr>
-          <tr v-else-if="!pagines.length"><td colspan="11" class="py-8 text-center text-gray-400">Aucun field coaching sur la période.</td></tr>
+          <tr v-if="loading"><td colspan="12" class="py-8 text-center text-gray-400">Chargement…</td></tr>
+          <tr v-else-if="!pagines.length"><td colspan="12" class="py-8 text-center text-gray-400">Aucun field coaching sur la période.</td></tr>
           <tr v-for="c in pagines" :key="c.id">
             <td>{{ formatDate(c.date_coaching) }}</td>
             <td class="font-medium">{{ c.pdv?.nom_pdv || c.pdv_id }}</td>
@@ -43,6 +43,7 @@
             <td>{{ c.superviseur?.nom || c.auteur?.nom || '—' }}</td>
             <td>{{ c.assigne?.nom || '—' }}</td>
             <td>{{ c.distributeur_nom || '—' }}</td>
+            <td>{{ c.vendeur_nom || '—' }}</td>
             <td>{{ c.engin_code || '—' }}</td>
             <td>{{ c.nb_sku_dispo ?? '—' }} / {{ c.nb_sku_pdv ?? '—' }}</td>
             <td>{{ pct(scoreCoaching(c.reponses, 'visibilite').taux) }}</td>
@@ -134,9 +135,11 @@ function exporter() {
     superviseur: c.superviseur?.nom || c.auteur?.nom || '',
     en_charge: c.assigne?.nom || '',
     distributeur: c.distributeur_nom || '',
+    vendeur: c.vendeur_nom || '',
     engin: c.engin_code || '',
     route_jour: c.route_jour || '',
     type_pdv: c.type_pdv || '',
+    sous_type_pdv: c.type_pdv_detail || '',
     proprietaire: [c.proprietaire_prenom, c.proprietaire_nom].filter(Boolean).join(' '),
     telephone: c.proprietaire_tel || '',
     sku_pdv: c.nb_sku_pdv ?? '',
@@ -146,6 +149,7 @@ function exporter() {
     score_visibilite: scoreCoaching(c.reponses, 'visibilite').taux ?? '',
     score_promotion: scoreCoaching(c.reponses, 'promotion').taux ?? '',
     score_global: scoreCoaching(c.reponses).taux ?? '',
+    motif_non_participation: c.motif_non_participation || '',
     commentaire: c.commentaire || '',
   })), `field-coaching-${periode.value.debut}-${periode.value.fin}.csv`)
 }
@@ -156,7 +160,7 @@ async function charger() {
   try {
     const { data, error } = await supabase
       .from('field_coaching')
-      .select('id, date_coaching, auteur_id, superviseur_id, assigne_a, distributeur_nom, engin_code, pdv_id, route_jour, type_pdv, quartier, proprietaire_nom, proprietaire_prenom, proprietaire_tel, nb_sku_pdv, nb_sku_dispo, skus_disponibles, reponses, commentaire, pdv:pdv_id(nom_pdv, zone), auteur:auteur_id(nom), assigne:assigne_a(nom), superviseur:superviseur_id(nom)')
+      .select('id, date_coaching, auteur_id, superviseur_id, assigne_a, distributeur_nom, vendeur_nom, engin_code, pdv_id, route_jour, type_pdv, type_pdv_detail, quartier, proprietaire_nom, proprietaire_prenom, proprietaire_tel, nb_sku_pdv, nb_sku_dispo, skus_disponibles, reponses, commentaire, motif_non_participation, pdv:pdv_id(nom_pdv, zone), auteur:auteur_id(nom), assigne:assigne_a(nom), superviseur:superviseur_id(nom)')
       .gte('date_coaching', `${periode.value.debut}T00:00:00`)
       .lte('date_coaching', `${periode.value.fin}T23:59:59`)
       .order('date_coaching', { ascending: false })

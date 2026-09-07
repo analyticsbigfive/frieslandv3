@@ -277,9 +277,39 @@
                 </button>
               </span>
             </p>
-            <p v-if="unmatchedTerritories.length" class="mt-2 text-xs text-amber-600 dark:text-amber-400">
-              Territoires hors référentiel, conservés tels quels : {{ unmatchedTerritories.join(', ') }}
-            </p>
+            <div v-if="unmatchedTerritories.length" class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/50 dark:bg-amber-900/10">
+              <p class="text-xs font-semibold text-amber-700 dark:text-amber-300">Territoires hors référentiel</p>
+              <p class="mt-0.5 text-[11px] text-amber-700/80 dark:text-amber-300/80">
+                Rattachez chaque libellé à un territoire réel : le profil ne gardera que le territoire réel et les PDV portant encore l'ancien libellé resteront dans son périmètre (alias).
+              </p>
+              <div v-for="nom in unmatchedTerritories" :key="nom" class="mt-2 flex flex-wrap items-center gap-2">
+                <span class="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-slate-800 dark:text-amber-200">{{ nom }}</span>
+                <UIcon name="i-heroicons-arrow-right" class="h-3.5 w-3.5 text-amber-500" />
+                <USelectMenu
+                  :model-value="rattachements[nom] || ''"
+                  :options="allTerritoryOptions"
+                  option-attribute="label"
+                  value-attribute="value"
+                  placeholder="Conserver tel quel"
+                  searchable
+                  searchable-placeholder="Rechercher un territoire…"
+                  size="xs"
+                  class="w-64"
+                  @update:model-value="rattachements[nom] = $event"
+                />
+                <UButton
+                  v-if="rattachements[nom]"
+                  size="2xs"
+                  variant="soft"
+                  color="amber"
+                  :loading="applyingAlias === nom"
+                  title="Enregistre l'alias et remplace ce libellé sur tous les profils qui le portent"
+                  @click="appliquerAliasPartout(nom)"
+                >
+                  Appliquer à tous les profils
+                </UButton>
+              </div>
+            </div>
           </UFormGroup>
 
           <UFormGroup label="Quartiers assignés" help="Agrégés sur les territoires cochés. Laissez vide pour tout autoriser." size="md" class="sm:col-span-2">
@@ -295,21 +325,28 @@
             >
               Aucun quartier référencé sur les territoires sélectionnés.
             </div>
-            <div
-              v-else
-              class="grid max-h-56 grid-cols-1 gap-1.5 overflow-y-auto rounded-lg border border-slate-200 p-3 sm:grid-cols-2 dark:border-slate-700"
-            >
-              <label
-                v-for="q in quartierOptions"
-                :key="q"
-                class="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50"
-              >
-                <UCheckbox
-                  :model-value="userForm.quartiers_assignes.includes(q)"
-                  @update:model-value="toggleQuartier(q)"
-                />
-                <span class="text-slate-700 dark:text-slate-200">{{ q }}</span>
-              </label>
+            <div v-else class="max-h-72 space-y-3 overflow-y-auto rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+              <div v-for="g in quartierGroupes" :key="g.code">
+                <div class="mb-1 flex items-center justify-between">
+                  <span class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ g.territoire }} · {{ g.quartiers.filter(q => userForm.quartiers_assignes.includes(q)).length }}/{{ g.quartiers.length }}</span>
+                  <button type="button" class="text-[11px] font-medium text-fc-blue hover:underline" @click="toggleGroupeQuartiers(g.quartiers)">
+                    {{ g.quartiers.every(q => userForm.quartiers_assignes.includes(q)) ? 'Tout décocher' : 'Tout cocher' }}
+                  </button>
+                </div>
+                <div class="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                  <label
+                    v-for="q in g.quartiers"
+                    :key="q"
+                    class="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1 text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                  >
+                    <UCheckbox
+                      :model-value="userForm.quartiers_assignes.includes(q)"
+                      @update:model-value="toggleQuartier(q)"
+                    />
+                    <span class="text-slate-700 dark:text-slate-200">{{ q }}</span>
+                  </label>
+                </div>
+              </div>
             </div>
           </UFormGroup>
         </div>
@@ -429,6 +466,7 @@
 </template>
 
 <script setup lang="ts">
+import { grouperQuartiersParTerritoire } from '~/utils/territoires'
 import type { Profile, UserRole } from '~/types'
 
 definePageMeta({
@@ -467,7 +505,7 @@ const userForm = ref({
 // Cascade géo Division → Sous-région → Territoire → Quartiers, alignée sur la
 // hiérarchie référentiel. Scoping pdv : pdv.zone = territoire.nom,
 // pdv.quartier = quartier.nom, pdv.region = sous_region.nom_affichage.
-const { regions, subRegions, territories, areas, quartiers, fetchReferentiels } = useReferentiels()
+const { regions, subRegions, territories, areas, quartiers, territoireAliases, fetchReferentiels } = useReferentiels()
 const regionOptions = computed(() => regions.value.map(r => ({ value: r.code, label: r.nom_affichage ? `${r.nom_affichage} · ${r.name}` : r.name })))
 const subRegionOptions = computed(() => subRegions.value
   .filter(s => s.region_code === userForm.value.region_code)
@@ -481,6 +519,48 @@ const quartierOptions = computed(() => {
   const zoneIds = new Set(areas.value.filter(a => selected.has(a.territory_code)).map(a => a.id))
   return [...new Set(quartiers.value.filter(q => zoneIds.has(q.zone_id)).map(q => q.nom).filter(Boolean))].sort()
 })
+
+// Rattachement des libellés hors référentiel (territoire_alias). Vide =
+// conservé tel quel, comme avant.
+const allTerritoryOptions = computed(() => territories.value
+  .map(t => ({ value: t.code, label: territoryChipLabel(t.code) }))
+  .sort((a, b) => a.label.localeCompare(b.label, 'fr')))
+const rattachements = ref<Record<string, string>>({})
+const applyingAlias = ref<string | null>(null)
+
+async function enregistrerAlias(alias: string, code: string) {
+  const { error } = await (supabase.from('territoire_alias') as any)
+    .upsert({ alias, territoire_code: code }, { onConflict: 'alias' })
+  if (error) throw error
+  if (!territoireAliases.value.some(a => a.alias === alias)) {
+    territoireAliases.value = [...territoireAliases.value, { alias, territoire_code: code }]
+  }
+}
+
+// Alias + remplacement du libellé sur tous les profils (service role côté serveur).
+async function appliquerAliasPartout(nom: string) {
+  const code = rattachements.value[nom]
+  if (!code) return
+  applyingAlias.value = nom
+  try {
+    await enregistrerAlias(nom, code)
+    const res = await $fetch<{ profils: number }>('/api/admin/territoire-alias', {
+      method: 'POST', body: { alias: nom, territoire_code: code },
+    })
+    toast.add({ title: 'Alias appliqué', description: `${res.profils} profil(s) mis à jour.`, color: 'green' })
+    // Le formulaire courant suit : le libellé devient le territoire réel.
+    unmatchedTerritories.value = unmatchedTerritories.value.filter(n => n !== nom)
+    if (!userForm.value.territory_codes.includes(code)) userForm.value.territory_codes.push(code)
+    delete rattachements.value[nom]
+    await fetchUsers()
+  }
+  catch (err: any) {
+    toast.add({ title: 'Rattachement impossible', description: err?.data?.message || err?.message, color: 'red' })
+  }
+  finally {
+    applyingAlias.value = null
+  }
+}
 
 // Chip : le territoire peut venir d'une autre sous-région que celle filtrée,
 // on rappelle donc son rattachement pour lever l'ambiguïté.
@@ -514,6 +594,14 @@ function toggleAllVisibleTerritories(select: boolean) {
   userForm.value.territory_codes = [...current]
   const valid = new Set(quartierOptions.value)
   userForm.value.quartiers_assignes = userForm.value.quartiers_assignes.filter(q => valid.has(q))
+}
+// Quartiers groupés par territoire (utils/territoires.ts).
+const quartierGroupes = computed(() => grouperQuartiersParTerritoire(quartierOptions.value, quartiers.value, areas.value, territories.value))
+function toggleGroupeQuartiers(liste: string[]) {
+  const tous = liste.every(q => userForm.value.quartiers_assignes.includes(q))
+  const set = new Set(userForm.value.quartiers_assignes)
+  for (const q of liste) tous ? set.delete(q) : set.add(q)
+  userForm.value.quartiers_assignes = [...set]
 }
 function toggleQuartier(q: string) {
   const list = userForm.value.quartiers_assignes
@@ -553,6 +641,8 @@ function hydrateUserGeo() {
   const matched = names.map(n => ({ name: n, terr: territories.value.find(t => normTerrName(t.name) === normTerrName(n)) }))
   userForm.value.territory_codes = matched.filter(m => m.terr).map(m => m.terr!.code)
   unmatchedTerritories.value = matched.filter(m => !m.terr).map(m => m.name)
+  rattachements.value = Object.fromEntries(unmatchedTerritories.value
+    .map(n => [n, territoireAliases.value.find(a => normTerrName(a.alias) === normTerrName(n))?.territoire_code || '']))
   originalTerrNames.value = Object.fromEntries(
     matched.filter(m => m.terr).map(m => [m.terr!.code, m.name]))
   const first = matched.find(m => m.terr)?.terr
@@ -774,11 +864,21 @@ async function handleSaveUser() {
     // Dérive territoires (noms) depuis les codes cochés ; zone_assignee = 1er (compat legacy).
     // Un territoire déjà présent sur le profil garde son libellé d'origine
     // (originalTerrNames) pour ne pas casser le scoping exact sur pdv.zone.
+    // Libellés hors référentiel rattachés : alias enregistré, territoire réel
+    // ajouté au profil à la place du libellé. Les autres restent tels quels.
+    const conserves: string[] = []
+    const codesRattaches: string[] = []
+    for (const nom of unmatchedTerritories.value) {
+      const code = rattachements.value[nom]
+      if (code) { await enregistrerAlias(nom, code); codesRattaches.push(code) }
+      else conserves.push(nom)
+    }
+    const codes = [...new Set([...userForm.value.territory_codes, ...codesRattaches])]
     const terrs = [
-      ...userForm.value.territory_codes
+      ...codes
         .map(code => originalTerrNames.value[code] || territories.value.find(t => t.code === code)?.name)
         .filter(Boolean) as string[],
-      ...unmatchedTerritories.value,
+      ...conserves,
     ]
     // Région dérivée du 1er territoire coché (et non du filtre affiché, qui peut
     // pointer une autre sous-région que celle du périmètre réel).

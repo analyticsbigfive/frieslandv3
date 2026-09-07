@@ -1,6 +1,7 @@
 // stores/pdv.ts
 import { defineStore, skipHydrate } from 'pinia'
 import { isPrivilegedProfile } from '~/utils/roles'
+import { profileTerritoriesEtendus } from '~/composables/useUserScope'
 import { markRaw } from 'vue'
 import type { PDV, Profile, ZoneSecteur } from '~/types'
 
@@ -13,6 +14,7 @@ export const SANS_ZONE = '__SANS_ZONE__'
 
 export const usePDVStore = defineStore('pdv', () => {
   const supabase = skipHydrate(markRaw(useSupabaseClient()))
+  const { territoireAliases, territories } = useReferentiels()
   const cacheTTL = 5 * 60 * 1000
 
   const pdvList = ref<PDV[]>([])
@@ -46,7 +48,7 @@ export const usePDVStore = defineStore('pdv', () => {
   async function fetchFilterFacets(profile?: Profile | null) {
     let query = supabase.from('pdv').select('zone, region').eq('is_active', true)
     if (profile && !isPrivilegedProfile(profile)) {
-      const territoires = profileTerritories(profile)
+      const territoires = profileTerritoriesEtendus(profile, territoireAliases.value, territories.value)
       if (territoires.length === 1) query = query.eq('zone', territoires[0])
       else if (territoires.length > 1) query = query.in('zone', territoires)
       const quartiers = (profile.quartiers_assignes || []).filter(Boolean)
@@ -74,7 +76,7 @@ export const usePDVStore = defineStore('pdv', () => {
     }
 
     const quartiers = (profile.quartiers_assignes || []).filter(Boolean).sort().join('|')
-    const territoires = profileTerritories(profile).slice().sort().join('|')
+    const territoires = profileTerritoriesEtendus(profile, territoireAliases.value, territories.value).slice().sort().join('|')
     return [
       profile.id,
       profile.role,
@@ -95,7 +97,7 @@ export const usePDVStore = defineStore('pdv', () => {
       return query
     }
 
-    const territoires = profileTerritories(profile)
+    const territoires = profileTerritoriesEtendus(profile, territoireAliases.value, territories.value)
     if (territoires.length === 1) {
       query = query.eq('zone', territoires[0])
     }

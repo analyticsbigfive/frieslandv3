@@ -3,6 +3,7 @@ import {
   QUESTIONS_COACHING,
   erreursIdentification,
   evaluationComplete,
+  motifRequis,
   questionsDuBloc,
   reponsesVides,
   scoreCoaching,
@@ -36,11 +37,21 @@ describe('questionnaire field coaching', () => {
   })
 })
 
+describe('libellés Kobo', () => {
+  it('reprend les intitulés du formulaire et exige un motif si non-participation', () => {
+    expect(QUESTIONS_COACHING.find(q => q.code === 'hot_spot')?.libelle).toBe('Présence dans le Hot Spot')
+    expect(QUESTIONS_COACHING.find(q => q.code === 'respect_prix')?.libelle).toBe('Respect des prix')
+    expect(motifRequis({ participation: 'non' })).toBe(true)
+    expect(motifRequis({ participation: 'oui' })).toBe(false)
+    expect(motifRequis({})).toBe(false)
+  })
+})
+
 describe('identification', () => {
   it('exige PDV, distributeur, engin et une cohérence des SKU', () => {
-    expect(erreursIdentification({})).toHaveLength(3)
-    expect(erreursIdentification({ pdv_id: 'x', distributeur_nom: 'ABDI', engin_code: 'moto', nb_sku_pdv: 5, nb_sku_dispo: 7 }))
+    expect(erreursIdentification({})).toHaveLength(4)
+    expect(erreursIdentification({ pdv_id: 'x', distributeur_nom: 'ABDI', vendeur_nom: 'KONE MOUSSA', engin_code: 'moto', nb_sku_pdv: 5, nb_sku_dispo: 7 }))
       .toEqual(['Le nombre de SKU disponibles ne peut pas dépasser le nombre de SKU en PDV.'])
-    expect(erreursIdentification({ pdv_id: 'x', distributeur_nom: 'ABDI', engin_code: 'moto', nb_sku_pdv: 7, nb_sku_dispo: 5 })).toEqual([])
+    expect(erreursIdentification({ pdv_id: 'x', distributeur_nom: 'ABDI', vendeur_nom: 'KONE MOUSSA', engin_code: 'moto', nb_sku_pdv: 7, nb_sku_dispo: 5 })).toEqual([])
   })
 })

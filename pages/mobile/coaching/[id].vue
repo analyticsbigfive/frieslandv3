@@ -17,9 +17,10 @@
           <div><p class="text-xs text-gray-400">Superviseur</p><p>{{ c.superviseur?.nom || c.auteur?.nom || '—' }}</p></div>
           <div><p class="text-xs text-gray-400">En charge</p><p>{{ c.assigne?.nom || c.auteur?.nom || '—' }}</p></div>
           <div><p class="text-xs text-gray-400">Distributeur</p><p>{{ c.distributeur_nom || '—' }}</p></div>
+          <div><p class="text-xs text-gray-400">Vendeur</p><p>{{ c.vendeur_nom || '—' }}</p></div>
           <div><p class="text-xs text-gray-400">Engin</p><p>{{ libelleEngin(c.engin_code) }}</p></div>
           <div><p class="text-xs text-gray-400">Route du jour</p><p>{{ c.route_jour || '—' }}</p></div>
-          <div><p class="text-xs text-gray-400">Type de PDV</p><p>{{ c.type_pdv || '—' }}</p></div>
+          <div><p class="text-xs text-gray-400">Type de PDV</p><p>{{ c.type_pdv_detail || c.type_pdv || '—' }}</p></div>
         </div>
         <p class="text-xs text-gray-500">{{ [c.commune, c.quartier, c.rue, c.proche_de ? 'proche de ' + c.proche_de : ''].filter(Boolean).join(' · ') || '—' }}</p>
       </div>
@@ -45,9 +46,14 @@
         <div v-for="q in questionsDuBloc(bloc)" :key="q.code" class="flex items-start justify-between gap-3 text-sm">
           <span class="text-gray-700 dark:text-gray-300">{{ q.libelle }}</span>
           <span class="shrink-0 font-semibold" :class="c.reponses[q.code] === 'oui' ? 'text-green-600' : c.reponses[q.code] === 'non' ? 'text-red-500' : 'text-gray-400'">
-            {{ c.reponses[q.code] === 'oui' ? 'Oui' : c.reponses[q.code] === 'non' ? 'Non' : 'N/A' }}
+            {{ c.reponses[q.code] === 'oui' ? 'Oui' : c.reponses[q.code] === 'non' ? 'Non' : 'Not Applicable' }}
           </span>
         </div>
+      </div>
+
+      <div v-if="c.motif_non_participation" class="mobile-card space-y-2 p-4">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Motif de la non-participation à la promo</h3>
+        <p class="whitespace-pre-line text-sm">{{ c.motif_non_participation }}</p>
       </div>
 
       <div v-if="c.commentaire" class="mobile-card space-y-2 p-4">
