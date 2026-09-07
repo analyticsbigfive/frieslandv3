@@ -1,13 +1,31 @@
 apply plugin: 'com.android.application'
 
-// Signature release : lue depuis android/keystore.properties (non versionné,
-// voir docs/BUILD-ANDROID.md). Absent → le release est signé en debug
-// (tests internes uniquement, jamais livrable client).
+// --- Signature release ---------------------------------------------------
+// Lue depuis android/keystore.properties (non versionné, voir docs/BUILD-ANDROID.md).
+// RÈGLE : la phase de configuration ne lève JAMAIS d'erreur — sinon assembleDebug,
+// `./gradlew tasks` et la synchro Android Studio casseraient aussi. Les diagnostics
+// sont collectés ici et levés par le guard `gradle.taskGraph.whenReady` (bas de
+// fichier), qui ne se déclenche que si une tâche produisant un artefact release
+// est planifiée.
 def keystoreProperties = new Properties()
 def keystorePropertiesFile = rootProject.file('keystore.properties')
-if (keystorePropertiesFile.exists()) {
+def signingProblem = null
+
+if (!keystorePropertiesFile.exists()) {
+    signingProblem = "fichier introuvable : ${keystorePropertiesFile.absolutePath}"
+} else {
     keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+    def missing = ['storeFile', 'storePassword', 'keyAlias', 'keyPassword'].findAll {
+        !keystoreProperties[it]?.trim()
+    }
+    if (missing) {
+        signingProblem = "clés manquantes ou vides dans keystore.properties : ${missing.join(', ')}"
+    } else if (!file(keystoreProperties['storeFile']).exists()) {
+        // file() résout les chemins relatifs depuis android/app/ : utiliser un chemin ABSOLU.
+        signingProblem = "storeFile introuvable : ${keystoreProperties['storeFile']}"
+    }
 }
+def signingReady = (signingProblem == null)
 
 android {
     namespace "com.bdco.bonnetrouge"
@@ -26,7 +44,7 @@ android {
         }
     }
     signingConfigs {
-        if (keystorePropertiesFile.exists()) {
+        if (signingReady) {
             release {
                 storeFile file(keystoreProperties['storeFile'])
                 storePassword keystoreProperties['storePassword']
@@ -39,11 +57,42 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            signingConfig keystorePropertiesFile.exists()
-                ? signingConfigs.release
-                : signingConfigs.debug
+            if (signingReady) {
+                signingConfig signingConfigs.release
+            }
+            // Sinon : AUCUN signingConfig. Jamais de repli sur la clé debug — c'est ce
+            // repli qui a produit l'AAB debug-signé (CN=Android Debug) du 7 sept. 2026.
         }
     }
+}
+
+// Garde-fou : interdit de produire un artefact release sans le keystore d'upload.
+// `whenReady` s'exécute après la configuration et AVANT la première tâche → échec en
+// quelques secondes, pas après 4 minutes de packaging. Les builds debug, `./gradlew
+// tasks` et la synchro Android Studio ne matchent aucune tâche de la liste : intacts.
+// NB : concaténation de String volontaire — en Groovy, Set<GString>.contains(String)
+// renvoie toujours false.
+def releaseArtifactTasks = [
+    project.path + ':assembleRelease',
+    project.path + ':bundleRelease',
+    project.path + ':installRelease'
+] as Set
+
+gradle.taskGraph.whenReady { graph ->
+    if (signingReady) return
+    def requested = graph.allTasks.findAll { releaseArtifactTasks.contains(it.path) }
+    if (requested.isEmpty()) return
+    throw new GradleException(
+        "\n\n*** BUILD RELEASE REFUSÉ : keystore d'upload absent ou invalide ***\n" +
+        "  Cause   : " + signingProblem + "\n" +
+        "  Tâches  : " + requested.collect { it.path }.join(', ') + "\n" +
+        "  Sans keystore ce build produirait un artefact non signé (auparavant : signé\n" +
+        "  avec la clé debug), refusé par Google Play.\n" +
+        "  Corriger: créer android/keystore.properties (chemins ABSOLUS), voir\n" +
+        "            docs/BUILD-ANDROID.md § « Signature release ».\n" +
+        "  SHA-1 attendu de la clé d'upload :\n" +
+        "  13:B2:1B:C5:C7:12:90:73:BE:DF:65:EB:AE:FD:0D:F6:45:FE:FD:CF\n"
+    )
 }
 
 repositories {

@@ -12,6 +12,7 @@
     "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug",
     "android:release": "npm run android:sync && cd android && ./gradlew assembleRelease",
     "android:bundle": "npm run android:sync && cd android && ./gradlew bundleRelease",
+    "android:verify": "bash scripts/verify-aab-signature.sh",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
