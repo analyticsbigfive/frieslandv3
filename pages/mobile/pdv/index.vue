@@ -186,7 +186,7 @@
 
 <script setup lang="ts">
 import type { PDV } from '~/types'
-import { ETATS_FRAICHEUR, etatFraicheurColor, libelleFraicheur, type EtatFraicheur } from '~/utils/actionsCommerciales'
+import { ETATS_FRAICHEUR, calculerEtatFraicheur, etatFraicheurColor, libelleFraicheur, type EtatFraicheur } from '~/utils/actionsCommerciales'
 import { profileTerritories } from '~/composables/useUserScope'
 
 definePageMeta({ middleware: ['auth'], layout: 'mobile' })
@@ -211,23 +211,45 @@ const canCreatePDV = computed(() => authStore.profile?.role === 'merchandiser')
 const userPosition = computed(() => currentPosition.value)
 const activeFilterCount = computed(() => Number(Boolean(selectedZone.value)) + Number(!sortByProximity.value) + Number(Boolean(selectedEtat.value)))
 
-// Fraîcheur de visite (lot 3.2) via pdv_fraicheur_filtre, un appel par
-// territoire. Réservée au commercial et aux privilégiés : pour un
-// merchandiseur la RLS ne montre que ses propres visites, l'état serait faux.
+// Fraîcheur de visite (lot 3.2), calculée côté client avec la même règle que
+// pdv_fraicheur_filtre : dernière visite par PDV (la RLS limite déjà les
+// visites au périmètre du commercial) et fréquence attendue (frequence_visite,
+// surcharge zone / type). Évite le plafond de 1 000 lignes de la RPC.
+// Réservée au commercial et aux privilégiés : pour un merchandiseur la RLS ne
+// montre que ses propres visites, l'état serait faux.
 const supabase = useSupabaseClient()
 const selectedEtat = ref<EtatFraicheur | ''>('')
 const fraicheur = ref<Record<string, { etat: EtatFraicheur; jours_depuis: number | null }>>({})
 const fraicheurActive = computed(() => authStore.isCommercial || authStore.isSuperviseur)
 async function chargerFraicheur() {
-  if (!fraicheurActive.value) return
-  const zones = profileTerritories(authStore.profile)
-  const cibles = zones.length ? zones : [...new Set(allPDV.value.map(p => p.zone).filter(Boolean))].slice(0, 6)
+  if (!fraicheurActive.value || !allPDV.value.length) return
+  const { data: freqs } = await supabase.from('frequence_visite').select('zone, type_pdv, jours')
+  const frequences = (freqs || []) as { zone: string | null; type_pdv: string | null; jours: number }[]
+  const frequencePour = (zone?: string | null, type?: string | null) => {
+    const candidats = frequences
+      .filter(f => (!f.zone || f.zone === zone) && (!f.type_pdv || f.type_pdv === type))
+      .sort((a, b) => (Number(!!b.zone) + Number(!!b.type_pdv)) - (Number(!!a.zone) + Number(!!a.type_pdv)) || Number(!!b.type_pdv) - Number(!!a.type_pdv))
+    return candidats[0]?.jours ?? 7
+  }
+  // Dernière visite par PDV, toutes visites visibles, par pages de 1 000.
+  const derniere: Record<string, string> = {}
+  for (let from = 0; from < 20_000; from += 1000) {
+    const { data, error } = await supabase
+      .from('visites')
+      .select('pdv_id, date_visite')
+      .order('date_visite', { ascending: false })
+      .range(from, from + 999)
+    if (error || !data?.length) break
+    for (const v of data as { pdv_id: string; date_visite: string }[]) {
+      if (!derniere[v.pdv_id]) derniere[v.pdv_id] = v.date_visite
+    }
+    if (data.length < 1000) break
+  }
   const map: Record<string, { etat: EtatFraicheur; jours_depuis: number | null }> = {}
-  await Promise.all(cibles.map(async (zone) => {
-    const { data, error } = await (supabase.rpc as any)('pdv_fraicheur_filtre', { p_territoire: zone })
-    if (error) return
-    for (const r of (data || []) as any[]) map[r.pdv_id] = { etat: r.etat, jours_depuis: r.jours_depuis }
-  }))
+  for (const p of allPDV.value) {
+    const r = calculerEtatFraicheur(derniere[p.pdv_id], frequencePour(p.zone, p.sous_categorie_pdv))
+    map[p.pdv_id] = { etat: r.etat, jours_depuis: r.joursDepuis }
+  }
   fraicheur.value = map
 }
 function compteEtat(etat: EtatFraicheur) {

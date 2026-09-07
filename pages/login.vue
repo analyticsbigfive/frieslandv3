@@ -102,6 +102,7 @@
 </template>
 
 <script setup lang="ts">
+import { homePathForRole } from '~/utils/roles'
 definePageMeta({ layout: false })
 
 const authStore = useAuthStore()
@@ -123,7 +124,7 @@ watch(() => authStore.isAuthenticated, async (isAuth) => {
     await authStore.fetchProfile()
   }
 
-  const redirect = authStore.isAdmin || authStore.isSuperviseur ? '/admin' : '/mobile'
+  const redirect = homePathForRole(authStore.profile?.role)
   router.push(redirect)
 }, { immediate: true })
 
@@ -145,7 +146,7 @@ async function handleLogin() {
 
     // Wait for profile to load
     await nextTick()
-    const redirect = authStore.isAdmin || authStore.isSuperviseur ? '/admin' : '/mobile'
+    const redirect = homePathForRole(authStore.profile?.role)
     router.push(redirect)
   }
   catch (err: any) {

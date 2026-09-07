@@ -104,6 +104,7 @@
 </template>
 
 <script setup lang="ts">
+import { canWriteTerrain } from '~/utils/roles'
 const route = useRoute()
 const authStore = useAuthStore()
 const { isOnline, pendingCount, lastSyncAt } = useOfflineSync()
@@ -139,13 +140,14 @@ const userMenuItems = computed(() => [
   }],
 ])
 
-// Tournée automatique (natif) : démarre ou reprend dès que l'utilisateur
-// est connecté, s'arrête au logout.
-watch(tourneeUser, (u) => {
-  if (u) {
+// Tournée automatique (natif) : démarre ou reprend dès qu'un utilisateur
+// TERRAIN est connecté (le commercial consulte, il n'est pas suivi), s'arrête
+// au logout. Attend le profil pour connaître le rôle.
+watch([tourneeUser, () => authStore.profile?.role], ([u, role]) => {
+  if (u && role && canWriteTerrain(role)) {
     void autoStart()
   }
-  else if (isTrackingTournee.value) {
+  else if (!u && isTrackingTournee.value) {
     void stopTournee()
   }
 }, { immediate: true })

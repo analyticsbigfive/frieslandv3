@@ -3,6 +3,7 @@
 </template>
 
 <script setup lang="ts">
+import { homePathForRole } from '~/utils/roles'
 definePageMeta({ layout: false })
 
 const authStore = useAuthStore()
@@ -17,11 +18,7 @@ async function redirectUser() {
     await authStore.fetchProfile()
   }
 
-  if (authStore.isAdmin || authStore.isSuperviseur) {
-    return navigateTo('/admin')
-  }
-
-  return navigateTo('/mobile')
+  return navigateTo(homePathForRole(authStore.profile?.role))
 }
 
 // Redirect based on auth & role

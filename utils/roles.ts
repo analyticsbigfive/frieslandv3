@@ -26,6 +26,14 @@ export function canWriteTerrain(role?: string | null): boolean {
   return !!role && ROLES_ECRITURE_TERRAIN.includes(role)
 }
 
+// Page d'atterrissage après connexion. Le commercial consulte son équipe ;
+// les autres rôles terrain saisissent ; les privilégiés vont au dashboard web.
+export function homePathForRole(role?: string | null): string {
+  if (isPrivilegedRole(role)) return '/admin'
+  if (isCommercialRole(role)) return '/mobile/equipe'
+  return '/mobile'
+}
+
 export interface MobileNavItem {
   key: 'visites' | 'routing' | 'pdv' | 'equipe' | 'actions' | 'more'
   label: string

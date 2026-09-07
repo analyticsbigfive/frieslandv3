@@ -4,6 +4,7 @@ import {
   isCommercialRole,
   isPrivilegedProfile,
   isPrivilegedRole,
+  homePathForRole,
   mobileNavItems,
 } from '../utils/roles'
 
@@ -40,6 +41,16 @@ describe('écriture terrain', () => {
   it('isCommercialRole', () => {
     expect(isCommercialRole('commercial')).toBe(true)
     expect(isCommercialRole('merchandiser')).toBe(false)
+  })
+})
+
+describe('accueil par rôle', () => {
+  it('admin et superviseur au dashboard, commercial à son équipe, terrain aux visites', () => {
+    expect(homePathForRole('admin')).toBe('/admin')
+    expect(homePathForRole('superviseur')).toBe('/admin')
+    expect(homePathForRole('commercial')).toBe('/mobile/equipe')
+    expect(homePathForRole('merchandiser')).toBe('/mobile')
+    expect(homePathForRole(undefined)).toBe('/mobile')
   })
 })
 
