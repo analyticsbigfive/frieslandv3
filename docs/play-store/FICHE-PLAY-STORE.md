@@ -80,16 +80,22 @@ Bonnet Rouge ne propose pas d'inscription libre. Les identifiants sont fournis p
 | Nom de l'application | Friesland Bonnet Rouge |
 | Package | com.bdco.bonnetrouge |
 
-Ces valeurs sont reprises telles quelles dans `pages/privacy-policy.vue` (section
-« Identification de l'application et de l'éditeur ») et dans `pages/supprimer-compte.vue`.
+Ces valeurs sont reprises telles quelles dans `pages/politique-de-confidentialite.vue` (section
+« Identification de l'application et de l'éditeur ») et dans `pages/suppression-de-compte.vue`.
 Tout changement dans Play Console doit être répercuté dans ces deux pages, sinon le
 motif de rejet « Les renseignements sur l'appli ou le développeur ne concordent pas »
 revient.
 
 ## URL à déclarer (domaine de production : frieslandv3.vercel.app, vérifié le 7 sept. 2026)
 
-- Politique de confidentialité : `https://frieslandv3.vercel.app/privacy-policy` (doit nommer l'app, le package `com.bdco.bonnetrouge` et BD&CO comme personne morale — exigence Play)
-- Suppression de compte : `https://frieslandv3.vercel.app/supprimer-compte`
+- Politique de confidentialité : `https://frieslandv3.vercel.app/politique-de-confidentialite` (doit nommer l'app, le package `com.bdco.bonnetrouge` et BD&CO comme personne morale — exigence Play)
+- Suppression de compte : `https://frieslandv3.vercel.app/suppression-de-compte`
+
+Pages renommées le 7 septembre 2026 (Play refusait les précédentes). Les anciennes
+adresses `/privacy-policy` et `/supprimer-compte` restent servies en alias
+(`definePageMeta({ alias })`) : la modale de divulgation de l'AAB 1.0.4 déjà signé
+pointe dessus et un lien mort casserait le parcours montré à Google. Ne pas les
+supprimer avant qu'une version postérieure à 1.0.4 soit seule installée.
 
 ## Fichier à téléverser
 

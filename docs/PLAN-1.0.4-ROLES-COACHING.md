@@ -24,8 +24,8 @@ Deux chantiers convergent sur une seule livraison, à la demande du client.
 | `app.vue` | Montage de la modale dans `<ClientOnly>`. |
 | `composables/useGeoProvider.ts` | `getCurrentPosition`, `watchPosition` et `requestPermission` attendent la divulgation avant tout prompt système. |
 | `composables/useTournee.ts` | `startTournee` exige la divulgation même si la permission premier plan est déjà accordée (`addWatcher` demande l'arrière-plan). |
-| `pages/privacy-policy.vue` | Section d'identification : BD & CO, 60 rue François Ier 75008 Paris, package `com.bdco.bonnetrouge`, contact `team@bigfive-edition.com`, site `bigfivesolutions.com`. Collecte décrite en deux volets, premier plan et tournée en arrière-plan. |
-| `pages/supprimer-compte.vue` | Même identité éditeur rappelée. |
+| `pages/politique-de-confidentialite.vue` | Section d'identification : BD & CO, 60 rue François Ier 75008 Paris, package `com.bdco.bonnetrouge`, contact `team@bigfive-edition.com`, site `bigfivesolutions.com`. Collecte décrite en deux volets, premier plan et tournée en arrière-plan. |
+| `pages/suppression-de-compte.vue` | Même identité éditeur rappelée. |
 | `android/app/build.gradle` | `versionCode 6`, `versionName "1.0.4"` (le 5 a été consommé par un upload Play refusé le 7 sept.). |
 | `package.json` | Version `1.0.4`, script `android:bundle`. |
 | `docs/play-store/FICHE-PLAY-STORE.md` | Table des valeurs d'identité à répliquer entre Play Console et les pages publiques. |
@@ -636,8 +636,8 @@ Des visites historiques portent `data.produits.yaourt` et `.cereales` : on masqu
 Résolu le 7 sept. : les deux pages sont servies par `https://frieslandv3.vercel.app` (vérifié, package et BD & CO présents). Ancien constat : l'URL était `https://<domaine>/privacy-policy` dans la fiche (`docs/play-store/FICHE-PLAY-STORE.md`). Google exige une URL **publiquement accessible** ; l'existence des pages dans le dépôt ne suffit pas, d'autant que `generate:native` ne publie que `/mobile`. Résoudre le domaine de production, puis :
 
 ```bash
-curl -s https://frieslandv3.vercel.app/privacy-policy | grep -c 'com.bdco.bonnetrouge'
-curl -s https://frieslandv3.vercel.app/supprimer-compte | grep -c 'BD &amp; CO'
+curl -s https://frieslandv3.vercel.app/politique-de-confidentialite | grep -c 'com.bdco.bonnetrouge'
+curl -s https://frieslandv3.vercel.app/suppression-de-compte | grep -c 'BD &amp; CO'
 ```
 
 ---

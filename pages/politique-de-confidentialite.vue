@@ -98,7 +98,7 @@
           <p class="mt-2">
             <strong>Supprimer son compte</strong> : la demande de suppression du compte et des données associées
             se fait depuis la page
-            <NuxtLink to="/supprimer-compte" class="text-fc-red underline">Supprimer mon compte</NuxtLink>,
+            <NuxtLink to="/suppression-de-compte" class="text-fc-red underline">Supprimer mon compte</NuxtLink>,
             accessible sans connexion. Elle est traitée par l'administrateur sous 30 jours.
           </p>
         </section>
@@ -141,7 +141,7 @@
 
       <p class="mt-10 flex flex-wrap justify-center gap-x-4 text-center text-xs text-gray-400">
         <NuxtLink to="/login" class="underline">← Retour à la connexion</NuxtLink>
-        <NuxtLink to="/supprimer-compte" class="underline">Supprimer mon compte</NuxtLink>
+        <NuxtLink to="/suppression-de-compte" class="underline">Supprimer mon compte</NuxtLink>
       </p>
     </main>
   </div>
@@ -149,6 +149,8 @@
 
 <script setup lang="ts">
 // Page publique (exigée par Google Play) : pas de middleware d'authentification.
-definePageMeta({ layout: false })
+// L'alias garde l'ancienne URL vivante : la modale de divulgation de l'AAB 1.0.4
+// déjà signé pointe dessus, et un lien mort casserait le parcours Play.
+definePageMeta({ layout: false, alias: ['/privacy-policy'] })
 useHead({ title: 'Politique de confidentialité — Bonnet Rouge' })
 </script>

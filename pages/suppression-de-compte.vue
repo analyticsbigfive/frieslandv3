@@ -76,7 +76,7 @@
 
       <p class="mt-10 flex flex-wrap justify-center gap-x-4 text-center text-xs text-gray-400">
         <NuxtLink :to="user ? '/mobile/more' : '/login'" class="underline">← Retour</NuxtLink>
-        <NuxtLink to="/privacy-policy" class="underline">Politique de confidentialité</NuxtLink>
+        <NuxtLink to="/politique-de-confidentialite" class="underline">Politique de confidentialité</NuxtLink>
       </p>
     </main>
   </div>
@@ -86,7 +86,9 @@
 // Page publique (exigence Google Play : lien de suppression de compte
 // accessible hors connexion). Pas de middleware d'authentification ; si
 // l'utilisateur est connecté, son e-mail est prérempli et son compte ciblé.
-definePageMeta({ layout: false })
+// L'alias garde l'ancienne URL vivante : la modale de divulgation de l'AAB 1.0.4
+// déjà signé pointe dessus, et un lien mort casserait le parcours Play.
+definePageMeta({ layout: false, alias: ['/supprimer-compte'] })
 useHead({ title: 'Supprimer mon compte — Bonnet Rouge' })
 
 const user = useSupabaseUser()

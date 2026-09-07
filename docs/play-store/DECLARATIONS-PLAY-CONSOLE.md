@@ -2,7 +2,7 @@
 
 Vérifié le 7 septembre 2026. Toutes les valeurs proviennent du code de la version
 1.0.4 : ne pas les modifier sans mettre à jour `composables/useTournee.ts`,
-`components/LocationDisclosureModal.vue` et `pages/privacy-policy.vue`.
+`components/LocationDisclosureModal.vue` et `pages/politique-de-confidentialite.vue`.
 
 **Binaire à téléverser : `dist-apk/friesland-bonnet-rouge-1.0.4-vc6-release.aab`**
 (versionName 1.0.4, **versionCode 6**, clé d'upload SHA-1
@@ -159,7 +159,7 @@ données** › **Commencer**.
 | --- | --- |
 | Votre application collecte-t-elle ou partage-t-elle des données utilisateur ? | **Oui** |
 | Toutes les données sont-elles chiffrées en transit ? | **Oui** (HTTPS/TLS) |
-| Proposez-vous un moyen de demander la suppression des données ? | **Oui** — `https://frieslandv3.vercel.app/supprimer-compte` |
+| Proposez-vous un moyen de demander la suppression des données ? | **Oui** — `https://frieslandv3.vercel.app/suppression-de-compte` |
 
 **Page 2 — Types de données** : cocher exactement ces quatre lignes, rien d'autre.
 
@@ -190,7 +190,7 @@ comme personne morale (vérifié le 7 septembre 2026).
 **4a. Politique de confidentialité** — **Règles et programmes › Contenu de
 l'application › Politique de confidentialité** › **Commencer** :
 
-    https://frieslandv3.vercel.app/privacy-policy
+    https://frieslandv3.vercel.app/politique-de-confidentialite
 
 **Enregistrer**.
 
@@ -201,7 +201,7 @@ Suppression de compte** › **Commencer** :
 | --- | --- |
 | Votre application permet-elle de créer un compte ? | **Oui** (créés par l'admin, mais Play les considère comme comptes utilisateur) |
 | Proposez-vous un moyen de demander la suppression ? | **Oui** |
-| URL | `https://frieslandv3.vercel.app/supprimer-compte` |
+| URL | `https://frieslandv3.vercel.app/suppression-de-compte` |
 | Suppression partielle des données sans supprimer le compte ? | **Non** |
 
 **Enregistrer**.
@@ -222,7 +222,7 @@ développeur › Détails du compte développeur**.
 
     BD & CO
 
-Esperluette entourée de deux espaces, comme dans `pages/privacy-policy.vue`.
+Esperluette entourée de deux espaces, comme dans `pages/politique-de-confidentialite.vue`.
 Pas `BD&CO`, pas `BD & Co`.
 
 - Déjà `BD & CO` : ne rien toucher.

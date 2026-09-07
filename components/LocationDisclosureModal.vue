@@ -22,7 +22,7 @@
 
       <p class="text-xs text-gray-500 dark:text-gray-400">
         Détails dans la
-        <NuxtLink to="/privacy-policy" class="text-fc-red underline" @click="decline">politique de confidentialité</NuxtLink>.
+        <NuxtLink to="/politique-de-confidentialite" class="text-fc-red underline" @click="decline">politique de confidentialité</NuxtLink>.
       </p>
 
       <div class="flex justify-end gap-2 pt-1">

@@ -93,8 +93,8 @@
 
         <p class="text-center text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400 mt-6">
           FrieslandCampina © {{ new Date().getFullYear() }} — Bonnet Rouge ·
-          <NuxtLink to="/privacy-policy" class="underline hover:text-gray-600">Politique de confidentialité</NuxtLink> ·
-          <NuxtLink to="/supprimer-compte" class="underline hover:text-gray-600">Supprimer mon compte</NuxtLink>
+          <NuxtLink to="/politique-de-confidentialite" class="underline hover:text-gray-600">Politique de confidentialité</NuxtLink> ·
+          <NuxtLink to="/suppression-de-compte" class="underline hover:text-gray-600">Supprimer mon compte</NuxtLink>
         </p>
       </div>
     </div>
