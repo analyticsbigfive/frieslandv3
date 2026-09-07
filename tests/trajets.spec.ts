@@ -36,12 +36,12 @@ describe('lisserTrajet', () => {
       pt(0, 0, 0),
       pt(0, 0, 1, 250),          // précision 250 m
       pt(5000, 0, 2),            // 5 km en 1 min = 300 km/h
-      pt(40, 0, 10),             // 40 m plus loin, 10 min après : retenu
+      pt(60, 0, 10),             // 60 m plus loin, 10 min après : retenu
     ]
     const r = lisserTrajet(bruts)
     expect(r.rejetes).toEqual({ precision: 1, vitesse: 1 })
     expect(r.points).toHaveLength(2)
-    expect(r.distanceM).toBeCloseTo(40, -1)
+    expect(r.distanceM).toBeCloseTo(60, -1)
   })
 
   it('conserve un vrai déplacement et ne compte pas d\'arrêt en dessous de 5 min', () => {
@@ -51,6 +51,15 @@ describe('lisserTrajet', () => {
     expect(r.distanceM).toBeCloseTo(1000, -2)
     expect(r.arrets).toHaveLength(0)
     expect(distanceTrajet(bruts)).toBeCloseTo(1000, -2)
+  })
+
+  it('absorbe un aller-retour de dérive vers l\'avant-dernier point', () => {
+    // Téléphone posé : 0 → 45 m → retour à 5 m → 45 m… pendant 30 min.
+    const bruts = [pt(0, 0, 0), pt(45, 0, 5), pt(5, 0, 10), pt(45, 3, 15), pt(2, 0, 20), pt(44, 0, 25), pt(0, 0, 30)]
+    const r = lisserTrajet(bruts)
+    expect(r.points).toHaveLength(1)
+    expect(r.distanceM).toBe(0)
+    expect(r.arrets).toHaveLength(1)
   })
 
   it('la simplification retire les points alignés mais garde les arrêts', () => {

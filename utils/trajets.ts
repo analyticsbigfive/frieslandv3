@@ -42,7 +42,7 @@ export interface OptionsLissage {
 const DEFAUTS: Required<OptionsLissage> = {
   precisionMaxM: 50,
   vitesseMaxKmh: 100,
-  rayonStationnaireM: 25,
+  rayonStationnaireM: 40,
   arretMinMs: 5 * 60_000,
   toleranceSimplificationM: 10,
 }
@@ -127,6 +127,21 @@ export function lisserTrajet<T extends PointGps>(bruts: T[], options: OptionsLis
       dernier.finArret = p.captured_at
       dernier.absorbes++
       continue
+    }
+    // Aller-retour de dérive : le point revient près de l'avant-dernier point
+    // retenu (mesuré en Côte d'Ivoire : pas de 26 à 40 m en zigzag sur un
+    // téléphone posé). On retire le dernier point, faux départ, et on
+    // prolonge l'arrêt précédent.
+    const avant = retenus[retenus.length - 2]
+    if (avant) {
+      const d2 = haversine(avant.point.lat, avant.point.lng, p.lat, p.lng)
+      const rayon2 = Math.max(o.rayonStationnaireM, p.accuracy ?? 0, avant.point.accuracy ?? 0)
+      if (d2 <= rayon2) {
+        retenus.pop()
+        avant.finArret = p.captured_at
+        avant.absorbes += dernier.absorbes + 2
+        continue
+      }
     }
     const dt = (ms(p.captured_at) - ms(dernier.finArret)) / 1000
     const kmh = dt > 0 ? (d / dt) * 3.6 : Infinity
