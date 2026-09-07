@@ -171,6 +171,8 @@ const emit = defineEmits<{
   (e: 'submit'): void
   (e: 'cancel'): void
   (e: 'step-change', step: number): void
+  /** `validate()` a refusé la sortie de l'étape : au parent d'expliquer pourquoi. */
+  (e: 'invalid', step: WizardStep): void
 }>()
 
 const currentStep = ref(props.modelValue)
@@ -284,7 +286,12 @@ function onTouchEnd(e: TouchEvent) {
 
 function nextStep() {
   const step = props.steps[currentStep.value]
-  if (step.validate && !step.validate()) return
+  // Ne jamais bloquer en silence : sans le message du parent, le bouton
+  // « Suivant » paraîtrait cassé.
+  if (step.validate && !step.validate()) {
+    emit('invalid', step)
+    return
+  }
 
   if (currentStep.value < props.steps.length - 1) {
     goToStep(currentStep.value + 1)

@@ -115,6 +115,9 @@ type AdminNavItem = {
   icon: any
   badge?: string | number
   activePaths?: string[]
+  // Écran d'encadrement (planification) : masqué au commercial, qui a pourtant
+  // la section via la matrice RBAC. La page pose la même garde côté route.
+  privilegie?: boolean
 }
 
 function isActive(path: string, activePaths: string[] = []): boolean {
@@ -130,7 +133,7 @@ const navSections: Array<{ key: string; title: string; items: AdminNavItem[] }> 
     items: [
       { label: 'Perfect Store', to: '/admin', icon: Trophy },
       { label: 'Activité', to: '/admin/activite', icon: LayoutDashboard },
-      { label: 'Routing & Planning', to: '/admin/routing', icon: Route },
+      { label: 'Routing & Planning', to: '/admin/routing', icon: Route, privilegie: true },
       { label: 'Carte', to: '/admin/map', icon: Map },
       { label: 'Suivi commerciaux', to: '/admin/trajets', icon: Navigation },
     ],
@@ -203,10 +206,15 @@ const navSections: Array<{ key: string; title: string; items: AdminNavItem[] }> 
 // Avant montage (SSR + 1er rendu client) on affiche tout pour éviter un
 // mismatch d'hydratation ; le filtrage s'applique une fois le profil chargé.
 const { fetchAccess, canAccessSection } = useAccessControl()
+const authStore = useAuthStore()
 const mounted = ref(false)
-const visibleSections = computed(() =>
-  mounted.value ? navSections.filter(s => canAccessSection(s.key)) : navSections
-)
+const visibleSections = computed(() => {
+  if (!mounted.value) return navSections
+  return navSections
+    .filter(s => canAccessSection(s.key))
+    .map(s => ({ ...s, items: s.items.filter(i => !i.privilegie || authStore.isSuperviseur) }))
+    .filter(s => s.items.length > 0)
+})
 
 onMounted(async () => {
   await fetchAccess()

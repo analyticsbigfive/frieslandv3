@@ -24,8 +24,12 @@ export function statutActionColor(statut?: string | null): string {
   return STATUTS_ACTION.find(s => s.value === statut)?.color || 'gray'
 }
 
+// Statuts d'une action encore à traiter. Source unique : le badge de la nav
+// mobile, la liste et le compteur serveur doivent compter la même chose.
+export const STATUTS_OUVERTS: readonly ActionCommercialeStatut[] = ['a_faire', 'en_cours']
+
 export function estOuverte(action: Pick<ActionCommerciale, 'statut'>): boolean {
-  return action.statut === 'a_faire' || action.statut === 'en_cours'
+  return STATUTS_OUVERTS.includes(action.statut as ActionCommercialeStatut)
 }
 
 export function typesActifs(types: TypeActionCommerciale[]): TypeActionCommerciale[] {

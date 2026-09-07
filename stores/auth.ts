@@ -197,9 +197,14 @@ export const useAuthStore = defineStore('auth', () => {
   async function updateProfile(updates: Partial<Profile>) {
     if (!user.value) return
 
-    // Sanitize string inputs to prevent XSS
+    // Sanitize string inputs to prevent XSS.
+    // `zone_assignee` et `region` ne sont PAS éditables par l'intéressé : elles
+    // définissent le périmètre de lecture (pdv_ids_perimetre(),
+    // pdv_dans_perimetre_commercial()), donc les modifier élargirait ce que
+    // l'utilisateur voit. La base refuse déjà (profiles_update_own, migration
+    // 20260910120000) ; on ne les propose pas non plus côté client.
     const sanitized: Partial<Profile> = {}
-    const allowedFields: (keyof Profile)[] = ['nom', 'telephone', 'avatar_url', 'zone_assignee', 'region']
+    const allowedFields: (keyof Profile)[] = ['nom', 'telephone', 'avatar_url']
 
     for (const [key, value] of Object.entries(updates)) {
       if (!allowedFields.includes(key as keyof Profile)) continue

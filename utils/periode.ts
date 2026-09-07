@@ -14,7 +14,7 @@
 // tests unitaires qui tournent hors contexte Nuxt.
 import { formatDateFr } from './dates'
 
-export type PeriodePreset = 'jour' | 'semaine' | '30j' | 'mois' | 'tout' | 'personnalise'
+export type PeriodePreset = 'jour' | 'semaine' | '30j' | 'mois' | 'trimestre' | 'tout' | 'personnalise'
 
 export interface PlageDates {
   /** Borne basse incluse, format AAAA-MM-JJ. Vide = pas de borne. */
@@ -70,6 +70,16 @@ export function plageDePeriode(preset: PeriodePreset, reference: Date = new Date
     return { debut: toIsoJour(premier), fin: toIsoJour(dernier) }
   }
 
+  if (preset === 'trimestre') {
+    // Trimestre CALENDAIRE (janv.-mars, avr.-juin, juil.-sept., oct.-déc.), et
+    // non 90 jours glissants : les revues commerciales se tiennent sur les
+    // trimestres de l'exercice, pas sur une fenêtre mobile.
+    const premierMois = Math.floor(ref.getMonth() / 3) * 3
+    const premier = new Date(ref.getFullYear(), premierMois, 1)
+    const dernier = new Date(ref.getFullYear(), premierMois + 3, 0)
+    return { debut: toIsoJour(premier), fin: toIsoJour(dernier) }
+  }
+
   // 'tout' et 'personnalise' : aucune borne imposée, l'appelant garde la main.
   return { debut: '', fin: '' }
 }
@@ -92,6 +102,7 @@ export const PERIODE_OPTIONS: { value: PeriodePreset; label: string }[] = [
   { value: 'semaine', label: 'Semaine' },
   { value: '30j', label: '30 jours' },
   { value: 'mois', label: 'Mois' },
+  { value: 'trimestre', label: 'Trimestre' },
   { value: 'tout', label: 'Tout' },
   { value: 'personnalise', label: 'Personnalisé' },
 ]

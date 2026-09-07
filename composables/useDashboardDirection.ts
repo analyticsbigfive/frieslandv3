@@ -118,17 +118,57 @@ export function useDashboardDirection() {
         p_area: filters.value.area || null,
       }
 
-      const { data, error: rpcError } = await supabase.rpc('get_visites_filtered', params)
+      // PAGINÉ. La RPC se terminait par un `limit 2000` en dur pour 26 261
+      // visites en base : sur un périmètre large, les écrans analysaient
+      // silencieusement les 2 000 plus récentes et rendaient des chiffres faux
+      // vers le bas. Le plafond reste borné (MAX_LIGNES) pour ne pas ramener
+      // tout l'historique dans le navigateur — mais il est explicite, et
+      // atteint il se signale dans la console plutôt que de tronquer sans rien
+      // dire.
+      // PAGE = 1000 et pas davantage : PostgREST plafonne toute réponse à
+      // 1 000 lignes, RPC comprises (vérifié le 7 sept. — un `p_limit` à 2 000
+      // rend 1 000 lignes). Une page plus large ferait croire à la dernière
+      // page dès la première et rétablirait la troncature qu'on corrige.
+      const PAGE = 1000
+      const MAX_LIGNES = 20000
+      const lignes: any[] = []
+      for (let offset = 0; offset < MAX_LIGNES; offset += PAGE) {
+        const { data: page, error: rpcError } = await supabase.rpc('get_visites_filtered', {
+          ...params,
+          p_limit: PAGE,
+          p_offset: offset,
+        } as any)
 
-      if (rpcError) {
-        // Si la RPC n'existe pas, fallback vers requête directe
-        console.warn('RPC get_visites_filtered indisponible, fallback query directe:', rpcError.message)
-        await fetchVisitesFallback()
-        return
+        if (rpcError) {
+          if (offset === 0) {
+            // Tant que la migration 20260910150000 n'est pas appliquée, la RPC
+            // n'accepte pas p_limit/p_offset et PostgREST répond « function not
+            // found ». On réessaie sans eux : l'ancien comportement (2 000
+            // lignes) vaut mieux que le repli client, qui ne sait pas filtrer
+            // sur la géographie.
+            const { data: ancienne, error: erreurAncienne } = await supabase.rpc('get_visites_filtered', params)
+            if (!erreurAncienne) {
+              lignes.push(...(ancienne || []))
+              console.warn('get_visites_filtered : pagination indisponible (migration 20260910150000 non appliquée), lecture plafonnée à 1 000 visites.')
+              break
+            }
+            console.warn('RPC get_visites_filtered indisponible, fallback query directe:', rpcError.message)
+            await fetchVisitesFallback()
+            return
+          }
+          console.warn('get_visites_filtered : page suivante indisponible', rpcError.message)
+          break
+        }
+
+        lignes.push(...(page || []))
+        if ((page?.length || 0) < PAGE) break
+        if (lignes.length >= MAX_LIGNES) {
+          console.warn(`get_visites_filtered : ${MAX_LIGNES} visites atteintes, resserrez la période ou le périmètre.`)
+        }
       }
 
       // Transform flat RPC result to VisiteWithPDV structure
-      visites.value = (data || []).map((row: any) => ({
+      visites.value = lignes.map((row: any) => ({
         visite_id: row.visite_id,
         date_visite: row.date_visite,
         commercial: row.commercial,

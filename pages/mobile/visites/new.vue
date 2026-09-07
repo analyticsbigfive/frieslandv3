@@ -33,6 +33,7 @@
       @submit="handleSave"
       @cancel="handleCancel"
       @step-change="onStepChange"
+      @invalid="onEtapeIncomplete"
     >
       <!-- STEP: Général -->
       <template #general>
@@ -635,6 +636,8 @@ import { getDefaultVisiteData } from '~/types'
 import type { PDV, VisiteData, VisiteProduits, VisiteConcurrence, VisiteActions } from '~/types'
 import { getSkus, quantityToLegacyStatus, categoryPresent } from '~/utils/products'
 import { statutMarqueDerive } from '~/utils/concurrence'
+import { CATEGORIES_RELEVE, categorieRenseignee } from '~/utils/visiteCompletude'
+import type { WizardStep } from '~/components/FormWizard.vue'
 
 // Helper types: exclude 'present', 'prix_respectes' & 'quantites' so indexed access yields ProductStatus only
 type ProductKey<T> = Exclude<keyof T, 'present' | 'prix_respectes' | 'quantites'>
@@ -705,7 +708,29 @@ const ALL_WIZARD_STEPS = [
   { key: 'photos', label: 'Photos', phase: 'Actions & photos' },
 ]
 const { filtrer: filtrerCategoriesReleve, charger: chargerCategoriesReleve } = useCategoriesReleve()
-const wizardSteps = computed(() => filtrerCategoriesReleve(ALL_WIZARD_STEPS, s => s.key))
+
+// Les étapes produit sont OBLIGATOIRES. Constat en base le 7 sept. 2026 : 17
+// visites sur 6 098 depuis avril portaient une quantité, parce que ces étapes
+// se traversaient sans rien saisir — et le score Perfect Store, la
+// disponibilité et l'analyse des gaps se calculent uniquement à partir d'elles.
+// Une quantité à 0 vaut réponse (« rupture ») : il suffit d'avoir touché un SKU.
+const wizardSteps = computed<WizardStep[]>(() =>
+  filtrerCategoriesReleve(ALL_WIZARD_STEPS, s => s.key).map(s =>
+    (CATEGORIES_RELEVE as readonly string[]).includes(s.key)
+      ? { ...s, validate: () => categorieRenseignee((form.produits as any)[s.key]) }
+      : s,
+  ),
+)
+
+// Le wizard bloque la sortie de l'étape ; c'est ici qu'on dit pourquoi.
+function onEtapeIncomplete(step: WizardStep) {
+  toast.add({
+    title: `${step.label} : quantités manquantes`,
+    description: 'Saisissez au moins un produit. Une quantité à 0 vaut « rupture » et suffit.',
+    color: 'orange',
+    icon: 'i-heroicons-exclamation-triangle',
+  })
+}
 
 // Form state
 const defaultData = getDefaultVisiteData()

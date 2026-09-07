@@ -9,8 +9,18 @@ type RoleLike = { role?: UserRole | string | null } | null | undefined
 export const ROLES_PRIVILEGIES: readonly string[] = ['admin', 'superviseur']
 export const ROLES_ECRITURE_TERRAIN: readonly string[] = ['admin', 'superviseur', 'merchandiser']
 
+// Écrans de pilotage : suivi des visites de l'équipe, field coaching. Le
+// merchandiseur en est exclu — il ne voit que ce qui lui est assigné. Miroir
+// des politiques de la migration 20260910120000.
+export const ROLES_CONSULTATION_COMMERCIALE: readonly string[] = ['admin', 'superviseur', 'commercial']
+
 export function isPrivilegedRole(role?: string | null): boolean {
   return !!role && ROLES_PRIVILEGIES.includes(role)
+}
+
+// Peut consulter le travail des autres : visites de l'équipe, field coaching.
+export function canConsulterEquipe(role?: string | null): boolean {
+  return !!role && ROLES_CONSULTATION_COMMERCIALE.includes(role)
 }
 
 export function isPrivilegedProfile(profile: RoleLike): boolean {
@@ -32,6 +42,17 @@ export function homePathForRole(role?: string | null): string {
   if (isPrivilegedRole(role)) return '/admin'
   if (isCommercialRole(role)) return '/mobile/equipe'
   return '/mobile'
+}
+
+// Dashboard d'analyse filtrée, ou null si le rôle n'y a pas accès.
+// Volontairement distinct de homePathForRole : le geste quotidien du commercial
+// reste mobile, l'analyse est une destination qu'il choisit. En base sa matrice
+// role_section_access est déjà ouverte partout sauf « parametres » ; il ne
+// manquait que le chemin.
+// L'appelant doit masquer l'entrée sur l'APK : native-scope.global.ts renvoie
+// tout /admin vers /mobile (voir composables/usePlateforme.ts).
+export function analysePathForRole(role?: string | null): string | null {
+  return isPrivilegedRole(role) || isCommercialRole(role) ? '/admin' : null
 }
 
 export interface MobileNavItem {

@@ -53,9 +53,13 @@ export interface PdvFraicheur {
   sous_categorie_pdv: string | null
   distributor_name: string | null
   derniere_visite: string | null
+  /** Statut de la dernière visite : soumis / validé / rejeté. */
+  derniere_visite_statut: string | null
   jours_depuis: number | null
   frequence_jours: number | null
   etat: FraicheurEtat
+  /** Visité au moins une fois dans la fenêtre de suivi (12 mois par défaut). */
+  suivi: boolean
   niveau: string | null
   score_global: number | null
   visite_id: string | null
@@ -66,10 +70,17 @@ export interface SyntheseZone {
   pdv_total: number
   pdv_visites: number
   pdv_non_visites: number
+  /** PDV sous couverture : au moins une visite dans la fenêtre de suivi. */
+  pdv_suivis: number
+  /** Jamais vus sur la fenêtre : hors alertes, à prospecter. */
+  a_prospecter: number
   a_jour: number
   en_retard: number
   jamais_visites: number
+  /** PDV SUIVIS en retard. Seul chiffre à traiter aujourd'hui. */
   alertes: number
+  /** Ancienne définition (retard + jamais visités), conservée pour comparaison. */
+  alertes_toutes: number
   dispo_moyenne: number | null
   perfect_store_pct: number | null
 }
@@ -511,20 +522,51 @@ export function usePerfectStore() {
    * passages, PDV distincts touchés, et la liste des PDV avec leur nombre de
    * passages — pour suivre l'objectif journalier (ex. 20 visites/jour).
    */
-  /** Fraîcheur des visites par PDV (lot 5) : état a_jour / en_retard / jamais_visite. */
-  async function fetchPdvFraicheur(f: DashFilters = {}, etat: FraicheurEtat | '' = ''): Promise<PdvFraicheur[]> {
-    const { p_date_debut: _d, p_date_fin: _f, ...geo } = dashFilterParams(f)
-    const { data, error } = await (supabase.rpc as any)('pdv_fraicheur_filtre', { ...geo, p_etat: etat || null })
-    if (error) {
-      console.warn('pdv_fraicheur_filtre indisponible (migration 20260907130000 ?)', error.message)
-      return []
+  /**
+   * Fraîcheur des visites par PDV (lot 5) : état a_jour / en_retard / jamais_visite.
+   *
+   * PAGINÉE. PostgREST plafonne aussi les RPC qui renvoient un `setof` — mesuré
+   * le 7 sept. 2026 : un commercial dont le périmètre compte 1 141 PDV n'en
+   * recevait que 1 000, et les 141 manquants n'avaient aucun badge. La borne
+   * `range()` fonctionne sur les RPC : on boucle jusqu'à une page incomplète,
+   * sans plafond arbitraire.
+   */
+  async function fetchPdvFraicheur(
+    f: DashFilters = {},
+    etat: FraicheurEtat | '' = '',
+    options: { suivi?: boolean | null; fenetreMois?: number | null } = {},
+  ): Promise<PdvFraicheur[]> {
+    // `p_date_debut` n'existe pas sur cette RPC : la fraîcheur regarde la
+    // DERNIÈRE visite, une borne basse ferait paraître « jamais visité » un PDV
+    // vu juste avant la période. `p_date_fin` fixe en revanche l'horloge.
+    const { p_date_debut: _d, ...geo } = dashFilterParams(f)
+    const args = {
+      ...geo,
+      p_etat: etat || null,
+      p_fenetre_mois: options.fenetreMois ?? null,
+      p_suivi: options.suivi ?? null,
     }
-    return (data || []) as PdvFraicheur[]
+    const PAGE = 1000
+    const lignes: PdvFraicheur[] = []
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await (supabase.rpc as any)('pdv_fraicheur_filtre', args)
+        .range(from, from + PAGE - 1)
+      if (error) {
+        console.warn('pdv_fraicheur_filtre indisponible (migration 20260907130000 ?)', error.message)
+        return lignes
+      }
+      const page = (data || []) as PdvFraicheur[]
+      lignes.push(...page)
+      if (page.length < PAGE) return lignes
+    }
   }
 
   /** Synthèse par territoire (lot 5) : visités / non visités, alertes, dispo, PS. */
-  async function fetchSyntheseZones(f: DashFilters = {}): Promise<SyntheseZone[]> {
-    const { data, error } = await (supabase.rpc as any)('synthese_zones_filtre', dashFilterParams(f))
+  async function fetchSyntheseZones(f: DashFilters = {}, fenetreMois: number | null = null): Promise<SyntheseZone[]> {
+    const { data, error } = await (supabase.rpc as any)('synthese_zones_filtre', {
+      ...dashFilterParams(f),
+      p_fenetre_mois: fenetreMois,
+    })
     if (error) {
       console.warn('synthese_zones_filtre indisponible (migration 20260907130000 ?)', error.message)
       return []

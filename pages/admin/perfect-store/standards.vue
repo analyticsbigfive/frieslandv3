@@ -19,6 +19,11 @@
       >
         Recalculer toutes les visites
       </UButton>
+      <!-- Le recalcul dure plusieurs dizaines de secondes : sans progression,
+           l'écran paraîtrait figé et l'opérateur relancerait. -->
+      <span v-if="recalculating && recalculTotal" class="text-xs tabular-nums text-slate-500 dark:text-slate-400">
+        {{ recalculProgression }} / {{ recalculTotal }} visites
+      </span>
     </div>
 
     <div v-if="loading" class="flex justify-center py-12">
@@ -554,16 +559,44 @@ async function saveTypeMapping(row: any) {
   }
 }
 
+// Recalcul PAR LOT. En un seul appel, les 26 000 visites dépassent le
+// statement_timeout de 30 s d'`authenticated` (20260831200000:33) et le bouton
+// échouait sans rien recalculer. On boucle donc sur recalculer_perfect_store_lot
+// avec la session de l'admin — la clé de service ne convient pas non plus,
+// est_gestionnaire_perfect_store() lisant profiles via auth.uid().
+const LOT = 500
+const recalculProgression = ref(0)
+const recalculTotal = ref(0)
+
 async function recalculateAll() {
   if (!canEdit.value) return
   recalculating.value = true
+  recalculProgression.value = 0
+  recalculTotal.value = 0
   try {
-    const { data, error } = await supabase.rpc('recalculer_tous_perfect_store', { p_base_calcul: 'taux_vente' })
-    if (error) throw error
-    toast.add({ title: 'Recalcul terminé', description: `${Number(data || 0)} visite(s) recalculée(s).`, color: 'green' })
+    const { data: total } = await supabase.rpc('compter_visites_a_recalculer' as any)
+    recalculTotal.value = Number(total || 0)
+
+    let traitees = 0
+    for (let offset = 0; ; offset += LOT) {
+      const { data, error } = await supabase.rpc('recalculer_perfect_store_lot' as any, {
+        p_limit: LOT,
+        p_offset: offset,
+        p_base_calcul: 'taux_vente',
+      })
+      if (error) throw error
+      const n = Number(data || 0)
+      traitees += n
+      recalculProgression.value = traitees
+      if (n < LOT) break
+    }
+    toast.add({ title: 'Recalcul terminé', description: `${traitees} visite(s) recalculée(s).`, color: 'green' })
   }
   catch (error: any) {
-    toast.add({ title: 'Recalcul impossible', description: error.message, color: 'red' })
+    // Dire où le recalcul s'est arrêté : un recalcul partiel laisse des scores
+    // incohérents entre eux, il faut savoir qu'il est à reprendre.
+    const ou = recalculProgression.value ? ` Arrêté après ${recalculProgression.value} visite(s) : à relancer.` : ''
+    toast.add({ title: 'Recalcul impossible', description: `${error.message}${ou}`, color: 'red' })
   }
   finally {
     recalculating.value = false

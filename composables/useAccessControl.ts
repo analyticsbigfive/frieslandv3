@@ -35,7 +35,8 @@ export function sectionKeyForPath(path: string): string | null {
     path.startsWith('/admin/referentiels') ||
     path.startsWith('/admin/import') ||
     path.startsWith('/admin/permissions') ||
-    path.startsWith('/admin/profile')
+    path.startsWith('/admin/profile') ||
+    path.startsWith('/admin/distributeurs')
   ) return 'parametres'
   if (path === '/admin' || path.startsWith('/admin/activite') || path.startsWith('/admin/routing') || path.startsWith('/admin/map') || path.startsWith('/admin/trajets')) return 'principal'
   if (path.startsWith('/admin/perfect-store')) return 'perfect-store'
@@ -94,7 +95,10 @@ export function useAccessControl() {
 
   function canAccessPath(path: string, role?: string): boolean {
     const key = sectionKeyForPath(path)
-    if (!key) return true // chemin non mappé: ne pas bloquer
+    // Chemin non mappé : REFUS par défaut. Un écran ajouté sans être déclaré
+    // dans sectionKeyForPath() ne doit pas s'ouvrir à tous les rôles en
+    // silence — l'admin garde son court-circuit dans canAccessSection().
+    if (!key) return canAccessSection('parametres', role)
     return canAccessSection(key, role)
   }
 

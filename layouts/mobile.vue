@@ -222,4 +222,56 @@ const pageTitle = computed(() => {
   if (route.path.startsWith('/mobile/coaching/')) return 'Field coaching'
   return 'Friesland'
 })
+
+// ---------------------------------------------------------------------------
+// Actions assignées : compteur du badge + notification en direct
+// ---------------------------------------------------------------------------
+// Monté ici plutôt que dans MobileBottomNav : un seul abonnement pour toute
+// l'app mobile, et le toast est une affaire de layout.
+// Realtime respecte la RLS : depuis le cloisonnement (migration 20260910120000),
+// un merchandiseur n'est réveillé que pour les actions qui lui sont assignées.
+const supabase = useSupabaseClient()
+const toast = useToast()
+const { compterActionsOuvertes } = useActionsCommerciales()
+let canalActions: ReturnType<typeof supabase.channel> | null = null
+
+async function suivreActions() {
+  const uid = tourneeUser.value?.id
+  if (!uid || canalActions) return
+  await compterActionsOuvertes()
+  canalActions = supabase
+    .channel(`actions-assignees-${uid}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'action_commerciale', filter: `assigne_a=eq.${uid}` },
+      (payload) => {
+        void compterActionsOuvertes()
+        if (payload.eventType === 'INSERT') {
+          toast.add({
+            title: 'Nouvelle action à réaliser',
+            description: 'Une action vient de vous être assignée.',
+            icon: 'i-heroicons-clipboard-document-check',
+            color: 'orange',
+          })
+        }
+      },
+    )
+    .subscribe()
+}
+
+onMounted(suivreActions)
+// La session arrive parfois après le montage (restauration du jeton).
+watch(tourneeUser, (u) => { if (u?.id) void suivreActions() })
+
+// Retour en ligne : le WebSocket a pu sauter pendant la coupure, le compteur
+// serait figé. Le retour d'arrière-plan est traité côté natif, dans
+// plugins/native-app.client.ts (listener appStateChange déjà en place).
+watch(isOnline, (enLigne) => { if (enLigne) void compterActionsOuvertes() })
+
+onUnmounted(() => {
+  if (canalActions) {
+    void supabase.removeChannel(canalActions)
+    canalActions = null
+  }
+})
 </script>

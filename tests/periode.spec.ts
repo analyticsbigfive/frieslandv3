@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { plageDePeriode, debutDeSemaine, toIsoJour } from '../utils/periode'
+import { plageDePeriode, debutDeSemaine, toIsoJour, PERIODE_OPTIONS } from '../utils/periode'
 
 // Les bornes de période pilotent toutes les RPC du dashboard : une erreur ici
 // décale silencieusement tous les KPI d'un jour, sans lever d'exception.
@@ -66,5 +66,30 @@ describe('toIsoJour', () => {
 describe('debutDeSemaine', () => {
   it('renvoie le lundi même quand la référence est déjà un lundi', () => {
     expect(toIsoJour(debutDeSemaine(new Date(2026, 6, 27)))).toBe('2026-07-27')
+  })
+})
+
+// Trimestre CALENDAIRE (demande d'analyse commerciale du 7 sept. 2026) : les
+// revues se tiennent sur les trimestres de l'exercice, pas sur 90 jours
+// glissants. Bornes inclusives des deux côtés, comme les autres presets.
+describe('preset trimestre', () => {
+  it('couvre le trimestre calendaire contenant la référence', () => {
+    expect(plageDePeriode('trimestre', new Date(2026, 0, 15))).toEqual({ debut: '2026-01-01', fin: '2026-03-31' })
+    expect(plageDePeriode('trimestre', new Date(2026, 4, 2))).toEqual({ debut: '2026-04-01', fin: '2026-06-30' })
+    expect(plageDePeriode('trimestre', new Date(2026, 8, 7))).toEqual({ debut: '2026-07-01', fin: '2026-09-30' })
+    expect(plageDePeriode('trimestre', new Date(2026, 11, 31))).toEqual({ debut: '2026-10-01', fin: '2026-12-31' })
+  })
+
+  it('les premier et dernier jours du trimestre restent dans leur trimestre', () => {
+    expect(plageDePeriode('trimestre', new Date(2026, 3, 1)).debut).toBe('2026-04-01')
+    expect(plageDePeriode('trimestre', new Date(2026, 5, 30)).fin).toBe('2026-06-30')
+  })
+
+  it('année bissextile : le T1 finit au 31 mars, pas au 29 février', () => {
+    expect(plageDePeriode('trimestre', new Date(2028, 1, 29))).toEqual({ debut: '2028-01-01', fin: '2028-03-31' })
+  })
+
+  it('le preset est proposé dans la barre de période', () => {
+    expect(PERIODE_OPTIONS.map(o => o.value)).toContain('trimestre')
   })
 })

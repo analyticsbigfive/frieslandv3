@@ -132,6 +132,16 @@
               >
                 {{ libelleFraicheur(fraicheur[pdv.pdv_id].etat, fraicheur[pdv.pdv_id].jours_depuis) }}
               </UBadge>
+              <!-- Statut de la dernière visite (soumise / validée / rejetée),
+                   distinct de la fraîcheur qui ne dit que son ancienneté. -->
+              <UBadge
+                v-if="fraicheurActive && fraicheur[pdv.pdv_id]?.derniere_visite_statut"
+                variant="subtle"
+                :color="statutVisiteColor(fraicheur[pdv.pdv_id].derniere_visite_statut)"
+                size="xs"
+              >
+                {{ statutVisiteLabel(fraicheur[pdv.pdv_id].derniere_visite_statut) }}
+              </UBadge>
               <!-- Distance badge -->
               <UBadge
                 v-if="sortByProximity && pdv._distance != null"
@@ -143,6 +153,16 @@
                 {{ formatDistance(pdv._distance) }}
               </UBadge>
             </div>
+          </NuxtLink>
+          <!-- Dernière visite : la RPC de fraîcheur renvoie déjà son visite_id,
+               le commercial y accède sans repasser par la liste des visites. -->
+          <NuxtLink
+            v-if="fraicheurActive && fraicheur[pdv.pdv_id]?.visite_id"
+            :to="`/mobile/visites/${fraicheur[pdv.pdv_id].visite_id}`"
+            class="touch-target inline-flex items-center justify-center rounded-xl text-gray-400 hover:bg-gray-50 hover:text-fc-red dark:hover:bg-gray-800"
+            :aria-label="`Ouvrir la dernière visite de ${pdv.nom_pdv}`"
+          >
+            <UIcon name="i-heroicons-clipboard-document-list" class="w-5 h-5" />
           </NuxtLink>
           <NuxtLink
             v-if="pdv.geolocation_lat"
@@ -186,7 +206,8 @@
 
 <script setup lang="ts">
 import type { PDV } from '~/types'
-import { ETATS_FRAICHEUR, calculerEtatFraicheur, etatFraicheurColor, libelleFraicheur, type EtatFraicheur } from '~/utils/actionsCommerciales'
+import { ETATS_FRAICHEUR, etatFraicheurColor, libelleFraicheur, type EtatFraicheur } from '~/utils/actionsCommerciales'
+import type { PdvFraicheur } from '~/composables/usePerfectStore'
 import { profileTerritories } from '~/composables/useUserScope'
 import { haversine } from '~/utils/trajets'
 
@@ -212,47 +233,44 @@ const canCreatePDV = computed(() => authStore.profile?.role === 'merchandiser')
 const userPosition = computed(() => currentPosition.value)
 const activeFilterCount = computed(() => Number(Boolean(selectedZone.value)) + Number(!sortByProximity.value) + Number(Boolean(selectedEtat.value)))
 
-// Fraîcheur de visite (lot 3.2), calculée côté client avec la même règle que
-// pdv_fraicheur_filtre : dernière visite par PDV (la RLS limite déjà les
-// visites au périmètre du commercial) et fréquence attendue (frequence_visite,
-// surcharge zone / type). Évite le plafond de 1 000 lignes de la RPC.
+// Fraîcheur de visite (lot 3.2), servie par la RPC `pdv_fraicheur_filtre`.
+//
+// Elle était auparavant recalculée ici : toutes les visites étaient
+// retéléchargées par pages de 1 000, avec un plafond `from < 20_000` — pour
+// 26 261 visites en base. Les plus anciennes tombaient hors du plafond et leurs
+// PDV s'affichaient « Jamais visité » alors qu'ils avaient bien été visités.
+//
+// Le plafond de 1 000 lignes qui motivait ce contournement est réel et
+// s'applique aussi aux RPC (vérifié le 7 sept. : 1 000 lignes rendues pour un
+// périmètre de 1 141 PDV) — il est désormais absorbé par la pagination de
+// `fetchPdvFraicheur`, sans plafond arbitraire.
+//
+// La RPC renvoie en prime `visite_id`, `niveau` et `score_global` : la carte PDV
+// peut ouvrir directement la dernière visite.
 // Réservée au commercial et aux privilégiés : pour un merchandiseur la RLS ne
 // montre que ses propres visites, l'état serait faux.
-const supabase = useSupabaseClient()
+const { fetchPdvFraicheur } = usePerfectStore()
 const selectedEtat = ref<EtatFraicheur | ''>('')
-const fraicheur = ref<Record<string, { etat: EtatFraicheur; jours_depuis: number | null }>>({})
+const fraicheur = ref<Record<string, PdvFraicheur>>({})
 const fraicheurActive = computed(() => authStore.isCommercial || authStore.isSuperviseur)
 async function chargerFraicheur() {
-  if (!fraicheurActive.value || !allPDV.value.length) return
-  const { data: freqs } = await supabase.from('frequence_visite').select('zone, type_pdv, jours')
-  const frequences = (freqs || []) as { zone: string | null; type_pdv: string | null; jours: number }[]
-  const frequencePour = (zone?: string | null, type?: string | null) => {
-    const candidats = frequences
-      .filter(f => (!f.zone || f.zone === zone) && (!f.type_pdv || f.type_pdv === type))
-      .sort((a, b) => (Number(!!b.zone) + Number(!!b.type_pdv)) - (Number(!!a.zone) + Number(!!a.type_pdv)) || Number(!!b.type_pdv) - Number(!!a.type_pdv))
-    return candidats[0]?.jours ?? 7
-  }
-  // Dernière visite par PDV, toutes visites visibles, par pages de 1 000.
-  const derniere: Record<string, string> = {}
-  for (let from = 0; from < 20_000; from += 1000) {
-    const { data, error } = await supabase
-      .from('visites')
-      .select('pdv_id, date_visite')
-      .order('date_visite', { ascending: false })
-      .range(from, from + 999)
-    if (error || !data?.length) break
-    for (const v of data as { pdv_id: string; date_visite: string }[]) {
-      if (!derniere[v.pdv_id]) derniere[v.pdv_id] = v.date_visite
-    }
-    if (data.length < 1000) break
-  }
-  const map: Record<string, { etat: EtatFraicheur; jours_depuis: number | null }> = {}
-  for (const p of allPDV.value) {
-    const r = calculerEtatFraicheur(derniere[p.pdv_id], frequencePour(p.zone, p.sous_categorie_pdv))
-    map[p.pdv_id] = { etat: r.etat, jours_depuis: r.joursDepuis }
-  }
+  if (!fraicheurActive.value) return
+  const lignes = await fetchPdvFraicheur()
+  const map: Record<string, PdvFraicheur> = {}
+  for (const l of lignes) map[l.pdv_id] = l
   fraicheur.value = map
 }
+// Miroir des libellés de /mobile/equipe : `visites.status` vaut soumis, validé
+// ou rejeté (20260715130000). Rendu tolérant : tant que la migration
+// 20260910130000 n'est pas appliquée, la RPC ne renvoie pas la colonne et le
+// badge ne s'affiche simplement pas.
+function statutVisiteLabel(s?: string | null) {
+  return s === 'validé' ? 'Validée' : s === 'rejeté' ? 'Rejetée' : 'Soumise'
+}
+function statutVisiteColor(s?: string | null) {
+  return s === 'validé' ? 'green' : s === 'rejeté' ? 'red' : 'blue'
+}
+
 function compteEtat(etat: EtatFraicheur) {
   return allPDV.value.filter(p => fraicheur.value[p.pdv_id]?.etat === etat).length
 }

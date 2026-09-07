@@ -68,7 +68,7 @@
 import type { FieldCoaching } from '~/types'
 import { scoreCoaching } from '~/utils/fieldCoaching'
 
-definePageMeta({ middleware: ['auth'], layout: 'mobile' })
+definePageMeta({ middleware: ['auth', 'consultation-commerciale'], layout: 'mobile' })
 
 const authStore = useAuthStore()
 const user = useSupabaseUser()

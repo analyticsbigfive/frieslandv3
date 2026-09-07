@@ -189,7 +189,10 @@
 <script setup lang="ts">
 import type { RoutingPDV } from '~/types'
 
-definePageMeta({ middleware: ['auth'], layout: 'mobile' })
+// La tournée est un geste d'écriture (démarrage de mission, saut de PDV,
+// clôture) : réservée aux rôles terrain. L'onglet est déjà masqué pour le
+// commercial (utils/roles.ts:mobileNavItems), mais l'URL restait atteignable.
+definePageMeta({ middleware: ['auth', 'terrain-write'], layout: 'mobile' })
 
 const user = useSupabaseUser()
 const authStore = useAuthStore()

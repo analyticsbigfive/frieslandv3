@@ -134,6 +134,10 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
+      // Vrai dans le bundle de l'APK. Connu dès la compilation, donc utilisable
+      // au prérendu : un écran réservé au web n'apparaît jamais, même le temps
+      // d'une hydratation (voir composables/usePlateforme.ts).
+      buildNatif: isCapacitor,
       geofenceRadius: 200, // TODO confirmer client (valeur réunion : 200 m)
       gpsMinAccuracy: 10,
       // Tracking de tournée (app native) : échantillonnage GPS régulier,

@@ -26,12 +26,16 @@
 </template>
 
 <script setup lang="ts">
+import { analysePathForRole } from '~/utils/roles'
+
 definePageMeta({ middleware: ['auth'], layout: 'mobile' })
 
 const authStore = useAuthStore()
+const { estNatif } = usePlateforme()
+
 const roleItems = computed(() => {
   const items = [
-    { label: 'Actions commerciales', description: authStore.isCommercial ? 'Actions décidées pour vos merchandiseurs' : 'Actions à réaliser sur vos PDV', to: '/mobile/actions', icon: 'i-heroicons-clipboard-document-check' },
+    { label: 'Actions commerciales', description: authStore.isCommercial ? 'Actions décidées pour vos merchandiseurs' : 'Actions qui vous sont assignées', to: '/mobile/actions', icon: 'i-heroicons-clipboard-document-check' },
   ]
   if (authStore.isCommercial || authStore.isSuperviseur) {
     items.unshift({ label: "Visites de l'équipe", description: 'Suivi des merchandiseurs du périmètre', to: '/mobile/equipe', icon: 'i-heroicons-users' })
@@ -39,6 +43,12 @@ const roleItems = computed(() => {
   // Le commercial a le coaching en onglet du bas : pas de doublon ici.
   if (authStore.isSuperviseur) {
     items.push({ label: 'Field coaching', description: 'Questionnaire de suivi des activités de prospection', to: '/mobile/coaching', icon: 'i-heroicons-academic-cap' })
+  }
+  // Analyse filtrée : surface WEB uniquement. Dans l'APK, native-scope.global.ts
+  // renvoie tout /admin vers /mobile — proposer le lien y serait une impasse.
+  const analyse = analysePathForRole(authStore.profile?.role)
+  if (analyse && !estNatif.value) {
+    items.push({ label: 'Analyse & performance', description: 'Tableaux de bord filtrables, gaps et alertes', to: analyse, icon: 'i-heroicons-chart-bar' })
   }
   return items
 })

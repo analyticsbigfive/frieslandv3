@@ -18,6 +18,15 @@
         <UFormGroup label="Distributeur" size="xs">
           <USelectMenu v-model="fDistrib" :options="distribOptions" placeholder="Tous" size="xs" searchable searchable-placeholder="Rechercher…" />
         </UFormGroup>
+        <UFormGroup label="Fenêtre de suivi" size="xs" hint="au-delà : à prospecter">
+          <USelectMenu
+            v-model="fenetreMois"
+            :options="fenetreOptions"
+            value-attribute="value"
+            option-attribute="label"
+            size="xs"
+          />
+        </UFormGroup>
         <div class="flex items-end">
           <UButton v-if="fDivision || fDistrib" size="xs" variant="ghost" @click="fDivision = ''; fDistrib = ''">Réinitialiser</UButton>
         </div>
@@ -33,8 +42,8 @@
       <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatsCard title="PDV du périmètre" :value="String(totaux.pdv_total)" icon="i-heroicons-building-storefront" color="blue" />
         <StatsCard title="Visités sur la période" :value="String(totaux.pdv_visites)" :subtitle="`${totaux.pdv_non_visites} non visités`" icon="i-heroicons-clipboard-document-check" color="green" />
-        <StatsCard title="En retard" :value="String(totaux.en_retard)" subtitle="au-delà de la fréquence attendue" icon="i-heroicons-clock" color="orange" />
-        <StatsCard title="Jamais visités" :value="String(totaux.jamais_visites)" subtitle="aucune visite enregistrée" icon="i-heroicons-exclamation-triangle" color="red" />
+        <StatsCard title="Alertes" :value="String(totaux.alertes)" subtitle="PDV suivis en retard" icon="i-heroicons-exclamation-triangle" color="red" />
+        <StatsCard title="À prospecter" :value="String(totaux.a_prospecter)" :subtitle="`aucune visite depuis ${fenetreMois} mois`" icon="i-heroicons-map-pin" color="orange" />
       </div>
 
       <!-- Une ligne par territoire, alertes en tête -->
@@ -56,9 +65,10 @@
                 <th class="th-c">PDV</th>
                 <th class="th-c">Visités</th>
                 <th class="th-c">Non visités</th>
+                <th class="th-c">Suivis</th>
+                <th class="th-c">À prospecter</th>
                 <th class="th-c">À jour</th>
                 <th class="th-c">En retard</th>
-                <th class="th-c">Jamais visités</th>
                 <th class="th-c">Dispo moy.</th>
                 <th class="th-c">Perfect Store</th>
                 <th class="th-c">Alertes</th>
@@ -76,9 +86,10 @@
                 <td class="px-4 py-2.5 text-center text-sm tabular-nums">{{ z.pdv_total }}</td>
                 <td class="px-4 py-2.5 text-center text-sm tabular-nums text-emerald-600">{{ z.pdv_visites }}</td>
                 <td class="px-4 py-2.5 text-center text-sm tabular-nums text-slate-500">{{ z.pdv_non_visites }}</td>
+                <td class="px-4 py-2.5 text-center text-sm tabular-nums font-medium">{{ z.pdv_suivis }}</td>
+                <td class="px-4 py-2.5 text-center text-sm tabular-nums text-slate-400">{{ z.a_prospecter }}</td>
                 <td class="px-4 py-2.5 text-center text-sm tabular-nums">{{ z.a_jour }}</td>
                 <td class="px-4 py-2.5 text-center text-sm tabular-nums" :class="z.en_retard ? 'font-semibold text-amber-600' : 'text-slate-400'">{{ z.en_retard }}</td>
-                <td class="px-4 py-2.5 text-center text-sm tabular-nums" :class="z.jamais_visites ? 'font-semibold text-fc-red' : 'text-slate-400'">{{ z.jamais_visites }}</td>
                 <td class="px-4 py-2.5 text-center text-sm tabular-nums">{{ fmtPct(z.dispo_moyenne) }}</td>
                 <td class="px-4 py-2.5 text-center text-sm tabular-nums">{{ fmtPct(z.perfect_store_pct) }}</td>
                 <td class="px-4 py-2.5 text-center">
@@ -91,7 +102,7 @@
                 </td>
               </tr>
               <tr v-if="!zones.length">
-                <td colspan="10" class="px-4 py-10 text-center text-sm text-slate-400">Aucun PDV dans ce périmètre.</td>
+                <td colspan="11" class="px-4 py-10 text-center text-sm text-slate-400">Aucun PDV dans ce périmètre.</td>
               </tr>
             </tbody>
           </table>
@@ -173,6 +184,27 @@ const { exportToCsv } = useCsvExport()
 const periode = ref<{ preset: PeriodePreset; debut: string; fin: string }>({ preset: 'semaine', ...plageDePeriode('semaine') })
 const fDivision = ref('')
 const fDistrib = ref('')
+
+// Fenêtre de suivi : un PDV visité au moins une fois dedans est « suivi » et
+// compte dans les alertes ; au-delà il bascule dans « à prospecter ». Défaut lu
+// dans le référentiel (Paramètres › Référentiels › Fenêtre de suivi), et
+// surchargeable ici sans rien écrire en base.
+const supabase = useSupabaseClient()
+const fenetreMois = ref(12)
+const fenetreOptions = [
+  { value: 6, label: '6 mois' },
+  { value: 12, label: '12 mois' },
+  { value: 24, label: '24 mois' },
+  { value: 999, label: 'Tout le parc' },
+]
+async function chargerFenetreParDefaut() {
+  const { data } = await supabase
+    .from('parametre_suivi')
+    .select('valeur')
+    .eq('cle', 'fenetre_suivi_mois')
+    .maybeSingle()
+  if (data?.valeur) fenetreMois.value = Number(data.valeur)
+}
 const uniq = (xs: (string | null | undefined)[]) => [...new Set(xs.filter((x): x is string => !!x))].sort((a, b) => a.localeCompare(b, 'fr'))
 const divisionOptions = computed(() => ['', ...uniq(regions.value.map(r => r.nom_affichage || r.name))])
 const distribOptions = computed(() => ['', ...uniq(distributeurs.value.map(d => d.name))])
@@ -201,9 +233,12 @@ const totaux = computed(() => zones.value.reduce((t, z) => ({
   pdv_total: t.pdv_total + Number(z.pdv_total),
   pdv_visites: t.pdv_visites + Number(z.pdv_visites),
   pdv_non_visites: t.pdv_non_visites + Number(z.pdv_non_visites),
+  pdv_suivis: t.pdv_suivis + Number(z.pdv_suivis),
+  a_prospecter: t.a_prospecter + Number(z.a_prospecter),
   en_retard: t.en_retard + Number(z.en_retard),
   jamais_visites: t.jamais_visites + Number(z.jamais_visites),
-}), { pdv_total: 0, pdv_visites: 0, pdv_non_visites: 0, en_retard: 0, jamais_visites: 0 }))
+  alertes: t.alertes + Number(z.alertes),
+}), { pdv_total: 0, pdv_visites: 0, pdv_non_visites: 0, pdv_suivis: 0, a_prospecter: 0, en_retard: 0, jamais_visites: 0, alertes: 0 }))
 
 const alertesPage = computed(() => alertes.value.slice((alertesPageNo.value - 1) * 50, alertesPageNo.value * 50))
 
@@ -217,7 +252,7 @@ function etatLabel(e: string) {
 async function charger() {
   loading.value = true
   try {
-    zones.value = await fetchSyntheseZones(filtres.value)
+    zones.value = await fetchSyntheseZones(filtres.value, fenetreMois.value)
     if (zoneOuverte.value && !zones.value.some(z => z.zone === zoneOuverte.value)) zoneOuverte.value = ''
     if (zoneOuverte.value) await chargerAlertes()
   }
@@ -232,7 +267,11 @@ async function chargerAlertes() {
   alertesPageNo.value = 1
   try {
     // Sans état demandé : retards et jamais visités, en une seule liste.
-    const rows = await fetchPdvFraicheur({ ...filtres.value, territoire: zoneOuverte.value }, filtreEtat.value)
+    const rows = await fetchPdvFraicheur(
+      { ...filtres.value, territoire: zoneOuverte.value },
+      filtreEtat.value,
+      { fenetreMois: fenetreMois.value },
+    )
     alertes.value = filtreEtat.value ? rows : rows.filter(r => r.etat !== 'a_jour')
   }
   finally {
@@ -252,12 +291,15 @@ function exporter() {
       PDV: z.pdv_total,
       Visités: z.pdv_visites,
       'Non visités': z.pdv_non_visites,
+      Suivis: z.pdv_suivis,
+      'À prospecter': z.a_prospecter,
       'À jour': z.a_jour,
       'En retard': z.en_retard,
       'Jamais visités': z.jamais_visites,
       'Dispo moyenne %': z.dispo_moyenne ?? '',
       'Perfect Store %': z.perfect_store_pct ?? '',
       Alertes: z.alertes,
+      'Alertes (ancien calcul)': z.alertes_toutes,
     })),
     `synthese-zones-${periode.value.debut || 'tout'}-${periode.value.fin || 'tout'}.csv`,
   )
@@ -265,9 +307,16 @@ function exporter() {
 
 watch(filtres, charger, { deep: true })
 watch(filtreEtat, chargerAlertes)
+// La fenêtre change ce qui est « suivi » : synthèse ET détail se recalculent.
+watch(fenetreMois, async () => {
+  await charger()
+  if (zoneOuverte.value) await chargerAlertes()
+})
 
 onMounted(async () => {
   void fetchReferentiels()
+  // Avant le premier chargement : la fenêtre par défaut vient du référentiel.
+  await chargerFenetreParDefaut()
   await charger()
 })
 </script>

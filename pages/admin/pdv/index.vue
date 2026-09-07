@@ -44,10 +44,10 @@
         <UButton size="sm" variant="outline" @click="handleExport" icon="i-heroicons-arrow-down-tray">
           Export
         </UButton>
-        <UButton size="sm" variant="outline" @click="showImport = true" icon="i-heroicons-arrow-up-tray">
+        <UButton v-if="peutEcrire" size="sm" variant="outline" @click="showImport = true" icon="i-heroicons-arrow-up-tray">
           Import CSV
         </UButton>
-        <UButton size="sm" @click="openCreatePDV" icon="i-heroicons-plus" class="bg-fc-blue">
+        <UButton v-if="peutEcrire" size="sm" @click="openCreatePDV" icon="i-heroicons-plus" class="bg-fc-blue">
           Nouveau PDV
         </UButton>
       </template>
@@ -109,6 +109,7 @@
               <td class="px-4 py-3 text-center">
                 <div class="flex items-center justify-center gap-1">
                   <UButton
+                    v-if="peutEcrire"
                     variant="ghost"
                     size="xs"
                     icon="i-heroicons-pencil"
@@ -128,6 +129,7 @@
                     @click="openPDVOnMap(pdv)"
                   />
                   <UButton
+                    v-if="peutEcrire"
                     variant="ghost"
                     size="xs"
                     icon="i-heroicons-trash"
@@ -426,11 +428,19 @@
 import { MapPin } from 'lucide-vue-next'
 import type { PDV } from '~/types'
 import { SANS_ZONE } from '~/stores/pdv'
+import { canWriteTerrain } from '~/utils/roles'
 
 definePageMeta({
   middleware: ['auth', 'admin'],
   layout: 'admin',
 })
+
+// La matrice RBAC ouvre la section « pdv » au commercial, qui consulte en
+// lecture seule : la base refuse déjà ses écritures (pdv_insert_terrain /
+// pdv_update_terrain, migration 20260907140100), on ne lui montre pas des
+// boutons qui échoueraient.
+const authStore = useAuthStore()
+const peutEcrire = computed(() => canWriteTerrain(authStore.profile?.role))
 
 const pdvStore = usePDVStore()
 const { exportPDVToExcel, parseCsv } = useCsvExport()

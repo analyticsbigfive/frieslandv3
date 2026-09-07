@@ -10,7 +10,20 @@
           class="min-w-0 flex-1"
           aria-label="Rechercher une visite de l'équipe"
         />
-        <UInput v-model="dateFilter" type="date" size="lg" class="w-40" aria-label="Filtrer par date" />
+      </div>
+      <div class="flex items-center gap-2">
+        <UInput v-model="dateDebut" type="date" size="md" class="min-w-0 flex-1" aria-label="Visites à partir du" />
+        <span class="shrink-0 text-xs text-gray-400">au</span>
+        <UInput v-model="dateFin" type="date" size="md" class="min-w-0 flex-1" aria-label="Visites jusqu'au" />
+        <UButton
+          v-if="dateDebut || dateFin"
+          variant="ghost"
+          color="gray"
+          size="xs"
+          icon="i-heroicons-x-mark"
+          aria-label="Effacer les dates"
+          @click="dateDebut = ''; dateFin = ''"
+        />
       </div>
       <div v-if="aUneEquipe" class="flex gap-2" aria-label="Filtrer les visites">
         <button
@@ -67,6 +80,18 @@
           </span>
         </div>
       </article>
+
+      <UButton
+        v-if="encorePlus"
+        block
+        variant="soft"
+        color="gray"
+        size="sm"
+        :loading="chargementSuite"
+        @click="chargerSuite"
+      >
+        Charger les visites suivantes
+      </UButton>
     </div>
 
     <div v-else class="px-4 py-14 text-center">
@@ -87,16 +112,23 @@
 // donc pas par user_id, contrairement à /mobile.
 import type { Visite } from '~/types'
 import { profileTerritories } from '~/composables/useUserScope'
+import { toIsoJour } from '~/utils/periode'
 
-definePageMeta({ middleware: ['auth'], layout: 'mobile' })
+definePageMeta({ middleware: ['auth', 'consultation-commerciale'], layout: 'mobile' })
 
 const supabase = useSupabaseClient()
 const authStore = useAuthStore()
 
 const visites = ref<Visite[]>([])
 const loading = ref(true)
+const chargementSuite = ref(false)
+const encorePlus = ref(false)
 const search = ref('')
-const dateFilter = ref('')
+// Plage de dates, appliquée EN SQL. Auparavant : un champ date unique filtré
+// côté client sur les 200 dernières visites — choisir une date un peu ancienne
+// affichait « aucune visite » alors qu'elles existaient en base.
+const dateDebut = ref('')
+const dateFin = ref('')
 
 const perimetreLabel = computed(() => {
   const t = profileTerritories(authStore.profile)
@@ -104,10 +136,18 @@ const perimetreLabel = computed(() => {
   return t.length <= 2 ? t.join(', ') : `${t.length} territoires`
 })
 
-const todayCount = computed(() => {
-  const today = new Date().toISOString().slice(0, 10)
-  return visites.value.filter(v => v.date_visite?.startsWith(today)).length
-})
+// Compté en base, pas sur les lignes chargées : avec la pagination, un décompte
+// local dépendrait du nombre de pages ouvertes.
+const todayCount = ref(0)
+async function compterAujourdhui() {
+  const today = toIsoJour(new Date())
+  const { count } = await supabase
+    .from('visites')
+    .select('*', { count: 'exact', head: true })
+    .gte('date_visite', today)
+    .lt('date_visite', `${today}T23:59:59.999`)
+  todayCount.value = count ?? 0
+}
 
 // Équipe assignée (profiles.commercial_id) : permet de distinguer « mes
 // merchandiseurs » de « tous ceux qui passent sur mes territoires ».
@@ -125,7 +165,6 @@ const filtered = computed(() => {
     const q = search.value.toLowerCase()
     list = list.filter(v => nomPdv(v).toLowerCase().includes(q) || v.commercial?.toLowerCase().includes(q))
   }
-  if (dateFilter.value) list = list.filter(v => v.date_visite?.startsWith(dateFilter.value))
   return list
 })
 
@@ -145,17 +184,29 @@ function statutColor(s?: string) {
   return s === 'validé' ? 'green' : s === 'rejeté' ? 'red' : 'blue'
 }
 
-onMounted(async () => {
+// Pagination : la liste ne se limite plus aux 200 dernières visites du
+// périmètre. Les bornes de date descendent en SQL, donc « charger plus »
+// parcourt bien toute la plage demandée et pas seulement la fenêtre récente.
+const PAR_PAGE = 100
+
+function requete(from: number) {
+  let q = supabase
+    .from('visites')
+    .select('visite_id, pdv_id, user_id, commercial, email, date_visite, geofence_validated, status, pdv:pdv_id(nom_pdv, zone)')
+  if (dateDebut.value) q = q.gte('date_visite', dateDebut.value)
+  // Borne haute INCLUSIVE : `date_visite` est un timestamp, comparer à la date
+  // seule exclurait toute la journée choisie.
+  if (dateFin.value) q = q.lt('date_visite', `${dateFin.value}T23:59:59.999`)
+  return q.order('date_visite', { ascending: false }).range(from, from + PAR_PAGE - 1)
+}
+
+async function charger() {
+  loading.value = true
   try {
-    if (!authStore.profile) await authStore.fetchProfile()
-    void chargerEquipe()
-    const { data, error } = await supabase
-      .from('visites')
-      .select('visite_id, pdv_id, user_id, commercial, email, date_visite, geofence_validated, status, pdv:pdv_id(nom_pdv, zone)')
-      .order('date_visite', { ascending: false })
-      .limit(200)
+    const { data, error } = await requete(0)
     if (error) throw error
     visites.value = (data || []) as Visite[]
+    encorePlus.value = (data?.length || 0) === PAR_PAGE
   }
   catch (err) {
     console.warn('Suivi équipe : chargement impossible', err)
@@ -163,5 +214,31 @@ onMounted(async () => {
   finally {
     loading.value = false
   }
+}
+
+async function chargerSuite() {
+  if (chargementSuite.value) return
+  chargementSuite.value = true
+  try {
+    const { data, error } = await requete(visites.value.length)
+    if (error) throw error
+    visites.value = [...visites.value, ...((data || []) as Visite[])]
+    encorePlus.value = (data?.length || 0) === PAR_PAGE
+  }
+  catch (err) {
+    console.warn('Suivi équipe : page suivante indisponible', err)
+  }
+  finally {
+    chargementSuite.value = false
+  }
+}
+
+watch([dateDebut, dateFin], () => { void charger() })
+
+onMounted(async () => {
+  if (!authStore.profile) await authStore.fetchProfile()
+  void chargerEquipe()
+  void compterAujourdhui()
+  await charger()
 })
 </script>

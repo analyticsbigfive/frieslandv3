@@ -221,12 +221,11 @@ const userInitials = computed(() => {
   return nom.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2)
 })
 
+// « Mon profil » pointait vers /admin/profile, page qui n'existe pas : le clic
+// menait à un 404, et sectionKeyForPath la classant dans « parametres », un
+// commercial y était de toute façon redirigé. Entrée retirée tant qu'il n'y a
+// pas d'écran de profil.
 const userMenuItems = [
-  [{
-    label: 'Mon profil',
-    icon: 'i-heroicons-user-circle',
-    click: () => navigateTo('/admin/profile'),
-  }],
   [{
     label: 'App Mobile',
     icon: 'i-heroicons-device-phone-mobile',

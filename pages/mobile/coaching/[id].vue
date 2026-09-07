@@ -98,7 +98,7 @@ import type { FieldCoaching } from '~/types'
 import { BLOCS_COACHING, questionsDuBloc, scoreCoaching } from '~/utils/fieldCoaching'
 import { isPrivilegedRole } from '~/utils/roles'
 
-definePageMeta({ middleware: ['auth'], layout: 'mobile' })
+definePageMeta({ middleware: ['auth', 'consultation-commerciale'], layout: 'mobile' })
 
 const route = useRoute()
 const user = useSupabaseUser()

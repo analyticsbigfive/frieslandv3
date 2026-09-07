@@ -555,6 +555,29 @@ const defs: Def[] = [
       : supabase.from('frequence_visite').delete().eq('id', r.id),
   },
   {
+    // Une seule ligne, jamais supprimable et jamais créée à la main : seule sa
+    // valeur se modifie. Sans elle, fenetre_suivi_mois() retomberait sur 12 —
+    // les RPC continueraient de répondre, mais le réglage serait invisible.
+    id: 'parametre_suivi', section: 'pdv', label: 'Fenêtre de suivi', table: 'parametre_suivi',
+    select: 'cle, valeur, libelle, aide', order: q => q.order('cle'), noDelete: true,
+    columns: [
+      { label: 'Paramètre', cell: r => r.libelle },
+      { label: 'Valeur (mois)', cell: r => r.valeur, align: 'c', kind: 'num' },
+      { label: 'Effet', cell: r => r.aide, muted: true },
+    ],
+    fields: [
+      { key: 'valeur', label: 'Fenêtre de suivi (mois)', type: 'num', required: true, min: 1, hint: 'Un PDV visité au moins une fois dans cette fenêtre compte dans les alertes. Au-delà, il bascule dans « à prospecter » sur la synthèse par zone.' },
+    ],
+    blank: () => ({ cle: 'fenetre_suivi_mois', valeur: 12 }),
+    fill: r => ({ ...r }),
+    rowKey: r => String(r.cle), search: r => `${r.libelle} ${r.valeur}`.toLowerCase(),
+    valid: f => typeof f.valeur === 'number' && f.valeur >= 1,
+    save: (f, e) => e
+      ? supabase.from('parametre_suivi').update({ valeur: f.valeur }).eq('cle', f.cle)
+      : supabase.from('parametre_suivi').insert({ cle: f.cle, valeur: f.valeur, libelle: 'Fenêtre de suivi (mois)' }),
+    del: async () => ({ error: new Error('Ce paramètre ne se supprime pas : modifiez sa valeur.') }),
+  },
+  {
     id: 'segment_grade_type_pdv', section: 'pdv', label: 'Segment / Grade', table: 'segment_grade_type_pdv',
     select: 'type_pdv_id, segment, grade',
     columns: [
@@ -1039,7 +1062,12 @@ async function save() {
 }
 
 async function remove(row: any) {
-  if (!confirm('Supprimer cet enregistrement ?')) return
+  // Nommer la ligne. Sur un retrait ciblé — les 17 seuils délistés de la V2,
+  // au milieu de 125 lignes dont 42 SupermarcheMT à ne surtout pas toucher —
+  // « Supprimer cet enregistrement ? » ne donnait aucun moyen de vérifier ce
+  // qu'on s'apprête à supprimer.
+  const quoi = activeDef.value.search(row)
+  if (!confirm(`Supprimer définitivement :\n\n${quoi}\n\n(${activeDef.value.label})`)) return
   try {
     const { error: err } = await activeDef.value.del(row)
     if (err) throw err

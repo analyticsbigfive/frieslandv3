@@ -23,8 +23,15 @@ export default defineNuxtPlugin(() => {
   })
 
   // Reprendre automatiquement les envois suspendus quand l’application revient au premier plan.
+  // On en profite pour rafraîchir le compteur d'actions assignées : le
+  // WebSocket Realtime est coupé pendant la mise en veille, le badge resterait
+  // sinon figé sur la valeur d'avant la pause.
+  const { compterActionsOuvertes } = useActionsCommerciales()
   void App.addListener('appStateChange', ({ isActive }) => {
-    if (isActive) void processQueue()
+    if (isActive) {
+      void processQueue()
+      void compterActionsOuvertes()
+    }
   })
 
   // Android 15+/targetSdk 36 : la barre de statut est transparente et bord à bord,

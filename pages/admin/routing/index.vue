@@ -919,7 +919,22 @@ import type { Routing, RoutingPDV, RoutingObjectives, RoutingTemplate, RoutingTe
 import { toIsoJour, debutDeSemaine } from '~/utils/periode'
 import { JOURS_SEMAINE, joursDeRegle, libelleJours, datesDeRegle } from '~/utils/routingRecurrence'
 
-definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
+// Écran de PLANIFICATION : création et édition de routings, de templates et
+// d'exceptions. La matrice RBAC le range dans la section « principal », ouverte
+// au commercial — qui consulte en lecture seule. Une garde de route plutôt
+// qu'une dizaine de `v-if` : les contrôles d'écriture sont disséminés dans tout
+// le fichier, en manquer un rouvrirait le trou en silence.
+definePageMeta({
+  middleware: [
+    'auth',
+    'admin',
+    () => {
+      const authStore = useAuthStore()
+      if (!authStore.isSuperviseur) return navigateTo('/admin')
+    },
+  ],
+  layout: 'admin',
+})
 
 const supabase = useSupabaseClient()
 const authStore = useAuthStore()

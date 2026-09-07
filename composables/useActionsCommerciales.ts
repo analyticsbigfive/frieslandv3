@@ -2,7 +2,7 @@
 // Actions décidées par le commercial (lot 3.5). Types depuis le référentiel
 // `type_action_commerciale`, repli hors ligne sur TYPES_ACTION_DEFAUT.
 import type { ActionCommerciale, ActionCommercialeStatut, TypeActionCommerciale } from '~/types'
-import { TYPES_ACTION_DEFAUT, typesActifs } from '~/utils/actionsCommerciales'
+import { STATUTS_OUVERTS, TYPES_ACTION_DEFAUT, typesActifs } from '~/utils/actionsCommerciales'
 
 const SELECT = 'id, pdv_id, visite_id, auteur_id, type_code, assigne_a, echeance, statut, commentaire, created_at, updated_at, '
   + 'pdv:pdv_id(nom_pdv, zone, quartier), auteur:auteur_id(nom, email), assigne:assigne_a(nom, email, telephone), type:type_code(libelle)'
@@ -60,6 +60,26 @@ export function useActionsCommerciales() {
     return (data || []) as unknown as ActionCommerciale[]
   }
 
+  /**
+   * Actions à connaître quand on ouvre une visite : celles décidées DEPUIS
+   * cette visite, plus celles encore ouvertes sur le même PDV.
+   *
+   * Une action créée depuis la fiche PDV n'a pas de `visite_id`
+   * (useActionsCommerciales.creer insère `visite_id: null`) : filtrer sur ce
+   * seul champ la rendait invisible dans toutes les visites, avant comme après.
+   * Le lecteur d'une visite veut pourtant savoir ce qui reste à faire sur ce PDV.
+   */
+  async function listerPourVisiteEtPdv(visiteId: string, pdvId: string): Promise<ActionCommerciale[]> {
+    const { data, error } = await supabase
+      .from('action_commerciale')
+      .select(SELECT)
+      .eq('pdv_id', pdvId)
+      .or(`visite_id.eq.${visiteId},and(visite_id.is.null,statut.in.(${STATUTS_OUVERTS.join(',')}))`)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return (data || []) as unknown as ActionCommerciale[]
+  }
+
   // Tout ce que la RLS laisse voir : auteur, assigné, ou PDV du périmètre.
   async function listerMesActions(limite = 200): Promise<ActionCommerciale[]> {
     const { data, error } = await supabase
@@ -89,6 +109,28 @@ export function useActionsCommerciales() {
       .single()
     if (error) throw error
     return data as ActionCommerciale
+  }
+
+  // Nombre d'actions ouvertes qui me sont assignées. `head: true` : PostgREST
+  // renvoie le compte dans l'en-tête, aucune ligne ne descend — le badge coûte
+  // une requête vide, ce qui compte sur un forfait data de terrain.
+  const actionsOuvertes = useState('actions-ouvertes-compte', () => 0)
+
+  async function compterActionsOuvertes(): Promise<number> {
+    if (!user.value?.id) return 0
+    const { count, error } = await supabase
+      .from('action_commerciale')
+      .select('*', { count: 'exact', head: true })
+      .eq('assigne_a', user.value.id)
+      .in('statut', STATUTS_OUVERTS as unknown as string[])
+    if (error) {
+      // Hors ligne ou RLS : garder la dernière valeur connue plutôt que
+      // d'afficher 0, qui se lirait « rien à faire ».
+      console.warn('Compteur d’actions indisponible', error.message)
+      return actionsOuvertes.value
+    }
+    actionsOuvertes.value = count ?? 0
+    return actionsOuvertes.value
   }
 
   async function changerStatut(id: string, statut: ActionCommercialeStatut): Promise<void> {
@@ -126,7 +168,10 @@ export function useActionsCommerciales() {
     libelleType,
     listerPourPdv,
     listerPourVisite,
+    listerPourVisiteEtPdv,
     listerMesActions,
+    actionsOuvertes,
+    compterActionsOuvertes,
     creer,
     changerStatut,
     merchandiseursPour,

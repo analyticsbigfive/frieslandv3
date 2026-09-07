@@ -30,6 +30,7 @@ export const adminSectionTabs: Record<AdminSection, AdminSectionTab[]> = {
     { label: 'Liste par niveau', to: '/admin/perfect-store/liste', icon: 'i-heroicons-list-bullet' },
     { label: 'Visites', to: '/admin/perfect-store/visites', icon: 'i-heroicons-clipboard-document-list' },
     { label: 'Synthèse par zone', to: '/admin/perfect-store/zones', icon: 'i-heroicons-map' },
+    { label: 'Analyse des gaps', to: '/admin/perfect-store/gaps', icon: 'i-heroicons-arrow-trending-up' },
   ],
   pdv: [
     { label: 'Liste', to: '/admin/pdv', icon: 'i-heroicons-map-pin' },
