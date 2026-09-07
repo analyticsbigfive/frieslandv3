@@ -113,6 +113,21 @@
               <span v-if="competitorAction(category.key)" class="mt-0.5 block text-slate-500 dark:text-slate-400">
                 {{ competitorAction(category.key) }}
               </span>
+              <span v-if="competitorSkus(category.key).length" class="mt-0.5 block text-slate-600 dark:text-slate-300">
+                {{ competitorSkus(category.key).join(' · ') }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Visibilité concurrence (marques du référentiel), formats ancien et nouveau -->
+          <div v-if="visibiliteConcurrence.length" class="mt-4 border-t border-slate-200 pt-3 dark:border-slate-600">
+            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Visibilité concurrence</p>
+            <div class="flex flex-wrap gap-2 text-xs">
+              <span v-for="m in visibiliteConcurrence" :key="m.cle" class="rounded-full bg-white px-2 py-1 dark:bg-slate-800">
+                {{ m.nom }} —
+                <span :class="m.ext ? 'font-semibold text-fc-red' : 'text-slate-400'">ext.</span>
+                <span :class="m.int ? 'font-semibold text-fc-red' : 'text-slate-400'">int.</span>
+              </span>
             </div>
           </div>
 
@@ -181,6 +196,7 @@ import type { Visite } from '~/types'
 import { tradeTypeForCanal, type PerfectStoreResultB } from '~/utils/perfectStore'
 import { visibilityElementObserved, visibilitySegmentForPdv, FALLBACK_VISIBILITY_ELEMENTS } from '~/utils/visibilityStandards'
 import { photosAffichables } from '~/utils/visitePhotos'
+import { visibiliteConcurrencePresente } from '~/utils/concurrence'
 
 const props = withDefaults(defineProps<{
   modelValue: boolean
@@ -206,7 +222,8 @@ const isOpen = computed({
 
 const { refs } = usePerfectStore()
 const { typePdvLabel, fetchTypePdvLabels } = useTypePdvLabels()
-onMounted(() => { void fetchTypePdvLabels() })
+const { skus: skusConcurrents, marquesVisibilite, charger: chargerMarques } = useMarquesConcurrentes()
+onMounted(() => { void fetchTypePdvLabels(); void chargerMarques() })
 
 const productLabels: Record<string, string> = { evap: 'Lait évaporé (EVAP)', imp: 'Lait en poudre (IMP)', scm: 'Lait concentré sucré (SCM)' }
 
@@ -340,6 +357,24 @@ function competitorAction(key: string): string {
 // Ancien format (nom_concurrent à plat) + nouveau format (autres[]) : sans les
 // deux, les visites antérieures n'affichent plus leurs concurrents libres.
 const freeCompetitors = computed(() => concurrentsDeLaVisite(props.visite?.data?.concurrence as any))
+
+// SKU concurrents relevés « Présent » (lot 6), libellés du référentiel.
+function competitorSkus(famille: string): string[] {
+  const statuts = (props.visite?.data?.concurrence as any)?.[famille]?.skus || {}
+  return skusConcurrents.value
+    .filter(s => s.famille === famille && statuts[s.code] === 'Présent')
+    .map(s => s.libelle)
+}
+
+const visibiliteConcurrence = computed(() => {
+  const conc = (props.visite?.data?.visibilite as any)?.concurrence
+  if (!conc?.presence_visibilite) return []
+  return marquesVisibilite.value.map(m => ({
+    ...m,
+    ext: visibiliteConcurrencePresente(conc, 'exterieure', m.cle),
+    int: visibiliteConcurrencePresente(conc, 'interieure', m.cle),
+  }))
+})
 
 function actionValue(key: string): boolean {
   return !!(props.visite?.data?.actions as any)?.[key]

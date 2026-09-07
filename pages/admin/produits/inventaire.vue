@@ -92,7 +92,9 @@ definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 const dashboard = useDashboardDirection()
 const { fetchThresholds, getSeuil } = useSkuThresholds()
 
-const catalog = PRODUCT_CATALOG
+// Catalogue restreint aux catégories actives (lot 6).
+const { filtrer: filtrerCategoriesReleve, charger: chargerCategoriesReleve } = useCategoriesReleve()
+const catalog = computed(() => filtrerCategoriesReleve(PRODUCT_CATALOG, c => c.key))
 
 const inventory = computed<SkuInventoryRow[]>(() =>
   computeSkuInventory(dashboard.visites.value as any, getSeuil)
@@ -124,7 +126,7 @@ const dispoMoyenne = computed(() => {
 })
 
 onMounted(() => {
-  
+  chargerCategoriesReleve()
   fetchThresholds()
   dashboard.fetchVisites()
 })

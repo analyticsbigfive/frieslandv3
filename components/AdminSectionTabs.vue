@@ -36,7 +36,17 @@ const detectedSection = computed(() => detectAdminSection(route.path))
 
 const currentSection = computed(() => props.section ?? detectedSection.value)
 const sectionLabel = computed(() => currentSection.value ? adminSectionLabels[currentSection.value] : '')
-const tabs = computed<AdminSectionTab[]>(() => currentSection.value ? adminSectionTabs[currentSection.value] : [])
+// Les onglets produits (/admin/produits/<code>) suivent le paramètre
+// categorie_releve (lot 6) : une catégorie désactivée n'a plus d'onglet.
+const { filtrer: filtrerCategoriesReleve, charger: chargerCategoriesReleve } = useCategoriesReleve()
+onMounted(() => { void chargerCategoriesReleve() })
+
+const tabs = computed<AdminSectionTab[]>(() => {
+  if (!currentSection.value) return []
+  const liste = adminSectionTabs[currentSection.value]
+  if (currentSection.value !== 'produits') return liste
+  return filtrerCategoriesReleve(liste, t => t.to.replace('/admin/produits/', ''))
+})
 
 function isActive(tab: AdminSectionTab) {
   return route.path === tab.to.split('?')[0]

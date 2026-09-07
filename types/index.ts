@@ -298,7 +298,9 @@ export interface ConcurrentSignale {
  */
 export type ConcurrenceCategorie = ConcurrenceCategorieBase & {
   autre: ProductStatus
-} & Record<string, ProductStatus | boolean | string | undefined>
+  /** Statut par SKU concurrent (marque_concurrente_sku.code). Absent avant septembre 2026. */
+  skus?: Record<string, ProductStatus>
+} & Record<string, ProductStatus | boolean | string | Record<string, ProductStatus> | undefined>
 
 export interface VisiteConcurrence {
   presence_concurrents: boolean
@@ -359,19 +361,19 @@ export interface VisiteVisibilite {
     autre_interieure: boolean
     etat_autre_int?: BrandingState
   }
+  /**
+   * Visibilité concurrence (étape 9/11). Depuis septembre 2026 les marques
+   * viennent du référentiel marque_concurrente : présence par marque sous
+   * `exterieure.<cle>` / `interieure.<cle>` (cle = cleVisibiliteMarque). Les
+   * clés plates historiques (nido_exterieur…) restent lues, plus écrites.
+   */
   concurrence: {
     presence_visibilite: boolean
-    nido_exterieur: boolean
-    nido_interieur: boolean
-    laity_exterieur: boolean
-    laity_interieur: boolean
-    candia_exterieur: boolean
-    candia_interieur: boolean
-    autre_exterieur: boolean
+    exterieure?: Record<string, boolean>
+    interieure?: Record<string, boolean>
     nom_concurrent_ext?: string
-    autre_interieur: boolean
     nom_concurrent_int?: string
-  }
+  } & Record<string, boolean | string | Record<string, boolean> | undefined>
 }
 
 export interface VisiteActions {
@@ -595,14 +597,8 @@ export function getDefaultVisiteData(): VisiteData {
       },
       concurrence: {
         presence_visibilite: false,
-        nido_exterieur: false,
-        nido_interieur: false,
-        laity_exterieur: false,
-        laity_interieur: false,
-        candia_exterieur: false,
-        candia_interieur: false,
-        autre_exterieur: false,
-        autre_interieur: false,
+        exterieure: {},
+        interieure: {},
       },
     },
     actions: {

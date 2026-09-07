@@ -102,6 +102,8 @@
 </template>
 
 <script setup lang="ts">
+import { visibiliteConcurrencePresente } from '~/utils/concurrence'
+
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const dashboard = useDashboardDirection()
@@ -118,12 +120,16 @@ const commercialColOptions = computed(() => {
     .map(nom => ({ value: nom, label: nom }))]
 })
 
-const marques = [
-  { key: 'nido', label: 'NIDO', textClass: 'text-red-600' },
-  { key: 'laity', label: 'LAITY', textClass: 'text-orange-600' },
-  { key: 'candia', label: 'CANDIA', textClass: 'text-green-600' },
-  { key: 'autre', label: 'AUTRE', textClass: 'text-purple-600' },
-]
+// Marques du référentiel marque_concurrente (lot 6), plus de liste locale :
+// la même liste que l'étape 9/11 du wizard, qui écrit
+// visibilite.concurrence.<emplacement>.<cle>. Les visites d'avant septembre
+// 2026 (clés plates nido_exterieur…) restent lues via
+// visibiliteConcurrencePresente.
+const { marquesVisibilite, charger: chargerMarques } = useMarquesConcurrentes()
+const TEXT_CLASSES = ['text-red-600', 'text-orange-600', 'text-green-600', 'text-purple-600', 'text-blue-600', 'text-pink-600']
+const marques = computed(() =>
+  marquesVisibilite.value.map((m, i) => ({ key: m.cle, label: m.nom.toUpperCase(), textClass: TEXT_CLASSES[i % TEXT_CLASSES.length] })),
+)
 
 const presenceOptions = ['', 'Présent', 'Absent']
 
@@ -134,26 +140,16 @@ const colFilters = reactive<Record<string, string>>({
   region: '',
   zone: '',
   commercial: '',
-  nido_ext: '',
-  laity_ext: '',
-  candia_ext: '',
-  autre_ext: '',
-  nido_int: '',
-  laity_int: '',
-  candia_int: '',
-  autre_int: '',
 })
 
 const page = ref(1)
 const perPage = 100
 
 function getExtVal(row: any, marque: string) {
-  const val = row.data?.visibilite?.concurrence?.exterieure?.[marque]
-  return val === true || val === 'Présent'
+  return visibiliteConcurrencePresente(row.data?.visibilite?.concurrence, 'exterieure', marque)
 }
 function getIntVal(row: any, marque: string) {
-  const val = row.data?.visibilite?.concurrence?.interieure?.[marque]
-  return val === true || val === 'Présent'
+  return visibiliteConcurrencePresente(row.data?.visibilite?.concurrence, 'interieure', marque)
 }
 
 function formatDate(d: string) {
@@ -170,7 +166,7 @@ const filteredRows = computed(() => {
   if (colFilters.zone) rows = rows.filter(r => r.pdv?.zone?.toLowerCase().includes(colFilters.zone.toLowerCase()))
   if (colFilters.commercial) rows = rows.filter(r => r.commercial?.toLowerCase().includes(colFilters.commercial.toLowerCase()))
 
-  for (const m of marques) {
+  for (const m of marques.value) {
     const extFilter = colFilters[m.key + '_ext']
     if (extFilter) {
       rows = rows.filter(r => {
@@ -199,6 +195,6 @@ watch(filteredRows, () => { page.value = 1 })
 
 onMounted(() => {
   fetchCachedUsers()
-  Promise.all([dashboard.fetchVisites()])
+  Promise.all([dashboard.fetchVisites(), chargerMarques()])
 })
 </script>

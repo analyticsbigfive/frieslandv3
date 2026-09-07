@@ -101,7 +101,8 @@ definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const dashboard = useDashboardDirection()
 
-const productCategories = [
+// Catégories filtrées par le paramètre categorie_releve (lot 6).
+const ALL_PRODUCT_CATEGORIES = [
   { key: 'evap', label: 'EVAP', color: '#3B82F6' },
   { key: 'imp', label: 'IMP', color: '#10B981' },
   { key: 'scm', label: 'SCM', color: '#F59E0B' },
@@ -109,6 +110,8 @@ const productCategories = [
   { key: 'yaourt', label: 'YAOURT', color: '#EC4899' },
   { key: 'cereales', label: 'CÉRÉALES', color: '#06B6D4' },
 ]
+const { filtrer: filtrerCategoriesReleve, charger: chargerCategoriesReleve } = useCategoriesReleve()
+const productCategories = computed(() => filtrerCategoriesReleve(ALL_PRODUCT_CATEGORIES, c => c.key))
 
 function catPresent(key: string) {
   return dashboard.countWhere(v => v.data?.produits?.[key]?.present)
@@ -129,6 +132,6 @@ function prixNon(key: string) {
 }
 
 onMounted(() => {
-  Promise.all([dashboard.fetchVisites()])
+  Promise.all([dashboard.fetchVisites(), chargerCategoriesReleve()])
 })
 </script>

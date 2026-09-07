@@ -208,6 +208,12 @@ const commercialColOptions = computed(() => {
 })
 
 const cat = computed(() => (route.params.category as string) || 'evap')
+
+// Catégorie fermée dans l'admin (lot 6) → retour au récapitulatif.
+const { estActive, charger: chargerCategoriesReleve } = useCategoriesReleve()
+watchEffect(() => {
+  if (!estActive(cat.value)) navigateTo('/admin/produits/recap', { replace: true })
+})
 const title = computed(() => cat.value.toUpperCase())
 
 // Tab management
@@ -361,6 +367,6 @@ watch(() => route.query.tab, (tab) => {
 
 onMounted(() => {
   fetchCachedUsers()
-  Promise.all([dashboard.fetchVisites()])
+  Promise.all([dashboard.fetchVisites(), chargerCategoriesReleve()])
 })
 </script>

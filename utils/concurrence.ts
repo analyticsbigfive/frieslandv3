@@ -70,6 +70,121 @@ export const MARQUES_CONCURRENTES_DEFAUT: MarqueConcurrente[] = [
   { famille: 'uht', code: 'candia', nom: 'Candia', ordre: 1 },
 ]
 
+/** SKU concurrent du référentiel `marque_concurrente_sku` (lot 6, 1.0.4). */
+export interface SkuConcurrent {
+  /** Identifiant de la marque (marque_concurrente.id), ou clé famille:code en repli. */
+  marque_id: string
+  famille: string
+  /** Code de la marque parente (marque_concurrente.code). */
+  marque_code: string
+  /** Clé JSONB du statut dans visites.data.concurrence.<famille>.skus.<code>. */
+  code: string
+  libelle: string
+  grammage_g?: number | null
+  format?: string | null
+  image_url?: string | null
+  ordre?: number | null
+}
+
+/**
+ * SKU de la liste « Présence » du client (7 septembre 2026), repli hors ligne.
+ * Même raison que MARQUES_CONCURRENTES_DEFAUT : sans réseau, le relevé SKU
+ * doit rester possible.
+ */
+export const SKUS_CONCURRENTS_DEFAUT: SkuConcurrent[] = [
+  { marque_id: 'evap:cowmilk', famille: 'evap', marque_code: 'cowmilk', code: 'cowmilk_160g', libelle: 'Cowmilk 160g', grammage_g: 160, ordre: 1 },
+  { marque_id: 'evap:laity', famille: 'evap', marque_code: 'laity', code: 'laity_150g', libelle: 'Laity 150g', grammage_g: 150, ordre: 1 },
+  { marque_id: 'evap:soleil', famille: 'evap', marque_code: 'soleil', code: 'soleil_400g', libelle: 'Soleil 400g', grammage_g: 400, ordre: 1 },
+  { marque_id: 'imp:nido', famille: 'imp', marque_code: 'nido', code: 'nido_15g', libelle: 'Nido 15g', grammage_g: 15, ordre: 1 },
+  { marque_id: 'imp:nido', famille: 'imp', marque_code: 'nido', code: 'nido_350g', libelle: 'Nido 350g', grammage_g: 350, ordre: 2 },
+  { marque_id: 'imp:nido', famille: 'imp', marque_code: 'nido', code: 'nido_400g', libelle: 'Nido 400g', grammage_g: 400, ordre: 3 },
+  { marque_id: 'imp:nido', famille: 'imp', marque_code: 'nido', code: 'nido_800g', libelle: 'Nido 800g', grammage_g: 800, ordre: 4 },
+  { marque_id: 'imp:nido', famille: 'imp', marque_code: 'nido', code: 'nido_2500g', libelle: 'Nido 2500g', grammage_g: 2500, ordre: 5 },
+  { marque_id: 'imp:top_lait', famille: 'imp', marque_code: 'top_lait', code: 'top_lait_12g', libelle: 'Top lait 12g', grammage_g: 12, ordre: 1 },
+  { marque_id: 'imp:top_lait', famille: 'imp', marque_code: 'top_lait', code: 'top_lait_400g', libelle: 'Top lait 400g', grammage_g: 400, ordre: 2 },
+  { marque_id: 'imp:laity', famille: 'imp', marque_code: 'laity', code: 'laity_18g', libelle: 'Laity 18g', grammage_g: 18, ordre: 1 },
+  { marque_id: 'imp:laity', famille: 'imp', marque_code: 'laity', code: 'laity_360g', libelle: 'Laity 360g', grammage_g: 360, ordre: 2 },
+  { marque_id: 'imp:laity', famille: 'imp', marque_code: 'laity', code: 'laity_400g', libelle: 'Laity 400g', grammage_g: 400, ordre: 3 },
+  { marque_id: 'imp:laity', famille: 'imp', marque_code: 'laity', code: 'laity_900g', libelle: 'Laity 900g', grammage_g: 900, ordre: 4 },
+  { marque_id: 'imp:biblos', famille: 'imp', marque_code: 'biblos', code: 'biblos_16g', libelle: 'Biblos FC 16g', grammage_g: 16, ordre: 1 },
+  { marque_id: 'imp:biblos', famille: 'imp', marque_code: 'biblos', code: 'biblos_360g', libelle: 'Biblos Full Cream 360g', grammage_g: 360, ordre: 2 },
+  { marque_id: 'imp:biblos', famille: 'imp', marque_code: 'biblos', code: 'biblos_900g', libelle: 'Biblos Fat Filled 900g', grammage_g: 900, ordre: 3 },
+  { marque_id: 'imp:captain', famille: 'imp', marque_code: 'captain', code: 'captain_12g', libelle: 'Captain 12g', grammage_g: 12, ordre: 1 },
+  { marque_id: 'imp:captain', famille: 'imp', marque_code: 'captain', code: 'captain_22g', libelle: 'Captain 22g', grammage_g: 22, ordre: 2 },
+]
+
+/** Regroupe les SKU par « famille:marque_code », triés par ordre puis grammage. */
+export function grouperSkusParMarque(skus: SkuConcurrent[]): Record<string, SkuConcurrent[]> {
+  const parMarque: Record<string, SkuConcurrent[]> = {}
+  for (const s of skus) {
+    if (!s?.famille || !s.marque_code || !s.code) continue
+    ;(parMarque[`${s.famille}:${s.marque_code}`] ||= []).push(s)
+  }
+  for (const liste of Object.values(parMarque)) {
+    liste.sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0) || (a.grammage_g ?? 0) - (b.grammage_g ?? 0))
+  }
+  return parMarque
+}
+
+/**
+ * Statut de marque dérivé de ses SKU : « Présent » dès qu'un SKU l'est. La clé
+ * marque continue d'être écrite pour les dashboards qui la lisent ; sans cette
+ * dérivation, un relevé fait au niveau SKU laisserait la marque « En rupture ».
+ */
+export function statutMarqueDerive(
+  skusStatuts: Record<string, string | undefined> | null | undefined,
+  codesSku: string[],
+  statutActuel: string | undefined,
+): string {
+  if (codesSku.some(code => skusStatuts?.[code] === 'Présent')) return 'Présent'
+  return statutActuel === 'Présent' ? 'Présent' : (statutActuel || 'En rupture')
+}
+
+/**
+ * Clé d'une marque dans la visibilité concurrence (étape 9/11), indépendante
+ * de la famille : « NIDO 150g » (evap) et « Nido » (imp) sont la même enseigne
+ * sur une affiche. Le grammage terminal est retiré avant normalisation, ce
+ * qui redonne les clés historiques nido / laity / candia lues par les
+ * dashboards de visibilité concurrence.
+ */
+export function cleVisibiliteMarque(nom: string): string {
+  return normaliserNomConcurrent(String(nom || '').replace(/\s*\d+(?:[.,]\d+)?\s*(g|kg|ml|l)\b\s*$/i, ''))
+}
+
+export interface MarqueVisibilite {
+  cle: string
+  nom: string
+}
+
+/** Marques distinctes pour la visibilité concurrence, toutes familles confondues. */
+export function marquesPourVisibilite(marques: MarqueConcurrente[]): MarqueVisibilite[] {
+  const vues = new Map<string, MarqueVisibilite>()
+  for (const m of marques) {
+    const cle = cleVisibiliteMarque(m.nom)
+    if (!cle || vues.has(cle)) continue
+    vues.set(cle, { cle, nom: m.nom.replace(/\s*\d+(?:[.,]\d+)?\s*(g|kg|ml|l)\b\s*$/i, '').trim() || m.nom })
+  }
+  return [...vues.values()]
+}
+
+/**
+ * Lit la présence de visibilité d'une marque, dans les deux formats :
+ *  - nouveau : `visibilite.concurrence.<emplacement>.<cle> = true`
+ *  - ancien  : `visibilite.concurrence.<cle>_exterieur` / `_interieur = true`
+ * Sans le second, les visites d'avant septembre 2026 perdraient leur relevé.
+ */
+export function visibiliteConcurrencePresente(
+  concurrence: Record<string, any> | null | undefined,
+  emplacement: 'exterieure' | 'interieure',
+  cle: string,
+): boolean {
+  if (!concurrence) return false
+  const v = concurrence[emplacement]?.[cle]
+  if (v === true || v === 'Présent') return true
+  const legacy = concurrence[`${cle}_${emplacement === 'exterieure' ? 'exterieur' : 'interieur'}`]
+  return legacy === true || legacy === 'Présent'
+}
+
 /** Regroupe les marques par famille, triées par ordre puis nom. */
 export function grouperMarquesParFamille(marques: MarqueConcurrente[]): Record<string, MarqueConcurrente[]> {
   const parFamille: Record<string, MarqueConcurrente[]> = {}

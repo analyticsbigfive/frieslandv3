@@ -85,6 +85,26 @@
             <p v-if="visite.data?.concurrence?.[cat.key]?.action_concurrence" class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
               {{ visite.data.concurrence[cat.key].action_concurrence }}
             </p>
+            <!-- SKU concurrents présents (lot 6) -->
+            <p v-if="skusPresents(cat.key).length" class="mt-1 text-xs text-gray-600 dark:text-gray-300">
+              {{ skusPresents(cat.key).join(' · ') }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Visibilité concurrence (étape 9/11), marques du référentiel -->
+        <div v-if="visite.data?.visibilite?.concurrence?.presence_visibilite" class="space-y-1 border-t border-gray-100 pt-3 dark:border-gray-700">
+          <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Visibilité concurrence</p>
+          <div class="flex flex-wrap gap-2">
+            <span
+              v-for="m in visibiliteMarques"
+              :key="m.cle"
+              class="rounded-full bg-gray-50 px-2 py-1 text-xs dark:bg-gray-700/50"
+            >
+              {{ m.nom }} :
+              <span :class="m.ext ? 'text-red-500' : 'text-gray-400'">ext.</span>
+              <span :class="m.int ? 'text-red-500' : 'text-gray-400'">int.</span>
+            </span>
           </div>
         </div>
 
@@ -159,13 +179,29 @@ const displayableImages = computed(() => photosAffichables(visite.value?.image_u
 const loading = ref(true)
 const pdvName = ref('')
 
-const productCategories = [
-  { key: 'evap', label: 'EVAP' },
-  { key: 'imp', label: 'IMP' },
-  { key: 'scm', label: 'SCM' },
-  { key: 'uht', label: 'UHT' },
-  { key: 'yaourt', label: 'YAOURT' },
-]
+// Catégories actives (lot 6) : une catégorie fermée dans l'admin n'est plus
+// affichée, même si la visite historique la porte.
+const { actives: categoriesReleveActives, charger: chargerCategoriesReleve } = useCategoriesReleve()
+const productCategories = computed(() =>
+  categoriesReleveActives.value.map(c => ({ key: c.code, label: c.libelle.toUpperCase() })),
+)
+
+// SKU concurrents et marques de visibilité, depuis le référentiel.
+const { skus: skusConcurrents, marquesVisibilite, charger: chargerMarques } = useMarquesConcurrentes()
+function skusPresents(famille: string): string[] {
+  const statuts = visite.value?.data?.concurrence?.[famille]?.skus || {}
+  return skusConcurrents.value
+    .filter(s => s.famille === famille && statuts[s.code] === 'Présent')
+    .map(s => s.libelle)
+}
+const visibiliteMarques = computed(() => {
+  const conc = visite.value?.data?.visibilite?.concurrence
+  return marquesVisibilite.value.map(m => ({
+    ...m,
+    ext: visibiliteConcurrencePresente(conc, 'exterieure', m.cle),
+    int: visibiliteConcurrencePresente(conc, 'interieure', m.cle),
+  }))
+})
 
 const concurrenceCategories = [
   { key: 'evap', label: 'EVAP' },
@@ -196,6 +232,8 @@ function formatDate(d: string) {
 }
 
 onMounted(async () => {
+  void chargerCategoriesReleve()
+  void chargerMarques()
   if (!authStore.profile) {
     await authStore.fetchProfile()
   }

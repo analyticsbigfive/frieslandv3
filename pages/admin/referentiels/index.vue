@@ -227,6 +227,7 @@ function rebuildMaps() {
   maps.type_pdv = byKey('type_pdv', 'id')
   maps.categorie_produit = byKey('categorie_produit', 'id')
   maps.reference_produit = byKey('reference_produit', 'id')
+  maps.marque_concurrente = byKey('marque_concurrente', 'id')
   maps.element_visibilite = byKey('element_visibilite', 'id')
   maps.zoneDistrib = new Map((store.zone_distributeur || []).map((r: any) => [r.zone_id, r.distributeur_id]))
   maps.quartierCount = (store.quartier || []).reduce((m: Map<any, number>, q: any) => m.set(q.zone_id, (m.get(q.zone_id) || 0) + 1), new Map())
@@ -246,6 +247,9 @@ const typePdvOpts = () => opt(store.type_pdv || [], r => r.id, r => r.nom)
 const categorieProduitOpts = () => opt(store.categorie_produit || [], r => r.id, r => `${r.nom} (${r.code})`)
 const referenceOpts = () => opt(store.reference_produit || [], r => r.id, r => `${r.nom} · ${catCodeOf(r.categorie_produit_id)}`)
 const elementVisOpts = () => opt(store.element_visibilite || [], r => r.id, r => `${r.nom} · ${r.segment} · ${r.pilier}`)
+const marqueConcurrenteOpts = () => opt(store.marque_concurrente || [], r => r.id, r => `${r.nom} · ${String(r.famille || '').toUpperCase()}`)
+const marqueNomOf = (id: string) => { const m = maps.marque_concurrente?.get(id); return m ? `${m.nom} (${String(m.famille || '').toUpperCase()})` : '—' }
+const marqueCodeOf = (id: string) => maps.marque_concurrente?.get(id)?.code || ''
 
 const catCodeOf = (id: number) => maps.categorie_produit?.get(id)?.code || '—'
 const refNameOf = (id: number) => maps.reference_produit?.get(id)?.nom || `#${id}`
@@ -270,6 +274,8 @@ interface Field { key: string; label: string; type: 'text' | 'num' | 'select' | 
 interface Def {
   id: string; section: string; label: string; table: string; select: string
   order?: (q: any) => any
+  /** Référentiel sans suppression : le code est structurel dans les visites, on désactive. */
+  noDelete?: boolean
   columns: Col[]
   fields: Field[]
   blank: () => any
@@ -635,6 +641,80 @@ const defs: Def[] = [
       : supabase.from('marque_concurrente').insert({ famille: f.famille, code: normaliserNomConcurrent(f.nom), nom: f.nom, ordre: f.ordre ?? 0, actif: f.actif !== false }),
     del: r => supabase.from('marque_concurrente').delete().eq('id', r.id),
   },
+  {
+    id: 'marque_concurrente_sku', section: 'produit', label: 'SKU concurrents', table: 'marque_concurrente_sku',
+    select: 'id, marque_id, code, libelle, grammage_g, format, colisage, image_url, actif, ordre', order: q => q.order('ordre').order('libelle'),
+    columns: [
+      { label: 'Marque', cell: r => marqueNomOf(r.marque_id) },
+      { label: 'SKU', cell: r => r.libelle },
+      { label: 'Grammage', cell: r => r.grammage_g ? `${r.grammage_g} g` : '—', align: 'c', kind: 'num' },
+      { label: 'Format', cell: r => r.format || '—', muted: true },
+      { label: 'Colisage', cell: r => r.colisage ?? '—', align: 'c', kind: 'num' },
+      { label: 'Clé JSONB', cell: r => r.code, kind: 'mono', muted: true },
+      { label: 'Photo', cell: r => !!r.image_url, align: 'c', kind: 'bool' },
+      { label: 'Actif', cell: r => r.actif, align: 'c', kind: 'bool' },
+    ],
+    fields: [
+      { key: 'marque_id', label: 'Marque', type: 'select', opts: marqueConcurrenteOpts, required: true, lockEdit: true },
+      { key: 'libelle', label: 'Libellé', type: 'text', required: true, hint: 'ex. Nido 400g — affiché tel quel dans le formulaire mobile' },
+      { key: 'grammage_g', label: 'Grammage (g)', type: 'num', min: 0 },
+      { key: 'format', label: 'Format', type: 'text', hint: 'Sachet, Pouch, Boîte…' },
+      { key: 'colisage', label: 'Colisage', type: 'num', min: 0 },
+      { key: 'image_url', label: 'URL photo', type: 'text', hint: 'Lien public (bucket visite-images). Vide tant que le client n\'a pas fourni le visuel.' },
+      { key: 'ordre', label: 'Ordre d\'affichage', type: 'num', min: 0 },
+      { key: 'actif', label: 'Actif', type: 'bool' },
+    ],
+    blank: () => ({ marque_id: null, libelle: '', grammage_g: null, format: '', colisage: null, image_url: '', ordre: 0, actif: true }),
+    fill: r => ({ ...r }),
+    rowKey: r => String(r.id), search: r => `${marqueNomOf(r.marque_id)} ${r.libelle} ${r.code}`.toLowerCase(),
+    valid: f => !!f.marque_id && !!f.libelle,
+    // Clé JSONB = <code marque>_<grammage>g (ou libellé normalisé), figée à la
+    // création. Pas de suppression : un SKU déjà relevé se désactive.
+    save: (f, e) => {
+      const rec = {
+        libelle: f.libelle,
+        grammage_g: f.grammage_g ?? null,
+        format: f.format || null,
+        colisage: f.colisage ?? null,
+        image_url: f.image_url || null,
+        ordre: f.ordre ?? 0,
+        actif: f.actif !== false,
+      }
+      if (e) return supabase.from('marque_concurrente_sku').update(rec).eq('id', f.id)
+      const base = marqueCodeOf(f.marque_id) || normaliserNomConcurrent(f.libelle)
+      const code = f.grammage_g ? `${base}_${f.grammage_g}g` : `${base}_${normaliserNomConcurrent(f.libelle)}`
+      return supabase.from('marque_concurrente_sku').insert({ ...rec, marque_id: f.marque_id, code })
+    },
+    del: async () => ({ error: new Error('Suppression désactivée : désactivez le SKU.') }),
+    noDelete: true,
+  },
+  {
+    id: 'categorie_releve', section: 'produit', label: 'Catégories du relevé', table: 'categorie_releve',
+    select: 'code, libelle, actif, ordre', order: q => q.order('ordre'),
+    columns: [
+      { label: 'Code', cell: r => r.code, kind: 'mono' },
+      { label: 'Catégorie', cell: r => r.libelle },
+      { label: 'Ordre', cell: r => r.ordre, align: 'c', kind: 'num' },
+      { label: 'Active', cell: r => r.actif, align: 'c', kind: 'bool' },
+    ],
+    fields: [
+      { key: 'code', label: 'Code', type: 'text', required: true, lockEdit: true },
+      { key: 'libelle', label: 'Libellé', type: 'text', required: true },
+      { key: 'ordre', label: 'Ordre', type: 'num', min: 0 },
+      { key: 'actif', label: 'Active', type: 'bool', hint: 'Décochée : la catégorie disparaît du formulaire mobile et des onglets admin. Les visites déjà saisies sont conservées.' },
+    ],
+    blank: () => ({ code: '', libelle: '', ordre: 0, actif: true }),
+    fill: r => ({ ...r }),
+    rowKey: r => r.code, search: r => `${r.code} ${r.libelle}`.toLowerCase(),
+    valid: f => !!f.code && !!f.libelle,
+    // Le code est structurel dans visites.data.produits.<code> : pas de création
+    // libre ni de suppression, seulement activation et ordre.
+    save: (f, e) => e
+      ? supabase.from('categorie_releve').update({ libelle: f.libelle, ordre: f.ordre ?? 0, actif: !!f.actif }).eq('code', f.code)
+      : supabase.from('categorie_releve').insert({ code: f.code, libelle: f.libelle, ordre: f.ordre ?? 0, actif: f.actif !== false }),
+    del: async () => ({ error: new Error('Suppression désactivée : désactivez la catégorie.') }),
+    noDelete: true,
+  },
   // ===== PERFECT STORE =====
   {
     id: 'niveau_perfect_store', section: 'ps', label: 'Niveaux Perfect Store', table: 'niveau_perfect_store',
@@ -883,10 +963,9 @@ function openCreate() {
 }
 
 function rowActions(row: any) {
-  return [[
-    { label: 'Modifier', icon: 'i-heroicons-pencil', click: () => openEdit(row) },
-    { label: 'Supprimer', icon: 'i-heroicons-trash', click: () => remove(row) },
-  ]]
+  const actions = [{ label: 'Modifier', icon: 'i-heroicons-pencil', click: () => openEdit(row) }]
+  if (!activeDef.value.noDelete) actions.push({ label: 'Supprimer', icon: 'i-heroicons-trash', click: () => remove(row) })
+  return [actions]
 }
 
 function openEdit(row: any) {

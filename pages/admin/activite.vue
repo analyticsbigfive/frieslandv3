@@ -418,13 +418,14 @@ const perfectStoreProgress = computed(() => {
   return `${Math.min(100, Math.max(0, value))}%`
 })
 
-const productCategories = computed(() => [
+const { filtrer: filtrerCategoriesReleve, charger: chargerCategoriesReleve } = useCategoriesReleve()
+const productCategories = computed(() => filtrerCategoriesReleve([
   { key: 'evap', label: 'EVAP', value: stats.value?.taux_evap ?? 0 },
   { key: 'imp', label: 'IMP', value: stats.value?.taux_imp ?? 0 },
   { key: 'scm', label: 'SCM', value: stats.value?.taux_scm ?? 0 },
   { key: 'uht', label: 'UHT', value: stats.value?.taux_uht ?? 0 },
   { key: 'yaourt', label: 'YAOURT', value: stats.value?.taux_yaourt ?? 0 },
-])
+], c => c.key))
 
 function getPercentColor(val: number) {
   if (val >= 70) return 'text-emerald-600'
@@ -546,6 +547,7 @@ function handlePrint() {
 // Load stats on mount
 onMounted(async () => {
   loadingDashboard.value = true
+  void chargerCategoriesReleve()
   fetchRecentVisits()
   fetchGlobalKpi().then(g => { psGlobal.value = g }).catch(() => {})
   fetchCoverage().then(c => { coverage.value = c }).catch(() => {})

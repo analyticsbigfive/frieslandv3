@@ -67,43 +67,40 @@
 
 <script setup lang="ts">
 import { Bar } from 'vue-chartjs'
+import { visibiliteConcurrencePresente } from '~/utils/concurrence'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const dashboard = useDashboardDirection()
 
-const concMarques = [
-  { key: 'nido', label: 'NIDO', color: '#EF4444' },
-  { key: 'laity', label: 'LAITY', color: '#3B82F6' },
-  { key: 'candia', label: 'CANDIA', color: '#10B981' },
-  { key: 'autre', label: 'AUTRE', color: '#8B5CF6' },
-]
+// Marques du référentiel (lot 6), même liste que l'étape 9/11 du wizard.
+const { marquesVisibilite, charger: chargerMarques } = useMarquesConcurrentes()
+const COLORS = ['#EF4444', '#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EC4899', '#06B6D4']
+const concMarques = computed(() =>
+  marquesVisibilite.value.map((m, i) => ({ key: m.cle, label: m.nom.toUpperCase(), color: COLORS[i % COLORS.length] })),
+)
 
-const concExtCount = computed(() =>
-  dashboard.countWhere(v => v.data?.visibilite?.concurrence?.exterieure?.presence)
-)
-const concIntCount = computed(() =>
-  dashboard.countWhere(v => v.data?.visibilite?.concurrence?.interieure?.presence)
-)
-const concExtPct = computed(() =>
-  dashboard.pctWhere(v => v.data?.visibilite?.concurrence?.exterieure?.presence)
-)
+// Présence d'au moins une marque à l'emplacement, dans les deux formats
+// (indicateur `presence` écrit depuis septembre 2026, clés plates avant).
+function presenceEmplacement(v: any, emplacement: 'exterieure' | 'interieure') {
+  const conc = v.data?.visibilite?.concurrence
+  if (conc?.[emplacement]?.presence === true) return true
+  return concMarques.value.some(m => visibiliteConcurrencePresente(conc, emplacement, m.key))
+}
+
+const concExtCount = computed(() => dashboard.countWhere(v => presenceEmplacement(v, 'exterieure')))
+const concIntCount = computed(() => dashboard.countWhere(v => presenceEmplacement(v, 'interieure')))
+const concExtPct = computed(() => dashboard.pctWhere(v => presenceEmplacement(v, 'exterieure')))
 
 function countExtPresent(marque: string) {
-  return dashboard.countWhere(v =>
-    v.data?.visibilite?.concurrence?.exterieure?.[marque] === true ||
-    v.data?.visibilite?.concurrence?.exterieure?.[marque] === 'Présent'
-  )
+  return dashboard.countWhere(v => visibiliteConcurrencePresente(v.data?.visibilite?.concurrence, 'exterieure', marque))
 }
 function countExtAbsent(marque: string) {
   return dashboard.totalVisites.value - countExtPresent(marque)
 }
 
 function countIntPresent(marque: string) {
-  return dashboard.countWhere(v =>
-    v.data?.visibilite?.concurrence?.interieure?.[marque] === true ||
-    v.data?.visibilite?.concurrence?.interieure?.[marque] === 'Présent'
-  )
+  return dashboard.countWhere(v => visibiliteConcurrencePresente(v.data?.visibilite?.concurrence, 'interieure', marque))
 }
 function countIntAbsent(marque: string) {
   return dashboard.totalVisites.value - countIntPresent(marque)
@@ -122,12 +119,11 @@ const evolutionChartData = computed(() => {
     const key = weekStart.toISOString().slice(0, 10)
 
     if (!weeks.has(key)) {
-      weeks.set(key, { nido: 0, laity: 0, candia: 0, autre: 0 })
+      weeks.set(key, Object.fromEntries(concMarques.value.map(m => [m.key, 0])))
     }
     const w = weeks.get(key)!
-    for (const m of concMarques) {
-      const val = v.data?.visibilite?.concurrence?.exterieure?.[m.key]
-      if (val === true || val === 'Présent') w[m.key]++
+    for (const m of concMarques.value) {
+      if (visibiliteConcurrencePresente(v.data?.visibilite?.concurrence, 'exterieure', m.key)) w[m.key]++
     }
   })
 
@@ -138,7 +134,7 @@ const evolutionChartData = computed(() => {
       const d = new Date(k)
       return d.toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' })
     }),
-    datasets: concMarques.map(m => ({
+    datasets: concMarques.value.map(m => ({
       label: m.label,
       data: sorted.map(([, v]) => v[m.key]),
       backgroundColor: m.color,
@@ -158,6 +154,6 @@ const chartOptions = {
 }
 
 onMounted(() => {
-  Promise.all([dashboard.fetchVisites()])
+  Promise.all([dashboard.fetchVisites(), chargerMarques()])
 })
 </script>

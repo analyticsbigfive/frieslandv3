@@ -41,7 +41,7 @@ Vérifié : 62 tests vitest passent, `npx nuxt build` réussit.
 | Garde-fou de signature | Échec immédiat si `keystore.properties` absent | Plus jamais d'AAB signé debug produit en silence. |
 | Machine de build | L'autre poste, détenteur du keystore | Le dépôt doit rendre ce build reproductible et auto-vérifiant. |
 | Concurrence (fichier « Competitors list » du 7 sept.) | Relevé **par SKU** (marque + grammage), marques existantes conservées | Nouveau référentiel `marque_concurrente_sku`, lot 6.2 |
-| Disponibilité V2 (fichier du 7 sept.) | Seuils GT obsolètes retirés, seuils `SupermarcheMT` conservés | Retrait depuis l'admin, jamais par migration, lot 6.1 |
+| Disponibilité V2 (fichier du 7 sept.) | Seuils GT obsolètes retirés, seuils `SupermarcheMT` conservés | Retrait depuis l'admin (CRUD Seuils dispo existant), jamais par migration, lot 6.1 |
 | Yaourt et céréales | Retirés du relevé, données historiques conservées | Paramètre admin activable/désactivable par catégorie, lot 6.4 |
 | Suppressions en base | **Aucune suppression directe en base** — tout retrait passe par un CRUD dans l'admin | Les migrations restent additives (schéma, seed, RLS). Vaut pour tout le lot 6. |
 
@@ -524,13 +524,12 @@ La base live contient aussi `SupermarcheMT` A/B/C pour BR 1kg et Pearl 1kg (câb
 
 **Effet sur le calcul, à connaître avant de retirer.** `calculer_dispo_categorie(..., 'scm', ...)` joint `seuil_disponibilite` ; sans seuil SCM en GT, elle renvoie `null` et `dispo_rayon` devient la moyenne EVAP + IMP — le `where x is not null` de `20260630130100_friesland_perfect_store_calcul.sql:187-190` le gère déjà. `presence_rayon_scm` (`20260730130000`) suit le même chemin. L'assortiment (`:200-218`) compte sur `correspondance_reference` sans jointure seuil : SCM et BRB 380g continuent de compter dans les « 15 SKU », ce qui est cohérent avec le total V2. Les visites GT déjà calculées gardent leur ancien `dispo_rayon_scm` tant qu'on ne les recalcule pas.
 
-**Constat.** Aucune page admin n'édite `seuil_disponibilite` : `pages/admin/perfect-store/standards.vue` touche `standard_assortiment`, `poids_reference`, `niveau_perfect_store`, `standard_visibilite`, mais pas les seuils. Aujourd'hui ce retrait ne peut se faire qu'en SQL, ce que la règle du lot interdit.
+**Constat — rien à coder.** Le CRUD existe déjà : Paramètres → Référentiels → section Perfect Store → « Seuils dispo » (`pages/admin/referentiels/index.vue`, entrée `seuil_disponibilite`, avec suppression ligne à ligne, RLS `seuil_disponibilite_manager_write` réservée à `est_gestionnaire_perfect_store()`). Le recalcul existe aussi : bouton « Recalculer toutes les visites » de `pages/admin/perfect-store/standards.vue`, RPC `recalculer_tous_perfect_store`.
 
-**À construire :**
-- CRUD `seuil_disponibilite` dans l'admin : grille référence × segment × grade dans `standards.vue`, ou entrée du registre `pages/admin/referentiels/index.vue` (section `ps`) avec `reference_produit_id` (select `referenceOpts` existant), `segment`, `grade`, `quantite_min`, et un `del`. Le registre gère déjà table, formulaire et suppression, c'est la voie la plus courte.
-- RPC `recalculer_perfect_store_visites(p_since date default null)` — `security definer`, réservée à `est_gestionnaire_perfect_store()`, boucle `calculer_perfect_store(id)` sur les visites concernées. Un bouton « Recalculer » dans Standards l'appelle après tout changement de seuil. Migration additive, convention 5.3.
-- Optionnel : afficher la classification client (Hero / Support / Emerging / Innovation / Delist) comme libellé du `role` dans Standards, sans toucher l'enum.
-- Procédure documentée pour l'admin : retirer les 17 lignes du tableau ci-dessus depuis l'UI, puis recalculer.
+**Procédure admin (pas de SQL) :**
+1. Référentiels → Perfect Store → Seuils dispo : supprimer les 17 lignes du tableau ci-dessus, en recoupant référence, segment et grade. Ne pas toucher aux lignes `SupermarcheMT`.
+2. Standards Perfect Store → « Recalculer toutes les visites ».
+3. Optionnel, à coder si demandé : afficher la classification client (Hero / Support / Emerging / Innovation / Delist) comme libellé du `role` dans Standards, sans toucher l'enum.
 
 ### 6.2 Concurrence par SKU
 
@@ -546,7 +545,7 @@ Les onglets « IVC IMP » et « IVC Evap » sont des fiches marché (format, col
 
 **À construire :**
 - Table `marque_concurrente_sku` : `id`, `marque_id → marque_concurrente`, `grammage_g int`, `format text`, `colisage int`, `code text`, `actif`, `ordre`, `image_url text null`, `unique (marque_id, code)`. `code` figé à la création, clé JSONB sous `data.concurrence.<famille>.skus.<code>` (ex. `nido_400g`). RLS calquée sur `marque_concurrente_read` / `marque_concurrente_write`.
-- Seed : les 4 marques manquantes puis les 20 SKU du fichier (Laity 150 g dédoublonné), format et colisage repris des onglets IVC quand ils existent.
+- Seed : les 4 marques manquantes puis les 19 SKU du fichier (Laity 150 g dédoublonné), format et colisage repris des onglets IVC quand ils existent.
 - `composables/useMarquesConcurrentes.ts` : charger les SKU avec les marques, exposer `skusParMarque`. Repli offline `MARQUES_CONCURRENTES_DEFAUT` enrichi des SKU.
 - Formulaire `pages/mobile/visites/new.vue:310-344` : sous chaque marque `present`, un `ToggleStatus` par SKU. La marque reste écrite sous sa clé actuelle (les dashboards historiques la lisent) et passe à `Présent` dès qu'un SKU l'est.
 - `types/index.ts` (`ConcurrenceCategorie`) et `utils/concurrence.ts` : sous-objet `skus`.

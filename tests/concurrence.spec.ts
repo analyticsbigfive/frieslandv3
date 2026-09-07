@@ -131,3 +131,90 @@ describe('grouperMarquesParFamille', () => {
     expect(Object.keys(par).sort()).toEqual(['evap', 'imp', 'scm', 'uht'])
   })
 })
+
+// ---------------------------------------------------------------------------
+// Lot 6 (1.0.4) : concurrence par SKU et visibilité concurrence pilotée par le
+// référentiel. Deux formats JSONB coexistent : les tests verrouillent la
+// lecture des anciennes visites autant que le nouveau relevé.
+// ---------------------------------------------------------------------------
+import {
+  SKUS_CONCURRENTS_DEFAUT,
+  grouperSkusParMarque,
+  statutMarqueDerive,
+  cleVisibiliteMarque,
+  marquesPourVisibilite,
+  visibiliteConcurrencePresente,
+} from '../utils/concurrence'
+
+describe('SKUS_CONCURRENTS_DEFAUT', () => {
+  it('reprend les 19 SKU de la liste Présence du client, codes uniques', () => {
+    expect(SKUS_CONCURRENTS_DEFAUT).toHaveLength(19)
+    expect(new Set(SKUS_CONCURRENTS_DEFAUT.map(s => s.code)).size).toBe(19)
+  })
+
+  it('rattache chaque SKU à une marque du repli marques', () => {
+    const marques = new Set(MARQUES_CONCURRENTES_DEFAUT.map(m => `${m.famille}:${m.code}`))
+    // Les marques ajoutées par le lot 6 (laity/soleil EVAP, biblos/captain IMP)
+    // sont seedées en base ; le repli hors ligne les porte via le SKU lui-même.
+    const attendues = new Set([...marques, 'evap:laity', 'evap:soleil', 'imp:biblos', 'imp:captain'])
+    for (const s of SKUS_CONCURRENTS_DEFAUT) expect(attendues.has(`${s.famille}:${s.marque_code}`)).toBe(true)
+  })
+})
+
+describe('grouperSkusParMarque', () => {
+  it('groupe par famille:marque et trie par ordre puis grammage', () => {
+    const groupes = grouperSkusParMarque(SKUS_CONCURRENTS_DEFAUT)
+    expect(groupes['imp:nido'].map(s => s.grammage_g)).toEqual([15, 350, 400, 800, 2500])
+    expect(groupes['evap:cowmilk']).toHaveLength(1)
+  })
+})
+
+describe('statutMarqueDerive', () => {
+  it('passe la marque à Présent dès qu’un SKU est Présent', () => {
+    expect(statutMarqueDerive({ nido_400g: 'Présent', nido_15g: 'En rupture' }, ['nido_15g', 'nido_400g'], 'En rupture')).toBe('Présent')
+  })
+
+  it('conserve le statut marque saisi quand aucun SKU n’est Présent', () => {
+    expect(statutMarqueDerive({ nido_400g: 'En rupture' }, ['nido_400g'], 'Présent')).toBe('Présent')
+    expect(statutMarqueDerive({}, ['nido_400g'], 'En rupture')).toBe('En rupture')
+    expect(statutMarqueDerive(undefined, ['nido_400g'], undefined)).toBe('En rupture')
+  })
+})
+
+describe('cleVisibiliteMarque / marquesPourVisibilite', () => {
+  it('retire le grammage terminal pour retrouver les clés historiques', () => {
+    expect(cleVisibiliteMarque('NIDO 150g')).toBe('nido')
+    expect(cleVisibiliteMarque('Nido')).toBe('nido')
+    expect(cleVisibiliteMarque('Top Lait')).toBe('toplait')
+  })
+
+  it('dédoublonne les marques présentes dans plusieurs familles', () => {
+    const marques = marquesPourVisibilite([
+      { famille: 'evap', code: 'nido_150g', nom: 'NIDO 150g' },
+      { famille: 'imp', code: 'nido', nom: 'Nido' },
+      { famille: 'imp', code: 'laity', nom: 'Laity' },
+      { famille: 'evap', code: 'laity', nom: 'Laity' },
+    ])
+    expect(marques.map(m => m.cle)).toEqual(['nido', 'laity'])
+    expect(marques[0].nom).toBe('NIDO')
+  })
+})
+
+describe('visibiliteConcurrencePresente', () => {
+  it('lit le nouveau format imbriqué', () => {
+    const conc = { presence_visibilite: true, exterieure: { nido: true }, interieure: {} }
+    expect(visibiliteConcurrencePresente(conc, 'exterieure', 'nido')).toBe(true)
+    expect(visibiliteConcurrencePresente(conc, 'interieure', 'nido')).toBe(false)
+  })
+
+  it('lit les clés plates des visites d’avant septembre 2026', () => {
+    const conc = { presence_visibilite: true, nido_exterieur: true, laity_interieur: true }
+    expect(visibiliteConcurrencePresente(conc, 'exterieure', 'nido')).toBe(true)
+    expect(visibiliteConcurrencePresente(conc, 'interieure', 'laity')).toBe(true)
+    expect(visibiliteConcurrencePresente(conc, 'interieure', 'nido')).toBe(false)
+  })
+
+  it('renvoie false sans bloc concurrence', () => {
+    expect(visibiliteConcurrencePresente(undefined, 'exterieure', 'nido')).toBe(false)
+  })
+})

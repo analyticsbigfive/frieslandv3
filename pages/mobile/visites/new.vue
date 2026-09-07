@@ -325,9 +325,25 @@
                   v-model:en-activite="form.concurrence[fam.key].en_activite"
                   v-model:action="form.concurrence[fam.key].action_concurrence"
                 />
-                <div v-for="marque in marquesConcurrence[fam.key] || []" :key="marque.code" class="space-y-1">
-                  <label class="text-sm font-medium text-gray-600">{{ marque.nom }} présent? *</label>
-                  <ToggleStatus v-model="form.concurrence[fam.key][marque.code]" />
+                <div v-for="marque in marquesConcurrence[fam.key] || []" :key="marque.code" class="space-y-2">
+                  <div class="space-y-1">
+                    <label class="text-sm font-medium text-gray-600">{{ marque.nom }} présent? *</label>
+                    <ToggleStatus v-model="form.concurrence[fam.key][marque.code]" />
+                  </div>
+                  <!-- SKU de la marque (lot 6) : relevé par grammage. La marque
+                       passe à « Présent » dès qu'un SKU l'est (voir submitVisite). -->
+                  <div
+                    v-if="skusDeMarque(fam.key, marque.code).length"
+                    class="ml-3 space-y-2 border-l-2 border-gray-100 pl-3 dark:border-gray-700"
+                  >
+                    <div v-for="sku in skusDeMarque(fam.key, marque.code)" :key="sku.code" class="space-y-1">
+                      <label class="flex items-center gap-2 text-xs font-medium text-gray-500">
+                        <img v-if="sku.image_url" :src="sku.image_url" alt="" class="h-6 w-6 rounded object-cover" />
+                        {{ sku.libelle }}
+                      </label>
+                      <ToggleStatus v-model="skusForm(fam.key)[sku.code]" />
+                    </div>
+                  </div>
                 </div>
                 <div class="space-y-1">
                   <label class="text-sm font-medium text-gray-600">Autre *</label>
@@ -429,9 +445,11 @@
             </div>
 
             <template v-if="form.visibilite.concurrence.presence_visibilite">
+              <!-- Marques du référentiel marque_concurrente (lot 6) : une marque
+                   ajoutée dans les Référentiels apparaît ici sans redéploiement. -->
               <div v-for="item in visibConcurrenceItems" :key="item.key" class="space-y-1">
                 <label class="text-sm font-medium text-gray-600">{{ item.label }} *</label>
-                <ToggleYesNo v-model="form.visibilite.concurrence[item.key]" />
+                <ToggleYesNo v-model="visibConcForm(item.emplacement)[item.cle]" />
               </div>
             </template>
           </div>
@@ -609,12 +627,12 @@
 
 <script setup lang="ts">
 import { getDefaultVisiteData } from '~/types'
-import type { PDV, VisiteData, VisiteProduits, VisiteConcurrence, VisiteVisibilite, VisiteActions } from '~/types'
+import type { PDV, VisiteData, VisiteProduits, VisiteConcurrence, VisiteActions } from '~/types'
 import { getSkus, quantityToLegacyStatus, categoryPresent } from '~/utils/products'
+import { statutMarqueDerive } from '~/utils/concurrence'
 
 // Helper types: exclude 'present', 'prix_respectes' & 'quantites' so indexed access yields ProductStatus only
 type ProductKey<T> = Exclude<keyof T, 'present' | 'prix_respectes' | 'quantites'>
-type VisibConcKey = Exclude<keyof VisiteVisibilite['concurrence'], 'presence_visibilite' | 'nom_concurrent_ext' | 'nom_concurrent_int'>
 
 definePageMeta({
   middleware: ['auth'],
@@ -664,8 +682,11 @@ const showSaveOverlay = ref(false)
 const saveStatus = ref<'saving' | 'success' | 'error'>('saving')
 const saveProgress = ref(0)
 
-// Wizard steps — one per product type for Dispo & Prix
-const wizardSteps = [
+// Wizard steps — one per product type for Dispo & Prix.
+// Les étapes produit sont filtrées par le paramètre categorie_releve (lot 6) :
+// une catégorie désactivée dans l'admin (yaourt, céréales) disparaît du
+// parcours, y compris hors ligne grâce au repli du composable.
+const ALL_WIZARD_STEPS = [
   { key: 'general', label: 'Général', phase: 'Général' },
   { key: 'evap', label: 'EVAP', phase: 'Produits' },
   { key: 'imp', label: 'IMP', phase: 'Produits' },
@@ -678,6 +699,8 @@ const wizardSteps = [
   { key: 'actions', label: 'Actions', phase: 'Actions & photos' },
   { key: 'photos', label: 'Photos', phase: 'Actions & photos' },
 ]
+const { filtrer: filtrerCategoriesReleve, charger: chargerCategoriesReleve } = useCategoriesReleve()
+const wizardSteps = computed(() => filtrerCategoriesReleve(ALL_WIZARD_STEPS, s => s.key))
 
 // Form state
 const defaultData = getDefaultVisiteData()
@@ -693,21 +716,57 @@ const form = reactive({
 
 // Marques concurrentes : référentiel partagé avec le dashboard, repli sur les
 // marques historiques hors ligne (voir useMarquesConcurrentes).
-const { parFamille: marquesConcurrence, charger: chargerMarquesConcurrence } = useMarquesConcurrentes()
+const {
+  parFamille: marquesConcurrence,
+  skusParMarque,
+  marquesVisibilite,
+  charger: chargerMarquesConcurrence,
+} = useMarquesConcurrentes()
 const famillesConcurrence = FAMILLES_CONCURRENCE
+
+function skusDeMarque(famille: string, marqueCode: string) {
+  return skusParMarque.value[`${famille}:${marqueCode}`] || []
+}
+
+// Sous-objet `skus` d'une famille, créé à la demande : les brouillons et les
+// visites reprises d'avant septembre 2026 ne l'ont pas.
+function skusForm(famille: string): Record<string, string> {
+  const bloc = form.concurrence[famille as keyof VisiteConcurrence] as any
+  if (!bloc.skus) bloc.skus = {}
+  return bloc.skus
+}
+
+// Idem pour la visibilité concurrence : `exterieure` / `interieure` par marque.
+function visibConcForm(emplacement: 'exterieure' | 'interieure'): Record<string, boolean> {
+  const conc = form.visibilite.concurrence as any
+  if (!conc[emplacement] || typeof conc[emplacement] !== 'object') conc[emplacement] = {}
+  return conc[emplacement]
+}
 
 // Chaque marque du référentiel doit exister dans le form avec le même défaut
 // que les marques historiques (« En rupture ») : sans ça, un ToggleStatus sur
 // une marque ajoutée après coup démarrerait sans valeur et la visite
 // l'omettrait du relevé.
-watch(marquesConcurrence, (par) => {
+function initialiserDefautsConcurrence() {
   for (const fam of famillesConcurrence) {
     const bloc = form.concurrence[fam.key] as Record<string, unknown>
-    for (const marque of par[fam.key] || []) {
+    for (const marque of marquesConcurrence.value[fam.key] || []) {
       if (bloc[marque.code] === undefined) bloc[marque.code] = 'En rupture'
     }
   }
-}, { immediate: true })
+  // Même garantie pour les SKU : chaque SKU du référentiel démarre « En rupture ».
+  for (const [cle, liste] of Object.entries(skusParMarque.value)) {
+    const famille = cle.split(':')[0]
+    if (!famillesConcurrence.some(f => f.key === famille)) continue
+    const skus = skusForm(famille)
+    for (const sku of liste) {
+      if (skus[sku.code] === undefined) skus[sku.code] = 'En rupture'
+    }
+  }
+}
+// Rejoué quand le référentiel arrive et après reprise d'un brouillon ou d'une
+// visite précédente (ils remplacent form.concurrence d'un bloc).
+watch([marquesConcurrence, skusParMarque], initialiserDefautsConcurrence, { immediate: true })
 
 const draftKey = computed(() => `visit-draft:${user.value?.id || 'anonymous'}:${routingPdvId.value || 'new'}`)
 const lastPdvKey = computed(() => `visit-last-pdv:${user.value?.id || 'anonymous'}`)
@@ -749,10 +808,10 @@ function restoreDraft() {
     }
     if (draft.date_visite) form.date_visite = draft.date_visite
     if (draft.produits) form.produits = draft.produits
-    if (draft.concurrence) form.concurrence = draft.concurrence
+    if (draft.concurrence) { form.concurrence = draft.concurrence; initialiserDefautsConcurrence() }
     if (draft.visibilite) form.visibilite = draft.visibilite
     if (draft.actions) form.actions = draft.actions
-    if (Number.isInteger(draft.currentTab)) currentTab.value = Math.max(0, Math.min(wizardSteps.length - 1, draft.currentTab))
+    if (Number.isInteger(draft.currentTab)) currentTab.value = Math.max(0, Math.min(wizardSteps.value.length - 1, draft.currentTab))
     draftSavedAt.value = draft.savedAt ? new Date(draft.savedAt) : new Date()
     toast.add({ title: 'Brouillon repris', description: 'Votre saisie précédente a été restaurée.', color: 'green', timeout: 3500 })
   }
@@ -916,14 +975,14 @@ function setFacings(cat: keyof VisiteProduits, sku: string, value: number) {
   catData.facings[sku] = Math.max(0, Math.round(value || 0))
 }
 
-const visibConcurrenceItems: { key: VisibConcKey; label: string }[] = [
-  { key: 'nido_exterieur', label: 'Visibilité extérieure NIDO' },
-  { key: 'nido_interieur', label: 'Visibilité intérieure NIDO' },
-  { key: 'laity_exterieur', label: 'Visibilité extérieure LAITY' },
-  { key: 'laity_interieur', label: 'Visibilité intérieure LAITY' },
-  { key: 'candia_exterieur', label: 'Visibilité extérieure CANDIA' },
-  { key: 'candia_interieur', label: 'Visibilité intérieure CANDIA' },
-]
+// Visibilité concurrence : une paire extérieur / intérieur par marque du
+// référentiel, écrite sous visibilite.concurrence.<emplacement>.<cle>.
+const visibConcurrenceItems = computed(() =>
+  marquesVisibilite.value.flatMap(m => [
+    { key: `${m.cle}_ext`, cle: m.cle, emplacement: 'exterieure' as const, label: `Visibilité extérieure ${m.nom.toUpperCase()}` },
+    { key: `${m.cle}_int`, cle: m.cle, emplacement: 'interieure' as const, label: `Visibilité intérieure ${m.nom.toUpperCase()}` },
+  ]),
+)
 
 const actionItems: { key: keyof VisiteActions; label: string }[] = [
   { key: 'referencement_produits', label: 'Référencement produits' },
@@ -956,9 +1015,14 @@ const visibilitySections = computed(() => [
   { key: 'interieure', label: 'Visibilité intérieure', icon: 'i-heroicons-view-columns', items: interiorVisibilityElements.value },
 ].filter(section => section.items.length > 0))
 
-const productCategoryKeys: (keyof VisiteProduits)[] = ['evap', 'imp', 'scm', 'uht', 'yaourt', 'cereales']
+const ALL_PRODUCT_CATEGORY_KEYS: (keyof VisiteProduits)[] = ['evap', 'imp', 'scm', 'uht', 'yaourt', 'cereales']
+const productCategoryKeys = computed(() => filtrerCategoriesReleve(ALL_PRODUCT_CATEGORY_KEYS, k => k))
 const productCategoryLabels: Record<string, string> = { evap: 'EVAP', imp: 'IMP', scm: 'SCM', uht: 'UHT', yaourt: 'Yaourt', cereales: 'Céréales' }
-const quickCategory = computed<keyof VisiteProduits | null>(() => productCategoryKeys[currentTab.value - 1] || null)
+// L'étape courante est une catégorie produit ? (l'ordre des étapes dépend des catégories actives)
+const quickCategory = computed<keyof VisiteProduits | null>(() => {
+  const key = wizardSteps.value[currentTab.value]?.key as keyof VisiteProduits | undefined
+  return key && productCategoryKeys.value.includes(key) ? key : null
+})
 const quickCategoryLabel = computed(() => quickCategory.value ? productCategoryLabels[quickCategory.value] : '')
 
 function categoryHasQuantities(category: keyof VisiteProduits) {
@@ -976,7 +1040,7 @@ function setCategoryPreset(category: keyof VisiteProduits | null, preset: 'zero'
 const stepStates = computed<Record<string, 'empty' | 'partial' | 'complete' | 'warning'>>(() => {
   const states: Record<string, 'empty' | 'partial' | 'complete' | 'warning'> = {}
   states.general = form.pdv_id && form.date_visite ? 'complete' : 'warning'
-  for (const category of productCategoryKeys) states[category] = categoryHasQuantities(category) ? 'complete' : 'partial'
+  for (const category of productCategoryKeys.value) states[category] = categoryHasQuantities(category) ? 'complete' : 'partial'
   states.concurrence = Object.values((form.concurrence || {}) as any).some(Boolean) ? 'complete' : 'partial'
   states.visibilite = Object.values((form.visibilite?.standards || {}) as any).some(Boolean) ? 'complete' : 'partial'
   states.actions = Object.values((form.actions || {}) as any).some(Boolean) ? 'complete' : 'partial'
@@ -988,15 +1052,15 @@ const visitWarnings = computed(() => {
   const warnings: string[] = []
   if (!form.pdv_id) warnings.push('Le PDV est obligatoire.')
   if (!form.date_visite) warnings.push('La date de visite est obligatoire.')
-  if (productCategoryKeys.every(category => !categoryHasQuantities(category))) warnings.push('Aucune quantité produit n’a encore été renseignée.')
+  if (productCategoryKeys.value.every(category => !categoryHasQuantities(category))) warnings.push('Aucune quantité produit n’a encore été renseignée.')
   const routingPdv = routingStore.routingPDVList.find(item => item.id === routingPdvId.value)
   if (routingPdv?.objectifs?.photos && form.images.length === 0) warnings.push('La tournée recommande au moins une photo pour ce PDV.')
   return warnings
 })
 
 const reviewSummary = computed(() => ({
-  productCategories: productCategoryKeys.filter(categoryHasQuantities).length,
-  skus: productCategoryKeys.reduce((total, category) => {
+  productCategories: productCategoryKeys.value.filter(categoryHasQuantities).length,
+  skus: productCategoryKeys.value.reduce((total, category) => {
     const quantities = ((form.produits[category] as any)?.quantites || {}) as Record<string, number>
     return total + Object.values(quantities).filter(value => Number(value) > 0).length
   }, 0),
@@ -1049,7 +1113,7 @@ function applyPreviousVisit() {
   const data = previousVisit.value?.data
   if (!data) return
   if (data.produits) form.produits = JSON.parse(JSON.stringify(data.produits))
-  if (data.concurrence) form.concurrence = JSON.parse(JSON.stringify(data.concurrence))
+  if (data.concurrence) { form.concurrence = JSON.parse(JSON.stringify(data.concurrence)); initialiserDefautsConcurrence() }
   if (data.visibilite) form.visibilite = JSON.parse(JSON.stringify(data.visibilite))
   if (data.actions) form.actions = JSON.parse(JSON.stringify(data.actions))
   showPreviousVisitConfirm.value = false
@@ -1258,6 +1322,25 @@ async function submitVisite(
   visiteData.visibilite.interieure.presence_visibilite = interiorVisibilityElements.value
     .some(element => visiteData.visibilite.standards[element.code] === true)
 
+  // Concurrence par SKU (lot 6) : la clé marque reste écrite pour les
+  // dashboards historiques, dérivée « Présent » dès qu'un SKU l'est.
+  for (const fam of famillesConcurrence) {
+    const bloc = (visiteData.concurrence as any)[fam.key]
+    if (!bloc) continue
+    for (const marque of marquesConcurrence.value[fam.key] || []) {
+      const codes = skusDeMarque(fam.key, marque.code).map(s => s.code)
+      if (codes.length) bloc[marque.code] = statutMarqueDerive(bloc.skus, codes, bloc[marque.code])
+    }
+  }
+  // Visibilité concurrence : indicateur `presence` par emplacement, lu par
+  // le dashboard d'évolution.
+  const visibConc = visiteData.visibilite.concurrence as any
+  for (const emplacement of ['exterieure', 'interieure'] as const) {
+    const bloc = visibConc[emplacement] && typeof visibConc[emplacement] === 'object' ? visibConc[emplacement] : {}
+    bloc.presence = Object.entries(bloc).some(([k, v]) => k !== 'presence' && v === true)
+    visibConc[emplacement] = bloc
+  }
+
   // Dériver présence + statut hérité par SKU depuis les quantités saisies (compat dashboards/export)
   for (const cat of Object.keys(visiteData.produits) as (keyof VisiteProduits)[]) {
     const catData: any = (visiteData.produits as any)[cat]
@@ -1329,6 +1412,7 @@ onMounted(async () => {
   void fetchVisibilityElements()
   void fetchTypePdvLabels()
   void chargerMarquesConcurrence()
+  void chargerCategoriesReleve()
   pdvList.value = await pdvStore.fetchScopedPDV(authStore.profile)
   restoreDraft()
 

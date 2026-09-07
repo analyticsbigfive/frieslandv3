@@ -116,6 +116,31 @@
         </div>
       </div>
 
+      <!-- Présence par SKU concurrent (lot 6) : part des visites où la famille
+           est présente et où le SKU est relevé « Présent ». -->
+      <template v-if="skuRows.length">
+        <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100">Présence par SKU concurrent</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div v-for="fam in skuRows" :key="fam.key" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-4">{{ fam.label }}</h3>
+            <div class="space-y-2">
+              <div v-for="sku in fam.skus" :key="sku.code" class="flex items-center justify-between gap-3">
+                <span class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <img v-if="sku.image_url" :src="sku.image_url" alt="" class="h-6 w-6 rounded object-cover" />
+                  {{ sku.libelle }}
+                </span>
+                <div class="flex items-center gap-2">
+                  <div class="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full" :class="sku.pct > 50 ? 'bg-red-500' : 'bg-orange-400'" :style="{ width: sku.pct + '%' }" />
+                  </div>
+                  <span class="text-xs font-bold text-gray-600 w-10 text-right">{{ sku.pct }}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
       <!-- Evolution stacked bar chart -->
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
         <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Évolution de la concurrence par semaine</h3>
@@ -140,7 +165,28 @@ const concPct = computed(() =>
 
 // Familles + marques depuis le référentiel marque_concurrente (réunion 23/07) :
 // une marque ajoutée dans les Référentiels apparaît ici sans redéploiement.
-const { categories, charger: chargerMarques } = useMarquesConcurrentes()
+const { categories, skus: skusConcurrents, charger: chargerMarques } = useMarquesConcurrentes()
+
+// Taux de présence par SKU, sur les visites où la famille est présente (même
+// dénominateur que getCompPct pour rester comparable à la marque).
+const skuRows = computed(() =>
+  categories.value
+    .map((cat) => {
+      const withConc = dashboard.visites.value.filter(v => v.data?.concurrence?.[cat.key]?.present)
+      const skus = skusConcurrents.value
+        .filter(s => s.famille === cat.key)
+        .map(s => ({
+          code: s.code,
+          libelle: s.libelle,
+          image_url: s.image_url,
+          pct: withConc.length
+            ? Math.round(withConc.filter(v => v.data?.concurrence?.[cat.key]?.skus?.[s.code] === 'Présent').length / withConc.length * 100)
+            : 0,
+        }))
+      return { key: cat.key, label: cat.label, skus }
+    })
+    .filter(fam => fam.skus.length > 0),
+)
 
 // Un concurrent présent mais inactif n'appelle pas la même réaction qu'un
 // concurrent qui pousse une promo : on compte les visites où au moins une
