@@ -3,7 +3,7 @@
     class="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/95 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur dark:border-gray-700 dark:bg-gray-900/95 safe-area-bottom"
     aria-label="Navigation mobile principale"
   >
-    <div class="grid px-1 pt-1" :class="navItems.length === 3 ? 'grid-cols-3' : 'grid-cols-4'">
+    <div class="grid px-1 pt-1" :class="navItems.length === 3 ? 'grid-cols-3' : navItems.length === 5 ? 'grid-cols-5' : 'grid-cols-4'">
       <NuxtLink
         v-for="item in navItems"
         :key="item.to"
@@ -29,6 +29,8 @@ import {
   Route,
   MapPin,
   MoreHorizontal,
+  Users,
+  ClipboardCheck,
 } from 'lucide-vue-next'
 
 import { mobileNavItems, type MobileNavItem } from '~/utils/roles'
@@ -45,6 +47,8 @@ const icons: Record<MobileNavItem['key'], Component> = {
   visites: ClipboardList,
   routing: Route,
   pdv: MapPin,
+  equipe: Users,
+  actions: ClipboardCheck,
   more: MoreHorizontal,
 }
 

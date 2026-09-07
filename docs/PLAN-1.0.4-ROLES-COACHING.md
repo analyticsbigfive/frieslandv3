@@ -372,6 +372,8 @@ Ces colonnes ont été ajoutées hors du dossier suivi. **Reproduire la base dep
 
 ## Lot 3 — Consultation commerciale dans l'app
 
+> **État au 7 septembre 2026 (fin d'après-midi).** Livré : `/mobile/equipe` (3.1), fraîcheur de visite dans la liste PDV via `pdv_fraicheur_filtre` (3.2, commercial et privilégiés), lecture d'une visite du périmètre par le commercial (3.3), `data.commentaires` dans le wizard, le détail et la modale (3.4), `action_commerciale` + `type_action_commerciale` avec création depuis la fiche PDV et le détail de visite, restitution `/mobile/actions` et fiche PDV, statut avançable par l'assigné (3.5). Migration à appliquer : `20260907150000_friesland_lot3_actions_commerciales.sql`. Comptes de test : `pnpm exec node scripts/create-test-accounts.mjs`. Non fait : rappel des actions ouvertes dans le routing du jour.
+
 ### 3.1 Suivi des visites de l'équipe
 
 Nouvelle page sous `/mobile` listant les visites des merchandiseurs du périmètre : date, heure, PDV, merchandiseur, statut.

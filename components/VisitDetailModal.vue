@@ -170,6 +170,14 @@
         </div>
       </section>
 
+      <section v-if="visite.data?.commentaires" class="mb-7">
+        <h4 class="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
+          <span class="h-2 w-2 rounded-full bg-slate-400" />
+          Commentaire du merchandiseur
+        </h4>
+        <p class="whitespace-pre-line rounded-xl bg-slate-50 p-3 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200">{{ visite.data.commentaires }}</p>
+      </section>
+
       <section v-if="displayableImages.length" class="mb-7">
         <h4 class="mb-3 text-sm font-semibold text-slate-900 dark:text-white">Photos ({{ displayableImages.length }})</h4>
         <div class="flex gap-2 overflow-x-auto pb-1">

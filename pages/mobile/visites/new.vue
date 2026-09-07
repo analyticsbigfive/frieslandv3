@@ -465,6 +465,11 @@
               <ToggleYesNo v-model="form.actions[action.key]" />
             </div>
           </div>
+          <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-2 shadow-sm">
+            <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100">Commentaire</h3>
+            <p class="text-xs text-gray-400">Remarques libres : propriétaire absent, rupture signalée, promesse de commande…</p>
+            <UTextarea v-model="form.commentaires" :rows="3" :maxlength="1000" placeholder="Votre commentaire (optionnel)" />
+          </div>
         </div>
       </template>
 
@@ -711,6 +716,7 @@ const form = reactive({
   concurrence: defaultData.concurrence,
   visibilite: defaultData.visibilite,
   actions: defaultData.actions,
+  commentaires: '',
   images: [] as File[],
 })
 
@@ -786,6 +792,7 @@ function saveDraft() {
       concurrence: form.concurrence,
       visibilite: form.visibilite,
       actions: form.actions,
+      commentaires: form.commentaires,
       savedAt: Date.now(),
     }))
     draftSavedAt.value = new Date()
@@ -811,6 +818,7 @@ function restoreDraft() {
     if (draft.concurrence) { form.concurrence = draft.concurrence; initialiserDefautsConcurrence() }
     if (draft.visibilite) form.visibilite = draft.visibilite
     if (draft.actions) form.actions = draft.actions
+    if (typeof draft.commentaires === 'string') form.commentaires = draft.commentaires
     if (Number.isInteger(draft.currentTab)) currentTab.value = Math.max(0, Math.min(wizardSteps.value.length - 1, draft.currentTab))
     draftSavedAt.value = draft.savedAt ? new Date(draft.savedAt) : new Date()
     toast.add({ title: 'Brouillon repris', description: 'Votre saisie précédente a été restaurée.', color: 'green', timeout: 3500 })
@@ -1303,6 +1311,8 @@ async function submitVisite(
     visibilite: JSON.parse(JSON.stringify(form.visibilite)),
     actions: JSON.parse(JSON.stringify(form.actions)),
   }
+  const commentaire = form.commentaires?.trim()
+  if (commentaire) visiteData.commentaires = commentaire.slice(0, 1000)
 
   // Les indicateurs historiques restent alimentés pour les dashboards existants.
   const observed = visiteData.visibilite.standards

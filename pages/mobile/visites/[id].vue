@@ -145,6 +145,30 @@
         </div>
       </div>
 
+      <!-- Commentaire du merchandiseur (lot 3.4) -->
+      <div v-if="visite.data?.commentaires" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-2">
+        <h3 class="font-bold text-sm text-gray-900 dark:text-gray-100">Commentaire du merchandiseur</h3>
+        <p class="whitespace-pre-line text-sm text-gray-700 dark:text-gray-300">{{ visite.data.commentaires }}</p>
+      </div>
+
+      <!-- Actions commerciales (lot 3.5) -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="font-bold text-sm text-gray-900 dark:text-gray-100">Actions décidées</h3>
+          <UButton v-if="peutDeciderAction" size="xs" icon="i-heroicons-plus" class="bg-fc-red" @click="showActionModal = true">Nouvelle action</UButton>
+        </div>
+        <ActionCommercialeList :actions="actionsCommerciales" empty-text="Aucune action décidée sur cette visite." />
+      </div>
+      <ActionCommercialeModal
+        v-if="peutDeciderAction"
+        v-model="showActionModal"
+        :pdv-id="visite.pdv_id"
+        :pdv-nom="pdvName"
+        :pdv-zone="visite.pdv?.zone"
+        :visite-id="visite.id"
+        @created="onActionCreee"
+      />
+
       <!-- Images -->
       <div v-if="displayableImages.length" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
         <h3 class="font-bold text-sm text-gray-900 dark:text-gray-100">Photos</h3>
@@ -163,6 +187,8 @@
 </template>
 
 <script setup lang="ts">
+import type { ActionCommerciale } from '~/types'
+
 definePageMeta({
   middleware: ['auth'],
   layout: 'mobile',
@@ -241,10 +267,12 @@ onMounted(async () => {
   const id = route.params.id as string
   let query = supabase
     .from('visites')
-    .select('visite_id, pdv_id, user_id, commercial, email, date_visite, geofence_validated, data, image_urls, pdv:pdv_id(nom_pdv)')
+    .select('id, visite_id, pdv_id, user_id, commercial, email, date_visite, geofence_validated, data, image_urls, pdv:pdv_id(nom_pdv, zone, quartier)')
     .eq('visite_id', id)
  
-  if (!isPrivileged()) {
+  // Le commercial lit les visites de son périmètre (lot 3.3) : la RLS filtre,
+  // on ne force plus user_id que pour les rôles terrain.
+  if (!isPrivileged() && !authStore.isCommercial) {
     query = query.eq('user_id', user.value?.id)
   }
 
@@ -253,10 +281,29 @@ onMounted(async () => {
   if (data && matchesVisiteScope(data)) {
     visite.value = data
     pdvName.value = data.pdv?.nom_pdv || data.pdv_id
+    void chargerActions()
   }
   else {
     visite.value = null
   }
   loading.value = false
 })
+
+// Actions commerciales liées à cette visite (lot 3.5).
+const { listerPourVisite } = useActionsCommerciales()
+const actionsCommerciales = ref<ActionCommerciale[]>([])
+const showActionModal = ref(false)
+const peutDeciderAction = computed(() => authStore.isCommercial || isPrivileged())
+async function chargerActions() {
+  if (!visite.value?.id) return
+  try {
+    actionsCommerciales.value = await listerPourVisite(visite.value.id)
+  }
+  catch {
+    actionsCommerciales.value = []
+  }
+}
+function onActionCreee(a: ActionCommerciale) {
+  actionsCommerciales.value = [a, ...actionsCommerciales.value]
+}
 </script>

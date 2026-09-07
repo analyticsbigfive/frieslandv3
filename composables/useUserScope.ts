@@ -1,5 +1,5 @@
 import type { PDV, Profile, Visite } from '~/types'
-import { isPrivilegedProfile, isPrivilegedRole } from '~/utils/roles'
+import { isCommercialRole, isPrivilegedProfile, isPrivilegedRole } from '~/utils/roles'
 
 // Territoires effectifs d'un profil : liste multi (territoires_assignes),
 // fallback mono legacy (zone_assignee) si la liste est vide.
@@ -64,6 +64,13 @@ export function useUserScope() {
 
     if (user.value?.email && visite.email === user.value.email) {
       return true
+    }
+
+    // Commercial (lot 3.3) : périmètre territorial, comme la RLS. Sans PDV
+    // joint, on fait confiance à la ligne que la base a laissée passer.
+    if (isCommercialRole(profile.role)) {
+      const pdv = (visite as any).pdv
+      return pdv && typeof pdv === 'object' ? pdvInScope(pdv, profile) : true
     }
 
     return false

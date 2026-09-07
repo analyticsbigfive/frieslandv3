@@ -50,6 +50,22 @@
           <UIcon name="i-heroicons-chevron-down" class="h-4 w-4" aria-hidden="true" />
         </button>
 
+        <div v-if="fraicheurActive" class="mt-3 flex gap-2 overflow-x-auto pb-1" aria-label="Filtrer par état de visite">
+          <button
+            v-for="e in ETATS_FRAICHEUR"
+            :key="e.value"
+            type="button"
+            class="min-h-9 shrink-0 rounded-full px-3 text-xs font-semibold transition-colors"
+            :class="selectedEtat === e.value
+              ? 'bg-fc-red text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'"
+            :aria-pressed="selectedEtat === e.value"
+            @click="selectedEtat = selectedEtat === e.value ? '' : e.value"
+          >
+            {{ e.label }} <span class="opacity-70">{{ compteEtat(e.value) }}</span>
+          </button>
+        </div>
+
         <div class="mt-3 flex gap-2 overflow-x-auto pb-1" aria-label="Filtrer par zone">
           <button
             v-for="zone in zones"
@@ -107,6 +123,15 @@
             <div class="flex gap-2 mt-2">
               <UBadge variant="subtle" color="blue" size="xs">{{ pdv.canal }}</UBadge>
               <UBadge variant="subtle" color="gray" size="xs">{{ categoriePdvLabel(pdv.categorie_pdv) }}</UBadge>
+              <!-- Fraîcheur de visite (lot 3.2) -->
+              <UBadge
+                v-if="fraicheurActive && fraicheur[pdv.pdv_id]"
+                variant="subtle"
+                :color="etatFraicheurColor(fraicheur[pdv.pdv_id].etat)"
+                size="xs"
+              >
+                {{ libelleFraicheur(fraicheur[pdv.pdv_id].etat, fraicheur[pdv.pdv_id].jours_depuis) }}
+              </UBadge>
               <!-- Distance badge -->
               <UBadge
                 v-if="sortByProximity && pdv._distance != null"
@@ -161,6 +186,8 @@
 
 <script setup lang="ts">
 import type { PDV } from '~/types'
+import { ETATS_FRAICHEUR, etatFraicheurColor, libelleFraicheur, type EtatFraicheur } from '~/utils/actionsCommerciales'
+import { profileTerritories } from '~/composables/useUserScope'
 
 definePageMeta({ middleware: ['auth'], layout: 'mobile' })
 
@@ -182,7 +209,30 @@ const zones = computed(() => [...new Set(allPDV.value.map(p => p.zone).filter(Bo
 const canCreatePDV = computed(() => authStore.profile?.role === 'merchandiser')
 
 const userPosition = computed(() => currentPosition.value)
-const activeFilterCount = computed(() => Number(Boolean(selectedZone.value)) + Number(!sortByProximity.value))
+const activeFilterCount = computed(() => Number(Boolean(selectedZone.value)) + Number(!sortByProximity.value) + Number(Boolean(selectedEtat.value)))
+
+// Fraîcheur de visite (lot 3.2) via pdv_fraicheur_filtre, un appel par
+// territoire. Réservée au commercial et aux privilégiés : pour un
+// merchandiseur la RLS ne montre que ses propres visites, l'état serait faux.
+const supabase = useSupabaseClient()
+const selectedEtat = ref<EtatFraicheur | ''>('')
+const fraicheur = ref<Record<string, { etat: EtatFraicheur; jours_depuis: number | null }>>({})
+const fraicheurActive = computed(() => authStore.isCommercial || authStore.isSuperviseur)
+async function chargerFraicheur() {
+  if (!fraicheurActive.value) return
+  const zones = profileTerritories(authStore.profile)
+  const cibles = zones.length ? zones : [...new Set(allPDV.value.map(p => p.zone).filter(Boolean))].slice(0, 6)
+  const map: Record<string, { etat: EtatFraicheur; jours_depuis: number | null }> = {}
+  await Promise.all(cibles.map(async (zone) => {
+    const { data, error } = await (supabase.rpc as any)('pdv_fraicheur_filtre', { p_territoire: zone })
+    if (error) return
+    for (const r of (data || []) as any[]) map[r.pdv_id] = { etat: r.etat, jours_depuis: r.jours_depuis }
+  }))
+  fraicheur.value = map
+}
+function compteEtat(etat: EtatFraicheur) {
+  return allPDV.value.filter(p => fraicheur.value[p.pdv_id]?.etat === etat).length
+}
 
 /**
  * Calcul haversine de distance en mètres
@@ -233,6 +283,11 @@ function getFilteredPDV() {
     list = list.filter(p => p.zone === selectedZone.value)
   }
 
+  // Filtrage par état de visite
+  if (selectedEtat.value) {
+    list = list.filter(p => fraicheur.value[p.pdv_id]?.etat === selectedEtat.value)
+  }
+
   // Calcul de distance et tri par proximité si GPS disponible
   if (sortByProximity.value && userPosition.value) {
     const { lat, lng } = userPosition.value
@@ -258,11 +313,12 @@ const hasMore = computed(() => filteredPDV.value.length < totalFilteredPDV.value
 
 function resetFilters() {
   selectedZone.value = ''
+  selectedEtat.value = ''
   sortByProximity.value = true
   visibleLimit.value = 50
 }
 
-watch([search, selectedZone, sortByProximity], () => {
+watch([search, selectedZone, selectedEtat, sortByProximity], () => {
   visibleLimit.value = 50
 })
 
@@ -275,6 +331,7 @@ onMounted(async () => {
     }
 
     allPDV.value = await pdvStore.fetchScopedPDV(authStore.profile)
+    void chargerFraicheur()
     // Demander la position GPS si pas encore disponible
     if (!currentPosition.value) {
       requestPosition()

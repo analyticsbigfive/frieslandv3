@@ -391,6 +391,37 @@ export interface VisiteData {
   concurrence: VisiteConcurrence
   visibilite: VisiteVisibilite
   actions: VisiteActions
+  // Texte libre du merchandiseur (lot 3.4, 1.0.4) : « propriétaire absent »…
+  commentaires?: string
+}
+
+// ---- Actions commerciales (lot 3.5, 1.0.4) ----
+export type ActionCommercialeStatut = 'a_faire' | 'en_cours' | 'faite' | 'annulee'
+
+export interface TypeActionCommerciale {
+  code: string
+  libelle: string
+  ordre: number
+  actif: boolean
+}
+
+export interface ActionCommerciale {
+  id: string
+  pdv_id: string
+  visite_id?: string | null
+  auteur_id: string
+  type_code: string
+  assigne_a?: string | null
+  echeance?: string | null
+  statut: ActionCommercialeStatut
+  commentaire?: string | null
+  created_at: string
+  updated_at: string
+  // Joined
+  pdv?: Pick<PDV, 'nom_pdv' | 'zone' | 'quartier'>
+  auteur?: Pick<Profile, 'nom' | 'email'>
+  assigne?: Pick<Profile, 'nom' | 'email'>
+  type?: Pick<TypeActionCommerciale, 'libelle'>
 }
 
 export interface Visite {

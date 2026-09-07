@@ -209,6 +209,8 @@ const pageTitle = computed(() => {
     '/mobile/map': 'Carte',
     '/mobile/contacts': 'Contacts',
     '/mobile/more': 'Plus',
+    '/mobile/equipe': "Visites de l'équipe",
+    '/mobile/actions': 'Actions commerciales',
   }
   if (titles[route.path]) return titles[route.path]
   if (route.path.startsWith('/mobile/pdv/')) return 'Détail PDV'

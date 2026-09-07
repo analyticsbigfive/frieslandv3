@@ -6,7 +6,7 @@
 
       <nav class="mt-5 space-y-2" aria-label="Autres écrans mobiles">
         <NuxtLink
-          v-for="item in secondaryItems"
+          v-for="item in [...roleItems, ...secondaryItems]"
           :key="item.to"
           :to="item.to"
           class="flex min-h-16 items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 transition hover:border-red-100 hover:bg-red-50/40 active:scale-[0.99] dark:border-gray-700 dark:bg-gray-800 dark:hover:border-red-900/50 dark:hover:bg-red-950/20"
@@ -27,6 +27,17 @@
 
 <script setup lang="ts">
 definePageMeta({ middleware: ['auth'], layout: 'mobile' })
+
+const authStore = useAuthStore()
+const roleItems = computed(() => {
+  const items = [
+    { label: 'Actions commerciales', description: authStore.isCommercial ? 'Actions décidées pour vos merchandiseurs' : 'Actions à réaliser sur vos PDV', to: '/mobile/actions', icon: 'i-heroicons-clipboard-document-check' },
+  ]
+  if (authStore.isCommercial || authStore.isSuperviseur) {
+    items.unshift({ label: "Visites de l'équipe", description: 'Suivi des merchandiseurs du périmètre', to: '/mobile/equipe', icon: 'i-heroicons-users' })
+  }
+  return items
+})
 
 const secondaryItems = [
   { label: 'Calendrier', description: 'Visites récentes et navigation par mois', to: '/mobile/calendar', icon: 'i-heroicons-calendar-days' },

@@ -71,6 +71,28 @@
           </div>
         </div>
 
+        <!-- Actions commerciales (lot 3.5) -->
+        <div class="mobile-card p-4 space-y-3">
+          <div class="flex items-center justify-between gap-2">
+            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Actions commerciales</h3>
+            <UButton v-if="peutDeciderAction" size="xs" icon="i-heroicons-plus" class="bg-fc-red" @click="showActionModal = true">Nouvelle action</UButton>
+          </div>
+          <ActionCommercialeList
+            :actions="actionsOuvertes"
+            :empty-text="authStore.isCommercial ? 'Aucune action ouverte sur ce PDV.' : 'Aucune action à réaliser sur ce PDV.'"
+            @changed="chargerActions"
+          />
+          <p v-if="actionsFermees.length" class="text-xs text-gray-400">{{ actionsFermees.length }} action{{ actionsFermees.length > 1 ? 's' : '' }} terminée{{ actionsFermees.length > 1 ? 's' : '' }}</p>
+        </div>
+        <ActionCommercialeModal
+          v-if="peutDeciderAction"
+          v-model="showActionModal"
+          :pdv-id="pdv.pdv_id"
+          :pdv-nom="pdv.nom_pdv"
+          :pdv-zone="pdv.zone"
+          @created="chargerActions"
+        />
+
         <!-- GPS -->
         <div class="mobile-card p-4 space-y-3">
           <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Coordonnées GPS</h3>
@@ -206,6 +228,8 @@
 </template>
 
 <script setup lang="ts">
+import type { ActionCommerciale } from '~/types'
+import { estOuverte } from '~/utils/actionsCommerciales'
 import type { PDV } from '~/types'
 
 definePageMeta({ middleware: ['auth'], layout: 'mobile' })
@@ -242,6 +266,24 @@ function onCategorieChange() {
   }
 }
 
+// Actions commerciales sur ce PDV (lot 3.5) : le commercial décide, le
+// merchandiseur voit ce qu'il a à faire et marque « faite ».
+const { listerPourPdv } = useActionsCommerciales()
+const actionsCommerciales = ref<ActionCommerciale[]>([])
+const showActionModal = ref(false)
+const peutDeciderAction = computed(() => authStore.isCommercial || authStore.isSuperviseur)
+const actionsOuvertes = computed(() => actionsCommerciales.value.filter(estOuverte))
+const actionsFermees = computed(() => actionsCommerciales.value.filter(a => !estOuverte(a)))
+async function chargerActions() {
+  if (!pdv.value?.pdv_id) return
+  try {
+    actionsCommerciales.value = await listerPourPdv(pdv.value.pdv_id)
+  }
+  catch {
+    actionsCommerciales.value = []
+  }
+}
+
 const loading = ref(true)
 const editing = ref(false)
 const saving = ref(false)
@@ -275,6 +317,7 @@ onMounted(async () => {
 
     const data = await pdvStore.fetchPDVById(route.params.id as string)
     pdv.value = matchesPDVScope(data as PDV) ? data as PDV : null
+    if (pdv.value) void chargerActions()
   }
   catch {
     pdv.value = null

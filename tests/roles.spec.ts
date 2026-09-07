@@ -44,9 +44,9 @@ describe('écriture terrain', () => {
 })
 
 describe('navigation mobile', () => {
-  it('le commercial n\'a pas d\'onglet Routing et démarre sur les PDV', () => {
+  it("le commercial n'a ni Routing ni saisie : équipe, PDV, actions", () => {
     const keys = mobileNavItems('commercial').map(i => i.key)
-    expect(keys).toEqual(['pdv', 'visites', 'more'])
+    expect(keys).toEqual(['equipe', 'pdv', 'actions', 'more'])
   })
 
   it('les autres rôles gardent les quatre onglets historiques', () => {
