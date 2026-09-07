@@ -101,6 +101,7 @@ import {
   Navigation,
   SlidersHorizontal,
   Trophy,
+  GraduationCap,
 } from 'lucide-vue-next'
 
 defineProps<{ collapsed: boolean; mobileOpen?: boolean }>()
@@ -146,6 +147,7 @@ const navSections: Array<{ key: string; title: string; items: AdminNavItem[] }> 
     title: 'Visites',
     items: [
       { label: 'Visites', to: '/admin/visites', icon: ClipboardList },
+      { label: 'Field coaching', to: '/admin/visites/coaching', icon: GraduationCap },
     ],
   },
   {

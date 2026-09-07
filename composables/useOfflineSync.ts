@@ -119,6 +119,13 @@ export function useOfflineSync() {
             throw error
           }
         }
+        else if (item.type === 'field_coaching') {
+          const { error } = await (supabase.from('field_coaching') as any)
+            .upsert(item.data, { onConflict: 'id' })
+          if (error) {
+            throw error
+          }
+        }
         else if (item.type === 'pdv') {
           const { error } = await supabase
             .from('pdv')

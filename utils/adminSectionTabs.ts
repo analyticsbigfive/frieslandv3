@@ -23,6 +23,7 @@ export const adminSectionTabs: Record<AdminSection, AdminSectionTab[]> = {
     { label: 'Évolution', to: '/admin/visites/evolution', icon: 'i-heroicons-chart-bar' },
     { label: 'Par catégorie', to: '/admin/visites/categories', icon: 'i-heroicons-squares-2x2' },
     { label: 'Commerciaux', to: '/admin/visites/commerciaux', icon: 'i-heroicons-users' },
+    { label: 'Field coaching', to: '/admin/visites/coaching', icon: 'i-heroicons-academic-cap' },
   ],
   'perfect-store': [
     { label: 'Tableau de bord', to: '/admin', icon: 'i-heroicons-trophy' },

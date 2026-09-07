@@ -35,6 +35,7 @@ const roleItems = computed(() => {
   ]
   if (authStore.isCommercial || authStore.isSuperviseur) {
     items.unshift({ label: "Visites de l'équipe", description: 'Suivi des merchandiseurs du périmètre', to: '/mobile/equipe', icon: 'i-heroicons-users' })
+    items.push({ label: 'Field coaching', description: 'Questionnaire de suivi des activités de prospection', to: '/mobile/coaching', icon: 'i-heroicons-academic-cap' })
   }
   return items
 })

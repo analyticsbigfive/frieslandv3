@@ -395,6 +395,43 @@ export interface VisiteData {
   commentaires?: string
 }
 
+// ---- Field coaching (lot 4, 1.0.4) ----
+export interface FieldCoaching {
+  id: string
+  date_coaching: string
+  auteur_id: string
+  superviseur_id?: string | null
+  assigne_a?: string | null
+  distributeur_id?: number | null
+  distributeur_nom?: string | null
+  engin_code?: string | null
+  pdv_id: string
+  route_jour?: string | null
+  type_pdv?: string | null
+  commune?: string | null
+  quartier?: string | null
+  rue?: string | null
+  proche_de?: string | null
+  proprietaire_nom?: string | null
+  proprietaire_prenom?: string | null
+  proprietaire_tel?: string | null
+  nb_sku_pdv?: number | null
+  nb_sku_dispo?: number | null
+  skus_disponibles: { id: number; nom: string }[]
+  reponses: Record<string, 'oui' | 'non' | 'na'>
+  commentaire?: string | null
+  image_urls: string[]
+  statut: 'soumis' | 'valide'
+  geolocation_lat?: number | null
+  geolocation_lng?: number | null
+  created_at: string
+  updated_at: string
+  pdv?: Pick<PDV, 'nom_pdv' | 'zone' | 'quartier'>
+  auteur?: Pick<Profile, 'nom' | 'email'>
+  assigne?: Pick<Profile, 'nom' | 'email'>
+  superviseur?: Pick<Profile, 'nom' | 'email'>
+}
+
 // ---- Actions commerciales (lot 3.5, 1.0.4) ----
 export type ActionCommercialeStatut = 'a_faire' | 'en_cours' | 'faite' | 'annulee'
 
@@ -537,7 +574,7 @@ export interface CouvertureLigne {
 // ---- Offline Queue ----
 export interface OfflineQueueItem {
   id: string
-  type: 'visite' | 'pdv' | 'image' | 'positions_batch'
+  type: 'visite' | 'pdv' | 'image' | 'positions_batch' | 'field_coaching'
   data: any
   timestamp: number
   retries: number

@@ -425,6 +425,8 @@ Restitution demandée à deux endroits : dans l'app du merchandiseur (fiche PDV 
 
 ## Lot 4 — Field coaching
 
+> **État au 7 septembre 2026 (soir).** Livré : référentiel `engin_vente`, tables `field_coaching` + `field_coaching_transfert`, RPC `transferer_field_coaching` (migration `20260907160000`, à appliquer) ; wizard mobile `/mobile/coaching/new` (5 étapes : superviseur & vendeur, PDV & propriétaire, distribution, Perfect Visibility, Effective Promotion — 13 questions Oui/Non/N/A), liste `/mobile/coaching`, détail avec transfert et historique, brouillon local, file hors ligne ; rapport admin `/admin/visites/coaching` (période, superviseur, zone, KPI, table, export CSV, impression). Ouvert aux rôles superviseur, commercial, admin. **À vérifier avec le client : le libellé exact des 13 questions** (`utils/fieldCoaching.ts`), rédigé d'après les intitulés courts du plan faute d'accès au formulaire Kobo. Non fait : photos sur le coaching.
+
 Chantier neuf : aucune trace de `kobo`, `enketo` ou `coaching` dans le dépôt.
 
 ### 4.1 Le formulaire source
@@ -531,6 +533,8 @@ La base live contient aussi `SupermarcheMT` A/B/C pour BR 1kg et Pearl 1kg (câb
 **Effet sur le calcul, à connaître avant de retirer.** `calculer_dispo_categorie(..., 'scm', ...)` joint `seuil_disponibilite` ; sans seuil SCM en GT, elle renvoie `null` et `dispo_rayon` devient la moyenne EVAP + IMP — le `where x is not null` de `20260630130100_friesland_perfect_store_calcul.sql:187-190` le gère déjà. `presence_rayon_scm` (`20260730130000`) suit le même chemin. L'assortiment (`:200-218`) compte sur `correspondance_reference` sans jointure seuil : SCM et BRB 380g continuent de compter dans les « 15 SKU », ce qui est cohérent avec le total V2. Les visites GT déjà calculées gardent leur ancien `dispo_rayon_scm` tant qu'on ne les recalcule pas.
 
 **Constat — rien à coder.** Le CRUD existe déjà : Paramètres → Référentiels → section Perfect Store → « Seuils dispo » (`pages/admin/referentiels/index.vue`, entrée `seuil_disponibilite`, avec suppression ligne à ligne, RLS `seuil_disponibilite_manager_write` réservée à `est_gestionnaire_perfect_store()`). Le recalcul existe aussi : bouton « Recalculer toutes les visites » de `pages/admin/perfect-store/standards.vue`, RPC `recalculer_tous_perfect_store`.
+
+> **État au 7 septembre 2026.** Script `scripts/retirer-seuils-v2.mjs` : le dry-run identifie exactement les 17 lignes (BRB 380g ×5, BR 1kg ×3, Pearl 1kg ×9, MT intact). **Reste à lancer** `node scripts/retirer-seuils-v2.mjs --apply` (supprime puis recalcule via `recalculer_tous_perfect_store`), ou la suppression à la main dans l'admin.
 
 **Procédure admin (pas de SQL) :**
 1. Référentiels → Perfect Store → Seuils dispo : supprimer les 17 lignes du tableau ci-dessus, en recoupant référence, segment et grade. Ne pas toucher aux lignes `SupermarcheMT`.

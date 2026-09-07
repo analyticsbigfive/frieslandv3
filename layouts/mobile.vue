@@ -213,10 +213,13 @@ const pageTitle = computed(() => {
     '/mobile/more': 'Plus',
     '/mobile/equipe': "Visites de l'équipe",
     '/mobile/actions': 'Actions commerciales',
+    '/mobile/coaching': 'Field coaching',
+    '/mobile/coaching/new': 'Nouveau field coaching',
   }
   if (titles[route.path]) return titles[route.path]
   if (route.path.startsWith('/mobile/pdv/')) return 'Détail PDV'
   if (route.path.startsWith('/mobile/visites/')) return 'Détail Visite'
+  if (route.path.startsWith('/mobile/coaching/')) return 'Field coaching'
   return 'Friesland'
 })
 </script>

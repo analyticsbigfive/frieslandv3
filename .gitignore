@@ -70,3 +70,6 @@ images-source/
 
 # Rapports générés par les scripts d'audit/harmonisation
 scripts/out/
+
+# Guides QA avec identifiants de test (envoyés au client, jamais dans git)
+docs/guides-qa/
