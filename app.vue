@@ -2,6 +2,9 @@
   <NuxtLayout>
     <NuxtPage />
   </NuxtLayout>
+  <ClientOnly>
+    <LocationDisclosureModal />
+  </ClientOnly>
 </template>
 
 <script setup lang="ts">

@@ -67,12 +67,31 @@ Bonnet Rouge ne propose pas d'inscription libre. Les identifiants sont fournis p
 | `feature-graphic-1024x500.png` | Image de présentation |
 | `icone-512.png` | Icône |
 
+## Identité à déclarer (doit correspondre mot pour mot entre la fiche Play et la politique)
+
+| Élément | Valeur |
+| --- | --- |
+| Nom du développeur (profil public Play) | `BD & CO` |
+| Personne morale | BUSINESS DEVELOPMENT & COMMUNICATION (BD&CO), SARL, SIREN 528 724 362 |
+| Adresse | 60 rue François Ier, 75008 Paris, France |
+| ID du compte de développeur | 6527229789438339542 |
+| E-mail développeur (public) | team@bigfive-edition.com |
+| Site web | https://bigfivesolutions.com/ |
+| Nom de l'application | Friesland Bonnet Rouge |
+| Package | com.bdco.bonnetrouge |
+
+Ces valeurs sont reprises telles quelles dans `pages/privacy-policy.vue` (section
+« Identification de l'application et de l'éditeur ») et dans `pages/supprimer-compte.vue`.
+Tout changement dans Play Console doit être répercuté dans ces deux pages, sinon le
+motif de rejet « Les renseignements sur l'appli ou le développeur ne concordent pas »
+revient.
+
 ## URL à déclarer (à compléter avec le domaine de production)
 
-- Politique de confidentialité : `https://<domaine>/privacy-policy`
+- Politique de confidentialité : `https://<domaine>/privacy-policy` (doit nommer l'app, le package `com.bdco.bonnetrouge` et BD&CO comme personne morale — exigence Play)
 - Suppression de compte : `https://<domaine>/supprimer-compte`
 
 ## Fichier à téléverser
 
-`android/app/build/outputs/bundle/release/app-release.aab` (version 1.0.1, versionCode 2),
+`android/app/build/outputs/bundle/release/app-release.aab` (version 1.0.4, versionCode 5),
 signé avec le keystore de production. Voir `docs/BUILD-ANDROID.md` pour régénérer.

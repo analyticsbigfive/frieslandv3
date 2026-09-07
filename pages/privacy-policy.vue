@@ -2,9 +2,34 @@
   <div class="min-h-screen bg-gray-50 px-6 py-12 dark:bg-gray-900">
     <main class="mx-auto max-w-2xl">
       <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Politique de confidentialité — Bonnet Rouge</h1>
-      <p class="mt-1 text-sm text-gray-400">Dernière mise à jour : 3 septembre 2026</p>
+      <p class="mt-1 text-sm text-gray-400">Dernière mise à jour : 7 septembre 2026</p>
 
       <div class="mt-8 space-y-6 text-[15px] leading-relaxed text-gray-700 dark:text-gray-300">
+        <section>
+          <h2 class="mb-2 text-lg font-semibold text-gray-900 dark:text-gray-100">Identification de l'application et de l'éditeur</h2>
+          <p>
+            La présente politique de confidentialité s'applique à l'application mobile
+            <strong>Friesland Bonnet Rouge</strong> (nom court « Bonnet Rouge »), publiée sur Google Play
+            sous l'identifiant de package <code class="text-[13px]">com.bdco.bonnetrouge</code>, ainsi qu'à
+            sa version web.
+          </p>
+          <p class="mt-2">
+            L'application est éditée et publiée par <strong>BD &amp; CO</strong>
+            (BUSINESS DEVELOPMENT &amp; COMMUNICATION), société à responsabilité limitée de droit français
+            immatriculée sous le numéro SIREN 528 724 362, dont l'adresse est
+            60 rue François Ier, 75008 Paris, France. BD &amp; CO est le développeur de l'Application, le
+            titulaire du compte de développeur Google Play sous lequel elle est publiée
+            (nom du développeur : « BD &amp; CO ») et le responsable du traitement des données décrites
+            ci-dessous.
+          </p>
+          <p class="mt-2">
+            Site web de l'éditeur :
+            <a href="https://bigfivesolutions.com/" class="text-fc-red underline" rel="noopener" target="_blank">bigfivesolutions.com</a>
+            — contact développeur :
+            <a href="mailto:team@bigfive-edition.com" class="text-fc-red underline">team@bigfive-edition.com</a>.
+          </p>
+        </section>
+
         <p>
           L'application <strong>Bonnet Rouge</strong> (« l'Application ») est un outil professionnel de collecte
           de données terrain destiné aux équipes commerciales et merchandising intervenant sur le réseau de
@@ -25,9 +50,19 @@
               vente prises via l'Application.
             </li>
             <li>
-              <strong>Localisation</strong> : la position GPS de l'appareil est relevée au moment de
-              l'enregistrement d'une visite, afin de valider la présence sur le point de vente (géorepérage).
-              L'Application ne suit pas la position en continu ni en arrière-plan.
+              <strong>Localisation (au premier plan)</strong> : la position GPS de l'appareil est relevée au
+              moment de l'enregistrement d'une visite, afin de valider la présence sur le point de vente
+              (géorepérage), et pour afficher la distance jusqu'au prochain point de vente.
+            </li>
+            <li>
+              <strong>Localisation en arrière-plan (suivi de tournée)</strong> : lorsque l'utilisateur démarre
+              explicitement une tournée, l'Application collecte sa position GPS à intervalles réguliers,
+              <strong>y compris lorsque l'application est fermée ou n'est pas utilisée</strong>, afin de
+              reconstituer le trajet et les visites de la journée dans le tableau de bord de son organisation.
+              Cette collecte commence au bouton « Démarrer la tournée », s'arrête au bouton « Terminer la
+              tournée », est signalée en permanence par une notification Android et n'est jamais activée sans
+              action de l'utilisateur. Avant toute demande d'autorisation, l'Application affiche un écran
+              d'explication que l'utilisateur doit accepter.
             </li>
           </ul>
         </section>
@@ -71,7 +106,18 @@
         <section>
           <h2 class="mb-2 text-lg font-semibold text-gray-900 dark:text-gray-100">Permissions de l'appareil</h2>
           <ul class="list-disc space-y-2 pl-5">
-            <li><strong>Localisation</strong> : validation de la présence en point de vente lors d'une visite.</li>
+            <li>
+              <strong>Localisation (pendant l'utilisation)</strong> : validation de la présence en point de
+              vente lors d'une visite.
+            </li>
+            <li>
+              <strong>Localisation « Toujours autoriser » (arrière-plan)</strong> : suivi GPS d'une tournée
+              démarrée par l'utilisateur, écran éteint ou application fermée, jusqu'à la fin de la tournée.
+            </li>
+            <li>
+              <strong>Désactivation de l'optimisation de batterie</strong> : permet au suivi de tournée de ne
+              pas être interrompu par le système.
+            </li>
             <li><strong>Appareil photo</strong> : prise de photos des points de vente et des relevés de visibilité.</li>
           </ul>
           <p class="mt-2">
@@ -83,7 +129,11 @@
         <section>
           <h2 class="mb-2 text-lg font-semibold text-gray-900 dark:text-gray-100">Contact</h2>
           <p>
-            Pour toute question relative à cette politique ou à vos données :
+            Responsable du traitement : <strong>BD &amp; CO</strong> (BUSINESS DEVELOPMENT &amp; COMMUNICATION)<br>
+            60 rue François Ier, 75008 Paris, France<br>
+            Éditeur :
+            <a href="mailto:team@bigfive-edition.com" class="text-fc-red underline">team@bigfive-edition.com</a><br>
+            Demandes relatives aux données et aux comptes :
             <a href="mailto:jeanluc@bigfiveabidjan.com" class="text-fc-red underline">jeanluc@bigfiveabidjan.com</a>
           </p>
         </section>

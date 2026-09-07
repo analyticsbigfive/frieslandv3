@@ -79,6 +79,7 @@ export function useTournee() {
   const user = useSupabaseUser()
   const { addToQueue } = useOfflineSync()
   const geo = useGeoProvider()
+  const { ensureDisclosure } = useLocationDisclosure()
 
   const minIntervalMs = Number(config.public.trackingIntervalMs) || 30_000
   const distanceM = Number(config.public.trackingDistanceM) || 15
@@ -248,6 +249,15 @@ export function useTournee() {
     const userId = user.value?.id
     if (!userId) {
       trackingError.value = 'Utilisateur non connecté.'
+      return
+    }
+
+    // Divulgation bien visible (Google Play) : explication interne AVANT le
+    // prompt système, y compris pour la localisation en arrière-plan demandée
+    // par addWatcher. Même si la permission « pendant l'utilisation » a déjà
+    // été accordée, l'utilisateur doit avoir accepté l'explication une fois.
+    if (!(await ensureDisclosure())) {
+      trackingError.value = 'Suivi de tournée annulé : la collecte de position n\'a pas été acceptée.'
       return
     }
 

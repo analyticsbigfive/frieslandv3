@@ -11,6 +11,13 @@
           organisation, la demande lui est transmise et traitée sous <strong>30 jours</strong>.
         </p>
 
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          Application concernée : <strong>Friesland Bonnet Rouge</strong>
+          (<code class="text-[13px]">com.bdco.bonnetrouge</code>), éditée par
+          <strong>BD &amp; CO</strong> (BUSINESS DEVELOPMENT &amp; COMMUNICATION),
+          60 rue François Ier, 75008 Paris, France.
+        </p>
+
         <section>
           <h2 class="mb-2 text-lg font-semibold text-gray-900 dark:text-gray-100">Ce qui est supprimé</h2>
           <ul class="list-disc space-y-1 pl-5">

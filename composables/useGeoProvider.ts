@@ -58,6 +58,20 @@ function normalizePermission(state: string): PermissionState {
 
 export function useGeoProvider() {
   const isNative = import.meta.client && Capacitor.isNativePlatform()
+  const { ensureDisclosure } = useLocationDisclosure()
+
+  // Google Play (divulgation bien visible) : en natif, aucun prompt système
+  // de localisation ne doit apparaître avant l'écran d'explication interne.
+  // Renvoie false si l'utilisateur refuse l'explication (pas de prompt).
+  async function disclosureBeforePrompt(): Promise<boolean> {
+    if (!isNative) {
+      return true
+    }
+    if ((await checkPermission()) === 'granted') {
+      return true
+    }
+    return ensureDisclosure()
+  }
 
   async function getCurrentPosition(options: GeoOptions = {}): Promise<GeoPositionLike> {
     const opts = {
@@ -67,6 +81,9 @@ export function useGeoProvider() {
     }
 
     if (isNative) {
+      if (!(await disclosureBeforePrompt())) {
+        throw toCodedError(new Error('Localisation refusée'))
+      }
       try {
         return await Geolocation.getCurrentPosition(opts)
       }
@@ -98,6 +115,10 @@ export function useGeoProvider() {
     }
 
     if (isNative) {
+      if (!(await disclosureBeforePrompt())) {
+        onError?.(toCodedError(new Error('Localisation refusée')))
+        return () => {}
+      }
       const id = await Geolocation.watchPosition(opts, (position, err) => {
         if (err) {
           onError?.(toCodedError(err))
@@ -151,6 +172,9 @@ export function useGeoProvider() {
 
   async function requestPermission(): Promise<PermissionState | null> {
     if (isNative) {
+      if (!(await disclosureBeforePrompt())) {
+        return 'denied'
+      }
       try {
         const status = await Geolocation.requestPermissions()
         return normalizePermission(status.location)
