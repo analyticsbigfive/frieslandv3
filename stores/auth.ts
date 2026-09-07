@@ -15,6 +15,9 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => !!user.value)
   const isAdmin = computed(() => profile.value?.role === 'admin')
   const isSuperviseur = computed(() => profile.value?.role === 'superviseur' || isAdmin.value)
+  // Commercial : consultation en lecture seule (lot 2, 1.0.4). Merchandiser : saisie terrain.
+  const isCommercial = computed(() => profile.value?.role === 'commercial')
+  const isMerchandiser = computed(() => profile.value?.role === 'merchandiser')
   const userRole = computed(() => profile.value?.role || 'merchandiser')
 
   async function fetchProfile(options: { force?: boolean } = {}) {
@@ -254,6 +257,8 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     isAdmin,
     isSuperviseur,
+    isCommercial,
+    isMerchandiser,
     userRole,
     login,
     register,

@@ -26,6 +26,7 @@
             <p class="text-xl font-bold tabular-nums text-gray-900 dark:text-gray-100">{{ todayCount }}<span class="text-sm font-normal text-gray-400"> / {{ dailyTarget }} visites</span></p>
           </div>
           <UButton
+            v-if="!authStore.isCommercial"
             size="sm"
             icon="i-heroicons-plus"
             class="shrink-0 bg-fc-red"
@@ -200,6 +201,7 @@
             Lancez une visite pour alimenter la base terrain.
           </p>
           <UButton
+            v-if="!authStore.isCommercial"
             size="sm"
             class="mt-4 bg-fc-red"
             icon="i-heroicons-plus"

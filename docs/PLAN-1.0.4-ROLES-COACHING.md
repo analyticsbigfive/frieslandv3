@@ -299,6 +299,10 @@ Pas de `./gradlew clean`, inutile de jeter l'état incrémental. Aucun risque gi
 
 Socle du reste. À faire en premier après le lot 1.
 
+> **État au 7 septembre 2026 (après-midi).** Code livré : `utils/roles.ts` (+ tests), `isCommercial` / `isMerchandiser` dans `stores/auth.ts`, `MobileBottomNav` selon le rôle, `middleware/terrain-write.ts` sur la saisie de visite, CTA d'écriture masqués pour le commercial. Migrations écrites, **à appliquer dans l'éditeur SQL Supabase dans cet ordre** : `20260907140000_friesland_lot2_schema_rattrapage.sql` puis `20260907140100_friesland_lot2_roles_rls_commercial.sql`. Preuve par PostgREST direct : `COMMERCIAL_EMAIL=… pnpm run rls:test`.
+>
+> Constat en production qui corrige le texte ci-dessous : la lecture des visites du commercial est **déjà scopée** zone + quartier (1 775 visites visibles pour un compte réel = exactement son périmètre), et `role_section_access` du commercial est déjà ouvert sauf `parametres`. Les deux ont été posés hors dépôt ; la migration 140100 les codifie. Ce qui manquait réellement est le 2.4 : l'écriture restait ouverte à tout authentifié.
+
 ### 2.1 Redirection après connexion
 
 `pages/login.vue:126`, `pages/login.vue:148` et `pages/index.vue:20` codent en dur :
@@ -623,11 +627,11 @@ Des visites historiques portent `data.produits.yaourt` et `.cereales` : on masqu
 
 ### Bloquant hors code
 
-L'URL de la politique de confidentialité est encore `https://<domaine>/privacy-policy` dans la fiche (`docs/play-store/FICHE-PLAY-STORE.md`). Google exige une URL **publiquement accessible** ; l'existence des pages dans le dépôt ne suffit pas, d'autant que `generate:native` ne publie que `/mobile`. Résoudre le domaine de production, puis :
+Résolu le 7 sept. : les deux pages sont servies par `https://frieslandv3.vercel.app` (vérifié, package et BD & CO présents). Ancien constat : l'URL était `https://<domaine>/privacy-policy` dans la fiche (`docs/play-store/FICHE-PLAY-STORE.md`). Google exige une URL **publiquement accessible** ; l'existence des pages dans le dépôt ne suffit pas, d'autant que `generate:native` ne publie que `/mobile`. Résoudre le domaine de production, puis :
 
 ```bash
-curl -s https://<domaine>/privacy-policy | grep -c 'com.bdco.bonnetrouge'
-curl -s https://<domaine>/supprimer-compte | grep -c 'BD &amp; CO'
+curl -s https://frieslandv3.vercel.app/privacy-policy | grep -c 'com.bdco.bonnetrouge'
+curl -s https://frieslandv3.vercel.app/supprimer-compte | grep -c 'BD &amp; CO'
 ```
 
 ---

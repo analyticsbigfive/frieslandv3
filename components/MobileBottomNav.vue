@@ -3,7 +3,7 @@
     class="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/95 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur dark:border-gray-700 dark:bg-gray-900/95 safe-area-bottom"
     aria-label="Navigation mobile principale"
   >
-    <div class="grid grid-cols-4 px-1 pt-1">
+    <div class="grid px-1 pt-1" :class="navItems.length === 3 ? 'grid-cols-3' : 'grid-cols-4'">
       <NuxtLink
         v-for="item in navItems"
         :key="item.to"
@@ -15,7 +15,7 @@
           ? 'bg-red-50 text-fc-red dark:bg-red-950/40 dark:text-red-200'
           : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200'"
       >
-        <component :is="item.icon" class="h-5 w-5" aria-hidden="true" />
+        <component :is="icons[item.key]" class="h-5 w-5" aria-hidden="true" />
         <span class="mt-0.5 text-[11px] font-semibold leading-tight">{{ item.label }}</span>
       </NuxtLink>
     </div>
@@ -23,6 +23,7 @@
 </template>
 
 <script setup lang="ts">
+import type { Component } from 'vue'
 import {
   ClipboardList,
   Route,
@@ -30,17 +31,23 @@ import {
   MoreHorizontal,
 } from 'lucide-vue-next'
 
+import { mobileNavItems, type MobileNavItem } from '~/utils/roles'
+
 const route = useRoute()
+const authStore = useAuthStore()
 
 function isActive(path: string) {
   if (path === '/mobile') return route.path === '/mobile'
   return route.path.startsWith(path)
 }
 
-const navItems = [
-  { label: 'Visites', to: '/mobile', icon: ClipboardList, ariaLabel: 'Voir les visites' },
-  { label: 'Routing', to: '/mobile/routing', icon: Route, ariaLabel: 'Voir le routing' },
-  { label: 'PDV', to: '/mobile/pdv', icon: MapPin, ariaLabel: 'Voir les points de vente' },
-  { label: 'Plus', to: '/mobile/more', icon: MoreHorizontal, ariaLabel: 'Voir les autres écrans' },
-]
+const icons: Record<MobileNavItem['key'], Component> = {
+  visites: ClipboardList,
+  routing: Route,
+  pdv: MapPin,
+  more: MoreHorizontal,
+}
+
+// Onglets selon le rôle (utils/roles.ts) : le commercial n'a pas de Routing.
+const navItems = computed(() => mobileNavItems(authStore.profile?.role))
 </script>

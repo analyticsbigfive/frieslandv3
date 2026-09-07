@@ -20,7 +20,7 @@
             <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">{{ pdv.nom_pdv }}</h2>
             <p class="text-xs text-gray-400 mt-0.5">{{ pdv.pdv_id }}</p>
           </div>
-          <div v-if="!editing" class="flex shrink-0 items-center gap-2">
+          <div v-if="!editing && !authStore.isCommercial" class="flex shrink-0 items-center gap-2">
             <UButton
               :to="{ path: '/mobile/visites/new', query: { pdv_id: pdv.pdv_id } }"
               size="sm"

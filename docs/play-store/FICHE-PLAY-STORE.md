@@ -86,10 +86,10 @@ Tout changement dans Play Console doit être répercuté dans ces deux pages, si
 motif de rejet « Les renseignements sur l'appli ou le développeur ne concordent pas »
 revient.
 
-## URL à déclarer (à compléter avec le domaine de production)
+## URL à déclarer (domaine de production : frieslandv3.vercel.app, vérifié le 7 sept. 2026)
 
-- Politique de confidentialité : `https://<domaine>/privacy-policy` (doit nommer l'app, le package `com.bdco.bonnetrouge` et BD&CO comme personne morale — exigence Play)
-- Suppression de compte : `https://<domaine>/supprimer-compte`
+- Politique de confidentialité : `https://frieslandv3.vercel.app/privacy-policy` (doit nommer l'app, le package `com.bdco.bonnetrouge` et BD&CO comme personne morale — exigence Play)
+- Suppression de compte : `https://frieslandv3.vercel.app/supprimer-compte`
 
 ## Fichier à téléverser
 

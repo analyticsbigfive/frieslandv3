@@ -1,8 +1,5 @@
 import type { PDV, Profile, Visite } from '~/types'
-
-function isPrivilegedProfile(profile?: Profile | null) {
-  return profile?.role === 'admin' || profile?.role === 'superviseur'
-}
+import { isPrivilegedProfile, isPrivilegedRole } from '~/utils/roles'
 
 // Territoires effectifs d'un profil : liste multi (territoires_assignes),
 // fallback mono legacy (zone_assignee) si la liste est vide.
@@ -95,7 +92,7 @@ export function useUserScope() {
         return true
       }
 
-      if (contact.role === 'admin' || contact.role === 'superviseur') {
+      if (isPrivilegedRole(contact.role)) {
         return true
       }
 

@@ -1,5 +1,6 @@
 // stores/pdv.ts
 import { defineStore, skipHydrate } from 'pinia'
+import { isPrivilegedProfile } from '~/utils/roles'
 import { markRaw } from 'vue'
 import type { PDV, Profile, ZoneSecteur } from '~/types'
 
@@ -56,10 +57,6 @@ export const usePDVStore = defineStore('pdv', () => {
     const rows = (data || []) as { zone: string | null; region: string | null }[]
     facetZones.value = [...new Set(rows.map(r => r.zone).filter((z): z is string => !!z))].sort((a, b) => a.localeCompare(b, 'fr'))
     facetRegions.value = [...new Set(rows.map(r => r.region).filter((r): r is string => !!r))].sort((a, b) => a.localeCompare(b, 'fr'))
-  }
-
-  function isPrivilegedProfile(profile?: Profile | null) {
-    return profile?.role === 'admin' || profile?.role === 'superviseur'
   }
 
   // Filtre quartier serveur : quartier ∈ liste OU quartier non renseigné (NULL).

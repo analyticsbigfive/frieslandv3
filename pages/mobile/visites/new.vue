@@ -635,7 +635,7 @@ import { statutMarqueDerive } from '~/utils/concurrence'
 type ProductKey<T> = Exclude<keyof T, 'present' | 'prix_respectes' | 'quantites'>
 
 definePageMeta({
-  middleware: ['auth'],
+  middleware: ['auth', 'terrain-write'],
   layout: false,
 })
 

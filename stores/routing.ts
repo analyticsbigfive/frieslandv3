@@ -1,5 +1,6 @@
 // stores/routing.ts
 import { defineStore, skipHydrate } from 'pinia'
+import { isPrivilegedProfile } from '~/utils/roles'
 import { markRaw } from 'vue'
 import type { Routing, RoutingPDV, RoutingObjectives, RoutingTemplate, RoutingTemplatePDV, RoutingTemplateException, Profile } from '~/types'
 
@@ -25,7 +26,7 @@ export const useRoutingStore = defineStore('routing', () => {
     if (profErr) throw profErr
 
     // admin / superviseur : aucune restriction de périmètre.
-    if (profile?.role === 'admin' || profile?.role === 'superviseur') return []
+    if (isPrivilegedProfile(profile)) return []
 
     const { data: pdvs, error: pdvErr } = await (supabase
       .from('pdv') as any)
