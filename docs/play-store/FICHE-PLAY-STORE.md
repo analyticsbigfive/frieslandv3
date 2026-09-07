@@ -93,5 +93,14 @@ revient.
 
 ## Fichier à téléverser
 
-`android/app/build/outputs/bundle/release/app-release.aab` (version 1.0.4, versionCode 5),
-signé avec le keystore de production. Voir `docs/BUILD-ANDROID.md` pour régénérer.
+`dist-apk/friesland-bonnet-rouge-1.0.4-release.aab` (version 1.0.4, versionCode 5),
+signé avec la clé d'upload de production (SHA-1 `13b21bc5c7129073bedf65ebaefd0df645fefdcf`).
+Play n'accepte que l'AAB : l'APK release du même lot ne sert qu'au test hors-Play.
+Contrôler la signature avant envoi avec
+`bash scripts/verify-aab-signature.sh dist-apk/friesland-bonnet-rouge-1.0.4-release.aab`.
+Voir `docs/BUILD-ANDROID.md` pour régénérer.
+
+## Déclarations Play Console
+
+Les textes prêts à coller (accès à la localisation en arrière-plan, sécurité des
+données, notes de version) sont dans `docs/play-store/DECLARATIONS-PLAY-CONSOLE.md`.
