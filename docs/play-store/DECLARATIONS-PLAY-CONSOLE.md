@@ -89,72 +89,64 @@ reste en brouillon, c'est voulu.
 ## Étape 2 — Déclaration accès à la position en arrière-plan
 
 **Chemin :** menu gauche **Règles et programmes › Contenu de l'application** ›
-ligne **Accès aux données de localisation** (parfois « Autorisations sensibles »)
-› **Commencer** / **Gérer**.
+ligne **Accès aux données de localisation** › **Commencer** / **Gérer**.
 
-### Préalable : la vidéo
+Le formulaire réel (constaté le 7 septembre 2026) ne comporte que **trois**
+saisies : deux champs libres de **500 caractères maximum** et un lien vidéo de
+**30 secondes maximum**. Les textes ci-dessous sont calibrés pour tenir dans ces
+limites — ne pas y ajouter de phrase sans recompter.
 
-YouTube en **Non répertorié** (pas « Privé », sinon Google ne peut pas la lire) ou
-Drive avec « Toute personne disposant du lien ». Plan de tournage, **sans coupure**
-(Google rejette les montages qui masquent l'ordre des écrans) :
+### Autorisations listées par Play (aucune action)
 
-1. Ouverture de l'app et connexion.
-2. Appui sur « Démarrer la tournée ».
-3. **La modale de divulgation, lisible 3 secondes** (« Bonnet Rouge collecte des
-   données de localisation… y compris lorsque l'application est fermée ou n'est
-   pas utilisée »).
-4. Appui sur « Accepter ».
-5. **Puis seulement** le prompt système Android « Autoriser Bonnet Rouge à accéder
-   à la position de cet appareil ? ».
-6. Volet de notifications montrant « Tournée en cours — Suivi GPS de votre tournée actif ».
-7. Appui sur « Terminer la tournée » → la notification disparaît.
+Play affiche les trois permissions issues du manifeste :
+`ACCESS_BACKGROUND_LOCATION`, `ACCESS_COARSE_LOCATION`, `ACCESS_FINE_LOCATION`.
+La présence de `ACCESS_FINE_LOCATION` impose de déclarer **Position exacte** à
+l'Étape 3 : une déclaration en « position approximative » serait incohérente
+avec le manifeste et constitue un motif de rejet distinct.
 
-### Le formulaire, champ par champ
+### Champ 1 — « Quelle est la finalité principale de votre application ? » (489/500)
 
-**Autorisations demandées** — cocher `ACCESS_BACKGROUND_LOCATION` (les autres
-sont pré-cochées d'après le manifeste).
+> Bonnet Rouge est un outil professionnel interne de collecte de données terrain,
+> réservé aux équipes commerciales et merchandising de BD & CO en Côte d'Ivoire.
+> L'accès exige un compte créé par l'administrateur. Sur le terrain, l'utilisateur
+> visite des points de vente : il relève la disponibilité des produits, les prix et
+> la visibilité, photos à l'appui, valide sa présence par géorepérage et enregistre
+> sa tournée — itinéraire parcouru, distance et temps passé dans chaque point de vente.
 
-**Quelle fonctionnalité de votre application utilise la position en arrière-plan ?**
+### Champ 2 — « Décrivez 1 fonctionnalité… » (491/500)
 
-> Suivi de tournée terrain. L'application enregistre le trajet d'un commercial
-> pendant une tournée qu'il démarre lui-même, afin de reconstituer l'itinéraire
-> réellement parcouru entre les points de vente visités et de calculer la distance
-> et la durée de la tournée. Le suivi commence à l'appui sur « Démarrer la tournée »
-> et s'arrête à l'appui sur « Terminer la tournée ».
+Une seule fonctionnalité, comme Play l'exige. Le texte dit explicitement où elle
+se trouve dans l'interface (« lancé depuis l'écran d'accueil »), ce que Google
+demande, et il condense en une phrase la justification de l'arrière-plan.
 
-**En quoi cette fonctionnalité est-elle utile à l'utilisateur ?**
+> Suivi de tournée, lancé depuis l'écran d'accueil. L'utilisateur appuie sur
+> « Démarrer la tournée » ; l'application enregistre sa position toutes les 120
+> secondes et seulement après 15 mètres, jusqu'à l'appui sur « Terminer la tournée ».
+> Elle en reconstitue l'itinéraire, la distance et les temps de visite, qui justifient
+> ses frais. Une tournée dure des heures, écran éteint ou GPS au premier plan : sans
+> arrière-plan le trajet serait fragmenté. Notification « Tournée en cours » permanente.
 
-> L'application est un outil professionnel interne, réservé aux équipes commerciales
-> et merchandising de l'entreprise. Le suivi de tournée dispense l'utilisateur de
-> tout relevé manuel de kilométrage et de justificatif de déplacement : son trajet,
-> sa distance et ses temps de visite sont calculés automatiquement et servent au
-> remboursement de ses frais et à la planification de ses tournées suivantes.
+### Champ 3 — Instructions vidéo (YouTube, 30 s maximum)
 
-**Pourquoi l'accès au premier plan ne suffit-il pas ?** — le champ décisif
+Play exige une URL **YouTube** (pas Drive), en **Non répertorié** — surtout pas
+« Privé », que Google ne peut pas lire. La vidéo doit montrer la divulgation
+*avant* l'invite système et expliquer pourquoi l'arrière-plan est nécessaire.
 
-> Une tournée dure plusieurs heures et l'utilisateur conduit entre deux points de
-> vente : son téléphone est en poche, écran éteint, ou il utilise une application
-> de navigation. Sans accès en arrière-plan, le trajet serait interrompu à chaque
-> mise en veille et l'itinéraire reconstitué serait une succession de fragments
-> inexploitables. L'accès en arrière-plan est strictement limité à l'intervalle
-> entre « Démarrer » et « Terminer la tournée ».
+Découpage tenant en 30 secondes :
 
-**Mesures prises pour limiter la collecte** (si le champ est présent)
+| Temps | À l'écran | Incrustation ou voix off |
+| --- | --- | --- |
+| 0-3 s | Écran d'accueil, doigt vers « Démarrer la tournée » | « Bonnet Rouge — suivi de tournée terrain » |
+| 3-11 s | **La modale de divulgation, immobile et lisible** | « Divulgation affichée avant toute demande d'autorisation » |
+| 11-14 s | Appui sur « Accepter » | — |
+| 14-19 s | **Invite système Android**, choix « Toujours autoriser » | « L'invite système n'apparaît qu'après l'acceptation » |
+| 19-25 s | Volet de notifications : « Tournée en cours » | « Le trajet continue écran éteint, entre deux points de vente » |
+| 25-30 s | Appui sur « Terminer la tournée », notification disparue | « Aucune position collectée hors tournée » |
 
-> Collecte limitée à un point toutes les 120 secondes et uniquement après 15 mètres
-> de déplacement. Une notification permanente « Tournée en cours » reste affichée
-> pendant toute la durée du suivi. Aucune position n'est collectée en dehors d'une
-> tournée active. Les positions ne sont ni vendues, ni partagées avec des tiers,
-> ni utilisées à des fins publicitaires.
-
-**Lien vidéo** — coller l'URL YouTube / Drive.
-
-**Case de conformité** — cocher « Je confirme que mon application respecte le
-règlement sur les autorisations de localisation ».
-
-**Bouton :** **Enregistrer**.
-
----
+Trois règles de tournage : aucune coupure entre la modale et l'invite système
+(c'est précisément l'enchaînement que Google vérifie), le texte de la modale doit
+rester lisible à l'image, et la vidéo doit être en ligne **avant** l'ouverture du
+formulaire — le champ n'accepte pas de brouillon sans lien valide.
 
 ## Étape 3 — Sécurité des données
 
