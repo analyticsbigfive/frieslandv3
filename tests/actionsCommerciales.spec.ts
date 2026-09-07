@@ -72,3 +72,29 @@ describe('fraîcheur de visite', () => {
     expect(libelleFraicheur('en_retard', 12)).toBe('Il y a 12 j')
   })
 })
+
+import { lienWhatsApp, messageActionsPourMerchandiser, normaliserTelephoneInternational } from '../utils/actionsCommerciales'
+
+describe('WhatsApp', () => {
+  it('normalise un numéro ivoirien local ou international', () => {
+    expect(normaliserTelephoneInternational('07 08 09 10 11')).toBe('2250708091011')
+    expect(normaliserTelephoneInternational('+225 07 08 09 10 11')).toBe('2250708091011')
+    expect(normaliserTelephoneInternational('00225 0708091011')).toBe('2250708091011')
+    expect(normaliserTelephoneInternational('')).toBeNull()
+    expect(normaliserTelephoneInternational('abc')).toBeNull()
+  })
+
+  it('construit un lien wa.me encodé et un message listant les actions ouvertes', () => {
+    const actions = [
+      { type_code: 'activation_ssr', type: { libelle: 'Activation SSR' }, statut: 'a_faire' as const, echeance: '2026-09-15', commentaire: 'Voir le gérant', pdv: { nom_pdv: 'Kadi porridge' } },
+      { type_code: 'referencement_produit', statut: 'faite' as const, echeance: null, commentaire: null, pdv: { nom_pdv: 'Bouné' } },
+    ]
+    const msg = messageActionsPourMerchandiser('Hermann', actions, 'QA Commercial')
+    expect(msg).toContain('Bonjour Hermann')
+    expect(msg).toContain('1. Kadi porridge : Activation SSR — avant le 15/09 (Voir le gérant)')
+    expect(msg).not.toContain('Bouné')
+    const lien = lienWhatsApp('0708091011', msg)!
+    expect(lien.startsWith('https://wa.me/2250708091011?text=Bonjour%20Hermann')).toBe(true)
+    expect(lienWhatsApp(null, msg)).toBeNull()
+  })
+})

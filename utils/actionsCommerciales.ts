@@ -85,3 +85,39 @@ export function libelleFraicheur(etat: EtatFraicheur, joursDepuis: number | null
   if (joursDepuis === 1) return 'Visité hier'
   return `Il y a ${joursDepuis} j`
 }
+
+// ---- Envoi WhatsApp (retour du 7 sept.) ----
+// Numéro ivoirien : 10 chiffres commençant par 0 (format 2021, le 0 fait
+// partie du numéro) → préfixé de l'indicatif 225. Un numéro déjà
+// international (+225…, 00225…) est conservé. Renvoie null si illisible.
+export function normaliserTelephoneInternational(tel?: string | null, indicatif = '225'): string | null {
+  const brut = (tel || '').replace(/[^\d+]/g, '')
+  if (!brut) return null
+  let n = brut.startsWith('+') ? brut.slice(1) : brut.startsWith('00') ? brut.slice(2) : brut
+  if (!n.startsWith(indicatif) && (n.length === 8 || n.length === 10)) n = indicatif + n
+  return /^\d{10,15}$/.test(n) ? n : null
+}
+
+export function lienWhatsApp(tel: string | null | undefined, message: string): string | null {
+  const n = normaliserTelephoneInternational(tel)
+  if (!n) return null
+  return `https://wa.me/${n}?text=${encodeURIComponent(message)}`
+}
+
+// Message récapitulatif des actions ouvertes d'un merchandiseur.
+export function messageActionsPourMerchandiser(
+  prenom: string | null | undefined,
+  actions: (Pick<ActionCommerciale, 'type_code' | 'echeance' | 'commentaire' | 'statut'> & { pdv?: { nom_pdv?: string | null } | null; type?: { libelle?: string } | null })[],
+  auteur?: string | null,
+): string {
+  const ouvertes = actions.filter(estOuverte)
+  const lignes = ouvertes.map((a, i) => {
+    const type = a.type?.libelle || a.type_code
+    const ech = a.echeance ? ` — avant le ${new Date(a.echeance).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}` : ''
+    const com = a.commentaire ? ` (${a.commentaire})` : ''
+    return `${i + 1}. ${a.pdv?.nom_pdv || 'PDV'} : ${type}${ech}${com}`
+  })
+  const tete = `Bonjour ${prenom || ''}`.trim() + `, voici ${ouvertes.length > 1 ? 'les actions à réaliser' : "l'action à réaliser"} sur tes points de vente :`
+  const pied = auteur ? `\nMerci de les marquer « Faite » dans l'application. — ${auteur}` : '\nMerci de les marquer « Faite » dans l\'application.'
+  return [tete, ...lignes].join('\n') + pied
+}

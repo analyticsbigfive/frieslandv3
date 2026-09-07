@@ -460,7 +460,7 @@ export interface ActionCommerciale {
   // Joined
   pdv?: Pick<PDV, 'nom_pdv' | 'zone' | 'quartier'>
   auteur?: Pick<Profile, 'nom' | 'email'>
-  assigne?: Pick<Profile, 'nom' | 'email'>
+  assigne?: Pick<Profile, 'nom' | 'email' | 'telephone'>
   type?: Pick<TypeActionCommerciale, 'libelle'>
 }
 

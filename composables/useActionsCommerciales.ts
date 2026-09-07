@@ -5,7 +5,7 @@ import type { ActionCommerciale, ActionCommercialeStatut, TypeActionCommerciale 
 import { TYPES_ACTION_DEFAUT, typesActifs } from '~/utils/actionsCommerciales'
 
 const SELECT = 'id, pdv_id, visite_id, auteur_id, type_code, assigne_a, echeance, statut, commentaire, created_at, updated_at, '
-  + 'pdv:pdv_id(nom_pdv, zone, quartier), auteur:auteur_id(nom, email), assigne:assigne_a(nom, email), type:type_code(libelle)'
+  + 'pdv:pdv_id(nom_pdv, zone, quartier), auteur:auteur_id(nom, email), assigne:assigne_a(nom, email, telephone), type:type_code(libelle)'
 
 export interface NouvelleAction {
   pdv_id: string

@@ -25,7 +25,24 @@
         <div class="mt-2 h-3 w-2/3 rounded bg-gray-100 dark:bg-gray-700" />
       </div>
     </div>
-    <div v-else class="px-4">
+    <div v-if="!loading && envois.length" class="mb-3 px-4">
+      <p class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">Prévenir par WhatsApp</p>
+      <div class="flex flex-wrap gap-2">
+        <a
+          v-for="e in envois"
+          :key="e.id"
+          :href="e.lien || undefined"
+          target="_blank"
+          rel="noopener"
+          class="inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-xs font-semibold"
+          :class="e.lien ? 'bg-green-600 text-white' : 'cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-gray-700'"
+          :title="e.lien ? `${e.nb} action(s) ouverte(s)` : 'Numéro de téléphone manquant sur le profil'"
+        >
+          <UIcon name="i-simple-icons-whatsapp" class="h-4 w-4" />{{ e.nom }} · {{ e.nb }}
+        </a>
+      </div>
+    </div>
+    <div v-if="!loading" class="px-4">
       <ActionCommercialeList
         :actions="filtrees"
         show-pdv
@@ -38,7 +55,7 @@
 
 <script setup lang="ts">
 import type { ActionCommerciale } from '~/types'
-import { estOuverte } from '~/utils/actionsCommerciales'
+import { estOuverte, lienWhatsApp, messageActionsPourMerchandiser } from '~/utils/actionsCommerciales'
 
 definePageMeta({ middleware: ['auth'], layout: 'mobile' })
 
@@ -60,6 +77,22 @@ function correspond(a: ActionCommerciale, f: typeof filtre.value) {
   return true
 }
 const filtrees = computed(() => actions.value.filter(a => correspond(a, filtre.value)))
+
+// Un bouton par merchandiseur ayant des actions ouvertes : ouvre WhatsApp
+// sur son numéro de profil avec la liste des actions.
+const envois = computed(() => {
+  if (!(authStore.isCommercial || authStore.isSuperviseur)) return []
+  const parAssigne = new Map<string, ActionCommerciale[]>()
+  for (const a of actions.value) {
+    if (!estOuverte(a) || !a.assigne_a) continue
+    parAssigne.set(a.assigne_a, [...(parAssigne.get(a.assigne_a) || []), a])
+  }
+  return [...parAssigne.entries()].map(([id, liste]) => {
+    const nom = liste[0].assigne?.nom || 'Merchandiseur'
+    const msg = messageActionsPourMerchandiser(nom.split(' ')[0], liste, authStore.profile?.nom)
+    return { id, nom, nb: liste.length, lien: lienWhatsApp(liste[0].assigne?.telephone, msg) }
+  }).sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
+})
 function compte(f: typeof filtre.value) {
   return actions.value.filter(a => correspond(a, f)).length
 }

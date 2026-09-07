@@ -64,6 +64,7 @@ export const adminSectionTabs: Record<AdminSection, AdminSectionTab[]> = {
   ],
   actions: [
     { label: 'Synthèse', to: '/admin/actions', icon: 'i-heroicons-bolt' },
+    { label: 'Actions commerciales', to: '/admin/actions/commerciales', icon: 'i-heroicons-clipboard-document-check' },
     { label: 'Visites terrain', to: '/admin/visites', icon: 'i-heroicons-clipboard-document-list' },
   ],
   parametres: [
