@@ -132,6 +132,7 @@ import { lienWhatsApp } from '~/utils/actionsCommerciales'
 
 definePageMeta({ middleware: ['auth'], layout: 'mobile' })
 
+const supabase = useSupabaseClient()
 const authStore = useAuthStore()
 const user = useSupabaseUser()
 const toast = useToast()
@@ -198,12 +199,15 @@ async function enregistrerTelephone() {
   erreurEdition.value = ''
   const numero = telephoneEdite.value.trim()
   try {
-    if (enEdition.value.id === user.value?.id) {
-      // Son propre profil : la RLS l'autorise déjà, pas besoin du serveur.
-      await authStore.updateProfile({ telephone: numero })
-    }
-    else {
-      await $fetch(`/api/contacts/${enEdition.value.id}`, { method: 'PATCH', body: { telephone: numero } })
+    // Fonction en base (maj_telephone_contact) plutôt qu'une route serveur :
+    // l'APK n'embarque pas de serveur Nuxt, mais parle à Supabase.
+    const { error } = await (supabase.rpc as any)('maj_telephone_contact', {
+      p_id: enEdition.value.id,
+      p_telephone: numero,
+    })
+    if (error) throw new Error(error.message)
+    if (enEdition.value.id === user.value?.id && authStore.profile) {
+      authStore.profile.telephone = numero
     }
     enEdition.value.telephone = numero
     invalidate()
@@ -211,7 +215,7 @@ async function enregistrerTelephone() {
     showEdition.value = false
   }
   catch (err: any) {
-    erreurEdition.value = err?.data?.message || err?.data?.statusMessage || err?.message || 'Enregistrement impossible'
+    erreurEdition.value = err?.message || err?.data?.message || 'Enregistrement impossible'
   }
   finally {
     enregistrement.value = false
