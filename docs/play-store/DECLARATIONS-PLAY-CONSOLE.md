@@ -182,7 +182,7 @@ données** › **Commencer**.
 
 ---
 
-## Étape 4 — Les URL (trois endroits)
+## Étape 4 — Les URL (deux endroits)
 
 Les deux pages répondent 200 et nomment l'app, `com.bdco.bonnetrouge` et BD & CO
 comme personne morale (vérifié le 7 septembre 2026).
@@ -206,10 +206,16 @@ Suppression de compte** › **Commencer** :
 
 **Enregistrer**.
 
-**4c. Fiche principale** — **Croissance › Présence sur le Play Store › Fiche
-principale** › tout en bas, champ **Politique de confidentialité** → la même URL
-qu'en 4a. Play l'exige aux deux endroits ; l'oubli de 4c est un motif de rejet
-fréquent.
+**Il n'y a pas de troisième endroit.** Le champ « Politique de confidentialité »
+qui figurait en bas de la fiche Play Store appartient à l'ancienne Play Console
+(avant 2021) : il n'existe plus. L'URL saisie en 4a est reprise automatiquement
+sur la fiche publique — inutile de la chercher dans
+*Croissance › Présence sur le Play Store*.
+
+Ce que Google exige en plus de 4a, c'est un lien vers la politique **dans
+l'application elle-même**. Il y est déjà à trois endroits : page de connexion
+(`pages/login.vue`), onglet « Plus » (`pages/mobile/more.vue`) et modale de
+divulgation de localisation (`components/LocationDisclosureModal.vue`).
 
 ---
 
