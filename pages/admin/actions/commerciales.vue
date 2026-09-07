@@ -10,6 +10,9 @@
         <UFormGroup label="Merchandiseur" class="min-w-56">
           <USelectMenu v-model="filtreAssigne" :options="assigneOptions" value-attribute="value" option-attribute="label" placeholder="Tous" size="sm" searchable />
         </UFormGroup>
+        <UFormGroup label="Décidée par" class="min-w-52">
+          <USelectMenu v-model="filtreAuteur" :options="auteurOptions" value-attribute="value" option-attribute="label" placeholder="Tous" size="sm" searchable />
+        </UFormGroup>
         <UFormGroup label="Zone" class="min-w-44">
           <USelectMenu v-model="filtreZone" :options="zoneOptions" placeholder="Toutes" size="sm" searchable />
         </UFormGroup>
@@ -88,6 +91,7 @@ const loading = ref(true)
 const rows = ref<ActionCommerciale[]>([])
 const filtreStatut = ref('')
 const filtreAssigne = ref('')
+const filtreAuteur = ref('')
 const filtreZone = ref('')
 const page = ref(1)
 const perPage = 25
@@ -98,11 +102,17 @@ const assigneOptions = computed(() => {
   for (const a of rows.value) if (a.assigne_a && a.assigne?.nom) m.set(a.assigne_a, a.assigne.nom)
   return [...m.entries()].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label, 'fr'))
 })
+const auteurOptions = computed(() => {
+  const m = new Map<string, string>()
+  for (const a of rows.value) if (a.auteur_id && a.auteur?.nom) m.set(a.auteur_id, a.auteur.nom)
+  return [...m.entries()].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label, 'fr'))
+})
 const zoneOptions = computed(() => [...new Set(rows.value.map(a => a.pdv?.zone).filter(Boolean))].sort() as string[])
 
 const filtrees = computed(() => rows.value.filter(a =>
   (!filtreStatut.value || (filtreStatut.value === 'ouvertes' ? estOuverte(a) : a.statut === filtreStatut.value))
   && (!filtreAssigne.value || a.assigne_a === filtreAssigne.value)
+  && (!filtreAuteur.value || a.auteur_id === filtreAuteur.value)
   && (!filtreZone.value || a.pdv?.zone === filtreZone.value),
 ))
 const pagines = computed(() => filtrees.value.slice((page.value - 1) * perPage, page.value * perPage))
@@ -110,14 +120,16 @@ const pagines = computed(() => filtrees.value.slice((page.value - 1) * perPage, 
 const chips = computed(() => [
   ...(filtreStatut.value ? [{ key: 'statut', label: `Statut : ${statutOptions.find(o => o.value === filtreStatut.value)?.label}` }] : []),
   ...(filtreAssigne.value ? [{ key: 'assigne', label: `Merchandiseur : ${assigneOptions.value.find(o => o.value === filtreAssigne.value)?.label}` }] : []),
+  ...(filtreAuteur.value ? [{ key: 'auteur', label: `Décidée par : ${auteurOptions.value.find(o => o.value === filtreAuteur.value)?.label}` }] : []),
   ...(filtreZone.value ? [{ key: 'zone', label: `Zone : ${filtreZone.value}` }] : []),
 ])
 function removeChip(key: string) {
   if (key === 'statut') filtreStatut.value = ''
   if (key === 'assigne') filtreAssigne.value = ''
+  if (key === 'auteur') filtreAuteur.value = ''
   if (key === 'zone') filtreZone.value = ''
 }
-function resetFilters() { filtreStatut.value = ''; filtreAssigne.value = ''; filtreZone.value = '' }
+function resetFilters() { filtreStatut.value = ''; filtreAssigne.value = ''; filtreAuteur.value = ''; filtreZone.value = '' }
 
 const kpis = computed(() => {
   const ouvertes = rows.value.filter(estOuverte)
@@ -153,7 +165,7 @@ function exporter() {
   })), `actions-commerciales-${new Date().toISOString().slice(0, 10)}.csv`)
 }
 
-watch([filtreStatut, filtreAssigne, filtreZone], () => { page.value = 1 })
+watch([filtreStatut, filtreAssigne, filtreAuteur, filtreZone], () => { page.value = 1 })
 onMounted(async () => {
   void chargerTypes()
   try { rows.value = await listerMesActions(2000) }

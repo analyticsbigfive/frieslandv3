@@ -70,6 +70,7 @@
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Email</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Rôle</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Zone</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Équipe</th>
               <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Statut</th>
               <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
             </tr>
@@ -104,6 +105,7 @@
                 </span>
               </td>
               <td class="px-4 py-3 text-sm text-gray-600">{{ zoneLabel(user) }}</td>
+              <td class="px-4 py-3 text-sm text-gray-600">{{ equipeLabel(user) }}</td>
               <td class="px-4 py-3 text-center">
                 <span
                   class="w-2.5 h-2.5 rounded-full inline-block"
@@ -181,6 +183,25 @@
           </UFormGroup>
           <UFormGroup label="Téléphone" size="md" class="sm:col-span-2">
             <UInput v-model="userForm.telephone" placeholder="Ex. +225 07 00 00 00 00" size="md" class="w-full" />
+          </UFormGroup>
+
+          <UFormGroup
+            v-if="userForm.role === 'merchandiser'"
+            label="Commercial responsable"
+            help="Rattachement d'équipe. N'élargit ni ne restreint le périmètre : celui-ci reste défini par les territoires."
+            size="md"
+          >
+            <USelectMenu
+              v-model="userForm.commercial_id"
+              :options="commercialOptions"
+              option-attribute="label"
+              value-attribute="value"
+              placeholder="Aucun"
+              searchable
+              searchable-placeholder="Rechercher un commercial..."
+              size="md"
+              class="w-full"
+            />
           </UFormGroup>
         </div>
       </section>
@@ -496,6 +517,7 @@ const userForm = ref({
   territoires_assignes: [] as string[],
   quartiers_assignes: [] as string[],
   telephone: '',
+  commercial_id: null as string | null,
   // Cascade géo (UI) — non stockées telles quelles ; on dérive zone_assignee/region au save.
   region_code: '',
   sub_region_code: '',
@@ -506,6 +528,18 @@ const userForm = ref({
 // hiérarchie référentiel. Scoping pdv : pdv.zone = territoire.nom,
 // pdv.quartier = quartier.nom, pdv.region = sous_region.nom_affichage.
 const { regions, subRegions, territories, areas, quartiers, territoireAliases, fetchReferentiels } = useReferentiels()
+// Commerciaux actifs : responsables possibles d'un merchandiseur.
+const commercialOptions = computed(() => users.value
+  .filter(u => u.role === 'commercial' && u.is_active !== false)
+  .map(u => ({ value: u.id, label: u.nom || u.email || u.id }))
+  .sort((a, b) => a.label.localeCompare(b.label, 'fr')))
+
+function equipeLabel(user: Profile) {
+  if (!user.commercial_id) return user.role === 'merchandiser' ? '—' : ''
+  const c = users.value.find(u => u.id === user.commercial_id)
+  return c?.nom || c?.email || '—'
+}
+
 const regionOptions = computed(() => regions.value.map(r => ({ value: r.code, label: r.nom_affichage ? `${r.nom_affichage} · ${r.name}` : r.name })))
 const subRegionOptions = computed(() => subRegions.value
   .filter(s => s.region_code === userForm.value.region_code)
@@ -657,7 +691,7 @@ function openCreateUser() {
   originalTerrNames.value = {}
   userForm.value = {
     nom: '', email: '', password: '', role: 'merchandiser',
-    zone_assignee: '', region: '', territoires_assignes: [], quartiers_assignes: [], telephone: '',
+    zone_assignee: '', region: '', territoires_assignes: [], quartiers_assignes: [], telephone: '', commercial_id: null,
     region_code: '', sub_region_code: '', territory_codes: [],
   }
   showCreate.value = true
@@ -792,6 +826,7 @@ function exportUsers() {
       zone_assignee: u.zone_assignee || '',
       territoires_assignes: terrs.join('|'),
       quartiers_assignes: (u.quartiers_assignes || []).filter(Boolean).join('|'),
+      commercial: users.value.find(c => c.id === u.commercial_id)?.email || '',
       sous_region: u.region || '',
       division: divs.join('|'),
     }
@@ -838,6 +873,8 @@ async function importUsers() {
       quartiers_assignes: splitList(r.quartiers_assignes),
       // sous_region (nouvel intitulé) ou region (fichiers antérieurs)
       region: r.sous_region || r.region,
+      // e-mail du commercial responsable, résolu en identifiant côté serveur
+      commercial: r.commercial,
       mot_de_passe: r.mot_de_passe,
     }))
     const result = await $fetch<{ created: number; updated: number; errors: { line: number; email: string; message: string }[] }>(
@@ -899,6 +936,7 @@ async function handleSaveUser() {
           region,
           quartiers_assignes: quartiers,
           telephone: userForm.value.telephone,
+          commercial_id: userForm.value.role === 'merchandiser' ? (userForm.value.commercial_id || null) : null,
         })
         .eq('id', editingUser.value.id)
 
@@ -914,6 +952,7 @@ async function handleSaveUser() {
         nom: userForm.value.nom,
         role: userForm.value.role,
         telephone: userForm.value.telephone,
+        commercial_id: userForm.value.role === 'merchandiser' ? (userForm.value.commercial_id || null) : null,
         zone_assignee: zoneAssignee,
         territoires_assignes: terrs,
         quartiers_assignes: quartiers,

@@ -35,7 +35,7 @@ export function homePathForRole(role?: string | null): string {
 }
 
 export interface MobileNavItem {
-  key: 'visites' | 'routing' | 'pdv' | 'equipe' | 'actions' | 'more'
+  key: 'visites' | 'routing' | 'pdv' | 'equipe' | 'actions' | 'coaching' | 'more'
   label: string
   to: string
   ariaLabel: string
@@ -47,14 +47,16 @@ const NAV_PDV: MobileNavItem = { key: 'pdv', label: 'PDV', to: '/mobile/pdv', ar
 const NAV_MORE: MobileNavItem = { key: 'more', label: 'Plus', to: '/mobile/more', ariaLabel: 'Voir les autres écrans' }
 const NAV_EQUIPE: MobileNavItem = { key: 'equipe', label: 'Équipe', to: '/mobile/equipe', ariaLabel: "Voir les visites de l'équipe" }
 const NAV_ACTIONS: MobileNavItem = { key: 'actions', label: 'Actions', to: '/mobile/actions', ariaLabel: 'Voir les actions commerciales' }
+const NAV_COACHING: MobileNavItem = { key: 'coaching', label: 'Coaching', to: '/mobile/coaching', ariaLabel: 'Remplir un field coaching' }
 
 // Onglets du bas d'écran mobile selon le rôle. Le commercial ne saisit pas de
-// visite et n'a pas de tournée : il suit son équipe, ses PDV et ses actions.
-// Les rôles terrain gardent les quatre onglets historiques (les actions qui
-// leur sont assignées sont dans « Plus » et sur la fiche PDV).
+// visite et n'a pas de tournée : il suit son équipe, ses PDV, ses actions et
+// remplit des field coachings (geste quotidien, d'où l'onglet plutôt que le
+// menu « Plus »). Les rôles terrain gardent les quatre onglets historiques
+// (les actions qui leur sont assignées sont dans « Plus » et sur la fiche PDV).
 export function mobileNavItems(role?: string | null): MobileNavItem[] {
   if (isCommercialRole(role)) {
-    return [NAV_EQUIPE, NAV_PDV, NAV_ACTIONS, NAV_MORE]
+    return [NAV_EQUIPE, NAV_PDV, NAV_ACTIONS, NAV_COACHING, NAV_MORE]
   }
   return [NAV_VISITES, NAV_ROUTING, NAV_PDV, NAV_MORE]
 }

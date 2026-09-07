@@ -43,6 +43,14 @@ export function etendreTerritoires(noms: string[], aliases: TerritoireAlias[], t
   return [...out]
 }
 
+// Deux périmètres se recoupent-ils ? Comparaison normalisée (casse, accents) :
+// les zones terrain sont en MAJUSCULES, le référentiel en casse mixte.
+export function partagentUnTerritoire(a: (string | null | undefined)[], b: (string | null | undefined)[]): boolean {
+  const setA = new Set(a.filter(Boolean).map(x => normaliserNomTerritoire(x as string)))
+  if (!setA.size) return false
+  return b.filter(Boolean).some(x => setA.has(normaliserNomTerritoire(x as string)))
+}
+
 export interface QuartierRef { id: number; zone_id: number; nom: string }
 export interface AreaRef { id: number; name: string; territory_code: string }
 

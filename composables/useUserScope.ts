@@ -1,6 +1,6 @@
 import type { PDV, Profile, Visite } from '~/types'
 import { isCommercialRole, isPrivilegedProfile, isPrivilegedRole } from '~/utils/roles'
-import { etendreTerritoires, type TerritoireAlias, type TerritoireRef } from '~/utils/territoires'
+import { etendreTerritoires, partagentUnTerritoire, type TerritoireAlias, type TerritoireRef } from '~/utils/territoires'
 
 // Territoires effectifs d'un profil : liste multi (territoires_assignes),
 // fallback mono legacy (zone_assignee) si la liste est vide.
@@ -95,6 +95,7 @@ export function useUserScope() {
       zone_assignee?: string | null
       region?: string | null
       is_active?: boolean | null
+      commercial_id?: string | null
     }
   >(
     list: T[],
@@ -117,7 +118,18 @@ export function useUserScope() {
         return true
       }
 
-      if (profile.zone_assignee && contact.zone_assignee === profile.zone_assignee) {
+      // Merchandiseur assigné à ce commercial : visible quel que soit le territoire.
+      if ((contact as any).commercial_id && (contact as any).commercial_id === profile.id) {
+        return true
+      }
+
+      // Périmètre territorial, alias compris — la comparaison sur le seul
+      // zone_assignee historique masquait les collègues des autres territoires
+      // d'un profil multi-territoires.
+      const miens = profileTerritoriesEtendus(profile, territoireAliases.value, territories.value)
+      const siens = (contact.territoires_assignes || []).filter(Boolean)
+      const territoiresContact = siens.length ? siens : (contact.zone_assignee ? [contact.zone_assignee] : [])
+      if (partagentUnTerritoire(miens, territoiresContact)) {
         return true
       }
 

@@ -40,6 +40,7 @@ export default defineEventHandler(async (event) => {
   const quartiers = toStringArray(body?.quartiers_assignes)
   const telephone = body?.telephone ? String(body.telephone).trim().substring(0, 50) : null
   const zoneAssignee = body?.zone_assignee ? String(body.zone_assignee) : (territoires[0] || null)
+  const commercialId = body?.commercial_id ? String(body.commercial_id) : null
   const region = body?.region ? String(body.region) : null
 
   return await createUserWithProfile(service, {
@@ -49,6 +50,7 @@ export default defineEventHandler(async (event) => {
     role,
     telephone,
     zone_assignee: zoneAssignee,
+    commercial_id: commercialId,
     territoires_assignes: territoires,
     quartiers_assignes: quartiers,
     region,

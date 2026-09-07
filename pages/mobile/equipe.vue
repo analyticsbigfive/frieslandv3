@@ -12,6 +12,19 @@
         />
         <UInput v-model="dateFilter" type="date" size="lg" class="w-40" aria-label="Filtrer par date" />
       </div>
+      <div v-if="aUneEquipe" class="flex gap-2" aria-label="Filtrer les visites">
+        <button
+          v-for="f in filtresEquipe"
+          :key="f.value"
+          type="button"
+          class="min-h-9 rounded-full px-3 text-xs font-semibold transition-colors"
+          :class="filtreEquipe === f.value ? 'bg-fc-red text-white' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'"
+          :aria-pressed="filtreEquipe === f.value"
+          @click="filtreEquipe = f.value"
+        >
+          {{ f.label }}
+        </button>
+      </div>
       <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
         <span>{{ filtered.length }} visite{{ filtered.length > 1 ? 's' : '' }} · {{ perimetreLabel }}</span>
         <span v-if="todayCount" class="font-semibold text-fc-red">{{ todayCount }} aujourd'hui</span>
@@ -96,8 +109,18 @@ const todayCount = computed(() => {
   return visites.value.filter(v => v.date_visite?.startsWith(today)).length
 })
 
+// Équipe assignée (profiles.commercial_id) : permet de distinguer « mes
+// merchandiseurs » de « tous ceux qui passent sur mes territoires ».
+const { aUneEquipe, estDeMonEquipe, charger: chargerEquipe } = useMonEquipe()
+const filtreEquipe = ref<'tous' | 'equipe'>('tous')
+const filtresEquipe = [
+  { value: 'tous' as const, label: 'Tout le territoire' },
+  { value: 'equipe' as const, label: 'Mon équipe' },
+]
+
 const filtered = computed(() => {
   let list = visites.value
+  if (filtreEquipe.value === 'equipe') list = list.filter(v => estDeMonEquipe(v.user_id))
   if (search.value) {
     const q = search.value.toLowerCase()
     list = list.filter(v => nomPdv(v).toLowerCase().includes(q) || v.commercial?.toLowerCase().includes(q))
@@ -125,6 +148,7 @@ function statutColor(s?: string) {
 onMounted(async () => {
   try {
     if (!authStore.profile) await authStore.fetchProfile()
+    void chargerEquipe()
     const { data, error } = await supabase
       .from('visites')
       .select('visite_id, pdv_id, user_id, commercial, email, date_visite, geofence_validated, status, pdv:pdv_id(nom_pdv, zone)')

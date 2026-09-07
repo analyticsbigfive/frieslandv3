@@ -76,6 +76,7 @@ const isOpen = computed({
 const authStore = useAuthStore()
 const toast = useToast()
 const { typesActifs, chargerTypes, creer, merchandiseursPour } = useActionsCommerciales()
+const { estDeMonEquipe, charger: chargerEquipe } = useMonEquipe()
 
 const merchandiseurs = ref<{ id: string; nom: string }[]>([])
 const saving = ref(false)
@@ -94,7 +95,14 @@ watch(isOpen, async (open) => {
   if (!form.type_code && typesActifs.value.length) form.type_code = typesActifs.value[0].code
   const zones = props.pdvZone ? [props.pdvZone] : profileTerritories(authStore.profile)
   try {
-    merchandiseurs.value = await merchandiseursPour(zones)
+    const liste = await merchandiseursPour(zones)
+    await chargerEquipe()
+    // Mon équipe assignée d'abord : c'est le choix attendu neuf fois sur dix.
+    merchandiseurs.value = [...liste].sort((a, b) => {
+      const ea = estDeMonEquipe(a.id) ? 0 : 1
+      const eb = estDeMonEquipe(b.id) ? 0 : 1
+      return ea - eb || (a.nom || '').localeCompare(b.nom || '', 'fr')
+    })
   }
   catch {
     merchandiseurs.value = []

@@ -13,6 +13,7 @@ export interface CreateUserInput {
   role: UserRole
   telephone: string | null
   zone_assignee: string | null
+  commercial_id: string | null
   territoires_assignes: string[]
   quartiers_assignes: string[]
   region: string | null
@@ -52,6 +53,7 @@ export async function createUserWithProfile(service: any, input: CreateUserInput
       role: input.role,
       telephone: input.telephone,
       zone_assignee: input.zone_assignee,
+      commercial_id: input.commercial_id,
       territoires_assignes: input.territoires_assignes,
       quartiers_assignes: input.quartiers_assignes,
       region: input.region,

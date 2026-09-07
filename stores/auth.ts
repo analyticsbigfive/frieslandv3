@@ -117,6 +117,7 @@ export const useAuthStore = defineStore('auth', () => {
     role?: UserRole
     telephone?: string | null
     zone_assignee?: string | null
+    commercial_id?: string | null
     territoires_assignes?: string[]
     quartiers_assignes?: string[]
     region?: string | null

@@ -23,6 +23,8 @@ export interface Profile {
   telephone?: string
   role: UserRole
   zone_assignee?: string
+  // Commercial responsable (lien organisationnel, lot Équipes du 8 sept. 2026).
+  commercial_id?: string | null
   territoires_assignes?: string[]
   quartiers_assignes?: string[]
   region?: string

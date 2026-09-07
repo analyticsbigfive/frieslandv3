@@ -23,6 +23,8 @@ interface ImportRow {
   territoires_assignes?: string[]
   quartiers_assignes?: string[]
   region?: string
+  /** e-mail du commercial responsable (colonne « commercial ») */
+  commercial?: string
   mot_de_passe?: string
 }
 
@@ -77,6 +79,7 @@ export default defineEventHandler(async (event) => {
     const telephone = row?.telephone ? String(row.telephone).trim().substring(0, 50) : ''
     const zoneAssignee = String(row?.zone_assignee || '').trim()
     const region = String(row?.region || '').trim()
+    const commercialEmail = String(row?.commercial || '').trim().toLowerCase()
 
     const existingId = idByEmail.get(email)
     if (existingId) {
@@ -90,6 +93,11 @@ export default defineEventHandler(async (event) => {
       if (quartiers.length) patch.quartiers_assignes = quartiers
       if (zoneAssignee || territoires.length) patch.zone_assignee = zoneAssignee || territoires[0]
       if (region) patch.region = region
+      if (commercialEmail) {
+        const cid = idByEmail.get(commercialEmail)
+        if (!cid) { fail(`Commercial responsable inconnu : ${commercialEmail}`); continue }
+        patch.commercial_id = cid
+      }
       if (!Object.keys(patch).length) { fail('Aucun champ à mettre à jour'); continue }
 
       const { error } = await service.from('profiles').update(patch).eq('id', existingId)
@@ -115,6 +123,7 @@ export default defineEventHandler(async (event) => {
           territoires_assignes: territoires,
           quartiers_assignes: quartiers,
           region: region || null,
+          commercial_id: commercialEmail ? (idByEmail.get(commercialEmail) || null) : null,
         })
         idByEmail.set(email, profile.id)
         created++

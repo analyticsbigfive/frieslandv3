@@ -67,10 +67,18 @@ export function useUsersCache() {
 
     _state.promise = (async () => {
       try {
-        const { data, error } = await supabase
+        // commercial_id (équipes commerciales) n'existe qu'après la migration
+        // 20260909100000 : repli sur l'ancien select tant qu'elle n'est pas
+        // appliquée, sinon toute la liste des contacts tomberait.
+        const COLONNES_BASE = 'id, nom, email, role, zone_assignee, territoires_assignes, quartiers_assignes, region, telephone, is_active, created_at, updated_at'
+        let { data, error } = await supabase
           .from('profiles')
-          .select('id, nom, email, role, zone_assignee, territoires_assignes, quartiers_assignes, region, telephone, is_active, created_at, updated_at')
+          .select(`${COLONNES_BASE}, commercial_id`)
           .order('nom')
+
+        if (error && /commercial_id/i.test(error.message || '')) {
+          ;({ data, error } = await supabase.from('profiles').select(COLONNES_BASE).order('nom'))
+        }
 
         if (error) throw error
 

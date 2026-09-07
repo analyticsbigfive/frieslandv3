@@ -31,6 +31,7 @@ import {
   MoreHorizontal,
   Users,
   ClipboardCheck,
+  GraduationCap,
 } from 'lucide-vue-next'
 
 import { mobileNavItems, type MobileNavItem } from '~/utils/roles'
@@ -49,6 +50,7 @@ const icons: Record<MobileNavItem['key'], Component> = {
   pdv: MapPin,
   equipe: Users,
   actions: ClipboardCheck,
+  coaching: GraduationCap,
   more: MoreHorizontal,
 }
 

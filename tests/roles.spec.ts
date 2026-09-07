@@ -55,9 +55,9 @@ describe('accueil par rôle', () => {
 })
 
 describe('navigation mobile', () => {
-  it("le commercial n'a ni Routing ni saisie : équipe, PDV, actions", () => {
+  it("le commercial n'a ni Routing ni saisie : équipe, PDV, actions, coaching", () => {
     const keys = mobileNavItems('commercial').map(i => i.key)
-    expect(keys).toEqual(['equipe', 'pdv', 'actions', 'more'])
+    expect(keys).toEqual(['equipe', 'pdv', 'actions', 'coaching', 'more'])
   })
 
   it('les autres rôles gardent les quatre onglets historiques', () => {
