@@ -26,7 +26,7 @@ Deux chantiers convergent sur une seule livraison, à la demande du client.
 | `composables/useTournee.ts` | `startTournee` exige la divulgation même si la permission premier plan est déjà accordée (`addWatcher` demande l'arrière-plan). |
 | `pages/privacy-policy.vue` | Section d'identification : BD & CO, 60 rue François Ier 75008 Paris, package `com.bdco.bonnetrouge`, contact `team@bigfive-edition.com`, site `bigfivesolutions.com`. Collecte décrite en deux volets, premier plan et tournée en arrière-plan. |
 | `pages/supprimer-compte.vue` | Même identité éditeur rappelée. |
-| `android/app/build.gradle` | `versionCode 5`, `versionName "1.0.4"`. |
+| `android/app/build.gradle` | `versionCode 6`, `versionName "1.0.4"` (le 5 a été consommé par un upload Play refusé le 7 sept.). |
 | `package.json` | Version `1.0.4`, script `android:bundle`. |
 | `docs/play-store/FICHE-PLAY-STORE.md` | Table des valeurs d'identité à répliquer entre Play Console et les pages publiques. |
 

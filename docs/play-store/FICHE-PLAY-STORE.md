@@ -93,11 +93,13 @@ revient.
 
 ## Fichier à téléverser
 
-`dist-apk/friesland-bonnet-rouge-1.0.4-release.aab` (version 1.0.4, versionCode 5),
+`dist-apk/friesland-bonnet-rouge-1.0.4-vc6-release.aab` (version 1.0.4, **versionCode 6**),
 signé avec la clé d'upload de production (SHA-1 `13b21bc5c7129073bedf65ebaefd0df645fefdcf`).
+Le versionCode 5 a été consommé par un premier upload refusé (« Le code de version 5
+a déjà été utilisé ») : `friesland-bonnet-rouge-1.0.4-release.aab` ne doit plus être envoyé.
 Play n'accepte que l'AAB : l'APK release du même lot ne sert qu'au test hors-Play.
 Contrôler la signature avant envoi avec
-`bash scripts/verify-aab-signature.sh dist-apk/friesland-bonnet-rouge-1.0.4-release.aab`.
+`bash scripts/verify-aab-signature.sh dist-apk/friesland-bonnet-rouge-1.0.4-vc6-release.aab`.
 Voir `docs/BUILD-ANDROID.md` pour régénérer.
 
 ## Déclarations Play Console

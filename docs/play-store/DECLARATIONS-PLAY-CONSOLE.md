@@ -1,32 +1,40 @@
-# Déclarations Play Console — 1.0.4 (textes prêts à coller)
+# Déclarations Play Console — 1.0.4, écran par écran (textes prêts à coller)
 
 Vérifié le 7 septembre 2026. Toutes les valeurs proviennent du code de la version
-1.0.4 (`versionCode 5`) : ne pas les modifier sans mettre à jour `composables/useTournee.ts`,
+1.0.4 : ne pas les modifier sans mettre à jour `composables/useTournee.ts`,
 `components/LocationDisclosureModal.vue` et `pages/privacy-policy.vue`.
 
-**Binaire à téléverser : `dist-apk/friesland-bonnet-rouge-1.0.4-release.aab`**
-(4,7 Mo, clé d'upload SHA-1 `13b21bc5c7129073bedf65ebaefd0df645fefdcf`).
+**Binaire à téléverser : `dist-apk/friesland-bonnet-rouge-1.0.4-vc6-release.aab`**
+(versionName 1.0.4, **versionCode 6**, clé d'upload SHA-1
+`13b21bc5c7129073bedf65ebaefd0df645fefdcf`).
+
+> Pourquoi versionCode 6 : Play a refusé le premier AAB 1.0.4 avec « Le code de
+> version 5 a déjà été utilisé » — un bundle en versionCode 5 avait été téléversé
+> une première fois (même en brouillon supprimé, Play garde le numéro consommé).
+> Le versionCode est un compteur à sens unique par package : tout nouvel upload
+> doit être strictement supérieur au plus grand jamais téléversé, pas seulement
+> au plus grand publié. Le fichier `friesland-bonnet-rouge-1.0.4-release.aab`
+> (versionCode 5) est conservé pour trace mais ne doit plus être envoyé.
+
 Play n'accepte **que l'AAB** ; l'APK release du même lot sert uniquement au test
 hors-Play (side-load). Contrôler la signature avant envoi :
 
-    bash scripts/verify-aab-signature.sh dist-apk/friesland-bonnet-rouge-1.0.4-release.aab
+    bash scripts/verify-aab-signature.sh dist-apk/friesland-bonnet-rouge-1.0.4-vc6-release.aab
 
 ---
 
 ## Ordre des étapes (l'inverse fait rejeter la release)
 
-1. Héberger la vidéo de divulgation (§2) — nécessaire au formulaire §4.
-2. Vérifier que les deux URL publiques répondent (§3).
-3. Créer la release Production en **brouillon** avec l'AAB (§5) : le formulaire
+1. Héberger la vidéo de divulgation (§ Étape 2, préalable).
+2. Vérifier que les deux URL publiques répondent (§ Étape 4).
+3. Créer la release Production en **brouillon** avec l'AAB (Étape 1) : le formulaire
    d'accès en arrière-plan ne devient remplissable qu'une fois un bundle déclarant
    `ACCESS_BACKGROUND_LOCATION` téléversé.
-4. Remplir « Accès aux données de localisation » (§4) puis « Sécurité des données » (§6).
-5. Vérifier le nom du développeur (§7).
+4. Remplir « Accès aux données de localisation » (Étape 2) puis « Sécurité des données » (Étape 3).
+5. Vérifier le nom du développeur (Étape 5).
 6. Envoyer la release en revue.
 
----
-
-## 1. Ce que fait réellement l'application (base factuelle des déclarations)
+## Base factuelle (ce que Google compare à la vidéo)
 
 | Élément | Valeur dans le code |
 | --- | --- |
@@ -38,76 +46,27 @@ hors-Play (side-load). Contrôler la signature avant envoi :
 | Usage au premier plan | Géorepérage de validation de visite, rayon 200 m, précision min. 10 m |
 | Divulgation préalable | `LocationDisclosureModal.vue`, bloquante, avant tout prompt système |
 
-## 2. Vidéo de divulgation (à héberger avant le formulaire §4)
-
-YouTube en **non répertorié** ou Drive en lien public accessible sans connexion.
-Doit montrer, sans coupure, dans cet ordre :
-
-1. Ouverture de l'app et connexion.
-2. Appui sur « Démarrer la tournée ».
-3. **La modale de divulgation** — laisser le texte lisible 3 s à l'écran.
-4. Appui sur « Accepter ».
-5. **Puis seulement** le prompt système Android de localisation.
-6. La notification « Tournée en cours » visible dans le volet de notifications.
-7. Appui sur « Terminer la tournée » et disparition de la notification.
-
-## 3. URL à déclarer (`Contenu de l'application`)
-
-- Politique de confidentialité : `https://frieslandv3.vercel.app/privacy-policy`
-- Suppression de compte : `https://frieslandv3.vercel.app/supprimer-compte`
-
-Les deux répondent 200 et nomment l'app, le package `com.bdco.bonnetrouge` et
-BD & CO comme personne morale (vérifié le 7 septembre 2026). La même URL de
-politique doit aussi figurer dans `Croissance › Présence sur le Play Store › Fiche principale`.
-
 ---
 
-## 4. « Accès aux données de localisation » — textes à coller
+## Étape 1 — Le binaire
 
-`Règles et programmes › Contenu de l'application › Accès aux données de localisation`
+**Chemin :** Play Console › app *Friesland Bonnet Rouge* › menu gauche
+**Tester et publier › Production** › bouton **Créer une release**.
 
-### Fonctionnalité qui nécessite l'accès en arrière-plan
+**Fichier à glisser dans la zone « App bundles » :**
+`dist-apk/friesland-bonnet-rouge-1.0.4-vc6-release.aab`.
+Si Play affiche « Ce bundle est signé avec une clé incorrecte », c'est un autre
+fichier du dossier qui a été pris. Si Play affiche « Le code de version N a déjà
+été utilisé », incrémenter `versionCode` dans `android/app/build.gradle`,
+rebuilder (`docs/BUILD-ANDROID.md`) et recommencer.
 
-> Suivi de tournée terrain. L'application enregistre le trajet d'un commercial
-> pendant une tournée qu'il démarre lui-même, afin de reconstituer l'itinéraire
-> réellement parcouru entre les points de vente visités et de calculer la distance
-> et la durée de la tournée. Le suivi commence à l'appui sur « Démarrer la tournée »
-> et s'arrête à l'appui sur « Terminer la tournée ».
+**Ce que Play affiche après l'upload :** un avertissement jaune « Cette release
+contient l'autorisation ACCESS_BACKGROUND_LOCATION — vous devez remplir la
+déclaration ». Normal : c'est l'Étape 2.
 
-### Bénéfice pour l'utilisateur
+**Nom de la release :** laisser la valeur proposée (`6 (1.0.4)`).
 
-> L'application est un outil professionnel interne, réservé aux équipes commerciales
-> et merchandising de l'entreprise. Le suivi de tournée dispense l'utilisateur de
-> tout relevé manuel de kilométrage et de justificatif de déplacement : son trajet,
-> sa distance et ses temps de visite sont calculés automatiquement et servent au
-> remboursement de ses frais et à la planification de ses tournées suivantes.
-
-### Pourquoi l'accès au premier plan ne suffit pas
-
-> Une tournée dure plusieurs heures et l'utilisateur conduit entre deux points de
-> vente : son téléphone est en poche, écran éteint, ou il utilise une application
-> de navigation. Sans accès en arrière-plan, le trajet serait interrompu à chaque
-> mise en veille et l'itinéraire reconstitué serait une succession de fragments
-> inexploitables. L'accès en arrière-plan est strictement limité à l'intervalle
-> entre « Démarrer » et « Terminer la tournée ».
-
-### Mesures de limitation (si un champ libre le permet)
-
-> Collecte limitée à un point toutes les 120 secondes et uniquement après 15 mètres
-> de déplacement. Une notification permanente « Tournée en cours » reste affichée
-> pendant toute la durée du suivi. Aucune position n'est collectée en dehors d'une
-> tournée active. Les positions ne sont ni vendues, ni partagées avec des tiers,
-> ni utilisées à des fins publicitaires.
-
-### Vidéo
-
-> Coller ici le lien de la vidéo du §2 (YouTube non répertorié ou Drive public).
-
----
-
-## 5. Notes de version — texte à coller
-
-`Tester et publier › Production › Créer une release › Notes de version (fr-FR)`
+**Notes de version — coller dans le bloc `<fr-FR>` :**
 
 > Version 1.0.4
 > - Divulgation explicite avant toute demande d'accès à la localisation : l'application
@@ -120,39 +79,174 @@ politique doit aussi figurer dans `Croissance › Présence sur le Play Store �
 > - Référentiel produits et relevé concurrence.
 > - Corrections de stabilité du suivi de tournée hors connexion.
 
+**Boutons :** **Enregistrer** (en bas), puis **Suivant**. **Ne pas** cliquer
+« Envoyer pour examen » tant que les Étapes 2 à 5 ne sont pas faites : la release
+reste en brouillon, c'est voulu.
+
 ---
 
-## 6. Sécurité des données — réponses à saisir
+## Étape 2 — Déclaration accès à la position en arrière-plan
 
-`Règles et programmes › Contenu de l'application › Sécurité des données`
+**Chemin :** menu gauche **Règles et programmes › Contenu de l'application** ›
+ligne **Accès aux données de localisation** (parfois « Autorisations sensibles »)
+› **Commencer** / **Gérer**.
+
+### Préalable : la vidéo
+
+YouTube en **Non répertorié** (pas « Privé », sinon Google ne peut pas la lire) ou
+Drive avec « Toute personne disposant du lien ». Plan de tournage, **sans coupure**
+(Google rejette les montages qui masquent l'ordre des écrans) :
+
+1. Ouverture de l'app et connexion.
+2. Appui sur « Démarrer la tournée ».
+3. **La modale de divulgation, lisible 3 secondes** (« Bonnet Rouge collecte des
+   données de localisation… y compris lorsque l'application est fermée ou n'est
+   pas utilisée »).
+4. Appui sur « Accepter ».
+5. **Puis seulement** le prompt système Android « Autoriser Bonnet Rouge à accéder
+   à la position de cet appareil ? ».
+6. Volet de notifications montrant « Tournée en cours — Suivi GPS de votre tournée actif ».
+7. Appui sur « Terminer la tournée » → la notification disparaît.
+
+### Le formulaire, champ par champ
+
+**Autorisations demandées** — cocher `ACCESS_BACKGROUND_LOCATION` (les autres
+sont pré-cochées d'après le manifeste).
+
+**Quelle fonctionnalité de votre application utilise la position en arrière-plan ?**
+
+> Suivi de tournée terrain. L'application enregistre le trajet d'un commercial
+> pendant une tournée qu'il démarre lui-même, afin de reconstituer l'itinéraire
+> réellement parcouru entre les points de vente visités et de calculer la distance
+> et la durée de la tournée. Le suivi commence à l'appui sur « Démarrer la tournée »
+> et s'arrête à l'appui sur « Terminer la tournée ».
+
+**En quoi cette fonctionnalité est-elle utile à l'utilisateur ?**
+
+> L'application est un outil professionnel interne, réservé aux équipes commerciales
+> et merchandising de l'entreprise. Le suivi de tournée dispense l'utilisateur de
+> tout relevé manuel de kilométrage et de justificatif de déplacement : son trajet,
+> sa distance et ses temps de visite sont calculés automatiquement et servent au
+> remboursement de ses frais et à la planification de ses tournées suivantes.
+
+**Pourquoi l'accès au premier plan ne suffit-il pas ?** — le champ décisif
+
+> Une tournée dure plusieurs heures et l'utilisateur conduit entre deux points de
+> vente : son téléphone est en poche, écran éteint, ou il utilise une application
+> de navigation. Sans accès en arrière-plan, le trajet serait interrompu à chaque
+> mise en veille et l'itinéraire reconstitué serait une succession de fragments
+> inexploitables. L'accès en arrière-plan est strictement limité à l'intervalle
+> entre « Démarrer » et « Terminer la tournée ».
+
+**Mesures prises pour limiter la collecte** (si le champ est présent)
+
+> Collecte limitée à un point toutes les 120 secondes et uniquement après 15 mètres
+> de déplacement. Une notification permanente « Tournée en cours » reste affichée
+> pendant toute la durée du suivi. Aucune position n'est collectée en dehors d'une
+> tournée active. Les positions ne sont ni vendues, ni partagées avec des tiers,
+> ni utilisées à des fins publicitaires.
+
+**Lien vidéo** — coller l'URL YouTube / Drive.
+
+**Case de conformité** — cocher « Je confirme que mon application respecte le
+règlement sur les autorisations de localisation ».
+
+**Bouton :** **Enregistrer**.
+
+---
+
+## Étape 3 — Sécurité des données
+
+**Chemin :** **Règles et programmes › Contenu de l'application › Sécurité des
+données** › **Commencer**.
+
+**Page 1 — Vue d'ensemble**
 
 | Question | Réponse |
 | --- | --- |
-| Les données sont-elles chiffrées en transit ? | Oui (HTTPS/TLS) |
-| L'utilisateur peut-il demander la suppression de ses données ? | Oui — `https://frieslandv3.vercel.app/supprimer-compte` |
-| Données partagées avec des tiers ? | **Non**, pour toutes les catégories |
+| Votre application collecte-t-elle ou partage-t-elle des données utilisateur ? | **Oui** |
+| Toutes les données sont-elles chiffrées en transit ? | **Oui** (HTTPS/TLS) |
+| Proposez-vous un moyen de demander la suppression des données ? | **Oui** — `https://frieslandv3.vercel.app/supprimer-compte` |
 
-Types de données à déclarer comme **collectées** :
+**Page 2 — Types de données** : cocher exactement ces quatre lignes, rien d'autre.
 
-| Catégorie | Type | Obligatoire | Finalité |
-| --- | --- | --- | --- |
-| Position | Position exacte | Oui | Fonctionnalité de l'application (géorepérage de visite, suivi de tournée) |
-| Informations personnelles | Nom | Oui | Fonctionnalité, gestion du compte |
-| Informations personnelles | Adresse e-mail | Oui | Fonctionnalité, gestion du compte |
-| Photos et vidéos | Photos | Oui | Fonctionnalité (preuve de visite en point de vente) |
-| Fichiers et documents | — | Non | ne pas déclarer |
+| Catégorie | Type |
+| --- | --- |
+| Position | **Position exacte** — pas « approximative » : le géorepérage tourne en `enableHighAccuracy` |
+| Informations personnelles | Nom |
+| Informations personnelles | Adresse e-mail |
+| Photos et vidéos | Photos |
 
-Ne rien déclarer en publicité, analyse marketing ou personnalisation : l'application
-n'en fait pas.
+**Page 3 — Pour chacune des quatre**
+
+- Collectée : **Oui** — Partagée : **Non**
+- Traitement éphémère : **Non**
+- Obligatoire ou facultative : **Obligatoire** (l'app ne fonctionne ni sans compte ni sans position)
+- Finalité : **Fonctionnalités de l'application** uniquement ; pour Nom et E-mail,
+  ajouter **Gestion du compte**. Ne cocher ni Analyse, ni Publicité, ni Personnalisation.
+
+**Boutons :** **Enregistrer** puis **Envoyer**.
 
 ---
 
-## 7. Nom du développeur
+## Étape 4 — Les URL (trois endroits)
 
-`Paramètres › Détails du compte développeur › Nom du développeur` = `BD & CO`
-(esperluette entourée d'espaces, exactement comme dans `pages/privacy-policy.vue`).
-Une modification ici peut déclencher une revérification d'identité : la traiter
-avant d'envoyer la release, pas après.
+Les deux pages répondent 200 et nomment l'app, `com.bdco.bonnetrouge` et BD & CO
+comme personne morale (vérifié le 7 septembre 2026).
 
-Le détail des autres valeurs d'identité (SIREN, adresse, e-mail public) est dans
+**4a. Politique de confidentialité** — **Règles et programmes › Contenu de
+l'application › Politique de confidentialité** › **Commencer** :
+
+    https://frieslandv3.vercel.app/privacy-policy
+
+**Enregistrer**.
+
+**4b. Suppression de compte** — **Règles et programmes › Contenu de l'application ›
+Suppression de compte** › **Commencer** :
+
+| Question | Réponse |
+| --- | --- |
+| Votre application permet-elle de créer un compte ? | **Oui** (créés par l'admin, mais Play les considère comme comptes utilisateur) |
+| Proposez-vous un moyen de demander la suppression ? | **Oui** |
+| URL | `https://frieslandv3.vercel.app/supprimer-compte` |
+| Suppression partielle des données sans supprimer le compte ? | **Non** |
+
+**Enregistrer**.
+
+**4c. Fiche principale** — **Croissance › Présence sur le Play Store › Fiche
+principale** › tout en bas, champ **Politique de confidentialité** → la même URL
+qu'en 4a. Play l'exige aux deux endroits ; l'oubli de 4c est un motif de rejet
+fréquent.
+
+---
+
+## Étape 5 — Nom du développeur
+
+**Chemin :** icône **Paramètres** (roue, en bas du menu gauche) › **Compte
+développeur › Détails du compte développeur**.
+
+**Champ « Nom du développeur »**, exactement :
+
+    BD & CO
+
+Esperluette entourée de deux espaces, comme dans `pages/privacy-policy.vue`.
+Pas `BD&CO`, pas `BD & Co`.
+
+- Déjà `BD & CO` : ne rien toucher.
+- À modifier : Google peut rouvrir la vérification d'identité (justificatif
+  SIREN 528 724 362 + adresse 60 rue François Ier, 75008 Paris). Le faire **avant**
+  d'envoyer la release, sinon elle reste bloquée en attente de vérification du compte.
+
+Les autres champs (adresse, e-mail public `team@bigfive-edition.com`, site
+`bigfivesolutions.com`) doivent correspondre au tableau d'identité de
 `docs/play-store/FICHE-PLAY-STORE.md`.
+
+---
+
+## Envoi
+
+Retour dans **Tester et publier › Production** › la release en brouillon ›
+**Examiner la release**. Play liste en rouge les erreurs restantes ; s'il n'y en a
+aucune, **Démarrer le déploiement en production**. Une revue avec déclaration de
+localisation en arrière-plan prend en général 3 à 7 jours, contre quelques heures
+pour une mise à jour ordinaire.
