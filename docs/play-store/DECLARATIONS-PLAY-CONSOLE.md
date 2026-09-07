@@ -13,8 +13,9 @@ Vérifié le 7 septembre 2026. Toutes les valeurs proviennent du code de la vers
 > une première fois (même en brouillon supprimé, Play garde le numéro consommé).
 > Le versionCode est un compteur à sens unique par package : tout nouvel upload
 > doit être strictement supérieur au plus grand jamais téléversé, pas seulement
-> au plus grand publié. Le fichier `friesland-bonnet-rouge-1.0.4-release.aab`
-> (versionCode 5) est conservé pour trace mais ne doit plus être envoyé.
+> au plus grand publié. Le livrable de référence est `…-1.0.4-vc6-release.aab`
+> (reconstruit depuis `66cf486`, 7 sept. 19:00) ; n'envoyer qu'un seul bundle
+> par versionCode — un second upload en 6 sera refusé de la même façon.
 
 Play n'accepte **que l'AAB** ; l'APK release du même lot sert uniquement au test
 hors-Play (side-load). Contrôler la signature avant envoi :
