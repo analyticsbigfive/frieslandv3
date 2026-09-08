@@ -34,6 +34,14 @@ export default defineNuxtPlugin(() => {
     }
   })
 
+  // Notifications push : l'app fermée, le Realtime ne tourne plus. FCM prend le
+  // relais pour les actions assignées. L'enregistrement demande une session :
+  // au premier lancement l'utilisateur n'est pas encore connecté, d'où le watch.
+  const { initialiser } = usePushNotifications()
+  const utilisateur = useSupabaseUser()
+  if (utilisateur.value?.id) void initialiser()
+  watch(utilisateur, (u) => { if (u?.id) void initialiser() })
+
   // Android 15+/targetSdk 36 : la barre de statut est transparente et bord à bord,
   // setBackgroundColor / setOverlaysWebView sont sans effet. Capacitor décale la
   // WebView (adjustMarginsForEdgeToEdge: 'force') et la bande derrière la barre

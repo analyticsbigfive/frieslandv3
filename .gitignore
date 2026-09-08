@@ -73,3 +73,5 @@ scripts/out/
 
 # Guides QA avec identifiants de test (envoyés au client, jamais dans git)
 docs/guides-qa/
+android/app/keystore.properties
+android/app/google-services.json

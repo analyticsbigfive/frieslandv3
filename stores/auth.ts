@@ -179,6 +179,14 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout() {
+    // Avant de perdre la session : ce téléphone ne doit plus recevoir les
+    // notifications push de la personne qui se déconnecte (la RLS n'autorise
+    // la suppression du jeton que tant qu'on est authentifié).
+    if (import.meta.client) {
+      const { retirerAppareil } = usePushNotifications()
+      await retirerAppareil().catch(() => {})
+    }
+
     await supabase.auth.signOut()
     profile.value = null
     profileRequest.value = null
