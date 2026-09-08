@@ -94,8 +94,37 @@ function formaterEcheance(echeance: string | null): string {
   return ` · pour le ${d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}`
 }
 
+// Comparaison à durée constante : une comparaison naïve s'arrête au premier
+// caractère différent, ce qui laisse deviner le secret octet par octet.
+function memeSecret(attendu: string, fourni: string): boolean {
+  const a = new TextEncoder().encode(attendu)
+  const b = new TextEncoder().encode(fourni)
+  if (a.length !== b.length) return false
+  let diff = 0
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i]
+  return diff === 0
+}
+
 Deno.serve(async (req) => {
   try {
+    // La fonction est déployée sans vérification de JWT : l'appelant est le
+    // déclencheur Postgres, pas un utilisateur connecté. Un secret partagé tient
+    // lieu d'authentification — sans lui, connaître l'URL suffirait à faire
+    // renvoyer n'importe quelle notification. Secret volontairement distinct de
+    // la clé service_role : il ne donne accès qu'à cette fonction et se change
+    // sans toucher au reste du projet.
+    // Fermeture par défaut : secret absent = fonction hors service, jamais
+    // fonction ouverte. Un secret effacé ou un déploiement incomplet ne doit
+    // pas transformer l'URL en porte d'entrée.
+    const attendu = Deno.env.get('NOTIFIER_SECRET')
+    if (!attendu) {
+      console.error('NOTIFIER_SECRET absent : envoi refusé')
+      return new Response('service mal configuré', { status: 500 })
+    }
+    if (!memeSecret(attendu, req.headers.get('x-notifier-secret') ?? '')) {
+      return new Response('non autorisé', { status: 401 })
+    }
+
     const { action_id } = await req.json()
     if (!action_id) return new Response('action_id manquant', { status: 400 })
 

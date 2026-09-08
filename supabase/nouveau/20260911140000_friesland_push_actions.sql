@@ -79,7 +79,9 @@ create policy appareil_push_delete_moi on public.appareil_push
 --
 -- Secrets attendus dans Vault (`select vault.create_secret(...)`) :
 --   · 'edge_notifier_action_url'   → https://<projet>.supabase.co/functions/v1/notifier-action
---   · 'edge_notifier_action_token' → clé service_role du projet
+--   · 'edge_notifier_action_token' → le secret partagé, identique au secret
+--     NOTIFIER_SECRET de la fonction Edge. Volontairement distinct de la clé
+--     service_role : il n'ouvre que cette fonction et se change tout seul.
 -- Tant qu'ils sont absents, le déclencheur ne fait rien, sans erreur.
 -- ---------------------------------------------------------------------------
 create or replace function public.notifier_action_assignee()
@@ -114,7 +116,7 @@ begin
     url := v_url,
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer ' || v_token
+      'x-notifier-secret', v_token
     ),
     body := jsonb_build_object('action_id', new.id),
     timeout_milliseconds := 5000
