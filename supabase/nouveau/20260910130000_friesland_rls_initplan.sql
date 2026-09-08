@@ -24,11 +24,11 @@
 --   - les référentiels sous est_gestionnaire_perfect_store() (< 1 000 lignes) :
 --     gain non mesurable, churn inutile ;
 --   - les policies en `exists (select 1 from profiles where id = auth.uid() …)`
---     (pdv_update_admin, pdv_delete_admin, visites_delete_admin) : le sous-select
---     ne référence pas la ligne externe, Postgres le remonte déjà en InitPlan.
---     Les réécrire avec role_actif_courant() ajouterait le filtre `is_active`
---     qu'elles n'ont pas aujourd'hui — ce serait un changement de droits, pas
---     une optimisation.
+--     (pdv_update_admin, pdv_delete_admin, visites_delete_admin) : l'advisor les
+--     signale toujours, mais les réécrire avec role_actif_courant() ajouterait le
+--     filtre `is_active` qu'elles n'ont pas aujourd'hui — ce serait un changement
+--     de droits. Les corriger demande une formulation équivalente à droits
+--     constants, hors périmètre de cette migration.
 --
 -- Idempotent. Additif.
 -- ============================================================================
