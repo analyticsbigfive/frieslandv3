@@ -75,3 +75,4 @@ scripts/out/
 docs/guides-qa/
 android/app/keystore.properties
 android/app/google-services.json
+supabase/.temp/
