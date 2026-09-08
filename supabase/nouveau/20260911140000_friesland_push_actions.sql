@@ -133,3 +133,12 @@ create trigger trg_action_commerciale_push
   for each row execute function public.notifier_action_assignee();
 
 commit;
+
+-- ============================================================================
+-- Correctif de posture (advisor Supabase) : une fonction SECURITY DEFINER dans
+-- le schéma public est exposée par défaut à `anon` et `authenticated` sur
+-- /rest/v1/rpc. Celle-ci n'a de sens qu'appelée par son déclencheur.
+-- ============================================================================
+begin;
+revoke execute on function public.notifier_action_assignee() from public, anon, authenticated;
+commit;
