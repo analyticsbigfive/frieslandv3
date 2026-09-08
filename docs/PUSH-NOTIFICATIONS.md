@@ -18,7 +18,14 @@ Trois niveaux, du plus léger au plus lourd, tous en place :
 La notification nomme le point de vente, le type d'action et l'échéance. Un
 appui ouvre la liste des actions.
 
-## État : en attente du client
+## État : validé sur téléphone le 8 septembre 2026
+
+Testé de bout en bout sur un Pixel 9 (Android 17) avec l'APK 1.0.6 / versionCode 8 :
+jeton enregistré à la connexion, notification reçue application en arrière-plan,
+clic ouvrant l'écran « Actions commerciales », badge suivant les créations et
+les suppressions.
+
+## Historique : ce qu'il fallait du client
 
 **Le code est en place, l'envoi est inerte tant que Firebase n'est pas fourni.**
 Rien ne casse entre-temps : sans `google-services.json`, le plugin Android n'est
@@ -112,6 +119,37 @@ Points de conception à connaître :
 - **Android 13+** demande la permission de notifier à l'exécution ; elle est
   demandée au premier lancement après connexion. Refusée, tout le reste continue
   de fonctionner.
+
+## Pièges rencontrés
+
+- **`adb shell am force-stop` empêche la réception.** Android met alors l'app en
+  état « stoppée » et FCM ne lui livre plus rien jusqu'à un lancement manuel. Ce
+  n'est pas le cas d'un utilisateur qui balaie l'app ou verrouille son téléphone :
+  la notification passe. Pour tester, mettre l'app en arrière-plan
+  (`input keyevent KEYCODE_HOME`), jamais la forcer à s'arrêter.
+- **Notifications groupées.** À partir de deux notifications, Android les
+  regroupe : cliquer l'en-tête du groupe ouvre l'app sur son écran d'accueil, pas
+  sur l'action. Il faut déplier le groupe puis cliquer la ligne. Comportement
+  système, rien à corriger côté app.
+- **La liste des actions ne se vide pas d'elle-même** quand une action est
+  supprimée : le badge redescend (Realtime), mais `pages/mobile/actions.vue` ne
+  recharge qu'à l'ouverture de l'écran. Décalage visible seulement si l'écran est
+  resté ouvert pendant la suppression.
+
+### Build Android
+
+Trois réglages propres au poste, non versionnés, à vérifier avant un build :
+
+- `android/local.properties` → `sdk.dir` doit pointer sur le SDK du compte
+  courant (le fichier survit aux changements de compte utilisateur).
+- **JDK 21 obligatoire** (Capacitor 7). S'il est installé par Homebrew, il reste
+  invisible de `/usr/libexec/java_home` : exporter le chemin avant le build.
+  ```bash
+  export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
+  ```
+- `keystore.properties` se place dans **`android/`** (pas `android/app/`) et son
+  `storeFile` doit être un chemin **absolu** — `build.gradle` refuse le build
+  release sinon, avec un message explicite.
 
 ## Vérifier que ça marche
 
