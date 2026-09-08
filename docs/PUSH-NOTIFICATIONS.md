@@ -153,6 +153,10 @@ Trois réglages propres au poste, non versionnés, à vérifier avant un build :
 
 ## Vérifier que ça marche
 
+Pour un test **côté client, sans outil technique** (deux téléphones, uniquement
+l'application), voir `docs/TEST-NOTIFICATIONS-TERRAIN.md`. La procédure ci-dessous
+est la vérification technique, avec accès à la base et à `adb`.
+
 1. Se connecter sur l'APK avec un compte merchandiseur, accepter la permission.
 2. `select jeton, user_id from appareil_push;` → une ligne doit apparaître.
 3. Depuis un compte commercial, créer une action assignée à ce merchandiseur.
