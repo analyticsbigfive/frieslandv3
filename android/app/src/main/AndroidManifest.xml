@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -33,6 +34,33 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Compatibilité Play Store : le plugin background-geolocation déclare
+         <uses-feature android:name="android.hardware.location.gps"/> SANS
+         required="false", donc requis par défaut. Google Play filtre alors les
+         appareils sans puce GPS — typiquement les tablettes Samsung Galaxy Tab A
+         en version Wi-Fi seule, qui affichent « appareil non compatible ».
+         La règle de fusion des manifestes fait un OU sur android:required :
+         tools:replace est INDISPENSABLE pour imposer false.
+         Conséquence : l'app s'installe partout, le suivi de tournée doit
+         dégrader proprement quand la géoloc n'est pas disponible. -->
+    <uses-feature
+        android:name="android.hardware.location.gps"
+        android:required="false"
+        tools:replace="android:required" />
+    <uses-feature
+        android:name="android.hardware.location"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.camera.any"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="false" />
+
     <!-- Localisation "Autoriser tout le temps" : améliore la survie du tracking
          de tournée sur les OEM agressifs (le plugin background-geolocation
          apporte déjà FINE/COARSE_LOCATION et FOREGROUND_SERVICE[_LOCATION]). -->
