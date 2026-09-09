@@ -8,6 +8,10 @@
       <span class="min-w-0 truncate"><strong>Présélectionné :</strong> {{ preselectionLabel }}</span>
       <button type="button" class="shrink-0 font-semibold underline underline-offset-2" @click="clearPreselection">Modifier</button>
     </div>
+    <div v-if="!hasGps" class="mx-4 mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100" role="status">
+      <UIcon name="i-heroicons-signal-slash" class="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+      <span>Cet appareil n’a pas de GPS. La visite s’enregistre normalement, mais sans position ni contrôle de proximité du PDV.</span>
+    </div>
     <div v-if="previousVisit" class="mx-4 mt-3 flex items-center justify-between gap-3 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs text-violet-900 dark:border-violet-900/60 dark:bg-violet-950/30 dark:text-violet-100">
       <span class="min-w-0 truncate">Dernière visite disponible pour ce PDV ({{ previousVisitDateLabel }}).</span>
       <button type="button" class="shrink-0 font-semibold underline underline-offset-2" @click="showPreviousVisitConfirm = true">Reprendre</button>
@@ -653,6 +657,7 @@ const authStore = useAuthStore()
 const pdvStore = usePDVStore()
 const routingStore = useRoutingStore()
 const { validateGeofence, grabPosition, haversineDistance, error: geolocationError } = useGeofencing()
+const { hasGps, ensureProbed: probeLocationHardware } = useLocationHardware()
 const { completeMission } = useRouting()
 const { addToQueue, isOnline } = useOfflineSync()
 const { uploadImages, compressImage } = useImageUpload()
@@ -876,7 +881,13 @@ async function suggestNearestPdv() {
   try {
     const position = await grabPosition()
     if (!position) {
-      toast.add({ title: 'Position indisponible', description: 'Autorisez le GPS pour rechercher le PDV le plus proche.', color: 'amber' })
+      toast.add({
+        title: 'Position indisponible',
+        description: hasGps.value
+          ? 'Autorisez le GPS pour rechercher le PDV le plus proche.'
+          : 'Cet appareil n’a pas de GPS : sélectionnez le PDV dans la liste.',
+        color: 'amber',
+      })
       return
     }
     const nearest = filteredPdvList.value
@@ -1255,7 +1266,9 @@ async function persistVisit() {
     // Phase 1: Grab GPS (0→30%)
     animateProgress(30, 800)
     const position = await grabPosition()
-    if (!position && isOnline.value) throw new Error(geolocationError.value || 'Position GPS indisponible. Activez la localisation puis réessayez.')
+    // Sans puce GPS (tablettes Wi-Fi), aucune position n'est atteignable :
+    // la visite s'enregistre sans coordonnées plutôt que d'être refusée.
+    if (!position && isOnline.value && hasGps.value) throw new Error(geolocationError.value || 'Position GPS indisponible. Activez la localisation puis réessayez.')
 
     // Phase 2: Check geofence (30→50%)
     animateProgress(50, 400)
@@ -1304,7 +1317,9 @@ async function forceSubmit() {
   try {
     animateProgress(50, 600)
     const position = await grabPosition()
-    if (!position && isOnline.value) throw new Error(geolocationError.value || 'Position GPS indisponible. Activez la localisation puis réessayez.')
+    // Sans puce GPS (tablettes Wi-Fi), aucune position n'est atteignable :
+    // la visite s'enregistre sans coordonnées plutôt que d'être refusée.
+    if (!position && isOnline.value && hasGps.value) throw new Error(geolocationError.value || 'Position GPS indisponible. Activez la localisation puis réessayez.')
     animateProgress(90, 600)
     await submitVisite(position, false)
     saveProgress.value = 100
@@ -1443,6 +1458,7 @@ onMounted(async () => {
   if (!authStore.profile) {
     await authStore.fetchProfile()
   }
+  void probeLocationHardware()
   void fetchThresholds()
   void fetchVisibilityElements()
   void fetchTypePdvLabels()

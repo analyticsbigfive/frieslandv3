@@ -73,6 +73,7 @@ export function useTournee() {
   const { addToQueue } = useOfflineSync()
   const geo = useGeoProvider()
   const { ensureDisclosure } = useLocationDisclosure()
+  const { hasGps, ensureProbed: probeLocationHardware } = useLocationHardware()
 
   const minIntervalMs = Number(config.public.trackingIntervalMs) || 30_000
   const distanceM = Number(config.public.trackingDistanceM) || 15
@@ -250,6 +251,14 @@ export function useTournee() {
     const userId = user.value?.id
     if (!userId) {
       trackingError.value = 'Utilisateur non connecté.'
+      return
+    }
+
+    // Une tablette sans puce GPS ne produira aucun point : démarrer le service
+    // n'afficherait qu'une notification « Tournée en cours » sans trajet.
+    await probeLocationHardware()
+    if (!hasGps.value) {
+      trackingError.value = 'Cet appareil n\'a pas de GPS : le suivi de tournée n\'est pas disponible dessus. Les visites restent enregistrables.'
       return
     }
 
