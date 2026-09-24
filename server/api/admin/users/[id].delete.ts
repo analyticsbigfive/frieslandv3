@@ -3,10 +3,9 @@
 // profiles.id est FK auth.users(id) ON DELETE CASCADE -> supprimer le compte auth
 // suffit. Supprimer uniquement le profil (ancien comportement) laissait un compte
 // auth orphelin encore capable de se connecter.
-import { serverSupabaseServiceRole } from '#supabase/server'
 
 export default defineEventHandler(async (event) => {
-  const service = serverSupabaseServiceRole(event) as any
+  const service = getServiceClient(event)
   const caller = await requireAdmin(event, service)
 
   const id = getRouterParam(event, 'id')

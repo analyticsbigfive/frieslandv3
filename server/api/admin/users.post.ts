@@ -8,12 +8,11 @@
 //     écraserait la session de l'admin dans le navigateur ;
 //   - le trigger handle_new_user pose le profil : on complète rôle + périmètre
 //     ici, sur l'id retourné (et non par un .eq('email') à l'aveugle).
-import { serverSupabaseServiceRole } from '#supabase/server'
 import type { UserRole } from '~/types'
 import { createUserWithProfile, USER_ROLES, EMAIL_RE } from '../../utils/adminUsers'
 
 export default defineEventHandler(async (event) => {
-  const service = serverSupabaseServiceRole(event) as any
+  const service = getServiceClient(event)
   await requireAdmin(event, service)
 
   const body = await readBody(event)

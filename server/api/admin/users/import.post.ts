@@ -6,7 +6,6 @@
 //     sinon SEED_DEFAULT_PASSWORD.
 // Le rôle 'admin' est importable : l'endpoint est réservé aux admins
 // (requireAdmin), il n'y a donc pas d'escalade possible.
-import { serverSupabaseServiceRole } from '#supabase/server'
 import type { UserRole } from '~/types'
 import { createUserWithProfile, USER_ROLES, EMAIL_RE } from '../../../utils/adminUsers'
 
@@ -36,7 +35,7 @@ function parseBool(v: string): boolean | null {
 }
 
 export default defineEventHandler(async (event) => {
-  const service = serverSupabaseServiceRole(event) as any
+  const service = getServiceClient(event)
   await requireAdmin(event, service)
 
   const body = await readBody(event)

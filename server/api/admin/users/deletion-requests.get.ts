@@ -1,7 +1,6 @@
 // server/api/admin/users/deletion-requests.get.ts
 // Liste des demandes de suppression de compte en attente (posées par
 // /api/account/deletion-request dans user_metadata). Admin uniquement.
-import { serverSupabaseServiceRole } from '#supabase/server'
 
 export interface DeletionRequest {
   id: string
@@ -11,7 +10,7 @@ export interface DeletionRequest {
 }
 
 export default defineEventHandler(async (event): Promise<DeletionRequest[]> => {
-  const service = serverSupabaseServiceRole(event) as any
+  const service = getServiceClient(event)
   await requireAdmin(event, service)
 
   const out: DeletionRequest[] = []
