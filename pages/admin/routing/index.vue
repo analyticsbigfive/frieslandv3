@@ -67,11 +67,11 @@
           </UButton>
         </div>
         <div class="flex gap-2 ml-4">
-          <UButton v-if="authStore.isAdmin" variant="outline" icon="i-heroicons-arrow-down-tray" @click="downloadRoutingTemplate">
-            Modèle CSV
+          <UButton v-if="authStore.isAdmin" variant="outline" icon="i-heroicons-arrow-down-tray" :loading="downloadingTemplate" @click="handleDownloadTemplate">
+            Modèle Excel
           </UButton>
           <UButton v-if="authStore.isAdmin" variant="outline" icon="i-heroicons-arrow-up-tray" @click="showImportModal = true">
-            Importer CSV
+            Importer
           </UButton>
           <UButton icon="i-heroicons-plus" class="bg-fc-red hover:bg-fc-red/90" @click="openCreateRouting">
             Nouveau routing
@@ -846,14 +846,28 @@
       </template>
     </AdminFormModal>
 
-    <!-- ==================== IMPORT CSV ROUTINGS MODAL ==================== -->
+    <!-- ==================== IMPORT ROUTINGS MODAL ==================== -->
     <UModal v-model="showImportModal" :ui="{ width: 'max-w-xl' }">
       <div class="p-6 space-y-4">
-        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Importer des routings (CSV)</h2>
-        <p class="text-sm text-gray-500 dark:text-gray-400">
-          Format : <strong>1 ligne = 1 PDV</strong>. Plusieurs lignes même <em>email + date</em> = un routing ordonné (colonne <em>ordre</em>).
-          Un routing existant (même utilisateur + date) est <strong>mis à jour</strong>, jamais dupliqué (progression terrain préservée).
-        </p>
+        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Importer des tournées</h2>
+
+        <ol class="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+          <li class="flex gap-2">
+            <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-fc-red text-xs font-bold text-white">1</span>
+            <span>
+              <UButton variant="link" size="sm" class="p-0 align-baseline" :loading="downloadingTemplate" @click="handleDownloadTemplate">Téléchargez le modèle Excel</UButton>
+              — il contient les merchandisers et points de vente à jour.
+            </span>
+          </li>
+          <li class="flex gap-2">
+            <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-fc-red text-xs font-bold text-white">2</span>
+            <span>Remplissez l'onglet <strong>Tournées</strong> : une ligne par point de vente à visiter, en choisissant chaque valeur dans les listes. L'onglet <em>Mode d'emploi</em> détaille chaque colonne.</span>
+          </li>
+          <li class="flex gap-2">
+            <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-fc-red text-xs font-bold text-white">3</span>
+            <span>Enregistrez-le, choisissez-le ci-dessous et cliquez sur <strong>Importer</strong>. Une journée déjà planifiée est mise à jour, jamais dupliquée.</span>
+          </li>
+        </ol>
 
         <UFormGroup label="Que faire des PDV déjà présents et absents du fichier ?" size="sm">
           <div class="space-y-2">
@@ -878,15 +892,12 @@
           </div>
         </UFormGroup>
 
-        <UButton variant="link" size="sm" icon="i-heroicons-arrow-down-tray" class="px-0" @click="downloadRoutingTemplate">
-          Télécharger le modèle CSV
-        </UButton>
-
         <div class="border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-lg p-6 text-center">
-          <input ref="importFileInput" type="file" accept=".csv" class="hidden" @change="handleImportFileSelect" />
+          <input ref="importFileInput" type="file" accept=".xlsx,.csv" class="hidden" @change="handleImportFileSelect" />
           <UButton variant="outline" @click="($refs.importFileInput as HTMLInputElement)?.click()">
-            Choisir un fichier CSV
+            Choisir le fichier
           </UButton>
+          <p class="text-xs text-gray-400 mt-1">Excel (.xlsx) ou ancien format CSV</p>
           <p v-if="importFile" class="text-sm text-gray-600 mt-2">{{ importFile.name }}</p>
         </div>
 
@@ -895,8 +906,8 @@
           <div class="flex flex-wrap gap-3 text-sm">
             <span class="text-emerald-600 font-medium">{{ importSummary.created }} créé(s)</span>
             <span class="text-blue-600 font-medium">{{ importSummary.updated }} mis à jour</span>
-            <span class="text-gray-500 dark:text-gray-400">{{ importSummary.pdvCount }} PDV</span>
-            <span v-if="importSummary.errors.length" class="text-red-600 font-medium">{{ importSummary.errors.length }} erreur(s)</span>
+            <span class="text-gray-500 dark:text-gray-400">{{ importSummary.pdvCount }} point(s) de vente</span>
+            <span v-if="importSummary.errors.length" class="text-red-600 font-medium">{{ importSummary.errors.length }} ligne(s) refusée(s)</span>
           </div>
           <div v-if="importSummary.errors.length" class="max-h-40 overflow-y-auto space-y-1 border-t border-gray-200 dark:border-gray-600 pt-2">
             <p v-for="(e, i) in importSummary.errors" :key="i" class="text-xs text-red-600">⚠ {{ e }}</p>
@@ -917,6 +928,7 @@
 <script setup lang="ts">
 import type { Routing, RoutingPDV, RoutingObjectives, RoutingTemplate, RoutingTemplatePDV, RoutingTemplateException } from '~/types'
 import { toIsoJour, debutDeSemaine } from '~/utils/periode'
+import { fetchAllRows } from '~/utils/fetchAll'
 import { JOURS_SEMAINE, joursDeRegle, libelleJours, datesDeRegle } from '~/utils/routingRecurrence'
 
 // Écran de PLANIFICATION : création et édition de routings, de templates et
@@ -940,7 +952,8 @@ const supabase = useSupabaseClient()
 const authStore = useAuthStore()
 const routingStore = useRoutingStore()
 const toast = useToast()
-const { parseCsv, downloadRoutingTemplate } = useCsvExport()
+const { parseCsv } = useCsvExport()
+const { downloadRoutingExcelTemplate, readRoutingFile } = useRoutingExcel()
 
 // ---- Import CSV routings ----
 const showImportModal = ref(false)
@@ -950,6 +963,18 @@ const importSummary = ref<{ created: number; updated: number; pdvCount: number; 
 // Fusion par défaut : réimporter pour corriger un mois déjà chargé ne doit
 // jamais supprimer les PDV absents du fichier (demande client du 23 juillet).
 const importMode = ref<'fusion' | 'remplacement'>('fusion')
+
+const downloadingTemplate = ref(false)
+async function handleDownloadTemplate() {
+  downloadingTemplate.value = true
+  try {
+    await downloadRoutingExcelTemplate()
+  } catch (err: any) {
+    toast.add({ title: 'Modèle indisponible', description: err.message, color: 'red' })
+  } finally {
+    downloadingTemplate.value = false
+  }
+}
 
 function handleImportFileSelect(e: Event) {
   const target = e.target as HTMLInputElement
@@ -967,8 +992,8 @@ async function handleImportRoutings() {
   if (!importFile.value) return
   importing.value = true
   try {
-    const text = await importFile.value.text()
-    const rows = parseCsv(text)
+    const rows = await readRoutingFile(importFile.value, parseCsv)
+    if (!rows.length) throw new Error('Aucune ligne remplie dans le fichier.')
     const result = await routingStore.importRoutingsFromCSV(rows, authStore.profile!.id, importMode.value)
     importSummary.value = result
     toast.add({
@@ -1508,11 +1533,14 @@ function templatePDVObjectifActions(tpl: RoutingTemplate, tp: RoutingTemplatePDV
 // Le PDV reste choisi dans une liste fermée, jamais saisi en texte libre.
 // Si la règle porte un territoire, la liste s'y restreint : c'est le garde de
 // périmètre côté règle (le store le revalide de toute façon avant insertion).
+// Sans territoire sur la règle, on se limite au périmètre du merchandiser :
+// la liste complète (25 000+ PDV) figerait l'écran à l'ouverture du menu.
 function availableTemplatePdvOptions(tpl: RoutingTemplate) {
   const usedIds = new Set((tpl.routing_template_pdv || []).map(p => p.pdv_id))
+  const titulaire = tpl.territoire ? null : users.value.find(u => u.id === tpl.user_id)
   return pdvList.value
     .filter(p => !usedIds.has(p.pdv_id))
-    .filter(p => !tpl.territoire || p.zone === tpl.territoire)
+    .filter(p => tpl.territoire ? p.zone === tpl.territoire : (!titulaire || pdvInScope(p, titulaire)))
     .map(p => ({ value: p.pdv_id, label: `${p.nom_pdv} (${p.zone || ''})` }))
 }
 
@@ -1716,10 +1744,16 @@ onMounted(async () => {
   const { fetchUsers: fetchCachedUsers } = useUsersCache()
   const [cachedUsers, pdvResult] = await Promise.all([
     fetchCachedUsers(),
-    supabase.from('pdv').select('pdv_id, nom_pdv, canal, region, zone, quartier, geolocation_lat, geolocation_lng').eq('is_active', true).order('nom_pdv'),
+    // Paginé : sans range(), PostgREST s'arrête à 1 000 PDV sur 25 000+, et
+    // les sélecteurs de PDV n'offraient que les 1 000 premiers par nom.
+    fetchAllRows<any>((from, to) => supabase.from('pdv')
+      .select('pdv_id, nom_pdv, canal, region, zone, quartier, geolocation_lat, geolocation_lng')
+      .eq('is_active', true)
+      .order('nom_pdv').order('pdv_id')
+      .range(from, to)),
   ])
   users.value = cachedUsers.filter(u => u.is_active !== false)
-  pdvList.value = pdvResult.data || []
+  pdvList.value = pdvResult
 
   loadRoutings()
   loadTemplates()
