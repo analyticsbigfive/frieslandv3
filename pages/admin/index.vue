@@ -720,7 +720,6 @@ const dashFilters = computed(() => ({
 // une fois sur deux. Les KPI et la courbe d'abord, les listes ensuite.
 async function applyDashboardFilters() {
   const f = dashFilters.value
-  kpiError.value = false
   const [k, ev, t] = await Promise.all([
     fetchGlobalKpiFiltre(f),
     fetchPerfectStoreEvolution(f),
@@ -730,9 +729,7 @@ async function applyDashboardFilters() {
     global.value = k
     coverage.value = { periode: coverage.value?.periode ?? '', pdv_vus: k.pdv_vus, pdv_total: k.pdv_total, couverture_pct: k.couverture_pct }
   }
-  else {
-    kpiError.value = true
-  }
+  // k null : la cause est dans dashboardError (délai dépassé, objet manquant…).
   evolution.value = ev.map(p => ({ date: p.date, count: p.perfect_store_pct ?? 0 }))
   parType.value = t
   loading.value = false
@@ -750,25 +747,14 @@ async function applyDashboardFilters() {
   // Accordéons par type : cache vidé, seuls les panneaux ouverts sont rechargés.
   const openList = [...openTypes]
   Object.keys(typeStoreState).forEach(key => delete typeStoreState[key])
-  await Promise.all([
-    ...tiers.value.map(tier => loadTierStores(tier.ps_tier, 1)),
-    ...openList.map(type => loadTypeStores(type, 1)),
-  ])
+  // Une liste à la fois : quatre appels perfect_store_liste_filtre simultanés
+  // dépassaient chacun 20 s en production (mesuré le 24 sept.), là où un seul
+  // prend ~1,5 s. En série, la page reste utilisable pendant le chargement.
+  for (const tier of tiers.value) await loadTierStores(tier.ps_tier, 1)
+  for (const type of openList) await loadTypeStores(type, 1)
 }
 watch([fDivision, fTerritoire, fArea, fDistrib, periode], applyDashboardFilters, { deep: true })
 const storesError = ref(false)
-// KPI non chargés (le plus souvent : requête annulée après 30 s, serveur saturé).
-const kpiError = ref(false)
-const retrying = ref(false)
-async function retryDashboard() {
-  retrying.value = true
-  try {
-    await applyDashboardFilters()
-  }
-  finally {
-    retrying.value = false
-  }
-}
 const showStoreDetail = ref(false)
 const selectedStoreVisite = ref<Visite | null>(null)
 const selectedStorePerfect = ref<PerfectStoreResultB | null>(null)
