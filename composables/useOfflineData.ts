@@ -142,13 +142,17 @@ export function useOfflineData() {
   }
 
   // --- Cleanup ---
-  async function clearOfflineData() {
+  // keepQueue : perte de session involontaire (jeton expiré, refresh refusé).
+  // La file contient des visites pas encore envoyées : elles repartiront quand
+  // la même personne se reconnectera. Seule une déconnexion volontaire, après
+  // confirmation, la supprime.
+  async function clearOfflineData(options: { keepQueue?: boolean } = {}) {
     await Promise.all([
       del('offline:pdv-list'),
       del('offline:zones'),
       del('offline:visites'),
       del('offline:contacts'),
-      del('offline:queue'),
+      options.keepQueue ? Promise.resolve() : del('offline:queue'),
     ])
   }
 

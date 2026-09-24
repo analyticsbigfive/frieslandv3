@@ -196,9 +196,17 @@ export const useAuthStore = defineStore('auth', () => {
       const { clearPosition } = useUserGeolocation()
       clearPosition()
 
-      // Nettoyer le cache offline
+      // Déconnexion volontaire (confirmée si des données n'étaient pas
+      // synchronisées, cf. layouts/mobile.vue) : on vide aussi la file, en
+      // mémoire comme sur disque, pour que la personne suivante ne la rejoue pas.
       const { clearOfflineData } = useOfflineData()
+      viderFileHorsLigne()
       void clearOfflineData()
+
+      // Cache PWA des réponses /rest/v1 (supprimé de la config en 1.0.9) : les
+      // installations existantes peuvent encore en avoir un, indexé par URL
+      // seule, donc lisible par le prochain utilisateur du navigateur.
+      if ('caches' in window) void caches.delete('supabase-api-cache').catch(() => {})
     }
   }
 
@@ -255,10 +263,11 @@ export const useAuthStore = defineStore('auth', () => {
       profile.value = null
       profileRequest.value = null
 
-      // Nettoyer le cache offline
+      // Session perdue sans passer par logout() (expiration, jeton révoqué) :
+      // on vide les caches de lecture mais on garde la file d'envoi.
       if (import.meta.client) {
         const { clearOfflineData } = useOfflineData()
-        void clearOfflineData()
+        void clearOfflineData({ keepQueue: true })
       }
     }
   }, { immediate: true })

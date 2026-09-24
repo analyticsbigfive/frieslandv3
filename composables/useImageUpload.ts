@@ -68,13 +68,18 @@ export function useImageUpload() {
   async function uploadImages(
     files: File[],
     folder: string = 'visites'
-  ): Promise<string[]> {
+  ): Promise<{ urls: string[], echecs: { file: File, index: number }[] }> {
+    // Les échecs sont rendus à l'appelant (avec leur rang) au lieu d'être
+    // ignorés : sur un réseau faible, navigator.onLine reste vrai mais l'envoi
+    // expire, et la visite partait sans ses photos, sans avertissement.
     const urls: string[] = []
-    for (const file of files) {
+    const echecs: { file: File, index: number }[] = []
+    for (const [index, file] of files.entries()) {
       const url = await uploadImage(file, folder)
       if (url) urls.push(url)
+      else echecs.push({ file, index })
     }
-    return urls
+    return { urls, echecs }
   }
 
   /**

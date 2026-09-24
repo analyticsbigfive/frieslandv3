@@ -16,6 +16,12 @@ async function saveQueueToStorage() {
   await saveQueue(queue.value)
 }
 
+// Storage renvoie 409 / « Duplicate » / « already exists » selon la version.
+function estDejaPresent(error: any): boolean {
+  const status = Number(error?.statusCode ?? error?.status)
+  return status === 409 || /duplicate|already exists/i.test(String(error?.message || error?.error || ''))
+}
+
 async function initializeOfflineQueue() {
   if (!import.meta.client || offlineSyncInitialized) {
     return
@@ -32,6 +38,18 @@ async function initializeOfflineQueue() {
   catch {
     queue.value = []
   }
+  // `processing` n'est qu'un état transitoire en mémoire, mais la file est
+  // enregistrée pendant une synchro (addToQueue du tracking toutes les 5 min).
+  // Si l'app a été tuée à ce moment-là, l'élément doit repartir, sinon il n'est
+  // plus jamais retenté ni compté.
+  let repris = false
+  for (const item of queue.value) {
+    if (item.status === 'processing') {
+      item.status = 'pending'
+      repris = true
+    }
+  }
+  if (repris) await saveQueueToStorage()
 
   // One-time migration from localStorage
   try {
@@ -73,8 +91,20 @@ async function initializeOfflineQueue() {
   }, 30000)
 }
 
+// Vide la file (mémoire + disque) sans passer par useOfflineSync() : appelée
+// depuis logout(), après des await, là où les composables Nuxt
+// (useSupabaseClient) ne sont plus disponibles.
+export function viderFileHorsLigne() {
+  queue.value = []
+  void saveQueueToStorage()
+}
+
 export function useOfflineSync() {
   const supabase = useSupabaseClient()
+  const user = useSupabaseUser()
+
+  // Éléments de l'utilisateur connecté (et ceux d'avant la 1.0.9, sans ownerId).
+  const estAMoi = (item: OfflineQueueItem) => !item.ownerId || item.ownerId === user.value?.id
 
   // initializeOfflineQueue is async but we fire-and-forget on first call
   void initializeOfflineQueue()
@@ -85,6 +115,7 @@ export function useOfflineSync() {
       timestamp: Date.now(),
       retries: 0,
       status: 'pending',
+      ownerId: user.value?.id,
       ...item,
     }
 
@@ -97,14 +128,14 @@ export function useOfflineSync() {
   }
 
   async function processQueue() {
-    if (isSyncing.value || !isOnline.value) {
+    if (isSyncing.value || !isOnline.value || !user.value) {
       return
     }
 
     isSyncing.value = true
     lastSyncError.value = null
 
-    const pendingItems = queue.value.filter(item => item.status === 'pending' || item.status === 'error')
+    const pendingItems = queue.value.filter(item => (item.status === 'pending' || item.status === 'error') && estAMoi(item))
 
     for (const item of pendingItems) {
       try {
@@ -136,17 +167,21 @@ export function useOfflineSync() {
           }
         }
         else if (item.type === 'image') {
-          const { data: uploaded, error } = await supabase.storage
+          // Pas d'upsert : le bucket n'a pas de policy UPDATE, donc réécrire un
+          // objet existant est refusé. Or le chemin est fixe : si un passage
+          // précédent a déposé le fichier puis échoué au rattachement, il existe
+          // déjà — on le considère comme envoyé et on passe au rattachement.
+          const { error } = await supabase.storage
             .from('visite-images')
-            .upload(item.data.path, item.data.file, { contentType: 'image/jpeg', upsert: true })
+            .upload(item.data.path, item.data.file, { contentType: 'image/jpeg', upsert: false })
 
-          if (error) {
+          if (error && !estDejaPresent(error)) {
             throw error
           }
 
           const { data: urlData } = supabase.storage
             .from('visite-images')
-            .getPublicUrl(uploaded.path)
+            .getPublicUrl(item.data.path)
           const { data: visite, error: visiteError } = await (supabase
             .from('visites') as any)
             .select('image_urls')
@@ -219,8 +254,12 @@ export function useOfflineSync() {
   processQueueRunner = processQueue
 
   const pendingCount = computed(() =>
-    queue.value.filter(item => item.status === 'pending').length
+    queue.value.filter(item => item.status === 'pending' || item.status === 'processing').length
   )
+
+  // Tout ce qui n'est pas encore sur le serveur pour l'utilisateur connecté,
+  // erreurs comprises : c'est ce que la déconnexion ferait perdre.
+  const unsyncedCount = computed(() => queue.value.filter(estAMoi).length)
 
   const errorCount = computed(() =>
     queue.value.filter(item => item.status === 'error').length
@@ -238,6 +277,7 @@ export function useOfflineSync() {
     lastSyncError,
     queue,
     pendingCount,
+    unsyncedCount,
     errorCount,
     pendingVisitCount,
     pendingImageCount,

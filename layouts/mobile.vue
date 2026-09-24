@@ -107,7 +107,7 @@
 import { canWriteTerrain } from '~/utils/roles'
 const route = useRoute()
 const authStore = useAuthStore()
-const { isOnline, pendingCount, lastSyncAt } = useOfflineSync()
+const { isOnline, pendingCount, unsyncedCount, lastSyncAt } = useOfflineSync()
 const { currentPosition, isLocating, positionError, requestPosition } = useUserGeolocation()
 const { isTracking: isTrackingTournee, pointCount: tourneePointCount, autoStart, stopTournee } = useTournee()
 const tourneeUser = useSupabaseUser()
@@ -115,11 +115,12 @@ const showStatusPanel = ref(false)
 const isVisitWizard = computed(() => route.path === '/mobile/visites/new')
 
 // Déconnexion : logout() purge le cache offline (dont la file d'attente des
-// visites non synchronisées), d'où le garde-fou si pendingCount > 0.
+// éléments non synchronisés), d'où le garde-fou. unsyncedCount compte aussi
+// les éléments en erreur, que pendingCount ignore.
 async function handleLogout() {
-  if (pendingCount.value > 0) {
+  if (unsyncedCount.value > 0) {
     const ok = window.confirm(
-      `${pendingCount.value} visite(s) non synchronisée(s) seront perdues à la déconnexion. Se déconnecter quand même ?`,
+      `${unsyncedCount.value} élément(s) non synchronisé(s) (visites, photos, positions) seront perdus à la déconnexion. Se déconnecter quand même ?`,
     )
     if (!ok) return
   }
