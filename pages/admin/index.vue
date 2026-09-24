@@ -496,7 +496,18 @@
     </template>
 
     <div v-else class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-6 text-sm text-amber-800 dark:text-amber-200">
-      Vues Perfect Store indisponibles. Lance les migrations <code>supabase/nouveau</code> dans Supabase.
+      <template v-if="dashboardTimeout">
+        <p class="font-semibold">La base de données a mis trop de temps à répondre (délai dépassé).</p>
+        <p class="mt-1">Le tableau de bord n'a pas pu être calculé : Supabase est saturé, aucune migration ne manque. Réessaie dans quelques secondes.</p>
+      </template>
+      <template v-else-if="dashboardError">
+        <p class="font-semibold">Tableau de bord indisponible.</p>
+        <p class="mt-1">{{ dashboardMessage }}</p>
+      </template>
+      <template v-else>
+        Vues Perfect Store indisponibles. Lance les migrations <code>supabase/nouveau</code> dans Supabase.
+      </template>
+      <UButton class="mt-3" size="xs" variant="soft" :loading="retrying" @click="retryDashboard">Réessayer</UButton>
     </div>
 
     <!-- Seuils par niveau -->
@@ -559,6 +570,7 @@ import type { PeriodeValue } from '~/components/PeriodFilter.vue'
 import type { Visite } from '~/types'
 import type { PerfectStoreResultB } from '~/utils/perfectStore'
 import { plageDePeriode, libellePlage } from '~/utils/periode'
+import { describeSupabaseError, isTimeoutError } from '~/utils/supabaseErrors'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
@@ -566,6 +578,7 @@ const visitesStore = useVisitesStore()
 const { typePdvLabel, fetchTypePdvLabels } = useTypePdvLabels()
 const {
   refs,
+  dashboardError,
   fetchRefs,
   scoreVisite,
   fetchKpiParType,
@@ -580,6 +593,21 @@ const {
 
 const loading = ref(true)
 const global = ref<PerfectStoreDashboardKpi | null>(null)
+// Cause de l'absence de KPI : base saturée (504 / 57014) ou vraie erreur.
+const dashboardTimeout = computed(() => isTimeoutError(dashboardError.value))
+const dashboardMessage = computed(() => describeSupabaseError(dashboardError.value))
+const retrying = ref(false)
+async function retryDashboard() {
+  retrying.value = true
+  loading.value = true
+  try {
+    await applyDashboardFilters()
+  }
+  finally {
+    retrying.value = false
+    loading.value = false
+  }
+}
 const parType = ref<PerfectStoreTypeKpi[]>([])
 const coverage = ref<CoverageKpi | null>(null)
 const evolution = ref<{ date: string; count: number }[]>([])
@@ -685,12 +713,31 @@ const dashFilters = computed(() => ({
   dateDebut: periode.value.debut,
   dateFin: periode.value.fin,
 }))
+// Chargement en deux vagues. Tout lancer d'un coup (une quinzaine de requêtes
+// lourdes) saturait le serveur de base de données : les requêtes se
+// ralentissaient mutuellement jusqu'à dépasser la limite de 30 s, et c'est le
+// bloc KPI qui tombait le plus souvent — d'où « indicateurs indisponibles »
+// une fois sur deux. Les KPI et la courbe d'abord, les listes ensuite.
 async function applyDashboardFilters() {
   const f = dashFilters.value
-  const [k, ev, t, cc, skus, mq] = await Promise.all([
+  kpiError.value = false
+  const [k, ev, t] = await Promise.all([
     fetchGlobalKpiFiltre(f),
     fetchPerfectStoreEvolution(f),
     fetchKpiParType(f),
+  ])
+  if (k) {
+    global.value = k
+    coverage.value = { periode: coverage.value?.periode ?? '', pdv_vus: k.pdv_vus, pdv_total: k.pdv_total, couverture_pct: k.couverture_pct }
+  }
+  else {
+    kpiError.value = true
+  }
+  evolution.value = ev.map(p => ({ date: p.date, count: p.perfect_store_pct ?? 0 }))
+  parType.value = t
+  loading.value = false
+
+  const [cc, skus, mq] = await Promise.all([
     fetchCouvertureParCommercial(f),
     fetchPresenceSkus(f),
     fetchPerfectStoreManques(f),
@@ -699,12 +746,6 @@ async function applyDashboardFilters() {
   couvertureCommerciaux.value = cc
   presenceSkus.value = skus
   manques.value = mq
-  if (k) {
-    global.value = k
-    coverage.value = { periode: coverage.value?.periode ?? '', pdv_vus: k.pdv_vus, pdv_total: k.pdv_total, couverture_pct: k.couverture_pct }
-  }
-  evolution.value = ev.map(p => ({ date: p.date, count: p.perfect_store_pct ?? 0 }))
-  parType.value = t
   // Listes « PDV par niveau » : rechargées page 1 sur le nouveau périmètre.
   // Accordéons par type : cache vidé, seuls les panneaux ouverts sont rechargés.
   const openList = [...openTypes]
@@ -716,6 +757,18 @@ async function applyDashboardFilters() {
 }
 watch([fDivision, fTerritoire, fArea, fDistrib, periode], applyDashboardFilters, { deep: true })
 const storesError = ref(false)
+// KPI non chargés (le plus souvent : requête annulée après 30 s, serveur saturé).
+const kpiError = ref(false)
+const retrying = ref(false)
+async function retryDashboard() {
+  retrying.value = true
+  try {
+    await applyDashboardFilters()
+  }
+  finally {
+    retrying.value = false
+  }
+}
 const showStoreDetail = ref(false)
 const selectedStoreVisite = ref<Visite | null>(null)
 const selectedStorePerfect = ref<PerfectStoreResultB | null>(null)

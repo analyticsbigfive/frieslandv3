@@ -2,6 +2,7 @@
 import { defineStore, skipHydrate } from 'pinia'
 import { markRaw } from 'vue'
 import type { Visite, DashboardStats } from '~/types'
+import { isTimeoutError } from '~/utils/supabaseErrors'
 
 export const useVisitesStore = defineStore('visites', () => {
   const supabase = skipHydrate(markRaw(useSupabaseClient()))
@@ -15,6 +16,8 @@ export const useVisitesStore = defineStore('visites', () => {
   // Stats cache: TTL 5 minutes + deduplication
   const statsCacheTTL = 5 * 60 * 1000
   let statsCacheTimestamp = 0
+  // false = dernier chargement « léger » (compteurs seuls, tableaux non rafraîchis).
+  let statsComplet = false
   let statsPromise: Promise<void> | null = null
 
   // Filters
@@ -164,9 +167,13 @@ export const useVisitesStore = defineStore('visites', () => {
     visites.value = visites.value.filter(v => v.visite_id !== id)
   }
 
-  async function fetchStats(options: { force?: boolean } = {}) {
-    // Return cached if still valid
-    if (!options.force && stats.value && Date.now() - statsCacheTimestamp < statsCacheTTL) {
+  // leger : seulement les compteurs (v_stats_visites + nombre de PDV), pour le
+  // bandeau du layout admin chargé à chaque page. Les tableaux (performance des
+  // commerciaux, visites par jour, distribution) coûtent ~7 s de base de données
+  // et ne servent qu'à la page Activité, qui appelle sans `leger`.
+  async function fetchStats(options: { force?: boolean; leger?: boolean } = {}) {
+    // Return cached if still valid (un cache léger ne satisfait pas un appel complet)
+    if (!options.force && stats.value && Date.now() - statsCacheTimestamp < statsCacheTTL && (statsComplet || options.leger)) {
       return
     }
 
@@ -178,11 +185,14 @@ export const useVisitesStore = defineStore('visites', () => {
     statsPromise = (async () => {
       try {
         // All 5 queries in parallel — each with individual error handling
+        // En mode léger, les tableaux gardent leur dernière valeur connue.
+        const precedent = (cle: 'performance_commerciaux' | 'visites_par_jour' | 'distribution_pdv') =>
+          Promise.resolve({ data: (stats.value?.[cle] || []) as any[], error: null })
         const [statsResult, perfResult, jourResult, distResult, countResult] = await Promise.all([
           supabase.from('v_stats_visites').select('*').single().then(r => r).catch(() => ({ data: null, error: 'view missing' })),
-          supabase.from('v_performance_commerciaux').select('*').limit(20).then(r => r).catch(() => ({ data: null, error: 'view missing' })),
-          supabase.from('v_visites_par_jour').select('*').limit(30).then(r => r).catch(() => ({ data: null, error: 'view missing' })),
-          supabase.from('v_distribution_pdv').select('*').then(r => r).catch(() => ({ data: null, error: 'view missing' })),
+          options.leger ? precedent('performance_commerciaux') : supabase.from('v_performance_commerciaux').select('*').limit(20).then(r => r).catch(() => ({ data: null, error: 'view missing' })),
+          options.leger ? precedent('visites_par_jour') : supabase.from('v_visites_par_jour').select('*').limit(30).then(r => r).catch(() => ({ data: null, error: 'view missing' })),
+          options.leger ? precedent('distribution_pdv') : supabase.from('v_distribution_pdv').select('*').then(r => r).catch(() => ({ data: null, error: 'view missing' })),
           supabase.from('pdv').select('*', { count: 'exact', head: true }).eq('is_active', true),
         ])
 
@@ -194,7 +204,15 @@ export const useVisitesStore = defineStore('visites', () => {
         if (distResult.error) viewErrors.push('v_distribution_pdv')
 
         if (viewErrors.length > 0) {
-          console.warn('Vues SQL manquantes ou inaccessibles:', viewErrors.join(', '))
+          const firstError = [statsResult, perfResult, jourResult, distResult].find(r => r.error)?.error
+          if (isTimeoutError(firstError as any)) {
+            // Base saturée, pas un problème de schéma : ne pas envoyer l'admin
+            // relancer des migrations (vu en prod le 24 sept. 2026).
+            console.warn('Vues de statistiques : délai dépassé côté Supabase (base saturée) :', viewErrors.join(', '))
+          }
+          else {
+            console.warn('Vues SQL manquantes ou inaccessibles:', viewErrors.join(', '))
+          }
         }
 
         const statsData = statsResult.data as any
@@ -276,6 +294,7 @@ export const useVisitesStore = defineStore('visites', () => {
         }
 
         statsCacheTimestamp = Date.now()
+        statsComplet = !options.leger
       }
       catch (err) {
         console.error('Erreur chargement stats:', err)

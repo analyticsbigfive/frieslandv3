@@ -255,7 +255,9 @@ watch(mobileSidebarOpen, (opened) => {
 })
 
 onMounted(() => {
-  visitesStore.fetchStats().catch(() => {})
+  // Le bandeau n'affiche que trois compteurs : pas besoin des tableaux
+  // (performance des commerciaux = 6 s de base de données à chaque page admin).
+  visitesStore.fetchStats({ leger: true }).catch(() => {})
   fetchCommerciauxEnTournee()
   presenceTimer = setInterval(fetchCommerciauxEnTournee, 60_000)
 })
