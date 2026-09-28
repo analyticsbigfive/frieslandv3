@@ -3,10 +3,9 @@
 // remplace ce libellé sur TOUS les profils qui le portent (territoires_assignes,
 // zone_assignee). Service role : la RLS de profiles ne laisse pas un admin
 // réécrire les autres profils depuis le navigateur.
-import { serverSupabaseServiceRole } from '#supabase/server'
 
 export default defineEventHandler(async (event) => {
-  const service = serverSupabaseServiceRole(event) as any
+  const service = getServiceClient(event)
   await requireAdmin(event, service)
 
   const body = await readBody(event)

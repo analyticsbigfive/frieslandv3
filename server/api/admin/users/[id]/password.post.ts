@@ -11,7 +11,6 @@
 // Retour : { success: true, password }  (le mot de passe appliqué, à afficher
 // une seule fois à l'admin).
 import { randomInt } from 'node:crypto'
-import { serverSupabaseServiceRole } from '#supabase/server'
 
 // Alphabet sans caractères ambigus (0/O, 1/l/I) : le mot de passe est souvent
 // dicté oralement ou recopié depuis un écran.
@@ -23,7 +22,7 @@ function motDePasseProvisoire(): string {
 }
 
 export default defineEventHandler(async (event) => {
-  const service = serverSupabaseServiceRole(event) as any
+  const service = getServiceClient(event)
   await requireAdmin(event, service)
 
   const id = getRouterParam(event, 'id')

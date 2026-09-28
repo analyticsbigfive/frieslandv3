@@ -83,16 +83,12 @@ export default defineNuxtConfig({
     workbox: {
       navigateFallback: '/',
       globPatterns: ['**/*.{js,css,html,png,svg,ico,woff2}'],
+      // Pas de cache sur /rest/v1 : les réponses dépendent de l'utilisateur
+      // (RLS) mais le cache est indexé par URL seule — sur un navigateur
+      // partagé, B hors ligne recevait les données de A. Le hors-ligne passe
+      // par IndexedDB (useOfflineData). L'ancien cache « supabase-api-cache »
+      // est purgé à la déconnexion (stores/auth.ts).
       runtimeCaching: [
-        {
-          urlPattern: /^https:\/\/iirgolfjwdnnesamzcbd\.supabase\.co\/rest\/v1\/.*/i,
-          handler: 'NetworkFirst',
-          options: {
-            cacheName: 'supabase-api-cache',
-            expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 },
-            cacheableResponse: { statuses: [0, 200] },
-          },
-        },
         {
           urlPattern: /^https:\/\/iirgolfjwdnnesamzcbd\.supabase\.co\/storage\/.*/i,
           handler: 'CacheFirst',

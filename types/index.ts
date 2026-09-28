@@ -584,6 +584,10 @@ export interface OfflineQueueItem {
   timestamp: number
   retries: number
   status: 'pending' | 'processing' | 'error'
+  // Utilisateur qui a mis l'élément en file : un collègue qui se connecte
+  // ensuite sur le même téléphone ne doit pas le rejouer (RLS : échec certain).
+  // Absent sur les files enregistrées avant la 1.0.9.
+  ownerId?: string
 }
 
 // ---- Tracking de tournée (app native) ----

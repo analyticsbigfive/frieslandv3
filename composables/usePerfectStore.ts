@@ -230,6 +230,12 @@ export function usePerfectStore() {
 
   const refs = useState<PerfectStoreDashboardRefs | null>('ps-refs-b', () => null)
   const loaded = useState<boolean>('ps-refs-b-loaded', () => false)
+  /**
+   * Dernière erreur du KPI global du dashboard (null si le dernier appel a
+   * réussi). Permet à la page d'afficher « délai dépassé, réessaie » plutôt
+   * que « lance les migrations » quand la base est simplement saturée.
+   */
+  const dashboardError = useState<{ message: string; code?: string; status?: number } | null>('ps-dashboard-error', () => null)
 
   async function fetchRefs(force = false) {
     if (loaded.value && !force && refs.value) return refs.value
@@ -512,8 +518,10 @@ export function usePerfectStore() {
     const { data, error } = await (supabase.rpc as any)('dashboard_perfect_store_filtre', dashFilterParams(f))
     if (error) {
       console.warn('dashboard_perfect_store_filtre indisponible', error.message)
+      dashboardError.value = { message: String(error.message || ''), code: error.code, status: (error as any).status }
       return null
     }
+    dashboardError.value = null
     return data as PerfectStoreDashboardKpi
   }
 
@@ -639,6 +647,7 @@ export function usePerfectStore() {
 
   return {
     refs,
+    dashboardError,
     fetchRefs,
     scoreVisite,
     fetchGlobalKpi,

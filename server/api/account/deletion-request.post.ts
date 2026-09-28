@@ -11,21 +11,45 @@
 // Réponse identique que l'e-mail existe ou non : on ne révèle pas la liste
 // des comptes. Si l'appelant est connecté, son propre compte est ciblé quel
 // que soit l'e-mail saisi.
-import { serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
+import { serverSupabaseUser } from '#supabase/server'
 import { EMAIL_RE } from '../../utils/adminUsers'
 
+// Route publique : on plafonne le nombre de demandes par IP. Mémoire locale à
+// l'instance (pas partagée entre fonctions serverless) : un frein, pas une
+// garantie — suffisant pour un formulaire rarement utilisé.
+const FENETRE_MS = 60_000
+const MAX_PAR_FENETRE = 5
+const demandesParIp = new Map<string, number[]>()
+
+function limiteAtteinte(ip: string): boolean {
+  const maintenant = Date.now()
+  const recentes = (demandesParIp.get(ip) || []).filter(t => maintenant - t < FENETRE_MS)
+  recentes.push(maintenant)
+  demandesParIp.set(ip, recentes)
+  if (demandesParIp.size > 1000) demandesParIp.clear()
+  return recentes.length > MAX_PAR_FENETRE
+}
+
+// Une requête sur profiles plutôt que de paginer auth.users (jusqu'à 20
+// appels admin par demande anonyme). profiles.email est renseigné à la
+// création de chaque compte (createUserWithProfile, handle_new_user), en
+// minuscules comme l'e-mail saisi.
 async function findUserIdByEmail(service: any, email: string): Promise<string | null> {
-  for (let page = 1; page <= 20; page++) {
-    const { data, error } = await service.auth.admin.listUsers({ page, perPage: 200 })
-    if (error) throw apiError(500, error.message)
-    const hit = (data?.users || []).find((u: any) => String(u.email || '').toLowerCase() === email)
-    if (hit) return hit.id
-    if (!data?.users?.length || data.users.length < 200) break
-  }
-  return null
+  const { data, error } = await service
+    .from('profiles')
+    .select('id')
+    .eq('email', email)
+    .limit(1)
+    .maybeSingle()
+  if (error) throw apiError(500, error.message)
+  return data?.id || null
 }
 
 export default defineEventHandler(async (event) => {
+  if (limiteAtteinte(getRequestIP(event, { xForwardedFor: true }) || 'inconnue')) {
+    throw apiError(429, 'Trop de demandes, réessayez dans une minute')
+  }
+
   const body = await readBody(event).catch(() => ({}))
   const email = String(body?.email || '').trim().toLowerCase()
   const reason = String(body?.reason || '').trim().substring(0, 500)
@@ -36,7 +60,7 @@ export default defineEventHandler(async (event) => {
     throw apiError(400, 'Veuillez confirmer la demande')
   }
 
-  const service = serverSupabaseServiceRole(event) as any
+  const service = getServiceClient(event)
 
   let userId: string | null = null
   try {

@@ -2,6 +2,7 @@
 import { defineStore, skipHydrate } from 'pinia'
 import { isPrivilegedProfile } from '~/utils/roles'
 import { markRaw } from 'vue'
+import { fetchAllRows } from '~/utils/fetchAll'
 import type { Routing, RoutingPDV, RoutingObjectives, RoutingTemplate, RoutingTemplatePDV, RoutingTemplateException, Profile } from '~/types'
 
 export const useRoutingStore = defineStore('routing', () => {
@@ -404,12 +405,15 @@ export const useRoutingStore = defineStore('routing', () => {
       (profiles || []).map((p: any) => [String(p.email || '').trim().toLowerCase(), p])
     )
 
-    // PDV valides + leur zone/quartier (pour vérifier le périmètre)
-    const { data: pdvs, error: pdvErr } = await (supabase.from('pdv') as any)
+    // PDV valides + leur zone/quartier (pour vérifier le périmètre). Paginé :
+    // sans range(), PostgREST s'arrête à 1 000 lignes et tout PDV au-delà était
+    // refusé comme « introuvable ».
+    const pdvs = await fetchAllRows<any>((from, to) => (supabase.from('pdv') as any)
       .select('pdv_id, zone, quartier')
       .eq('is_active', true)
-    if (pdvErr) throw pdvErr
-    const pdvById = new Map<string, any>((pdvs || []).map((p: any) => [p.pdv_id, p]))
+      .order('pdv_id')
+      .range(from, to))
+    const pdvById = new Map<string, any>(pdvs.map((p: any) => [p.pdv_id, p]))
     const validPdv = new Set(pdvById.keys())
 
     const parseBool = (v?: string) => {
@@ -422,17 +426,20 @@ export const useRoutingStore = defineStore('routing', () => {
     const groups = new Map<string, Grp>()
 
     rows.forEach((r, i) => {
-      const lineNo = i + 2 // ligne 1 = en-têtes
+      // __ligne : numéro de ligne réel du fichier (useRoutingExcel saute les
+      // lignes vides) ; à défaut, ligne 1 = en-têtes.
+      const lineNo = Number(r.__ligne) || i + 2
       const email = (r.email || '').trim().toLowerCase()
       const date = (r.date || '').trim()
       const pdvId = (r.pdv_id || '').trim()
 
       if (!email || !date || !pdvId) {
-        summary.errors.push(`Ligne ${lineNo}: email, date ou pdv_id manquant`)
+        const manque = [!email && 'merchandiser', !date && 'date', !pdvId && 'point de vente'].filter(Boolean).join(', ')
+        summary.errors.push(`Ligne ${lineNo} : ${manque} manquant(e)`)
         return
       }
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        summary.errors.push(`Ligne ${lineNo}: date "${date}" invalide (format AAAA-MM-JJ)`)
+        summary.errors.push(`Ligne ${lineNo} : date « ${date} » non reconnue (attendu : 25/06/2026)`)
         return
       }
 
@@ -462,7 +469,7 @@ export const useRoutingStore = defineStore('routing', () => {
     for (const g of groups.values()) {
       const profile = emailToProfile.get(g.email)
       if (!profile) {
-        summary.errors.push(`${g.email} (${g.date}): utilisateur introuvable`)
+        summary.errors.push(`${g.email} (${g.date}) : merchandiser introuvable`)
         continue
       }
       const userId = profile.id
@@ -470,12 +477,12 @@ export const useRoutingStore = defineStore('routing', () => {
       const items = g.items
         .filter((it) => {
           if (!validPdv.has(it.pdv_id)) {
-            summary.errors.push(`${g.email} (${g.date}): PDV "${it.pdv_id}" introuvable, ignoré`)
+            summary.errors.push(`${g.email} (${g.date}) : point de vente « ${it.pdv_id} » introuvable ou inactif, ignoré`)
             return false
           }
           // Garde périmètre : PDV hors territoires assignés au user → rejeté avec message clair.
           if (!pdvInScope(pdvById.get(it.pdv_id), profile as Profile)) {
-            summary.errors.push(`${g.email} (${g.date}): PDV "${it.pdv_id}" hors du périmètre assigné, ignoré`)
+            summary.errors.push(`${g.email} (${g.date}) : point de vente « ${it.pdv_id} » hors des territoires de ce merchandiser, ignoré`)
             return false
           }
           return true
@@ -484,7 +491,7 @@ export const useRoutingStore = defineStore('routing', () => {
         .map(it => ({ pdv_id: it.pdv_id, objectifs: it.objectifs }))
 
       if (!items.length) {
-        summary.errors.push(`${g.email} (${g.date}): aucun PDV valide, routing ignoré`)
+        summary.errors.push(`${g.email} (${g.date}) : aucun point de vente valide, tournée non créée`)
         continue
       }
 

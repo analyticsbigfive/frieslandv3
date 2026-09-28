@@ -1338,6 +1338,13 @@ function onSaveComplete() {
   router.push('/mobile')
 }
 
+// supabase-js renvoie les pannes réseau comme une erreur à message
+// « Failed to fetch » (Chrome/WebView), « Load failed » (Safari) ou
+// « Network request failed », sans code HTTP.
+function estErreurReseau(error: any): boolean {
+  return !error?.code && /failed to fetch|load failed|network ?request failed|networkerror/i.test(String(error?.message || ''))
+}
+
 async function submitVisite(
   position: { lat: number; lng: number; accuracy: number } | null,
   geofenceOk: boolean
@@ -1401,9 +1408,15 @@ async function submitVisite(
     catData.present = categoryPresent(catData, cat)
   }
 
+  // Photos : en ligne, on tente l'envoi direct ; celles qui échouent (réseau
+  // faible, délai dépassé) partent dans la file et seront rattachées à la
+  // visite à la prochaine synchro. Hors ligne, toutes passent par la file.
   let imageUrls: string[] = []
+  let photosEnFile: { file: File, index: number }[] = form.images.map((file, index) => ({ file, index }))
   if (form.images.length > 0 && isOnline.value) {
-    imageUrls = await uploadImages(form.images, `visites/${visiteId}`)
+    const envoi = await uploadImages(form.images, `visites/${visiteId}`)
+    imageUrls = envoi.urls
+    photosEnFile = envoi.echecs
   }
 
   const visite = {
@@ -1422,23 +1435,35 @@ async function submitVisite(
     sync_status: 'synced',
   }
 
-  if (isOnline.value) {
+  let visiteEnFile = !isOnline.value
+  if (!visiteEnFile) {
     const { error } = await supabase.from('visites').upsert(visite as any, { onConflict: 'visite_id' })
-    if (error) throw error
+    // Réseau coupé en cours d'envoi : même traitement que hors ligne plutôt
+    // qu'une erreur. Les autres erreurs (droits, validation) remontent.
+    if (error && estErreurReseau(error)) visiteEnFile = true
+    else if (error) throw error
   }
-  else {
+  if (visiteEnFile) {
     addToQueue({ type: 'visite', data: { ...visite, sync_status: 'pending' } })
-    for (const [index, file] of form.images.entries()) {
-      const compressed = await compressImage(file)
-      addToQueue({
-        type: 'image',
-        data: {
-          visiteId,
-          path: `visites/${visiteId}/${index}.jpg`,
-          file: compressed,
-        },
-      })
-    }
+  }
+  for (const { file, index } of photosEnFile) {
+    const compressed = await compressImage(file)
+    addToQueue({
+      type: 'image',
+      data: {
+        visiteId,
+        path: `visites/${visiteId}/${index}.jpg`,
+        file: compressed,
+      },
+    })
+  }
+  if (!visiteEnFile && photosEnFile.length) {
+    toast.add({
+      title: 'Visite enregistrée',
+      description: `${photosEnFile.length} photo(s) seront envoyées dès que le réseau le permettra.`,
+      color: 'amber',
+      icon: 'i-heroicons-arrow-path',
+    })
   }
 
   clearDraft()
