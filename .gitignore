@@ -76,3 +76,6 @@ docs/guides-qa/
 android/app/keystore.properties
 android/app/google-services.json
 supabase/.temp/
+
+# Guides PDF personnalisés (nom, e-mail, territoires : données personnelles)
+docs/guides/utilisateurs/
