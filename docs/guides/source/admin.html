@@ -1,0 +1,289 @@
+<section class="chapitre">
+  <h2>Rôles et accès</h2>
+  <p>Le back-office s’ouvre à l’adresse de l’application, page de connexion. Chaque rôle arrive sur son écran : <strong>admin</strong> et <strong>superviseur</strong> sur le tableau de bord Perfect Store (<code>/admin</code>), <strong>commercial</strong> sur « Équipe » de l’application mobile, <strong>merchandiseur</strong> sur « Visites ».</p>
+
+  <table>
+    <thead><tr><th>Rôle</th><th>Back-office web</th><th>Données</th><th>Saisie</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Admin</strong></td><td>Tout. Seul à gérer Utilisateurs, Équipes, Permissions, imports CSV d’utilisateurs et de routings, mots de passe et suppressions de comptes.</td><td>Tout le parc</td><td>Tout</td></tr>
+      <tr><td><strong>Superviseur</strong></td><td>Toutes les sections sauf <span class="ui">Paramètres</span> (par défaut). Accès à Routing &amp; Planning.</td><td>Tout le parc</td><td>PDV, visites, routings, field coaching</td></tr>
+      <tr><td><strong>Commercial</strong></td><td>Analyse en lecture seule, sur navigateur uniquement (pas dans l’APK). Sans Paramètres ni Routing.</td><td>Ses territoires et quartiers</td><td>Actions commerciales et field coachings (mobile)</td></tr>
+      <tr><td><strong>Merchandiseur</strong></td><td>Aucun accès : renvoyé vers l’application mobile.</td><td>PDV de son périmètre, ses visites, ses actions</td><td>Visites, PDV</td></tr>
+    </tbody>
+  </table>
+
+  <div class="encadre encadre--regle">
+    <span class="encadre__titre">Le périmètre</span>
+    <ul>
+      <li>Ce que voit un utilisateur terrain est défini par ses <strong>territoires assignés</strong> et, s’ils sont renseignés, ses <strong>quartiers assignés</strong>. Un PDV sans quartier reste visible dès que son territoire correspond.</li>
+      <li>Le rattachement à un commercial (<span class="ui">Équipes</span>) est organisationnel : il <strong>ne change pas</strong> le périmètre.</li>
+      <li>Un PDV <strong>sans territoire</strong> est invisible pour tout le terrain. Retrouvez-les avec le filtre <span class="ui">— Sans territoire —</span> de la liste PDV.</li>
+      <li>Les utilisateurs ne peuvent modifier ni leurs territoires, ni leurs quartiers, ni leur commercial, ni leur e-mail : tout passe par l’admin.</li>
+    </ul>
+  </div>
+  <p>La visibilité des sections par rôle se règle dans <span class="ui">Paramètres</span> → <span class="ui">Permissions</span> (chapitre 11).</p>
+</section>
+
+<section class="chapitre">
+  <h2>Se repérer dans le back-office</h2>
+  <h3>L’en-tête</h3>
+  <ul>
+    <li>Indicateurs permanents : <span class="ui">Visites mois</span>, <span class="ui">PDV actifs</span>, <span class="ui">Commerciaux actifs</span>.</li>
+    <li>Pastille <span class="ui">N en ligne</span> : les personnes dont un point GPS vient d’arriver ; un clic ouvre le Suivi commerciaux.</li>
+    <li>Bascule mode sombre ; menu utilisateur avec <span class="ui">App Mobile</span> et <span class="ui">Déconnexion</span>.</li>
+  </ul>
+  <h3>La barre latérale</h3>
+  <table>
+    <thead><tr><th>Groupe</th><th>Entrées</th></tr></thead>
+    <tbody>
+      <tr><td>Principal</td><td><span class="ui">Perfect Store</span>, <span class="ui">Activité</span>, <span class="ui">Routing &amp; Planning</span>, <span class="ui">Carte</span>, <span class="ui">Suivi commerciaux</span></td></tr>
+      <tr><td>PDV</td><td><span class="ui">Points de vente</span></td></tr>
+      <tr><td>Visites</td><td><span class="ui">Visites</span>, <span class="ui">Field coaching</span></td></tr>
+      <tr><td>Analyses</td><td><span class="ui">Visibilité extérieure</span>, <span class="ui">Concurrence</span>, <span class="ui">Produits</span></td></tr>
+      <tr><td>Actions</td><td><span class="ui">Actions</span></td></tr>
+      <tr><td>Paramètres</td><td><span class="ui">Paramètres</span></td></tr>
+    </tbody>
+  </table>
+  <p>Chaque section a des <strong>onglets</strong> en haut de page ; ils conservent les filtres en cours.</p>
+
+  <h3>Outils communs</h3>
+  <ul>
+    <li><strong>Période</strong> : <span class="ui">Jour</span>, <span class="ui">Semaine</span>, <span class="ui">30 jours</span> (défaut le plus fréquent), <span class="ui">Mois</span>, <span class="ui">Trimestre</span>, <span class="ui">Tout</span>, <span class="ui">Personnalisé</span> (Du / Au).</li>
+    <li><strong>Bloc Filtres</strong> : canal, commercial, recherche PDV ; <span class="ui">Plus de filtres</span> ajoute catégorie, sous-catégorie, division, sous-région, territoire, area, quartier. Valider par <span class="ui">Filtrer</span>.</li>
+    <li>Les pastilles de filtres actifs se retirent d’un clic. Les tableaux sont paginés et proposent <span class="ui">Colonnes : tri et filtres</span>.</li>
+  </ul>
+</section>
+
+<section class="chapitre">
+  <h2>Le tableau de bord Perfect Store</h2>
+  <p>Premier écran après connexion. Onglets : <span class="ui">Tableau de bord</span>, <span class="ui">Liste par niveau</span>, <span class="ui">Visites</span>, <span class="ui">Synthèse par zone</span>, <span class="ui">Analyse des gaps</span>.</p>
+  <p>Les filtres (période, <span class="ui">Division (North/South)</span>, <span class="ui">Territoire</span>, <span class="ui">Quartier</span>, <span class="ui">Distributeur</span>) pilotent toute la page. De haut en bas :</p>
+  <ol class="etapes">
+    <li><strong>Perfect Stores de la période</strong> : nombre de PDV Perfect Store, puis « X % des N PDV visités », ventilé Flagship / VIP / Core / Basic et non conformes. La liste des PDV ouvre le détail de leur visite.</li>
+    <li><strong>Six indicateurs</strong> : couverture effective (PDV uniques / parc), couverture des visites (passages), taux de présence (quantité ≥ 1), taux de disponibilité (quantité ≥ seuil), score global moyen, assortiment moyen.</li>
+    <li><strong>Présence et disponibilité</strong> par catégorie et pour les SKU clés.</li>
+    <li><strong>Visites par merchandiser</strong> : PDV distincts, jours travaillés, visites par jour, passages répétés.</li>
+    <li><strong>Autres piliers</strong> (visibilité, promotion), <strong>évolution</strong> du taux de Perfect Stores, <strong>Perfect Store par type de magasin</strong>, <strong>PDV par niveau</strong>.</li>
+    <li><strong>Passer au niveau supérieur</strong> : pour chaque PDV, le niveau actuel, le niveau cible et les <strong>critères exacts qui manquent</strong> (disponibilité insuffisante, assortiment, éléments de visibilité ou de promotion). C’est la liste de travail à transmettre aux commerciaux.</li>
+  </ol>
+  <div class="encadre encadre--attention">
+    <span class="encadre__titre">Présence ≠ disponibilité</span>
+    <p>Présence = au moins 1 unité en rayon. Disponibilité = quantité minimale du standard atteinte (et facings minimum en Modern Trade).</p>
+  </div>
+
+  <h3>Comment le niveau est calculé</h3>
+  <p><strong>Perfect Store = Disponibilité + Assortiment + Visibilité + Promotion</strong> (la promotion n’est évaluée que si « Promotion en cours » est coché sur la visite). À chaque visite enregistrée, le type du PDV détermine son canal (GT / MT), son segment et son grade ; le moteur calcule la disponibilité pondérée par catégorie (EVAP, IMP, SCM), l’assortiment et le pourcentage d’éléments de visibilité requis installés. Le niveau atteint est le plus haut dont <strong>tous</strong> les critères passent.</p>
+  <table>
+    <thead><tr><th>Niveau</th><th>Disponibilité rayon (défaut)</th><th>Visibilité</th><th>Promotion (si applicable)</th></tr></thead>
+    <tbody>
+      <tr><td>FLAGSHIP</td><td>≥ 95 %</td><td>100 % du requis</td><td>100 %</td></tr>
+      <tr><td>VIP</td><td>≥ 85 %</td><td>100 %</td><td>100 %</td></tr>
+      <tr><td>CORE</td><td>≥ 75 %</td><td>100 %</td><td>100 %</td></tr>
+      <tr><td>BASIC</td><td>≥ 60 %</td><td>100 %</td><td>100 %</td></tr>
+    </tbody>
+  </table>
+  <p>Ces seuils se modifient dans <span class="ui">Standards Perfect Store</span> → <span class="ui">Niveaux</span> (chapitre 12).</p>
+</section>
+
+<section class="chapitre">
+  <h2>Activité, carte et suivi des équipes</h2>
+  <h3>Activité</h3>
+  <p>Pilotage commercial : alertes <span class="ui">À traiter maintenant</span> (catégorie sous 40 % de disponibilité, Perfect Store sous le seuil critique), couverture du mois, santé des piliers, disponibilité par catégorie, évolution des visites, activité des commerciaux. <span class="ui">Exporter</span> propose plusieurs CSV (KPIs, performance, visites par jour, distribution PDV, tout).</p>
+  <h3>Carte</h3>
+  <p>Tous les PDV géolocalisés, filtrables par zone ; la fenêtre d’un PDV affiche ses informations et sa photo.</p>
+  <h3>Suivi commerciaux</h3>
+  <ul>
+    <li>Choisissez une date (les 30 derniers jours tracés sont proposés) et une personne : kilomètres, durée, PDV visités.</li>
+    <li>Alertes : <span class="ui">GPS non démarré</span>, <span class="ui">Pas de tournée</span>, <span class="ui">Immobile</span>, <span class="ui">Sans signal</span>.</li>
+    <li>La carte montre le trajet lissé, les arrêts de plus de 5 min, les visites (et celles <strong>hors géofence</strong>) ; une barre de rejeu rejoue la journée.</li>
+    <li><span class="ui">Localiser</span> : qui était près d’un point, à quelle heure, dans un rayon de 200 m à 2 km.</li>
+  </ul>
+</section>
+
+<section class="chapitre">
+  <h2>Routing &amp; Planning</h2>
+  <p>Réservé à l’admin et au superviseur. Deux onglets : <span class="ui">Tournées planifiées</span> et <span class="ui">Règles récurrentes</span>.</p>
+  <h3>Créer une tournée</h3>
+  <ol class="etapes">
+    <li><span class="ui">Nouveau routing</span> → choisissez l’<span class="ui">Utilisateur</span> et la <span class="ui">Date</span>.</li>
+    <li>Ajoutez les PDV (seuls ceux du périmètre de l’utilisateur sont proposés ; filtres canal, région, zone, quartier ; <span class="ui">Tout ajouter</span>).</li>
+    <li>Réordonnez par glisser-déposer et cochez les objectifs par PDV : Stock, Encaissement, Photos, Merchandising, Prospection.</li>
+    <li><span class="ui">Créer le routing</span>. Le menu d’une tournée permet de la <span class="ui">Modifier</span>, la <span class="ui">Dupliquer</span> (autre date / autre utilisateur) ou la <span class="ui">Supprimer</span>.</li>
+  </ol>
+  <h3>Règles récurrentes</h3>
+  <p><span class="ui">Nouvelle règle</span> : merchandiseur, jours de la semaine, territoire, distributeur, période de validité (sans fin possible) et liste ordonnée de PDV. Les tournées sont générées automatiquement ; <span class="ui">Pré-générer 7 jours</span> et <span class="ui">Générer sur une période</span> les créent à l’avance. <span class="ui">Décocher une semaine</span> enregistre une exception (congé, PDV fermé) avec un motif.</p>
+  <h3>Import CSV de tournées</h3>
+  <p>Une ligne = un PDV. Colonnes : <code>email, date, pdv_id, ordre, releve_stock, encaissement, photos, merchandising, prospection, notes, statut</code>. Une tournée existante (même utilisateur, même date) est mise à jour : <span class="ui">Fusionner</span> conserve les PDV absents du fichier, <span class="ui">Remplacer</span> aligne exactement la tournée sur le fichier. Téléchargez le modèle avec <span class="ui">Modèle CSV</span>.</p>
+</section>
+
+<section class="chapitre">
+  <h2>Points de vente</h2>
+  <p>Onglets : <span class="ui">Liste</span>, <span class="ui">Répartition</span>, <span class="ui">Évolution</span>, <span class="ui">Historique PDV</span>, <span class="ui">Distributeurs</span>.</p>
+  <h3>Liste et fiche</h3>
+  <ul>
+    <li>Recherche par nom, code ou adressage ; filtres <span class="ui">Territoire</span> (dont <span class="ui">— Sans territoire —</span>) et <span class="ui">Sous-région</span>.</li>
+    <li><span class="ui">Nouveau PDV</span> / <span class="ui">Modifier</span> : identité (nom, catégorie, <strong>sous-catégorie = type de PDV, qui pilote le scoring</strong>), zone commerciale (division, sous-région, territoire, code area, quartier, distributeur), objectif Perfect Store, adressage et coordonnées GPS.</li>
+    <li><span class="ui">Export</span> produit un fichier Excel ; <span class="ui">Import CSV</span> met à jour ou crée les PDV par <code>PDV ID</code>.</li>
+  </ul>
+  <div class="encadre encadre--attention">
+    <span class="encadre__titre">Import CSV des PDV</span>
+    <p>Colonnes reconnues : <code>PDV ID</code>, <code>Nom du PDV</code>, <code>Canal</code>, <code>Catégorie de PDV</code>, <code>Sous-catégorie de PDV</code>, <code>Région</code>, <code>Zone</code>, <code>Quartier</code>, <code>Geolocation</code> (« lat, lng » dans une cellule), <code>Adressage</code>, <code>Image</code>, <code>Territoire</code>, <code>Area</code>, <code>Distributeur</code>, <code>Objectif Perfect Store</code>. <strong>Ne réimportez pas l’export Excel tel quel</strong> : ses en-têtes sont différents et les colonnes non reconnues seraient remplacées par des valeurs par défaut.</p>
+  </div>
+  <h3>Historique PDV</h3>
+  <p>Courbe visite par visite (disponibilité, visibilité, promotion, score) d’un PDV, comparaison avec un second PDV ou entre deux périodes, tableau des visites.</p>
+  <h3>Distributeurs</h3>
+  <p>Consultation : portée nationale ou territoriale, PDV et visites par distributeur. Les distributeurs se créent dans <span class="ui">Référentiels</span>.</p>
+</section>
+
+<section class="chapitre">
+  <h2>Visites et field coaching</h2>
+  <p>Onglets : <span class="ui">Toutes les visites</span>, <span class="ui">Évolution</span>, <span class="ui">Par catégorie</span>, <span class="ui">Commerciaux</span>, <span class="ui">Field coaching</span>.</p>
+  <ul>
+    <li><strong>Toutes les visites</strong> : filtres période et commercial ; <span class="ui">Export</span> Excel (5 000 lignes maximum) ; menu de ligne <span class="ui">Voir le détail</span> / <span class="ui">Supprimer</span> ; galerie de photos.</li>
+    <li><strong>Évolution</strong> et <strong>Par catégorie</strong> : volumes par jour / semaine / mois, par canal et par type de PDV.</li>
+    <li><strong>Commerciaux</strong> : classement (visites, PDV distincts, visites par jour, dernière visite) et export CSV.</li>
+  </ul>
+  <h3>Field coaching</h3>
+  <p>Les coachings sont saisis sur le mobile par les commerciaux et superviseurs : évaluation du <strong>vendeur d’un distributeur</strong> en 13 questions Oui / Non / Non applicable (8 Perfect Visibility, 5 Effective Promotion). Le rapport se filtre par période, superviseur et zone ; indicateurs : nombre de coachings, PDV couverts, scores Perfect Visibility et Effective Promotion. <span class="ui">Export CSV</span> contient toutes les réponses ; <span class="ui">Imprimer</span> produit le rapport papier.</p>
+  <p>Score = Oui ÷ (Oui + Non). Lecture : vert ≥ 70 %, orange ≥ 40 %, rouge en dessous.</p>
+</section>
+
+<section class="chapitre">
+  <h2>Visibilité, concurrence et produits</h2>
+  <h3>Visibilité</h3>
+  <p>Onglets <span class="ui">Extérieure</span>, <span class="ui">Récap. extérieure</span>, <span class="ui">Intérieure</span>, <span class="ui">Évolution intérieure</span>, <span class="ui">Intérieure GT</span>, <span class="ui">Intérieure MT</span>, <span class="ui">Promotion</span> : présence par élément, conformité par niveau (éléments requis uniquement), détail par PDV filtrable par élément. La promotion n’est calculée que sur les visites où elle est applicable.</p>
+  <h3>Concurrence</h3>
+  <p><span class="ui">Évolution</span> : concurrence détectée, concurrents en activité, <strong>concurrents signalés</strong> par les merchandiseurs (noms regroupés malgré les variantes d’écriture), présence par SKU concurrent. <span class="ui">Récapitulatif</span> et <span class="ui">Visibilité</span> : visibilité extérieure / intérieure par marque.</p>
+  <h3>Produits</h3>
+  <p><span class="ui">Récapitulatif</span> par famille, <span class="ui">Inventaire SKU</span> (photographie des stocks à la dernière visite de chaque PDV : ruptures, stock bas, disponibilité), puis un onglet par catégorie (Disponibilités, Prix, Récapitulatif). Les onglets <span class="ui">Yaourt</span> et <span class="ui">Céréales</span> n’apparaissent que si ces catégories sont activées.</p>
+</section>
+
+<section class="chapitre">
+  <h2>Actions</h2>
+  <p>Onglets : <span class="ui">Synthèse</span>, <span class="ui">Actions commerciales</span>, <span class="ui">Visites terrain</span>.</p>
+  <ul>
+    <li><strong>Synthèse</strong> : taux de réalisation des actions cochées pendant les visites (référencement, promo, prospection, FIFO, rangement, affiches, matériel de visibilité).</li>
+    <li><strong>Actions commerciales</strong> : suivi en lecture des actions décidées par les commerciaux sur le mobile (types livrés : Activation SSR, Activation SSM, Référencement produit). Filtres statut, merchandiseur, auteur, zone ; indicateurs Ouvertes, <strong>En retard</strong>, Faites ; <span class="ui">Export CSV</span>.</li>
+    <li><span class="ui">Prévenir les merchandiseurs par WhatsApp</span> : un bouton par merchandiseur ouvre un message listant ses actions ouvertes. Bouton inactif = téléphone manquant sur sa fiche utilisateur.</li>
+  </ul>
+  <p>Le merchandiseur assigné reçoit une <strong>notification push</strong> à la création ou à la réassignation d’une action (application Android 1.0.6 ou plus). Aucun réglage n’est nécessaire côté admin.</p>
+</section>
+
+<section class="chapitre">
+  <h2>Gérer les utilisateurs</h2>
+  <p><span class="ui">Paramètres</span> → <span class="ui">Utilisateurs</span> (admin uniquement). Recherche, filtre par rôle, <span class="ui">Exporter</span>, <span class="ui">Importer CSV</span>, <span class="ui">Nouvel utilisateur</span>. Le menu de chaque ligne propose <span class="ui">Modifier</span>, <span class="ui">Réinitialiser le mot de passe</span>, <span class="ui">Désactiver</span> / <span class="ui">Activer</span>, <span class="ui">Supprimer</span>.</p>
+
+  <h3>Créer un utilisateur</h3>
+  <ol class="etapes">
+    <li><strong>Compte et accès</strong> : nom complet, e-mail (identifiant, non modifiable ensuite), mot de passe (8 caractères minimum), rôle, <strong>téléphone</strong> (indispensable pour WhatsApp) et, pour un merchandiseur, son <span class="ui">Commercial responsable</span>.</li>
+    <li><strong>Périmètre terrain</strong> : cochez les <span class="ui">Territoires assignés</span> puis, si besoin, les <span class="ui">Quartiers assignés</span> (vide = tous les quartiers des territoires). Région et sous-région servent seulement à filtrer la liste.</li>
+    <li><span class="ui">Créer l’utilisateur</span> : le compte est actif immédiatement, aucun e-mail n’est envoyé.</li>
+  </ol>
+  <div class="encadre encadre--attention">
+    <span class="encadre__titre">Premier mot de passe</span>
+    <p>Un compte créé par ce formulaire ou par import CSV <strong>n’est pas obligé</strong> de changer son mot de passe à la première connexion. Pour l’imposer, faites <span class="ui">Réinitialiser le mot de passe</span> juste après la création et remettez à l’utilisateur le mot de passe provisoire affiché.</p>
+  </div>
+
+  <h3>Réinitialiser un mot de passe</h3>
+  <ol class="etapes">
+    <li>Menu de la ligne → <span class="ui">Réinitialiser le mot de passe</span>.</li>
+    <li>Laissez le champ vide pour générer un mot de passe provisoire (format <code>BR-XXXX-XXXX</code>, sans caractères ambigus) ou saisissez-en un.</li>
+    <li>Le mot de passe s’affiche <strong>une seule fois</strong> : <span class="ui">Copier</span>, puis transmettez-le à l’utilisateur (de vive voix ou sur sa fiche de connexion).</li>
+    <li>À sa connexion suivante, l’utilisateur doit choisir son propre mot de passe.</li>
+  </ol>
+  <div class="encadre encadre--regle">
+    <span class="encadre__titre">Confidentialité des mots de passe</span>
+    <p>Les mots de passe sont stockés chiffrés de façon irréversible : <strong>personne, y compris l’admin, ne peut relire le mot de passe actuel</strong> d’un utilisateur. En cas d’oubli, la seule solution est la réinitialisation.</p>
+  </div>
+
+  <h3>Changer son propre mot de passe</h3>
+  <p>Menu utilisateur (en haut à droite) → <span class="ui">Changer mon mot de passe</span>. Saisissez le mot de passe actuel, puis le nouveau deux fois. Pour les comptes <strong>admin et superviseur</strong>, le mot de passe doit faire au moins <strong>12 caractères</strong>, mélanger au moins 3 types (minuscule, majuscule, chiffre, symbole) et ne contenir ni mot courant (admin, azerty, 123456…) ni votre identifiant. Astuce : trois mots sans rapport entre eux, séparés par des tirets, avec une majuscule et un chiffre, sont à la fois solides et faciles à retenir (n’utilisez jamais un exemple publié).</p>
+
+  <h3>Désactiver, supprimer, demandes de suppression</h3>
+  <ul>
+    <li><strong>Désactiver</strong> : l’utilisateur est déconnecté et ne peut plus se connecter ; il disparaît des listes. Réversible avec <span class="ui">Activer</span>.</li>
+    <li><strong>Supprimer</strong> : définitif. Compte, profil et positions GPS sont supprimés ; les visites sont conservées de façon anonyme.</li>
+    <li>Les <strong>demandes de suppression</strong> envoyées depuis l’application apparaissent dans un bandeau orange en haut de la page (e-mail, date, motif) et la ligne porte le badge <span class="ui">Suppression demandée</span>. À traiter sous 30 jours.</li>
+  </ul>
+
+  <h3>Import et export CSV</h3>
+  <p>Colonnes : <code>email, nom, role, telephone, is_active, zone_assignee, territoires_assignes, quartiers_assignes, commercial, sous_region, mot_de_passe</code>. Listes multiples séparées par <code>|</code> ; <code>commercial</code> = e-mail du commercial responsable. 500 lignes maximum.</p>
+  <ul>
+    <li><strong>E-mail connu</strong> : mise à jour des seules cellules remplies (une cellule vide n’efface rien ; e-mail et mot de passe jamais modifiés).</li>
+    <li><strong>E-mail inconnu</strong> : création ; <code>nom</code> et <code>mot_de_passe</code> (8 caractères minimum) à renseigner.</li>
+    <li>Les libellés de territoires et quartiers doivent être écrits <strong>exactement</strong> comme dans les PDV. Les libellés inconnus sont signalés dans la fiche utilisateur (<span class="ui">Territoires hors référentiel</span>) et se rattachent à un territoire réel avec <span class="ui">Appliquer à tous les profils</span>.</li>
+  </ul>
+</section>
+
+<section class="chapitre">
+  <h2>Équipes et permissions</h2>
+  <h3>Équipes</h3>
+  <ol class="etapes">
+    <li><span class="ui">Paramètres</span> → <span class="ui">Équipes</span> : choisissez un commercial dans la colonne de gauche.</li>
+    <li>Cochez ses merchandiseurs ; un badge orange signale ceux déjà rattachés à un autre commercial (<span class="ui">Masquer ceux d’une autre équipe</span> pour les cacher).</li>
+    <li><span class="ui">Enregistrer</span> : les merchandiseurs cochés sont rattachés, les décochés libérés.</li>
+  </ol>
+  <p>L’équipe alimente les filtres « Mon équipe », l’ordre de proposition des merchandiseurs dans les actions et les relances WhatsApp. Elle ne modifie pas le périmètre.</p>
+  <h3>Permissions</h3>
+  <p>Matrice section × rôle ; chaque case s’enregistre immédiatement. L’admin a toujours tout. Sections : Principal, Stats · PDV, Stats · Visites &amp; commerciaux, Stats · Perfect Store, Stats · Visibilité, Stats · Concurrence, Stats · Produits, Actions, Paramètres. Ouvrir <span class="ui">Paramètres</span> au superviseur lui permet de modifier les standards.</p>
+</section>
+
+<section class="chapitre">
+  <h2>Standards, seuils et référentiels</h2>
+  <h3>Standards Perfect Store</h3>
+  <table>
+    <thead><tr><th>Onglet</th><th>Ce qu’on y règle</th></tr></thead>
+    <tbody>
+      <tr><td><span class="ui">Niveaux</span></td><td>Disponibilité, visibilité et promotion minimales par niveau.</td></tr>
+      <tr><td><span class="ui">Assortiment</span></td><td>SKU cibles, minimum présents, Hero SKU par segment et grade.</td></tr>
+      <tr><td><span class="ui">Disponibilité</span></td><td>Pondération des SKU (GT et MT) : le total par famille doit faire 100 %.</td></tr>
+      <tr><td><span class="ui">Visibilité</span></td><td>Matrice élément × niveau par segment, éléments optionnels.</td></tr>
+      <tr><td><span class="ui">Types de PDV</span></td><td>Rattachement de chaque type à sa matrice de visibilité, son segment et son grade.</td></tr>
+    </tbody>
+  </table>
+  <div class="encadre encadre--regle">
+    <span class="encadre__titre">Après toute modification</span>
+    <p>Cliquez sur <span class="ui">Recalculer toutes les visites</span> (traitement par lots avec compteur). Sans recalcul, les scores affichés reflètent les anciens standards.</p>
+  </div>
+  <h3>Seuils de stock</h3>
+  <p>Seuil « stock bas » par SKU, utilisé pour les pastilles de l’application mobile (hors score). Enregistrement immédiat.</p>
+  <h3>Référentiels</h3>
+  <table>
+    <thead><tr><th>Rubrique</th><th>Référentiels</th></tr></thead>
+    <tbody>
+      <tr><td>Géographie</td><td>Régions, sous-régions, territoires, zones / areas, quartiers, <strong>alias de territoire</strong>.</td></tr>
+      <tr><td>Distribution</td><td>Distributeurs (option couverture nationale), liens distributeur ↔ territoires et ↔ areas.</td></tr>
+      <tr><td>Points de vente</td><td>Catégories, types, <strong>fréquence de visite</strong> (7 jours par défaut : au-delà, le PDV est « en retard »), <strong>fenêtre de suivi</strong>, segments.</td></tr>
+      <tr><td>Produits</td><td>Catégories, références, correspondance SKU, marques et <strong>SKU concurrents</strong>, <strong>catégories du relevé</strong> (désactiver une catégorie la retire du formulaire mobile).</td></tr>
+      <tr><td>Perfect Store</td><td>Niveaux, poids SKU, seuils de disponibilité GT et MT (facings), assortiment, éléments et standards de visibilité.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="chapitre">
+  <h2>Import / Export et guides de formation</h2>
+  <h3>Import / Export</h3>
+  <ul>
+    <li>Import : seul le type <span class="ui">Points de vente (PDV)</span> est opérationnel, en <strong>CSV</strong> (mêmes colonnes que l’import de la liste PDV).</li>
+    <li>Export : visites (Excel, sur une plage de dates), PDV (Excel).</li>
+  </ul>
+  <h3>Remettre les guides aux utilisateurs</h3>
+  <p>Trois guides génériques sont fournis : administrateur, commercial, merchandiseur. Un guide <strong>personnalisé</strong> par commercial et par merchandiseur (fiche de connexion avec nom, identifiant, territoires, équipe ou commercial responsable) se génère depuis un poste disposant du fichier <code>.env</code> du projet :</p>
+  <p><code>node scripts/generer-guides-pdf.mjs --utilisateurs</code></p>
+  <p>Les PDF sont créés dans <code>docs/guides/utilisateurs/</code> (non versionné). Par défaut, la ligne « Mot de passe provisoire » est laissée vide, à compléter à la main.</p>
+  <p>Avec l’option <code>--avec-mots-de-passe</code>, le <strong>mot de passe par défaut</strong> des comptes initiaux est imprimé, uniquement pour les comptes qui ne l’ont pas encore remplacé. Il est <strong>présumé</strong> : un compte réinitialisé depuis l’admin a un autre mot de passe. Si la connexion échoue, réinitialisez le compte. Les comptes ayant déjà choisi leur mot de passe affichent « Personnel ».</p>
+  <div class="encadre encadre--attention">
+    <span class="encadre__titre">Diffusion</span>
+    <p>Un guide contenant un mot de passe se remet <strong>en main propre à son seul destinataire</strong>. Distribuez tous les guides le même jour et vérifiez que chacun se connecte et change son mot de passe rapidement.</p>
+  </div>
+
+  <div class="aide">
+    <h3>Check-list d’arrivée d’un nouvel utilisateur</h3>
+    <ol>
+      <li>Créer le compte avec rôle, téléphone, territoires (et quartiers).</li>
+      <li>Pour un merchandiseur : le rattacher à son commercial (<span class="ui">Équipes</span>) et lui planifier des tournées (règle récurrente).</li>
+      <li><span class="ui">Réinitialiser le mot de passe</span> pour imposer un mot de passe personnel à la première connexion ; noter le mot de passe provisoire sur sa fiche.</li>
+      <li>Remettre son guide personnalisé et vérifier sa première connexion (localisation et notifications autorisées).</li>
+    </ol>
+  </div>
+</section>

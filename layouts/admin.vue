@@ -230,6 +230,10 @@ const userMenuItems = [
     label: 'App Mobile',
     icon: 'i-heroicons-device-phone-mobile',
     click: () => navigateTo('/mobile'),
+  }, {
+    label: 'Changer mon mot de passe',
+    icon: 'i-heroicons-key',
+    click: () => navigateTo('/mon-mot-de-passe'),
   }],
   [{
     label: 'Déconnexion',
