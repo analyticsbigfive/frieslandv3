@@ -51,12 +51,29 @@ const sansGps = lireCsv(readFileSync(SANS_GPS_CSV, 'utf8'))
 const applique = existsSync(IMPORT_MD) && readFileSync(IMPORT_MD, 'utf8').includes('(appliqué)')
 const { clients } = await lireDms(DMS_PATH)
 
-const [territoires, distributeurs, liensTerr] = await Promise.all([
+const [territoires, distributeurs, liensTerr, regles] = await Promise.all([
   toutesLesLignes(() => supabase.from('territoire').select('id,code,nom').order('id')),
   toutesLesLignes(() => supabase.from('distributeur').select('id,nom').order('id')),
   toutesLesLignes(() => supabase.from('territoire_distributeur').select('territoire_id,distributeur_id').order('territoire_id')),
+  toutesLesLignes(() => supabase.from('routing_templates').select('id,label,is_active').order('id')),
 ])
 
+// PDV présents dans une tournée récurrente active : un merchandiser les
+// visitera, et la position des PDV sans GPS sera relevée à la première visite.
+const idsRegles = regles.filter(r => r.is_active).map(r => r.id)
+const enTournee = new Set()
+for (let i = 0; i < idsRegles.length; i += 10) {
+  const lignes = await toutesLesLignes(() => supabase.from('routing_template_pdv')
+    .select('id,pdv_id').in('template_id', idsRegles.slice(i, i + 10)).order('id'))
+  lignes.forEach(l => enTournee.add(l.pdv_id))
+}
+const reglesPerimetre = regles.filter(r => r.is_active && String(r.label || '').startsWith('Portefeuille périmètre')).length
+
+function compterBrut(items, cle) {
+  const m = new Map()
+  items.forEach(i => { const k = cle(i) || '(vide)'; m.set(k, (m.get(k) || 0) + 1) })
+  return [...m].sort((a, b) => b[1] - a[1])
+}
 const compter = (items, cle) => {
   const m = new Map()
   items.forEach(i => { const k = cle(i) || '(vide)'; m.set(k, (m.get(k) || 0) + 1) })
@@ -68,6 +85,10 @@ const crees = imports.filter(l => l.Action === 'créé')
 const relies = imports.filter(l => l.Action === 'relié' || l.Action === 'déjà relié')
 const depot = sansGps.filter(l => /dépôt/.test(l.Motif))
 const absents = sansGps.filter(l => !/dépôt/.test(l.Motif))
+sansGps.forEach((l) => { l.enTournee = enTournee.has(l.pdv_id) })
+const sansGpsEnTournee = sansGps.filter(l => l.enTournee)
+const sansGpsHorsTournee = sansGps.filter(l => !l.enTournee)
+const zonesHorsTournee = compterBrut(sansGpsHorsTournee, l => l['Territoire attribué'])
 const desaccords = imports.filter(l => l['District ≠ GPS'] === 'oui')
 
 // Merchandisers du fichier et leurs PDV
@@ -152,11 +173,11 @@ feuille(wbSansGps, 'PDV sans GPS', [
   ['Code client', 'code', 14], ['Nom client', 'nom', 28], ['Distributeur', 'dist', 30], ['Vendeur', 'vendeur', 24],
   ['Adresse', 'adresse', 24], ['Quartier DMS', 'quartier', 30], ['District DMS', 'district', 16],
   ['Merchandiser', 'merch', 18], ['Territoire attribué', 'territoire', 18], ['Code PDV (app)', 'pdv', 12], ['Motif', 'motif', 50],
-  ['Latitude à renseigner', 'lat', 18], ['Longitude à renseigner', 'lng', 18],
-], sansGps.map(l => ({
+  ['Dans une tournée', 'tournee', 16], ['Latitude à renseigner', 'lat', 18], ['Longitude à renseigner', 'lng', 18],
+], [...sansGpsHorsTournee, ...sansGpsEnTournee].map(l => ({
   code: l['Code client'], nom: l['Nom client'], dist: l.Distributeur, vendeur: l.Vendeur, adresse: l.Adresse,
   quartier: l['Quartier DMS'], district: l['District DMS'], merch: l['Merchandiser (fichier)'], territoire: l['Territoire attribué'],
-  pdv: l.pdv_id, motif: l.Motif, lat: '', lng: '',
+  pdv: l.pdv_id, motif: l.Motif, tournee: l.enTournee ? 'Oui' : 'Non', lat: '', lng: '',
 })))
 await wbSansGps.xlsx.writeFile(OUT_SANS_GPS)
 
@@ -186,7 +207,10 @@ const tableau = (entetes, lignes) => [
 
 const sansGpsParDist = compter(sansGps, l => l.Distributeur)
 const exemplesDesaccord = compter(desaccords, l => `${l['District DMS']} → ${l.Territoire}`).slice(0, 3)
-const horsAbidjan = imports.filter(l => !l['Merchandiser (fichier)']).length
+const sansMerch = imports.filter(l => !l['Merchandiser (fichier)'])
+const sansMerchEnTournee = sansMerch.filter(l => enTournee.has(l.pdv_id))
+const zonesSansMerch = compterBrut(sansMerch.filter(l => !enTournee.has(l.pdv_id)), l => l.Territoire)
+const listeZones = (zones, max = 6) => zones.slice(0, max).map(([z]) => z.charAt(0) + z.slice(1).toLowerCase()).join(', ') + (zones.length > max ? '…' : '')
 
 const email = `${applique ? '' : '> ⚠️ Chiffres de SIMULATION : relancer après `node scripts/importer-dms-pdv.mjs --apply`.\n\n'}**Objet :** Intégration du fichier clients DMS du 29/09 — bilan et informations à compléter
 
@@ -199,7 +223,8 @@ Nous avons intégré dans l'application le fichier clients DMS transmis le 29/09
 - ${fr(crees.length)} nouveaux points de vente créés, et ${fr(relies.length)} clients rattachés à des points de vente déjà présents dans l'application. Chaque point de vente porte désormais son code client DMS : les prochains fichiers pourront être rapprochés directement.
 - Le distributeur ETS HIDJABE a été ajouté au référentiel.
 - Les ${parMerch.length} merchandisers de la colonne « Merchandiseur » ont reçu leur portefeuille : une tournée du lundi au samedi, sans date de fin, avec l'ensemble de leurs clients.
-
+${reglesPerimetre ? `- Les ${reglesPerimetre} autres merchandisers disposent également d'une tournée du lundi au samedi couvrant l'ensemble de leur périmètre.
+` : ''}
 ${tableau(['Merchandiser', 'Distributeur', 'Clients en tournée', 'dont sans GPS'], parMerch.map(m => [m.nom, m.distributeur, fr(m.clients), fr(m.sansGps)]))}
 
 **2. Points de vente sans coordonnées GPS : ${fr(sansGps.length)}**
@@ -207,9 +232,12 @@ ${tableau(['Merchandiser', 'Distributeur', 'Clients en tournée', 'dont sans GPS
 - ${fr(absents.length)} clients n'ont pas de coordonnées dans le fichier (latitude et longitude vides ou à 0).
 - ${fr(depot.length)} clients partagent un même point GPS avec au moins 10 autres clients, vraisemblablement l'adresse du dépôt du distributeur. Ces coordonnées ont été écartées.
 
-${tableau(['Distributeur', 'Points de vente sans GPS'], sansGpsParDist.map(([d, n]) => [d, fr(n)]))}
+${tableau(['Distributeur', 'Points de vente sans GPS', 'dont hors tournée'], sansGpsParDist.map(([d, n]) => [d, fr(n), fr(sansGpsHorsTournee.filter(l => (l.Distributeur || '(vide)') === d).length)]))}
 
-Ces points de vente sont créés et visibles, mais sans géolocalisation, ce qui empêche le contrôle de présence et l'optimisation de l'ordre de passage. À Abidjan, les merchandisers enregistreront leur position lors de leur première visite. Pour les autres, **merci de nous transmettre les coordonnées** en complétant les deux dernières colonnes du fichier joint (pdv-sans-gps-dms.xlsx).
+Ces points de vente sont créés et visibles, mais sans géolocalisation, ce qui empêche le contrôle de présence et l'optimisation de l'ordre de passage :
+
+- ${fr(sansGpsEnTournee.length)} figurent dans la tournée d'un merchandiser, qui enregistrera leur position lors de sa première visite ;
+- ${fr(sansGpsHorsTournee.length)} se trouvent dans des zones sans merchandiser (${listeZones(zonesHorsTournee)}) : **merci de nous transmettre leurs coordonnées** en complétant les deux dernières colonnes du fichier joint (pdv-sans-gps-dms.xlsx, lignes « Non » de la colonne « Dans une tournée »).
 
 **3. Points à clarifier**
 
@@ -218,7 +246,7 @@ Ces points de vente sont créés et visibles, mais sans géolocalisation, ce qui
 3. **Merchandisers** :
    - Cocody 2 : le fichier DMS nomme Guihi Bernadin, la liste des comptes Diabate Idrissa. Nous avons attribué le compte cocodymerchtwo@gmail.com à Guihi Bernadin. Merci de confirmer.
 ${comptes.filter(m => !/Cocody 2/i.test(m.commune)).map(m => `   - ${m.commune} (${m.email}) : ${m.constat}`).join('\n')}
-4. **Clients sans merchandiser** : ${fr(horsAbidjan)} clients (principalement hors d'Abidjan) n'ont pas de merchandiser dans le fichier. Ils sont créés dans l'application mais ne figurent dans aucune tournée.
+4. **Clients sans merchandiser** : ${fr(sansMerch.length)} clients (principalement hors d'Abidjan) n'ont pas de merchandiser dans le fichier. ${fr(sansMerchEnTournee.length)} d'entre eux sont dans la tournée du merchandiser de leur zone ; les ${fr(sansMerch.length - sansMerchEnTournee.length)} autres se trouvent dans des zones sans merchandiser (${listeZones(zonesSansMerch)}). Merci de nous indiquer qui doit les couvrir.
 5. **Contacts** : aucun numéro de téléphone n'est renseigné, et le nom du contact est vide ou à « 0 » pour ${fr(sansContact.length)} clients (onglet « Contacts manquants »).
 
 Nous restons disponibles pour en discuter.
@@ -229,5 +257,55 @@ Cordialement,
 Pièces jointes : pdv-sans-gps-dms.xlsx, incoherences-dms.xlsx
 `
 writeFileSync(OUT_EMAIL, email, 'utf8')
+
+// Version HTML (brouillon Gmail) : gras, listes, listes numérotées avec
+// sous-puces, tableaux, paragraphes — le sous-ensemble utilisé ci-dessus.
+function mdVersHtml(md) {
+  const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const enLigne = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+  const cellules = r => r.replace(/^\||\|$/g, '').split('|').map(c => c.trim())
+  const td = 'border:1px solid #d1d5db;padding:4px 8px'
+  const lignes = md.split('\n')
+  const out = []
+  let i = 0
+  while (i < lignes.length) {
+    const l = lignes[i]
+    if (l.startsWith('|')) {
+      const rangs = []
+      while (i < lignes.length && lignes[i].startsWith('|')) rangs.push(lignes[i++])
+      const [entete, , ...corps] = rangs
+      out.push(`<table style="border-collapse:collapse;font-size:13px;margin:8px 0">`
+        + `<tr>${cellules(entete).map(c => `<th style="${td};background:#f3f4f6;text-align:left">${enLigne(c)}</th>`).join('')}</tr>`
+        + corps.map(r => `<tr>${cellules(r).map(c => `<td style="${td}">${enLigne(c)}</td>`).join('')}</tr>`).join('')
+        + '</table>')
+      continue
+    }
+    if (l.startsWith('- ')) {
+      const items = []
+      while (i < lignes.length && lignes[i].startsWith('- ')) items.push(lignes[i++].slice(2))
+      out.push(`<ul>${items.map(t => `<li>${enLigne(t)}</li>`).join('')}</ul>`)
+      continue
+    }
+    if (/^\d+\. /.test(l)) {
+      const items = []
+      while (i < lignes.length && (/^\d+\. /.test(lignes[i]) || /^ {3}- /.test(lignes[i]))) {
+        if (/^\d+\. /.test(lignes[i])) items.push({ texte: lignes[i].replace(/^\d+\. /, ''), sous: [] })
+        else items.at(-1).sous.push(lignes[i].replace(/^ {3}- /, ''))
+        i++
+      }
+      out.push(`<ol>${items.map(it => `<li>${enLigne(it.texte)}${it.sous.length ? `<ul>${it.sous.map(s => `<li>${enLigne(s)}</li>`).join('')}</ul>` : ''}</li>`).join('')}</ol>`)
+      continue
+    }
+    if (l === '---') out.push('<hr>')
+    else if (l.trim()) out.push(`<p>${enLigne(l)}</p>`)
+    i++
+  }
+  return `<div style="font-family:Arial,sans-serif;font-size:14px;color:#111827">${out.join('\n')}</div>`
+}
+const [ligneObjet, ...corpsEmail] = email.split('\n').filter(l => !l.startsWith('> ⚠️'))
+const corps = corpsEmail.join('\n').replace(/\n---\nPièces jointes :.*\n?$/, '\n')
+writeFileSync(OUT_EMAIL.replace(/\.md$/, '.html'), mdVersHtml(corps), 'utf8')
+writeFileSync(OUT_EMAIL.replace(/\.md$/, '.txt'), `${ligneObjet.replace(/^\*\*Objet :\*\* /, '')}\n${corps.replace(/\*\*/g, '')}`, 'utf8')
+
 console.log(email)
 console.log(`\nPièces jointes : ${OUT_SANS_GPS} (${sansGps.length} lignes), ${OUT_INCOHERENCES}`)
