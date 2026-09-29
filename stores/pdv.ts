@@ -196,13 +196,15 @@ export const usePDVStore = defineStore('pdv', () => {
     }
   }
 
-  // Export : tout le parc, page par page (une requête seule s'arrête à 1 000
-  // lignes). `avecFiltres` : même sélection que la liste affichée.
-  async function fetchAllPDV(avecFiltres = false): Promise<PDV[]> {
+  // Tout le parc (~40 000 PDV), page par page : une requête seule s'arrête à
+  // 1 000 lignes. `avecFiltres` : même sélection que la liste affichée.
+  // `colonnes` : ne ramener que l'utile (carte, répartition) — le parc entier
+  // en `*` pèse plusieurs dizaines de Mo.
+  async function fetchAllPDV(avecFiltres = false, colonnes = '*'): Promise<PDV[]> {
     return await fetchAllRows<PDV>((from, to) => {
       const query = supabase
         .from('pdv')
-        .select('*')
+        .select(colonnes)
         .eq('is_active', true)
         .order('nom_pdv')
         .order('pdv_id')

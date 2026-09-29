@@ -21,7 +21,7 @@
  *
  * Usage :
  *   node scripts/affecter-merch-dms.mjs [--dms=chemin.xlsx] [--mails=chemin.xlsx]
- *     [--debut=2026-10-05] [--auteur=email-admin] [--apply]
+ *     [--debut=2026-10-05] [--auteur=email-admin] [--pregenerer=7] [--apply]
  */
 import { createClient } from '@supabase/supabase-js'
 import { config } from 'dotenv'
@@ -29,7 +29,7 @@ import ExcelJS from 'exceljs'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { aGps, cleNom, lireCsv, lireDms, norm, ordreGps, texteCellule, toutesLesLignes } from './lib/dms.mjs'
+import { aGps, cleNom, distributeurCanonique, lireCsv, lireDms, norm, ordreGps, texteCellule, toutesLesLignes } from './lib/dms.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 config({ path: resolve(__dirname, '..', '.env'), quiet: true })
@@ -42,6 +42,8 @@ const DMS_PATH = arg('dms', join(DOWNLOADS, '20260929_115747.xlsx'))
 const MAILS_PATH = arg('mails', join(DOWNLOADS, 'MAILS MERCH (1).xlsx'))
 const DATE_DEBUT = arg('debut', '2026-10-05')
 const AUTEUR = arg('auteur', '')
+// Jours de tournées matérialisés dès l'affectation (0 = laissés à l'app, J → J+7 à l'ouverture).
+const PREGENERER = Number(arg('pregenerer', 0))
 const IMPORT_CSV = join(DOWNLOADS, 'import-dms-pdv.csv')
 const OUT_MD = join(DOWNLOADS, 'affectation-merch-dms-rapport.md')
 
@@ -109,6 +111,7 @@ const profils = await toutesLesLignes(() => supabase.from('profiles')
 const merchsActifs = profils.filter(p => p.role === 'merchandiser' && p.is_active !== false && p.email)
 const auteur = AUTEUR ? profils.find(p => p.email?.toLowerCase() === AUTEUR.toLowerCase() && p.role === 'admin') : null
 if (AUTEUR && !auteur) throw new Error(`--auteur=${AUTEUR} : aucun admin avec cet email`)
+const nomsDistributeur = (await toutesLesLignes(() => supabase.from('distributeur').select('nom').order('id'))).map(d => d.nom)
 
 const nomsFichier = [...new Set(affectes.map(c => c.merch))].sort((a, b) => a.localeCompare(b, 'fr'))
 const merchs = nomsFichier.map((nomFichier) => {
@@ -123,7 +126,9 @@ const merchs = nomsFichier.map((nomFichier) => {
     candidats,
     clients: siens,
     zonesFichier: [...new Set(siens.map(c => c.zone).filter(Boolean))],
-    distributeurs: [...new Set(siens.map(c => c.distributeurs[0]).filter(Boolean))],
+    // Distributeurs DMS de ses clients, du plus fréquent au moins fréquent.
+    distributeurs: [...siens.reduce((m, c) => m.set(c.distributeurs[0], (m.get(c.distributeurs[0]) || 0) + 1), new Map())]
+      .filter(([d]) => d).sort((a, b) => b[1] - a[1]).map(([d]) => d),
   }
 })
 
@@ -172,7 +177,8 @@ for (const m of merchs) {
   m.sansZone = m.pdvs.filter(p => !p.zone)
   m.sansGps = m.pdvs.filter(p => !aGps(p.geolocation_lat, p.geolocation_lng))
   m.ordre = ordreGps(m.pdvs)
-  m.label = `${PREFIXE_REGLE} — ${[...new Set(m.pdvs.map(p => p.distributor_name).filter(Boolean))].join(' / ') || m.distributeurs.join(' / ')}`
+  m.distributeur = m.distributeurs.length ? distributeurCanonique(m.distributeurs[0], nomsDistributeur) : ''
+  m.label = `${PREFIXE_REGLE} — ${m.distributeur || m.nomFichier}`
   m.nbVisibles = [...visibles.values()].filter(p => dansPerimetre(p, m.territoires, m.quartiers)).length
   m.nbVisiblesAvant = m.profil
     ? [...visibles.values()].filter(p => dansPerimetre(p,
@@ -237,7 +243,7 @@ if (APPLY) {
       label: m.label,
       notes: `Clients DMS du fichier ${DMS_PATH.split('/').pop()} (${m.pdvs.length} PDV).`,
       territoire: null,
-      distributeur: m.distributeurs[0] || null,
+      distributeur: m.distributeur || null,
       date_debut: DATE_DEBUT,
       date_fin: null,
       is_active: true,
@@ -252,6 +258,21 @@ if (APPLY) {
     }
     m.regleCreee = regle.id
     console.log(`✅ ${m.nomFichier} → ${email} : ${m.territoires.length} territoire(s), ${m.quartiers.length} quartier(s), règle de ${lignes.length} PDV`)
+  }
+
+  // Tournées des premiers jours matérialisées tout de suite (sinon à la
+  // première ouverture de l'app). Idempotent : un jour déjà créé est gardé.
+  if (PREGENERER > 0) {
+    const fin = new Date(`${DATE_DEBUT}T00:00:00Z`)
+    fin.setUTCDate(fin.getUTCDate() + PREGENERER - 1)
+    for (const m of merchs.filter(m => m.regleCreee)) {
+      const { data, error } = await supabase.rpc('materialiser_routings_periode', {
+        p_user_id: m.profil.id, p_date_debut: DATE_DEBUT, p_date_fin: fin.toISOString().slice(0, 10),
+      })
+      if (error) throw new Error(`pré-génération ${m.profil.email} : ${error.message}`)
+      m.tourneesCreees = data || 0
+      console.log(`📅 ${m.nomFichier} : ${m.tourneesCreees} tournée(s) créée(s) du ${DATE_DEBUT} au ${fin.toISOString().slice(0, 10)}`)
+    }
   }
 }
 
@@ -303,7 +324,7 @@ ${merchs.filter(m => m.profil).map(m => `### ${m.nomFichier} — ${m.profil.emai
 - Quartiers : ${(m.profil.quartiers_assignes || []).length} → **${m.quartiers.length}**
 - Ancienne liste de quartiers (retour arrière) : \`${JSON.stringify(m.profil.quartiers_assignes || [])}\`
 - Ancienne liste de territoires (retour arrière) : \`${JSON.stringify(m.profil.territoires_assignes || [])}\`, zone_assignee \`${m.profil.zone_assignee || ''}\`
-- Tournée : ${m.pdvs.length} PDV, dont ${m.sansGps.length} sans GPS placés en fin de liste${m.regleCreee ? ` — règle \`${m.regleCreee}\`` : ''}`).join('\n\n')}
+- Tournée « ${m.label} » : ${m.pdvs.length} PDV, dont ${m.sansGps.length} sans GPS placés en fin de liste${m.regleCreee ? ` — règle \`${m.regleCreee}\`` : ''}${m.tourneesCreees != null ? ` — ${m.tourneesCreees} tournée(s) pré-générée(s)` : ''}`).join('\n\n')}
 
 ## Anomalies
 

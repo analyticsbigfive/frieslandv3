@@ -700,21 +700,24 @@ export const useRoutingStore = defineStore('routing', () => {
       if (error) throw error
       const regles = (data || []) as RoutingTemplate[]
 
-      // PDV des règles lus à part et paginés : une règle « portefeuille »
-      // dépasse 1 000 PDV, un embarquement dans la requête ci-dessus serait tronqué.
-      const ids = regles.map(t => t.id)
-      const lignes = ids.length
-        ? await fetchAllRows<RoutingTemplatePDV>((from, to) => (supabase.from('routing_template_pdv') as any)
-          .select('id, template_id, pdv_id, position_order, objectifs, pdv:pdv_id(pdv_id, nom_pdv, zone, quartier, geolocation_lat, geolocation_lng)')
-          .in('template_id', ids)
-          .order('template_id')
-          .order('position_order')
-          .order('id')
-          .range(from, to))
-        : []
-      const parRegle = new Map<string, RoutingTemplatePDV[]>()
-      lignes.forEach(l => { if (!parRegle.has(l.template_id)) parRegle.set(l.template_id, []); parRegle.get(l.template_id)!.push(l) })
-      regles.forEach(t => { t.routing_template_pdv = parRegle.get(t.id) || [] })
+      // Règles « portefeuille » de plusieurs milliers de PDV (des dizaines de
+      // milliers au total) : compteurs + première page seulement, la suite se
+      // charge à la demande (chargerPdvRegle).
+      await Promise.all(regles.map(async (t) => {
+        t.routing_template_pdv = []
+        const [total, sansGps] = await Promise.all([
+          (supabase.from('routing_template_pdv') as any)
+            .select('id', { count: 'exact', head: true })
+            .eq('template_id', t.id),
+          (supabase.from('routing_template_pdv') as any)
+            .select('id, pdv:pdv_id!inner(pdv_id)', { count: 'exact', head: true })
+            .eq('template_id', t.id)
+            .is('pdv.geolocation_lat', null),
+        ])
+        t.nb_pdv = total.count ?? 0
+        t.nb_sans_gps = sansGps.count ?? 0
+        await chargerPdvRegle(t)
+      }))
 
       templates.value = regles
       return templates.value
@@ -913,10 +916,16 @@ export const useRoutingStore = defineStore('routing', () => {
   ) {
     await assertScopedPDVForRegle(templateId, [pdvId])
 
-    // Get current max position
+    // Dernière position lue en base : la liste locale n'est chargée que par pages.
     const template = templates.value.find(t => t.id === templateId)
-    const maxPos = template?.routing_template_pdv
-      ?.reduce((max, p) => Math.max(max, p.position_order), 0) || 0
+    const { data: dernier, error: posErr } = await (supabase.from('routing_template_pdv') as any)
+      .select('position_order')
+      .eq('template_id', templateId)
+      .order('position_order', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (posErr) throw posErr
+    const maxPos = (dernier as any)?.position_order || 0
 
     const { data, error } = await (supabase.from('routing_template_pdv') as any)
       .insert({
@@ -928,18 +937,40 @@ export const useRoutingStore = defineStore('routing', () => {
       .select('*, pdv:pdv_id(pdv_id, nom_pdv, zone, quartier, geolocation_lat, geolocation_lng)')
       .single()
 
+    if (error?.code === '23505') throw new Error('Ce PDV est déjà dans la règle.')
     if (error) throw error
 
     // Update local state
     if (template) {
       if (!template.routing_template_pdv) template.routing_template_pdv = []
       template.routing_template_pdv.push(data as RoutingTemplatePDV)
+      template.nb_pdv = (template.nb_pdv ?? 0) + 1
+      if ((data as any)?.pdv && (data as any).pdv.geolocation_lat == null) template.nb_sans_gps = (template.nb_sans_gps ?? 0) + 1
     }
 
     return data as RoutingTemplatePDV
   }
 
+  const PAGE_REGLE = 50
+
+  /** Page suivante des PDV d'une règle, dans l'ordre de passage. */
+  async function chargerPdvRegle(template: RoutingTemplate) {
+    const deja = template.routing_template_pdv || []
+    const { data, error } = await (supabase.from('routing_template_pdv') as any)
+      .select('id, template_id, pdv_id, position_order, objectifs, pdv:pdv_id(pdv_id, nom_pdv, zone, quartier, geolocation_lat, geolocation_lng)')
+      .eq('template_id', template.id)
+      .order('position_order')
+      .order('id')
+      .range(deja.length, deja.length + PAGE_REGLE - 1)
+    if (error) throw error
+    const vus = new Set(deja.map(p => p.id))
+    template.routing_template_pdv = [...deja, ...((data || []) as RoutingTemplatePDV[]).filter(p => !vus.has(p.id))]
+  }
+
   // ---- Remove PDV from template ----
+  // Pas de renumérotation : la matérialisation suit l'ordre de position_order,
+  // les trous n'y changent rien. Renuméroter une règle de 4 000 PDV coûtait
+  // 4 000 requêtes.
   async function removeTemplatePDV(templateId: string, templatePdvId: string) {
     const { error } = await (supabase.from('routing_template_pdv') as any)
       .delete()
@@ -947,36 +978,36 @@ export const useRoutingStore = defineStore('routing', () => {
 
     if (error) throw error
 
-    // Update local state & reorder
     const template = templates.value.find(t => t.id === templateId)
     if (template?.routing_template_pdv) {
-      template.routing_template_pdv = template.routing_template_pdv
-        .filter(p => p.id !== templatePdvId)
-        .sort((a, b) => a.position_order - b.position_order)
-        .map((p, idx) => ({ ...p, position_order: idx + 1 }))
-
-      // Update positions in DB
-      for (const p of template.routing_template_pdv) {
-        await (supabase.from('routing_template_pdv') as any)
-          .update({ position_order: p.position_order })
-          .eq('id', p.id)
-      }
+      const retire = template.routing_template_pdv.find(p => p.id === templatePdvId)
+      template.routing_template_pdv = template.routing_template_pdv.filter(p => p.id !== templatePdvId)
+      template.nb_pdv = Math.max(0, (template.nb_pdv ?? 1) - 1)
+      if (retire?.pdv && retire.pdv.geolocation_lat == null) template.nb_sans_gps = Math.max(0, (template.nb_sans_gps ?? 1) - 1)
     }
   }
 
   // ---- Reorder PDV in template ----
+  // Les PDV réordonnés reprennent entre eux les positions qu'ils occupaient :
+  // seules les lignes dont la position change sont écrites (2 pour un échange).
   async function reorderTemplatePDV(templateId: string, pdvIdOrder: string[]) {
     const template = templates.value.find(t => t.id === templateId)
     if (!template?.routing_template_pdv) return
 
-    for (let i = 0; i < pdvIdOrder.length; i++) {
-      const item = template.routing_template_pdv.find(p => p.id === pdvIdOrder[i])
-      if (item) {
-        item.position_order = i + 1
-        await (supabase.from('routing_template_pdv') as any)
-          .update({ position_order: i + 1 })
-          .eq('id', pdvIdOrder[i])
-      }
+    const items = pdvIdOrder
+      .map(id => template.routing_template_pdv!.find(p => p.id === id))
+      .filter((p): p is RoutingTemplatePDV => !!p)
+    const positions = items.map(p => p.position_order).sort((a, b) => a - b)
+    const changements = items
+      .map((p, i) => ({ item: p, position: positions[i] }))
+      .filter(c => c.item.position_order !== c.position)
+
+    for (const { item, position } of changements) {
+      const { error } = await (supabase.from('routing_template_pdv') as any)
+        .update({ position_order: position })
+        .eq('id', item.id)
+      if (error) throw error
+      item.position_order = position
     }
 
     template.routing_template_pdv.sort((a, b) => a.position_order - b.position_order)
@@ -1028,6 +1059,7 @@ export const useRoutingStore = defineStore('routing', () => {
     fetchRoutings,
     chargerEtapesRouting,
     toutesEtapesRouting,
+    chargerPdvRegle,
     createRouting,
     updateRouting,
     deleteRouting,

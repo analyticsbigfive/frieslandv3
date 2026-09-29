@@ -136,7 +136,7 @@ function openPDVList(zone: string) {
 
 onMounted(async () => {
   try {
-    allPDV.value = await pdvStore.fetchAllPDV()
+    allPDV.value = await pdvStore.fetchAllPDV(false, 'pdv_id,zone,region,canal')
   } catch (err) {
     console.error('Erreur chargement PDV:', err)
   } finally {

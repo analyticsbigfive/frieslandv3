@@ -1,5 +1,7 @@
 ext {
-    minSdkVersion = 23
+    // 24 = Android 7.0 : exigé par la protection automatique de Google Play
+    // (import de l'AAB refusé en 23, 29/09/2026).
+    minSdkVersion = 24
     compileSdkVersion = 36
     targetSdkVersion = 36
     androidxActivityVersion = '1.9.2'
