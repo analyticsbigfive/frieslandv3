@@ -197,7 +197,7 @@ async function initMap() {
   markerGroup = L.featureGroup().addTo(map)
 
   // Load PDV
-  allPDV.value = await pdvStore.fetchAllPDV()
+  allPDV.value = await pdvStore.fetchAllPDV(false, 'pdv_id,nom_pdv,zone,quartier,canal,sous_categorie_pdv,geolocation_lat,geolocation_lng,image_url')
   addMarkers()
   focusTarget()
 

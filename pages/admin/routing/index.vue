@@ -256,7 +256,7 @@
                 </h3>
                 <p class="text-xs text-gray-400">
                   {{ tpl.user?.nom || tpl.user?.email }}
-                  · {{ tpl.routing_template_pdv?.length || 0 }} PDV
+                  · {{ tpl.nb_pdv ?? tpl.routing_template_pdv?.length ?? 0 }} PDV
                   <span v-if="nbSansGpsRegle(tpl)" class="font-semibold text-red-600 dark:text-red-400">dont {{ nbSansGpsRegle(tpl) }} sans GPS</span>
                   <template v-if="tpl.territoire"> · {{ tpl.territoire }}</template>
                   <template v-if="tpl.distributeur"> · {{ tpl.distributeur }}</template>
@@ -320,7 +320,7 @@
           <div class="px-5 py-3">
             <div class="space-y-2">
               <div
-                v-for="(tp, idx) in sortedTemplatePDVs(tpl).slice(0, limiteRegle(tpl))"
+                v-for="(tp, idx) in sortedTemplatePDVs(tpl)"
                 :key="tp.id"
                 class="flex items-center gap-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 group"
               >
@@ -378,9 +378,9 @@
               </div>
             </div>
 
-            <div v-if="(tpl.routing_template_pdv?.length || 0) > limiteRegle(tpl)" class="pt-2 text-center">
-              <UButton size="xs" variant="soft" color="gray" @click="afficherPlusRegle(tpl)">
-                Afficher la suite ({{ (tpl.routing_template_pdv?.length || 0) - limiteRegle(tpl) }} PDV restants)
+            <div v-if="(tpl.routing_template_pdv?.length || 0) < (tpl.nb_pdv ?? 0)" class="pt-2 text-center">
+              <UButton size="xs" variant="soft" color="gray" :loading="chargementRegles.has(tpl.id)" @click="chargerSuiteRegle(tpl)">
+                Afficher la suite ({{ (tpl.nb_pdv ?? 0) - (tpl.routing_template_pdv?.length || 0) }} PDV restants)
               </UButton>
             </div>
 
@@ -1451,17 +1451,24 @@ function pdvAGps(pdv: { geolocation_lat?: number | null; geolocation_lng?: numbe
 }
 
 function nbSansGpsRegle(tpl: RoutingTemplate) {
-  return (tpl.routing_template_pdv || []).filter(tp => tp.pdv && !pdvAGps(tp.pdv)).length
+  return tpl.nb_sans_gps ?? (tpl.routing_template_pdv || []).filter(tp => tp.pdv && !pdvAGps(tp.pdv)).length
 }
 
-// Règles « portefeuille » de ~1 000 PDV : affichage par tranches.
-const TRANCHE = 50
-const limitesRegles = ref<Record<string, number>>({})
-function limiteRegle(tpl: RoutingTemplate) {
-  return limitesRegles.value[tpl.id] || TRANCHE
-}
-function afficherPlusRegle(tpl: RoutingTemplate) {
-  limitesRegles.value = { ...limitesRegles.value, [tpl.id]: limiteRegle(tpl) + TRANCHE }
+// Règles « portefeuille » de plusieurs milliers de PDV : chargées par pages
+// depuis la base (fetchTemplates n'en ramène que la première).
+const chargementRegles = ref(new Set<string>())
+async function chargerSuiteRegle(tpl: RoutingTemplate) {
+  if (chargementRegles.value.has(tpl.id)) return
+  chargementRegles.value.add(tpl.id)
+  try {
+    await routingStore.chargerPdvRegle(tpl)
+  }
+  catch (err: any) {
+    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+  }
+  finally {
+    chargementRegles.value.delete(tpl.id)
+  }
 }
 
 // Étapes d'une tournée : chargées à l'ouverture, par pages (fetchRoutings ne

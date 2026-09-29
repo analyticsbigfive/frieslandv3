@@ -188,6 +188,9 @@ export interface RoutingTemplate {
   user?: Profile
   creator?: Profile
   routing_template_pdv?: RoutingTemplatePDV[]
+  // Compteurs de toute la règle (les PDV ne sont chargés que par pages)
+  nb_pdv?: number
+  nb_sans_gps?: number
   routing_template_exception?: RoutingTemplateException[]
 }
 
