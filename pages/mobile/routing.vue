@@ -65,7 +65,7 @@
     <!-- PDV routing list -->
     <div v-else class="px-4 py-2 space-y-3">
       <div
-        v-for="(rp, idx) in routingStore.routingPDVList"
+        v-for="rp in routingStore.routingPDVList"
         :key="rp.id"
         class="mobile-card overflow-hidden border-l-4 transition-all"
         :class="borderClass(rp)"
@@ -84,7 +84,7 @@
                 <UIcon name="i-heroicons-minus" class="w-5 h-5" />
               </template>
               <template v-else>
-                {{ idx + 1 }}
+                {{ rp.position_order }}
               </template>
             </div>
 
@@ -95,6 +95,13 @@
                 {{ rp.pdv?.zone || '' }}{{ rp.pdv?.quartier ? ` — ${rp.pdv.quartier}` : '' }}
               </p>
               <p v-if="rp.pdv?.adressage" class="text-xs text-gray-400">{{ rp.pdv.adressage }}</p>
+              <span
+                v-if="!pdvAGps(rp)"
+                class="mt-1 inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300"
+              >
+                <UIcon name="i-heroicons-map-pin" class="h-3 w-3" />
+                Sans GPS — position enregistrée au démarrage
+              </span>
 
               <!-- Objectifs -->
               <div v-if="hasObjectifs(rp)" class="flex flex-wrap gap-1 mt-2">
@@ -155,6 +162,19 @@
             </template>
           </div>
         </div>
+      </div>
+
+      <!-- Pages suivantes : chargées à l'approche du bas de liste -->
+      <div v-if="!routingStore.toutCharge" ref="finListe" class="py-4 text-center">
+        <UButton
+          variant="soft"
+          color="gray"
+          size="sm"
+          :loading="routingStore.chargementPage"
+          @click="routingStore.chargerPageRouting()"
+        >
+          Afficher la suite ({{ routingStore.totalCount - routingStore.routingPDVList.length }} PDV restants)
+        </UButton>
       </div>
     </div>
 
@@ -318,7 +338,38 @@ async function refreshRouting() {
   }
 }
 
+function pdvAGps(rp: RoutingPDV) {
+  return rp.pdv?.geolocation_lat != null && rp.pdv?.geolocation_lng != null
+}
+
+// Défilement infini : la page suivante se charge quand le bas de liste approche.
+// Tant que le bas reste visible après un chargement (pages courtes, grand
+// écran), on enchaîne : l'observateur ne se redéclenche que sur un changement.
+const finListe = ref<HTMLElement | null>(null)
+let observateur: IntersectionObserver | null = null
+let finVisible = false
+async function chargerTantQueVisible() {
+  while (finVisible && !routingStore.toutCharge && !routingStore.chargementPage) {
+    const avant = routingStore.routingPDVList.length
+    await routingStore.chargerPageRouting()
+    await nextTick()
+    if (routingStore.routingPDVList.length === avant) break
+  }
+}
+watch(finListe, (el) => {
+  observateur?.disconnect()
+  finVisible = false
+  if (!el || typeof IntersectionObserver === 'undefined') return
+  observateur = new IntersectionObserver((entrees) => {
+    finVisible = entrees.some(e => e.isIntersecting)
+    void chargerTantQueVisible()
+  }, { rootMargin: '400px' })
+  observateur.observe(el)
+})
+
 onMounted(async () => {
   await refreshRouting()
 })
+
+onBeforeUnmount(() => observateur?.disconnect())
 </script>

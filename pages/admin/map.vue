@@ -94,8 +94,13 @@ function addMarkers() {
   const L = window.L
   if (!L) return
 
+  // Tout le parc (~40 000 PDV) : rendu canvas plutôt qu'un nœud SVG par point,
+  // et popup construite à l'ouverture seulement.
+  const rendu = L.canvas({ padding: 0.5 })
+
   markers.value.forEach((pdv) => {
     const marker = L.circleMarker([pdv.geolocation_lat, pdv.geolocation_lng], {
+      renderer: rendu,
       radius: 6,
       fillColor: '#003DA5',
       color: '#fff',
@@ -104,48 +109,7 @@ function addMarkers() {
       fillOpacity: 0.8,
     })
 
-    const el = document.createElement('div')
-    el.className = 'text-sm'
-
-    const nameP = document.createElement('p')
-    nameP.className = 'font-bold'
-    nameP.textContent = pdv.nom_pdv
-    el.appendChild(nameP)
-
-    const zoneP = document.createElement('p')
-    zoneP.className = 'text-gray-500'
-    zoneP.textContent = `${pdv.zone || ''} - ${pdv.quartier || ''}`
-    el.appendChild(zoneP)
-
-    const canalP = document.createElement('p')
-    canalP.className = 'text-gray-400 text-xs'
-    canalP.textContent = `${pdv.canal} / ${typePdvLabel(pdv.sous_categorie_pdv) || ''}`
-    el.appendChild(canalP)
-
-    const coordP = document.createElement('p')
-    coordP.className = 'text-gray-400 text-xs mt-1'
-    coordP.textContent = `${pdv.geolocation_lat?.toFixed(4)}, ${pdv.geolocation_lng?.toFixed(4)}`
-    el.appendChild(coordP)
-
-    const photoWrap = document.createElement('div')
-    photoWrap.className = 'mt-2'
-    if (isSafeImageUrl(pdv.image_url)) {
-      const img = document.createElement('img')
-      img.src = pdv.image_url
-      img.alt = pdv.nom_pdv
-      img.className = 'w-full h-20 object-cover rounded cursor-pointer pdv-photo-btn'
-      img.dataset.pdvId = pdv.pdv_id
-      photoWrap.appendChild(img)
-    } else {
-      const btn = document.createElement('button')
-      btn.className = 'text-[10px] text-fc-red underline pdv-photo-btn'
-      btn.textContent = '📷 Voir photo'
-      btn.dataset.pdvId = pdv.pdv_id
-      photoWrap.appendChild(btn)
-    }
-    el.appendChild(photoWrap)
-
-    marker.bindPopup(el)
+    marker.bindPopup(() => popupPdv(pdv))
 
     markerGroup.addLayer(marker)
   })
@@ -156,6 +120,51 @@ function addMarkers() {
       map.fitBounds(bounds, { padding: [30, 30] })
     }
   }
+}
+
+function popupPdv(pdv: PDV) {
+  const el = document.createElement('div')
+  el.className = 'text-sm'
+
+  const nameP = document.createElement('p')
+  nameP.className = 'font-bold'
+  nameP.textContent = pdv.nom_pdv
+  el.appendChild(nameP)
+
+  const zoneP = document.createElement('p')
+  zoneP.className = 'text-gray-500'
+  zoneP.textContent = `${pdv.zone || ''} - ${pdv.quartier || ''}`
+  el.appendChild(zoneP)
+
+  const canalP = document.createElement('p')
+  canalP.className = 'text-gray-400 text-xs'
+  canalP.textContent = `${pdv.canal} / ${typePdvLabel(pdv.sous_categorie_pdv) || ''}`
+  el.appendChild(canalP)
+
+  const coordP = document.createElement('p')
+  coordP.className = 'text-gray-400 text-xs mt-1'
+  coordP.textContent = `${pdv.geolocation_lat?.toFixed(4)}, ${pdv.geolocation_lng?.toFixed(4)}`
+  el.appendChild(coordP)
+
+  const photoWrap = document.createElement('div')
+  photoWrap.className = 'mt-2'
+  if (isSafeImageUrl(pdv.image_url)) {
+    const img = document.createElement('img')
+    img.src = pdv.image_url
+    img.alt = pdv.nom_pdv
+    img.className = 'w-full h-20 object-cover rounded cursor-pointer pdv-photo-btn'
+    img.dataset.pdvId = pdv.pdv_id
+    photoWrap.appendChild(img)
+  } else {
+    const btn = document.createElement('button')
+    btn.className = 'text-[10px] text-fc-red underline pdv-photo-btn'
+    btn.textContent = '📷 Voir photo'
+    btn.dataset.pdvId = pdv.pdv_id
+    photoWrap.appendChild(btn)
+  }
+  el.appendChild(photoWrap)
+
+  return el
 }
 
 function focusTarget() {

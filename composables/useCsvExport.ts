@@ -114,8 +114,11 @@ export function useCsvExport() {
       { header: 'Région', key: 'region', width: 15 },
       { header: 'Zone', key: 'zone', width: 15 },
       { header: 'Quartier', key: 'quartier', width: 20 },
+      { header: 'GPS', key: 'gps', width: 8 },
       { header: 'Latitude', key: 'geolocation_lat', width: 15 },
       { header: 'Longitude', key: 'geolocation_lng', width: 15 },
+      { header: 'Source GPS', key: 'gps_source', width: 14 },
+      { header: 'Code DMS', key: 'mdm', width: 15 },
       { header: 'Adressage', key: 'adressage', width: 30 },
       { header: 'Territoire', key: 'territory_code', width: 15 },
       { header: 'Area', key: 'area_code', width: 15 },
@@ -129,7 +132,8 @@ export function useCsvExport() {
     ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF003DA5' } }
 
     for (const p of pdvList) {
-      ws.addRow(p)
+      const aGps = p.geolocation_lat != null && p.geolocation_lng != null
+      ws.addRow({ ...p, gps: aGps ? 'Oui' : 'Non' })
     }
 
     const buffer = await wb.xlsx.writeBuffer()

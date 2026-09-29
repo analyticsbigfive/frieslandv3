@@ -8,7 +8,7 @@
           Géographie, distribution, points de vente, produits et paramètres Perfect Store <span class="text-xs">(Système B)</span>.
         </p>
       </div>
-      <UButton icon="i-heroicons-plus" class="bg-fc-blue" @click="openCreate">Ajouter — {{ activeDef.label }}</UButton>
+      <UButton v-if="!activeDef.lectureSeule" icon="i-heroicons-plus" class="bg-fc-blue" @click="openCreate">Ajouter — {{ activeDef.label }}</UButton>
     </div>
 
     <div v-if="error" class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
@@ -81,7 +81,7 @@
               <span v-else :class="col.kind === 'num' ? 'font-semibold tabular-nums' : (col.muted ? 'text-gray-600 dark:text-gray-300' : '')">{{ col.cell(row) }}</span>
             </td>
             <td class="px-4 py-2.5 text-center">
-              <UDropdown :items="rowActions(row)">
+              <UDropdown v-if="!activeDef.lectureSeule" :items="rowActions(row)">
                 <UButton variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" />
               </UDropdown>
             </td>
@@ -276,6 +276,8 @@ interface Def {
   order?: (q: any) => any
   /** Référentiel sans suppression : le code est structurel dans les visites, on désactive. */
   noDelete?: boolean
+  /** Consultation seule : ni ajout ni modification (données écrites par l'app). */
+  lectureSeule?: boolean
   columns: Col[]
   fields: Field[]
   blank: () => any
@@ -576,6 +578,58 @@ const defs: Def[] = [
       ? supabase.from('parametre_suivi').update({ valeur: f.valeur }).eq('cle', f.cle)
       : supabase.from('parametre_suivi').insert({ cle: f.cle, valeur: f.valeur, libelle: 'Fenêtre de suivi (mois)' }),
     del: async () => ({ error: new Error('Ce paramètre ne se supprime pas : modifiez sa valeur.') }),
+  },
+  {
+    // Mise à jour obligatoire de l'app mobile (migration 20260930091000,
+    // plugins/version-app.client.ts). Une ligne par plateforme.
+    id: 'version_app', section: 'app', label: 'Version minimale', table: 'version_app',
+    select: 'plateforme, version_code_min, version_nom_min, url_telechargement, message', order: q => q.order('plateforme'), noDelete: true,
+    columns: [
+      { label: 'Plateforme', cell: r => r.plateforme, kind: 'badge' },
+      { label: 'Version minimale', cell: r => `${r.version_nom_min || '?'} (code ${r.version_code_min})` },
+      { label: 'Lien de téléchargement', cell: r => r.url_telechargement || '—', muted: true },
+    ],
+    fields: [
+      { key: 'version_code_min', label: 'Code de version minimal (versionCode)', type: 'num', required: true, min: 1, hint: 'En dessous, l’app est bloquée sur un écran de mise à jour. 1.0.9 = 11, 1.0.10 = 12. Vérifier d’abord la version installée dans « Versions installées ».' },
+      { key: 'version_nom_min', label: 'Version affichée', type: 'text', hint: 'Ex. 1.0.10' },
+      { key: 'url_telechargement', label: 'Lien de téléchargement', type: 'text', hint: 'Lien stable de l’APK (node scripts/upload-apk.mjs … --latest).' },
+      { key: 'message', label: 'Message affiché', type: 'text' },
+    ],
+    blank: () => ({ plateforme: 'android', version_code_min: 11, version_nom_min: '1.0.9', url_telechargement: '', message: '' }),
+    fill: r => ({ ...r }),
+    rowKey: r => String(r.plateforme), search: r => `${r.plateforme} ${r.version_nom_min || ''}`.toLowerCase(),
+    valid: f => typeof f.version_code_min === 'number' && f.version_code_min >= 1,
+    save: (f, e) => {
+      const valeurs = {
+        version_code_min: f.version_code_min,
+        version_nom_min: f.version_nom_min || null,
+        url_telechargement: f.url_telechargement || null,
+        message: f.message || null,
+        updated_at: new Date().toISOString(),
+      }
+      return e
+        ? supabase.from('version_app').update(valeurs).eq('plateforme', f.plateforme)
+        : supabase.from('version_app').insert({ plateforme: f.plateforme || 'android', ...valeurs })
+    },
+    del: async () => ({ error: new Error('Ce paramètre ne se supprime pas : modifiez sa valeur.') }),
+  },
+  {
+    // Lecture seule : version déclarée par l'app au lancement (version_installee).
+    id: 'version_installee', section: 'app', label: 'Versions installées', table: 'version_installee',
+    select: 'user_id, plateforme, version_code, version_nom, vu_le, profil:user_id(nom, email, role)', order: q => q.order('vu_le', { ascending: false }), noDelete: true, lectureSeule: true,
+    columns: [
+      { label: 'Utilisateur', cell: r => r.profil?.nom || r.profil?.email || r.user_id },
+      { label: 'Rôle', cell: r => r.profil?.role, kind: 'badge' },
+      { label: 'Version', cell: r => `${r.version_nom || '?'} (code ${r.version_code})`, kind: 'mono' },
+      { label: 'Dernière ouverture', cell: r => r.vu_le ? new Date(r.vu_le).toLocaleString('fr-FR') : '—', muted: true },
+    ],
+    fields: [],
+    blank: () => ({}),
+    fill: r => ({ ...r }),
+    rowKey: r => String(r.user_id), search: r => `${r.profil?.nom || ''} ${r.profil?.email || ''} ${r.version_nom || ''}`.toLowerCase(),
+    valid: () => false,
+    save: async () => ({ error: new Error('Déclarée automatiquement par l’application.') }),
+    del: async () => ({ error: new Error('Déclarée automatiquement par l’application.') }),
   },
   {
     id: 'segment_grade_type_pdv', section: 'pdv', label: 'Segment / Grade', table: 'segment_grade_type_pdv',
@@ -981,6 +1035,7 @@ const sections = [
   { key: 'pdv', label: 'Points de vente' },
   { key: 'produit', label: 'Produits' },
   { key: 'ps', label: 'Perfect Store' },
+  { key: 'app', label: 'Application mobile' },
 ]
 
 const section = ref('geo')

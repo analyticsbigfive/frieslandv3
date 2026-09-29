@@ -3,14 +3,26 @@ import { defineStore, skipHydrate } from 'pinia'
 import { isPrivilegedProfile } from '~/utils/roles'
 import { profileTerritoriesEtendus } from '~/composables/useUserScope'
 import { markRaw } from 'vue'
+import { fetchAllRows } from '~/utils/fetchAll'
 import type { PDV, Profile, ZoneSecteur } from '~/types'
 
 // Colonnes nécessaires aux listes (admin table + mobile).
-// Évite select('*') qui tire 24 colonnes inutiles (mdm, routing, dates…).
-const LIST_COLUMNS = 'id,pdv_id,nom_pdv,canal,categorie_pdv,sous_categorie_pdv,autre_sous_categorie,zone,quartier,region,territory_code,area_code,distributor_name,adressage,image_url,geolocation_lat,geolocation_lng'
+// Évite select('*') qui tire 24 colonnes inutiles (routing, dates…).
+// mdm = code client DMS, ajoute_par = origine (import DMS) : lus par l'admin.
+export const LIST_COLUMNS = 'id,pdv_id,nom_pdv,canal,categorie_pdv,sous_categorie_pdv,autre_sous_categorie,zone,quartier,region,territory_code,area_code,distributor_name,adressage,image_url,geolocation_lat,geolocation_lng,rayon_geofence,mdm,ajoute_par'
 
 // Valeur sentinelle du filtre zone : PDV dont la zone n'est pas renseignée.
 export const SANS_ZONE = '__SANS_ZONE__'
+
+// Filtre GPS de la liste admin.
+export type FiltreGps = '' | 'sans' | 'avec'
+
+/** Restreint une requête `pdv` selon la présence de coordonnées. */
+export function filtrerGps<Q extends { or: (f: string) => Q; not: (c: string, op: string, v: null) => Q }>(query: Q, gps: FiltreGps): Q {
+  if (gps === 'sans') return query.or('geolocation_lat.is.null,geolocation_lng.is.null')
+  if (gps === 'avec') return query.not('geolocation_lat', 'is', null).not('geolocation_lng', 'is', null)
+  return query
+}
 
 export const usePDVStore = defineStore('pdv', () => {
   const supabase = skipHydrate(markRaw(useSupabaseClient()))
@@ -30,6 +42,7 @@ export const usePDVStore = defineStore('pdv', () => {
     region: '',
     canal: '',
     categorie: '',
+    gps: '' as FiltreGps,
     page: 1,
     perPage: 50,
   })
@@ -87,11 +100,13 @@ export const usePDVStore = defineStore('pdv', () => {
   }
 
   function buildScopedQuery(profile?: Profile | null) {
+    // pdv_id en dernier critère : ordre stable, indispensable à la pagination.
     let query = supabase
       .from('pdv')
       .select(LIST_COLUMNS)
       .eq('is_active', true)
       .order('nom_pdv')
+      .order('pdv_id')
 
     if (!profile || isPrivilegedProfile(profile)) {
       return query
@@ -117,41 +132,57 @@ export const usePDVStore = defineStore('pdv', () => {
     scopedCache.value = {}
   }
 
+  // Filtres de la liste admin, partagés par la page et l'export.
+  function appliquerFiltres<Q extends { or: (f: string) => Q; eq: (c: string, v: string) => Q; not: (c: string, op: string, v: null) => Q }>(query: Q): Q {
+    const f = filters.value
+    if (f.search) {
+      query = query.or(`nom_pdv.ilike.%${f.search}%,pdv_id.ilike.%${f.search}%,adressage.ilike.%${f.search}%,mdm.ilike.%${f.search}%`)
+    }
+    // Sentinelle : isole les PDV sans zone, invisibles de tout périmètre
+    // terrain tant qu'un admin ne les a pas rattachés à un territoire.
+    if (f.zone === SANS_ZONE) {
+      query = query.or('zone.is.null,zone.eq.')
+    }
+    else if (f.zone) {
+      query = query.eq('zone', f.zone)
+    }
+    if (f.region) {
+      query = query.eq('region', f.region)
+    }
+    if (f.canal) {
+      query = query.eq('canal', f.canal)
+    }
+    return filtrerGps(query, f.gps)
+  }
+
+  // Nombre de PDV actifs sans coordonnées, sur tout le parc : alerte admin.
+  const nbSansGps = ref<number | null>(null)
+  async function compterSansGps() {
+    const { count, error } = await filtrerGps(
+      supabase.from('pdv').select('pdv_id', { count: 'exact', head: true }).eq('is_active', true),
+      'sans',
+    )
+    if (!error) nbSansGps.value = count ?? 0
+    return nbSansGps.value
+  }
+
   async function fetchPDV() {
     loading.value = true
 
     try {
-      let query = supabase
+      const query = appliquerFiltres(supabase
         .from('pdv')
         // 'exact' obligatoire : 'estimated' repose sur les stats du planificateur,
         // fausses après un import massif → total et pagination erronés.
         .select(LIST_COLUMNS, { count: 'exact' })
         .eq('is_active', true)
         .order('nom_pdv', { ascending: true })
-
-      if (filters.value.search) {
-        query = query.or(`nom_pdv.ilike.%${filters.value.search}%,pdv_id.ilike.%${filters.value.search}%,adressage.ilike.%${filters.value.search}%`)
-      }
-      // Sentinelle : isole les PDV sans zone, invisibles de tout périmètre
-      // terrain tant qu'un admin ne les a pas rattachés à un territoire.
-      if (filters.value.zone === SANS_ZONE) {
-        query = query.or('zone.is.null,zone.eq.')
-      }
-      else if (filters.value.zone) {
-        query = query.eq('zone', filters.value.zone)
-      }
-      if (filters.value.region) {
-        query = query.eq('region', filters.value.region)
-      }
-      if (filters.value.canal) {
-        query = query.eq('canal', filters.value.canal)
-      }
+        .order('pdv_id'))
 
       const from = (filters.value.page - 1) * filters.value.perPage
       const to = from + filters.value.perPage - 1
-      query = query.range(from, to)
 
-      const { data, count, error } = await query
+      const { data, count, error } = await query.range(from, to)
       if (error) throw error
 
       pdvList.value = (data || []) as PDV[]
@@ -165,15 +196,18 @@ export const usePDVStore = defineStore('pdv', () => {
     }
   }
 
-  async function fetchAllPDV(): Promise<PDV[]> {
-    const { data, error } = await supabase
-      .from('pdv')
-      .select('*')
-      .eq('is_active', true)
-      .order('nom_pdv')
-
-    if (error) throw error
-    return (data || []) as PDV[]
+  // Export : tout le parc, page par page (une requête seule s'arrête à 1 000
+  // lignes). `avecFiltres` : même sélection que la liste affichée.
+  async function fetchAllPDV(avecFiltres = false): Promise<PDV[]> {
+    return await fetchAllRows<PDV>((from, to) => {
+      const query = supabase
+        .from('pdv')
+        .select('*')
+        .eq('is_active', true)
+        .order('nom_pdv')
+        .order('pdv_id')
+      return (avecFiltres ? appliquerFiltres(query) : query).range(from, to) as any
+    })
   }
 
   async function fetchScopedPDV(profile?: Profile | null, force = false): Promise<PDV[]> {
@@ -185,11 +219,9 @@ export const usePDVStore = defineStore('pdv', () => {
     }
 
     try {
-      const { data, error } = await buildScopedQuery(profile)
-
-      if (error) throw error
-
-      const scopedData = (data || []) as PDV[]
+      // Paginé : un périmètre dépasse 1 000 PDV (Man, et les merchandisers
+      // du fichier DMS) ; une requête seule s'arrêtait là, sans erreur.
+      const scopedData = await fetchAllRows<PDV>((from, to) => buildScopedQuery(profile).range(from, to) as any)
       scopedCache.value[cacheKey] = {
         data: scopedData,
         timestamp: Date.now(),
@@ -354,6 +386,8 @@ export const usePDVStore = defineStore('pdv', () => {
     fetchFilterFacets,
     fetchPDV,
     fetchAllPDV,
+    nbSansGps,
+    compterSansGps,
     fetchScopedPDV,
     fetchPDVById,
     createPDV,

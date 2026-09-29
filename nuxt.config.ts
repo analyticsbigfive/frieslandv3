@@ -136,6 +136,9 @@ export default defineNuxtConfig({
       buildNatif: isCapacitor,
       geofenceRadius: 200, // TODO confirmer client (valeur réunion : 200 m)
       gpsMinAccuracy: 10,
+      // Précision maximale acceptée pour enregistrer la position d'un PDV sans
+      // GPS depuis le terrain (RPC geolocaliser_pdv, même seuil côté base).
+      gpsPdvPrecisionMax: 30,
       // Tracking de tournée (app native) : échantillonnage GPS régulier,
       // filtre distance mini entre points, envoi groupé par batch.
       // Intervalle à 2 min = compromis autonomie batterie / finesse du trajet.
