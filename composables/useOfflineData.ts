@@ -1,4 +1,6 @@
 import { get, set, del, clear } from 'idb-keyval'
+import { fetchAllRows } from '~/utils/fetchAll'
+import { LIST_COLUMNS } from '~/stores/pdv'
 import type { PDV, ZoneSecteur, OfflineQueueItem, Profile, Visite } from '~/types'
 
 const CACHE_TTL = 30 * 60 * 1000 // 30 minutes
@@ -109,8 +111,13 @@ export function useOfflineData() {
     try {
       const supabase = useSupabaseClient()
 
+      // PDV du périmètre (filtrés par la RLS), page par page : au-delà de
+      // 1 000 lignes une requête seule s'arrêtait sans erreur, et le cache hors
+      // ligne était incomplet pour les grands périmètres.
       const [pdvResult, zonesResult, visitesResult, contactsResult] = await Promise.all([
-        supabase.from('pdv').select('*').eq('is_active', true).order('nom_pdv'),
+        fetchAllRows<PDV>((from, to) => supabase.from('pdv').select(LIST_COLUMNS).eq('is_active', true)
+          .order('nom_pdv').order('pdv_id').range(from, to) as any)
+          .then(data => ({ data }), () => ({ data: null })),
         supabase.from('zones_secteurs').select('*').order('zone'),
         supabase.from('visites')
           .select('visite_id, pdv_id, user_id, commercial, email, date_visite, geofence_validated, sync_status, data, pdv:pdv_id(nom_pdv)')

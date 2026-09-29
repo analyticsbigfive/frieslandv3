@@ -658,7 +658,7 @@ const pdvStore = usePDVStore()
 const routingStore = useRoutingStore()
 const { validateGeofence, grabPosition, haversineDistance, error: geolocationError } = useGeofencing()
 const { hasGps, ensureProbed: probeLocationHardware } = useLocationHardware()
-const { completeMission } = useRouting()
+const { completeMission, geolocaliserPdv } = useRouting()
 const { addToQueue, isOnline } = useOfflineSync()
 const { uploadImages, compressImage } = useImageUpload()
 const toast = useToast()
@@ -1296,6 +1296,14 @@ async function persistVisit() {
     animateProgress(90, 600)
     await submitVisite(position, geofenceOk)
 
+    // PDV sans GPS (import DMS) : la position de la visite devient la sienne.
+    if (selectedPDV && !selectedPDV.geolocation_lat && position && isOnline.value) {
+      if (await geolocaliserPdv(selectedPDV.pdv_id, position)) {
+        selectedPDV.geolocation_lat = position.lat
+        selectedPDV.geolocation_lng = position.lng
+      }
+    }
+
     saveProgress.value = 100
     saveStatus.value = 'success'
   }
@@ -1469,9 +1477,10 @@ async function submitVisite(
   clearDraft()
   rememberPdv(form.pdv_id)
 
-  // Complete routing PDV if from routing context
+  // Complete routing PDV if from routing context. L'étape peut ne pas être
+  // dans les pages chargées de la tournée : getRoutingPDV la relit en base.
   if (routingPdvId.value) {
-    const routingPdvItem = routingStore.routingPDVList.find(rp => rp.id === routingPdvId.value)
+    const routingPdvItem = await routingStore.getRoutingPDV(routingPdvId.value).catch(() => null)
     if (routingPdvItem) {
       await completeMission(routingPdvItem, visiteId)
     }

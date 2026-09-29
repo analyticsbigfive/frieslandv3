@@ -62,6 +62,12 @@ export interface PDV {
   area_code?: string
   distributor_name?: string
   objectif_perfect_store?: 'FLAGSHIP' | 'VIP' | 'CORE' | 'BASIC'
+  // Traçabilité GPS (migration 20260930091000). Sans coordonnées :
+  // dms-absent / dms-depot disent pourquoi.
+  gps_source?: 'dms' | 'dms-absent' | 'dms-depot' | 'terrain' | 'admin' | null
+  gps_precision_m?: number | null
+  gps_maj_par?: string | null
+  gps_maj_le?: string | null
   is_active: boolean
   created_at: string
 }
@@ -133,6 +139,9 @@ export interface Routing {
   user?: Profile
   creator?: Profile
   routing_pdv?: RoutingPDV[]
+  // Compteurs (liste admin : les étapes ne sont chargées qu'à l'ouverture)
+  nb_pdv?: number
+  nb_faits?: number
 }
 
 // ---- Routing Templates (Permanent) ----

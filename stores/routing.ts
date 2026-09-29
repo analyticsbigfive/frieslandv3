@@ -9,8 +9,17 @@ export const useRoutingStore = defineStore('routing', () => {
   const supabase = skipHydrate(markRaw(useSupabaseClient()))
 
   const todayRouting = ref<Routing | null>(null)
+  // Étapes de la tournée du jour DÉJÀ CHARGÉES, par pages de PAGE_ETAPES : une
+  // tournée « portefeuille » compte jusqu'à ~1 000 PDV, trop pour un seul appel
+  // (plafond PostgREST de 1 000 lignes, rendu lent sur téléphone).
   const routingPDVList = ref<RoutingPDV[]>([])
   const loading = ref(false)
+  const chargementPage = ref(false)
+  // Compteurs de TOUTE la tournée, lus en base : la liste n'en contient qu'une partie.
+  const compteurs = ref({ total: 0, faits: 0, clos: 0, entames: 0 })
+  // Incrémenté à chaque rechargement : une page encore en vol au moment d'un
+  // « Actualiser » est ignorée au lieu de se mélanger à la nouvelle liste.
+  let jetonTournee = 0
 
   // ---- Garde périmètre : refuse toute tournée contenant un PDV hors des territoires du user ----
   // Filet côté store, appliqué même quand l'UI est contournée (duplicate, template, generate, CSV).
@@ -79,16 +88,10 @@ export const useRoutingStore = defineStore('routing', () => {
         console.warn('[Routing] matérialisation du jour impossible (hors ligne ?)', err)
       }
 
+      // En-tête seul : les étapes arrivent par pages (chargerPageRouting).
       const { data, error } = await (supabase
         .from('routings') as any)
-        .select(`
-          *,
-          user:user_id(id, nom, email),
-          routing_pdv(
-            *,
-            pdv:pdv_id(pdv_id, nom_pdv, zone, quartier, geolocation_lat, geolocation_lng, rayon_geofence, canal, adressage, image_url)
-          )
-        `)
+        .select('*, user:user_id(id, nom, email)')
         .eq('user_id', userId)
         .eq('date_routing', today)
         .neq('status', 'cancelled')
@@ -96,14 +99,17 @@ export const useRoutingStore = defineStore('routing', () => {
 
       if (error && error.code !== 'PGRST116') throw error
 
+      jetonTournee++
+      routingPDVList.value = []
+      chargementPage.value = false
       if (data) {
         todayRouting.value = data as Routing
-        routingPDVList.value = ((data as any).routing_pdv || [])
-          .sort((a: RoutingPDV, b: RoutingPDV) => a.position_order - b.position_order) as RoutingPDV[]
-        console.info(`[Routing] ${routingPDVList.value.length} PDV chargés pour le ${today}`)
+        await compterEtapes()
+        await chargerPageRouting()
+        console.info(`[Routing] ${routingPDVList.value.length}/${compteurs.value.total} PDV chargés pour le ${today}`)
       } else {
         todayRouting.value = null
-        routingPDVList.value = []
+        compteurs.value = { total: 0, faits: 0, clos: 0, entames: 0 }
         console.warn(`[Routing] Aucun routing trouvé pour user=${userId} date=${today}`)
       }
     } catch (err) {
@@ -111,6 +117,89 @@ export const useRoutingStore = defineStore('routing', () => {
     } finally {
       loading.value = false
     }
+  }
+
+  const PAGE_ETAPES = 50
+  const SELECT_ETAPE = `*,
+    pdv:pdv_id(pdv_id, nom_pdv, zone, quartier, geolocation_lat, geolocation_lng, rayon_geofence, canal, adressage, image_url)`
+
+  // clos = fait ou passé (tournée terminée quand tout est clos) ;
+  // entamés = en cours ou fait (tournée « en cours » dès le premier).
+  async function compterEtapes() {
+    const routingId = todayRouting.value?.id
+    if (!routingId) return
+    const compter = (statuts?: string[]) => {
+      let q = (supabase.from('routing_pdv') as any)
+        .select('id', { count: 'exact', head: true })
+        .eq('routing_id', routingId)
+      if (statuts) q = q.in('status', statuts)
+      return q
+    }
+    const [total, faits, clos, entames] = await Promise.all([
+      compter(), compter(['completed']), compter(['completed', 'skipped']), compter(['in_progress', 'completed']),
+    ])
+    const erreur = [total, faits, clos, entames].find(r => r.error)?.error
+    if (erreur) throw erreur
+    compteurs.value = {
+      total: total.count ?? 0,
+      faits: faits.count ?? 0,
+      clos: clos.count ?? 0,
+      entames: entames.count ?? 0,
+    }
+  }
+
+  const toutCharge = computed(() => routingPDVList.value.length >= compteurs.value.total)
+
+  /** Page suivante des étapes de la tournée du jour, dans l'ordre de passage. */
+  async function chargerPageRouting() {
+    const routingId = todayRouting.value?.id
+    if (!routingId || chargementPage.value || toutCharge.value) return
+    const jeton = jetonTournee
+    chargementPage.value = true
+    try {
+      const debut = routingPDVList.value.length
+      const { data, error } = await (supabase.from('routing_pdv') as any)
+        .select(SELECT_ETAPE)
+        .eq('routing_id', routingId)
+        .order('position_order')
+        .order('id')
+        .range(debut, debut + PAGE_ETAPES - 1)
+      if (jeton !== jetonTournee) return
+      if (error) throw error
+      const vus = new Set(routingPDVList.value.map(rp => rp.id))
+      routingPDVList.value = [...routingPDVList.value, ...((data || []) as RoutingPDV[]).filter(rp => !vus.has(rp.id))]
+      // Page vide alors que le compteur en annonce plus : la tournée a changé
+      // entre-temps, on s'aligne sur ce qui est réellement chargé.
+      if (!data?.length) compteurs.value.total = routingPDVList.value.length
+    }
+    catch (err) {
+      console.error('Erreur chargement des étapes:', err)
+    }
+    finally {
+      if (jeton === jetonTournee) chargementPage.value = false
+    }
+  }
+
+  /** Étape par son id : dans la liste chargée, sinon lue en base. */
+  async function getRoutingPDV(routingPdvId: string): Promise<RoutingPDV | null> {
+    const locale = routingPDVList.value.find(rp => rp.id === routingPdvId)
+    if (locale) return locale
+    const { data, error } = await (supabase.from('routing_pdv') as any)
+      .select(SELECT_ETAPE)
+      .eq('id', routingPdvId)
+      .maybeSingle()
+    if (error) throw error
+    return (data as RoutingPDV) || null
+  }
+
+  function ajusterCompteurs(avant: string | undefined, apres: string) {
+    if (!avant || avant === apres) return
+    const c = { ...compteurs.value }
+    const dans = (s: string, liste: string[]) => (liste.includes(s) ? 1 : 0)
+    c.faits += dans(apres, ['completed']) - dans(avant, ['completed'])
+    c.clos += dans(apres, ['completed', 'skipped']) - dans(avant, ['completed', 'skipped'])
+    c.entames += dans(apres, ['in_progress', 'completed']) - dans(avant, ['in_progress', 'completed'])
+    compteurs.value = c
   }
 
   // ---- Mobile: update routing PDV status ----
@@ -133,6 +222,15 @@ export const useRoutingStore = defineStore('routing', () => {
     if (status === 'completed') update.completed_at = now
     if (extras) Object.assign(update, extras)
 
+    // Statut précédent, pour tenir les compteurs : l'étape peut ne pas être
+    // dans les pages chargées (clôture depuis le formulaire de visite).
+    const idx = routingPDVList.value.findIndex(rp => rp.id === routingPdvId)
+    let avant = idx !== -1 ? routingPDVList.value[idx].status : undefined
+    if (!avant) {
+      const { data } = await (supabase.from('routing_pdv') as any).select('status').eq('id', routingPdvId).maybeSingle()
+      avant = (data as any)?.status
+    }
+
     const { error } = await (supabase
       .from('routing_pdv') as any)
       .update(update)
@@ -141,25 +239,23 @@ export const useRoutingStore = defineStore('routing', () => {
     if (error) throw error
 
     // Update local state
-    const idx = routingPDVList.value.findIndex(rp => rp.id === routingPdvId)
     if (idx !== -1) {
       routingPDVList.value[idx] = { ...routingPDVList.value[idx], ...update }
     }
+    ajusterCompteurs(avant, status)
 
     // Auto-update routing status
     await syncRoutingStatus()
   }
 
   // ---- Auto-update routing status based on PDV progress ----
+  // D'après les compteurs de toute la tournée, pas des seules pages chargées.
   async function syncRoutingStatus() {
     if (!todayRouting.value) return
 
-    const allCompleted = routingPDVList.value.every(
-      rp => rp.status === 'completed' || rp.status === 'skipped'
-    )
-    const anyInProgress = routingPDVList.value.some(
-      rp => rp.status === 'in_progress' || rp.status === 'completed'
-    )
+    const { total, clos, entames } = compteurs.value
+    const allCompleted = total > 0 && clos >= total
+    const anyInProgress = entames > 0
 
     let newStatus = todayRouting.value.status
     if (allCompleted) newStatus = 'completed'
@@ -184,17 +280,19 @@ export const useRoutingStore = defineStore('routing', () => {
   }) {
     loading.value = true
     try {
+      // Compteurs seulement : avec des tournées « portefeuille » (~1 000 PDV
+      // chacune), embarquer les étapes de 200 tournées ne tient plus. Le détail
+      // se charge à l'ouverture (chargerEtapesRouting).
       let query = (supabase
         .from('routings') as any)
         .select(`
           *,
           user:user_id(id, nom, email, zone_assignee),
           creator:created_by(id, nom),
-          routing_pdv(
-            id, pdv_id, position_order, objectifs, status, geofence_validated, arrived_at, completed_at, visite_id,
-            pdv:pdv_id(pdv_id, nom_pdv, zone, quartier)
-          )
+          total:routing_pdv(count),
+          faits:routing_pdv(count)
         `)
+        .eq('faits.status', 'completed')
         .order('date_routing', { ascending: false })
 
       if (filters?.dateFrom) query = query.gte('date_routing', filters.dateFrom)
@@ -204,13 +302,42 @@ export const useRoutingStore = defineStore('routing', () => {
 
       const { data, error } = await query.limit(200)
       if (error) throw error
-      return (data || []) as Routing[]
+      return (data || []).map(({ total, faits, ...r }: any) => ({
+        ...r,
+        nb_pdv: total?.[0]?.count ?? 0,
+        nb_faits: faits?.[0]?.count ?? 0,
+      })) as Routing[]
     } catch (err) {
       console.error('Erreur chargement routings:', err)
       return []
     } finally {
       loading.value = false
     }
+  }
+
+  const SELECT_ETAPE_ADMIN = `id, pdv_id, position_order, objectifs, status, geofence_validated, arrived_at, completed_at, visite_id,
+    pdv:pdv_id(pdv_id, nom_pdv, zone, quartier, geolocation_lat, geolocation_lng)`
+
+  /** Admin : une page d'étapes d'une tournée, dans l'ordre de passage. */
+  async function chargerEtapesRouting(routingId: string, debut = 0, taille = PAGE_ETAPES): Promise<RoutingPDV[]> {
+    const { data, error } = await (supabase.from('routing_pdv') as any)
+      .select(SELECT_ETAPE_ADMIN)
+      .eq('routing_id', routingId)
+      .order('position_order')
+      .order('id')
+      .range(debut, debut + taille - 1)
+    if (error) throw error
+    return (data || []) as RoutingPDV[]
+  }
+
+  /** Admin : toutes les étapes d'une tournée (édition, duplication). */
+  async function toutesEtapesRouting(routingId: string): Promise<RoutingPDV[]> {
+    return await fetchAllRows<RoutingPDV>((from, to) => (supabase.from('routing_pdv') as any)
+      .select(SELECT_ETAPE_ADMIN)
+      .eq('routing_id', routingId)
+      .order('position_order')
+      .order('id')
+      .range(from, to))
   }
 
   // ---- Admin: create routing with PDV list ----
@@ -269,10 +396,10 @@ export const useRoutingStore = defineStore('routing', () => {
 
   // ---- Admin: duplicate routing to another date ----
   async function duplicateRouting(routingId: string, newDate: string, newUserId?: string) {
-    // Fetch original
+    // Fetch original (étapes paginées : une tournée peut dépasser 1 000 PDV)
     const { data: original } = await (supabase
       .from('routings') as any)
-      .select('*, routing_pdv(*)')
+      .select('*')
       .eq('id', routingId)
       .single()
 
@@ -280,12 +407,12 @@ export const useRoutingStore = defineStore('routing', () => {
 
     const orig = original as any
     const targetUserId = newUserId || orig.user_id
+    const etapes = await toutesEtapesRouting(routingId)
 
     return await createRouting(
       targetUserId,
       newDate,
-      (orig.routing_pdv || [])
-        .sort((a: any, b: any) => a.position_order - b.position_order)
+      etapes
         .map((rp: any) => ({
           pdv_id: rp.pdv_id,
           objectifs: rp.objectifs || {},
@@ -530,11 +657,10 @@ export const useRoutingStore = defineStore('routing', () => {
   }
 
   // ---- Computed helpers ----
-  const completedCount = computed(() =>
-    routingPDVList.value.filter(rp => rp.status === 'completed').length
-  )
+  // Sur toute la tournée (compteurs en base), pas sur les pages chargées.
+  const completedCount = computed(() => compteurs.value.faits)
 
-  const totalCount = computed(() => routingPDVList.value.length)
+  const totalCount = computed(() => compteurs.value.total)
 
   const progressPercent = computed(() =>
     totalCount.value > 0 ? Math.round((completedCount.value / totalCount.value) * 100) : 0
@@ -563,10 +689,6 @@ export const useRoutingStore = defineStore('routing', () => {
           *,
           user:user_id(id, nom, email, zone_assignee),
           creator:created_by(id, nom),
-          routing_template_pdv(
-            id, pdv_id, position_order, objectifs,
-            pdv:pdv_id(pdv_id, nom_pdv, zone, quartier)
-          ),
           routing_template_exception(id, template_id, pdv_id, date_debut, date_fin, motif)
         `)
         .eq('is_active', true)
@@ -576,7 +698,25 @@ export const useRoutingStore = defineStore('routing', () => {
 
       const { data, error } = await query
       if (error) throw error
-      templates.value = (data || []) as RoutingTemplate[]
+      const regles = (data || []) as RoutingTemplate[]
+
+      // PDV des règles lus à part et paginés : une règle « portefeuille »
+      // dépasse 1 000 PDV, un embarquement dans la requête ci-dessus serait tronqué.
+      const ids = regles.map(t => t.id)
+      const lignes = ids.length
+        ? await fetchAllRows<RoutingTemplatePDV>((from, to) => (supabase.from('routing_template_pdv') as any)
+          .select('id, template_id, pdv_id, position_order, objectifs, pdv:pdv_id(pdv_id, nom_pdv, zone, quartier, geolocation_lat, geolocation_lng)')
+          .in('template_id', ids)
+          .order('template_id')
+          .order('position_order')
+          .order('id')
+          .range(from, to))
+        : []
+      const parRegle = new Map<string, RoutingTemplatePDV[]>()
+      lignes.forEach(l => { if (!parRegle.has(l.template_id)) parRegle.set(l.template_id, []); parRegle.get(l.template_id)!.push(l) })
+      regles.forEach(t => { t.routing_template_pdv = parRegle.get(t.id) || [] })
+
+      templates.value = regles
       return templates.value
     } catch (err) {
       console.error('Erreur chargement templates:', err)
@@ -785,7 +925,7 @@ export const useRoutingStore = defineStore('routing', () => {
         position_order: maxPos + 1,
         objectifs,
       })
-      .select('*, pdv:pdv_id(pdv_id, nom_pdv, zone, quartier)')
+      .select('*, pdv:pdv_id(pdv_id, nom_pdv, zone, quartier, geolocation_lat, geolocation_lng)')
       .single()
 
     if (error) throw error
@@ -879,9 +1019,15 @@ export const useRoutingStore = defineStore('routing', () => {
     nextPendingPDV,
     currentInProgressPDV,
     fetchTodayRouting,
+    chargerPageRouting,
+    chargementPage,
+    toutCharge,
+    getRoutingPDV,
     updateRoutingPDVStatus,
     syncRoutingStatus,
     fetchRoutings,
+    chargerEtapesRouting,
+    toutesEtapesRouting,
     createRouting,
     updateRouting,
     deleteRouting,

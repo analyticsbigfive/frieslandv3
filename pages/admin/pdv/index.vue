@@ -38,9 +38,28 @@
           :loading="!refsLoaded"
           @update:model-value="applyListScope"
         />
+        <USelect
+          v-model="selectedGps"
+          :options="gpsOptions"
+          size="sm"
+          class="w-36"
+          aria-label="Filtrer par GPS"
+          @update:model-value="applyListScope"
+        />
       </template>
 
       <template #actions>
+        <UButton
+          v-if="pdvStore.nbSansGps"
+          size="sm"
+          color="red"
+          variant="soft"
+          icon="i-heroicons-exclamation-triangle"
+          :title="`${pdvStore.nbSansGps} PDV actifs sans coordonnées : ni géofence ni ordre de tournée. Cliquer pour les afficher.`"
+          @click="voirSansGps"
+        >
+          {{ pdvStore.nbSansGps.toLocaleString('fr-FR') }} PDV sans GPS
+        </UButton>
         <UButton size="sm" variant="outline" @click="handleExport" icon="i-heroicons-arrow-down-tray">
           Export
         </UButton>
@@ -87,7 +106,25 @@
                       <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ pdv.nom_pdv }}</p>
                       <PDVPhotoModal :image-url="pdv.image_url" :pdv-id="pdv.pdv_id" :pdv-name="pdv.nom_pdv" />
                     </div>
-                    <p class="text-xs text-gray-400">{{ pdv.pdv_id }}</p>
+                    <p class="text-xs text-gray-400">
+                      {{ pdv.pdv_id }}<span v-if="pdv.mdm" title="Code client DMS"> · DMS {{ pdv.mdm }}</span>
+                    </p>
+                    <span
+                      v-if="!hasCoordinates(pdv)"
+                      class="mt-1 inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300"
+                      :title="motifSansGps(pdv)"
+                    >
+                      <UIcon name="i-heroicons-map-pin" class="h-3 w-3" />
+                      Sans GPS
+                    </span>
+                    <span
+                      v-else-if="gpsInfoByPdv[pdv.pdv_id]?.gps_source === 'terrain'"
+                      class="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                      :title="libelleGpsTerrain(pdv)"
+                    >
+                      <UIcon name="i-heroicons-map-pin-solid" class="h-3 w-3" />
+                      GPS terrain
+                    </span>
                   </div>
                 </div>
               </td>
@@ -427,7 +464,7 @@
 <script setup lang="ts">
 import { MapPin } from 'lucide-vue-next'
 import type { PDV } from '~/types'
-import { SANS_ZONE } from '~/stores/pdv'
+import { SANS_ZONE, type FiltreGps } from '~/stores/pdv'
 import { canWriteTerrain } from '~/utils/roles'
 
 definePageMeta({
@@ -454,18 +491,71 @@ const loading = computed(() => pdvStore.loading)
 const searchQuery = ref('')
 const selectedZone = ref('')
 const selectedRegion = ref('')
+const selectedGps = ref<FiltreGps>('')
+const gpsOptions = [
+  { label: 'GPS : tous', value: '' },
+  { label: 'Sans GPS', value: 'sans' },
+  { label: 'Avec GPS', value: 'avec' },
+]
 
 // Chips des filtres actifs (sous la barre) — clic = retirer ce filtre seul.
 const filterChips = computed(() => {
   const chips: { key: string; label: string }[] = []
   if (selectedZone.value) chips.push({ key: 'zone', label: `Territoire : ${selectedZone.value}` })
   if (selectedRegion.value) chips.push({ key: 'region', label: `Sous-région : ${selectedRegion.value}` })
+  if (selectedGps.value) chips.push({ key: 'gps', label: selectedGps.value === 'sans' ? 'Sans GPS' : 'Avec GPS' })
   return chips
 })
 function removeFilterChip(key: string) {
   if (key === 'zone') selectedZone.value = ''
   if (key === 'region') selectedRegion.value = ''
+  if (key === 'gps') selectedGps.value = ''
   applyListScope()
+}
+
+function voirSansGps() {
+  selectedGps.value = 'sans'
+  applyListScope()
+}
+
+// Traçabilité GPS des lignes affichées (migration 20260930091000). Lue à part :
+// la liste reste utilisable si la migration n'est pas encore appliquée.
+const gpsInfoByPdv = ref<Record<string, { gps_source: string | null; gps_precision_m: number | null; gps_maj_le: string | null; auteur: string | null }>>({})
+
+async function loadGpsInfoForList() {
+  const pdvIds = pdvList.value.map(p => p.pdv_id)
+  if (!pdvIds.length) {
+    gpsInfoByPdv.value = {}
+    return
+  }
+  const { data, error } = await (supabase.from('pdv') as any)
+    .select('pdv_id, gps_source, gps_precision_m, gps_maj_le, auteur:gps_maj_par(nom)')
+    .in('pdv_id', pdvIds)
+  if (error) {
+    console.warn('Traçabilité GPS indisponible', error.message)
+    return
+  }
+  gpsInfoByPdv.value = Object.fromEntries((data || []).map((r: any) => [r.pdv_id, {
+    gps_source: r.gps_source,
+    gps_precision_m: r.gps_precision_m,
+    gps_maj_le: r.gps_maj_le,
+    auteur: r.auteur?.nom || null,
+  }]))
+}
+
+function motifSansGps(pdv: PDV): string {
+  const source = gpsInfoByPdv.value[pdv.pdv_id]?.gps_source
+  const suite = 'Le merchandiser enregistre la position à sa première visite.'
+  if (source === 'dms-depot') return `Point GPS du DMS partagé par de nombreux clients (dépôt du distributeur), écarté. ${suite}`
+  if (source === 'dms-absent') return `Coordonnées absentes du fichier DMS. ${suite}`
+  return `Coordonnées manquantes : ni géofence ni ordre de tournée. ${suite}`
+}
+
+function libelleGpsTerrain(pdv: PDV): string {
+  const info = gpsInfoByPdv.value[pdv.pdv_id]
+  if (!info) return ''
+  const date = info.gps_maj_le ? new Date(info.gps_maj_le).toLocaleDateString('fr-FR') : '?'
+  return `Position relevée sur le terrain${info.auteur ? ` par ${info.auteur}` : ''} le ${date}${info.gps_precision_m != null ? `, précision ${info.gps_precision_m} m` : ''}`
 }
 const showCreate = ref(false)
 const showImport = ref(false)
@@ -637,9 +727,11 @@ function resetListFilters() {
   searchQuery.value = ''
   selectedZone.value = ''
   selectedRegion.value = ''
+  selectedGps.value = ''
   pdvStore.filters.search = ''
   pdvStore.filters.zone = ''
   pdvStore.filters.region = ''
+  pdvStore.filters.gps = ''
   pdvStore.filters.page = 1
   loadPDV()
 }
@@ -751,8 +843,10 @@ async function handleSavePDV() {
   }
 }
 
+// Exporte la sélection affichée (filtres compris) : « Sans GPS » + Export =
+// la liste à transmettre pour relever les coordonnées.
 async function handleExport() {
-  const all = await pdvStore.fetchAllPDV()
+  const all = await pdvStore.fetchAllPDV(true)
   await exportPDVToExcel(all)
 }
 
@@ -825,8 +919,9 @@ async function loadPerfectStoreForList() {
 async function loadPDV() {
   pdvStore.filters.zone = selectedZone.value === SANS_ZONE_LABEL ? SANS_ZONE : selectedZone.value
   pdvStore.filters.region = selectedRegion.value
+  pdvStore.filters.gps = selectedGps.value
   await pdvStore.fetchPDV()
-  await loadPerfectStoreForList()
+  await Promise.all([loadPerfectStoreForList(), loadGpsInfoForList()])
 }
 
 onMounted(() => {
@@ -837,7 +932,14 @@ onMounted(() => {
     selectedZone.value = zoneParam
     pdvStore.filters.page = 1
   }
+  // ?gps=sans : lien direct vers les PDV à géolocaliser.
+  const gpsParam = route.query.gps
+  if (gpsParam === 'sans' || gpsParam === 'avec') {
+    selectedGps.value = gpsParam
+    pdvStore.filters.page = 1
+  }
   loadPDV()
+  pdvStore.compterSansGps()
   pdvStore.fetchFilterFacets()
   fetchReferentiels()
   fetchTypePdvLabels()

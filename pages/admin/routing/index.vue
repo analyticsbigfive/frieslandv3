@@ -115,7 +115,7 @@
                 {{ statusLabel(routing.status) }}
               </UBadge>
               <span class="text-sm font-medium text-gray-600">
-                {{ completedPdvCount(routing) }}/{{ routing.routing_pdv?.length || 0 }} PDV
+                {{ routing.nb_faits ?? completedPdvCount(routing) }}/{{ routing.nb_pdv ?? routing.routing_pdv?.length ?? 0 }} PDV
               </span>
               <UDropdown :items="routingActions(routing)" :popper="{ placement: 'bottom-end' }">
                 <UButton variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" />
@@ -139,7 +139,10 @@
                 </div>
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ rp.pdv?.nom_pdv || rp.pdv_id }}</p>
-                  <p class="text-xs text-gray-400">{{ rp.pdv?.zone || '' }} {{ rp.pdv?.quartier ? `— ${rp.pdv.quartier}` : '' }}</p>
+                  <p class="text-xs text-gray-400">
+                    {{ rp.pdv?.zone || '' }} {{ rp.pdv?.quartier ? `— ${rp.pdv.quartier}` : '' }}
+                    <span v-if="rp.pdv && !pdvAGps(rp.pdv)" class="ml-1 rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300">Sans GPS</span>
+                  </p>
                 </div>
                 <div class="flex items-center gap-2">
                   <template v-for="(val, key) in rp.objectifs" :key="key">
@@ -158,6 +161,12 @@
                   </UBadge>
                 </div>
               </div>
+            </div>
+            <div v-if="chargementEtapes.has(routing.id)" class="py-2 text-center text-xs text-gray-400">Chargement…</div>
+            <div v-else-if="(routing.routing_pdv?.length || 0) < (routing.nb_pdv ?? 0)" class="pt-2 text-center">
+              <UButton size="xs" variant="soft" color="gray" @click="chargerEtapes(routing)">
+                Afficher la suite ({{ (routing.nb_pdv ?? 0) - (routing.routing_pdv?.length || 0) }} PDV restants)
+              </UButton>
             </div>
             <div v-if="routing.notes" class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
               <p class="text-xs text-gray-400">Note : {{ routing.notes }}</p>
@@ -248,6 +257,7 @@
                 <p class="text-xs text-gray-400">
                   {{ tpl.user?.nom || tpl.user?.email }}
                   · {{ tpl.routing_template_pdv?.length || 0 }} PDV
+                  <span v-if="nbSansGpsRegle(tpl)" class="font-semibold text-red-600 dark:text-red-400">dont {{ nbSansGpsRegle(tpl) }} sans GPS</span>
                   <template v-if="tpl.territoire"> · {{ tpl.territoire }}</template>
                   <template v-if="tpl.distributeur"> · {{ tpl.distributeur }}</template>
                 </p>
@@ -310,7 +320,7 @@
           <div class="px-5 py-3">
             <div class="space-y-2">
               <div
-                v-for="(tp, idx) in sortedTemplatePDVs(tpl)"
+                v-for="(tp, idx) in sortedTemplatePDVs(tpl).slice(0, limiteRegle(tpl))"
                 :key="tp.id"
                 class="flex items-center gap-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 group"
               >
@@ -338,7 +348,10 @@
 
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ tp.pdv?.nom_pdv || tp.pdv_id }}</p>
-                  <p class="text-xs text-gray-400">{{ tp.pdv?.zone || '' }} {{ tp.pdv?.quartier ? `— ${tp.pdv.quartier}` : '' }}</p>
+                  <p class="text-xs text-gray-400">
+                    {{ tp.pdv?.zone || '' }} {{ tp.pdv?.quartier ? `— ${tp.pdv.quartier}` : '' }}
+                    <span v-if="tp.pdv && !pdvAGps(tp.pdv)" class="ml-1 rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300">Sans GPS</span>
+                  </p>
                 </div>
 
                 <!-- Objectifs badges -->
@@ -363,6 +376,12 @@
                   <UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
                 </button>
               </div>
+            </div>
+
+            <div v-if="(tpl.routing_template_pdv?.length || 0) > limiteRegle(tpl)" class="pt-2 text-center">
+              <UButton size="xs" variant="soft" color="gray" @click="afficherPlusRegle(tpl)">
+                Afficher la suite ({{ (tpl.routing_template_pdv?.length || 0) - limiteRegle(tpl) }} PDV restants)
+              </UButton>
             </div>
 
             <!-- Add PDV to template -->
@@ -1427,9 +1446,51 @@ function sortedTemplatePDVs(tpl: RoutingTemplate): RoutingTemplatePDV[] {
   return [...(tpl.routing_template_pdv || [])].sort((a, b) => a.position_order - b.position_order)
 }
 
+function pdvAGps(pdv: { geolocation_lat?: number | null; geolocation_lng?: number | null }) {
+  return pdv.geolocation_lat != null && pdv.geolocation_lng != null
+}
+
+function nbSansGpsRegle(tpl: RoutingTemplate) {
+  return (tpl.routing_template_pdv || []).filter(tp => tp.pdv && !pdvAGps(tp.pdv)).length
+}
+
+// Règles « portefeuille » de ~1 000 PDV : affichage par tranches.
+const TRANCHE = 50
+const limitesRegles = ref<Record<string, number>>({})
+function limiteRegle(tpl: RoutingTemplate) {
+  return limitesRegles.value[tpl.id] || TRANCHE
+}
+function afficherPlusRegle(tpl: RoutingTemplate) {
+  limitesRegles.value = { ...limitesRegles.value, [tpl.id]: limiteRegle(tpl) + TRANCHE }
+}
+
+// Étapes d'une tournée : chargées à l'ouverture, par pages (fetchRoutings ne
+// ramène que les compteurs).
+const chargementEtapes = ref(new Set<string>())
+async function chargerEtapes(routing: Routing) {
+  if (chargementEtapes.value.has(routing.id)) return
+  chargementEtapes.value.add(routing.id)
+  try {
+    const deja = routing.routing_pdv || []
+    const page = await routingStore.chargerEtapesRouting(routing.id, deja.length)
+    routing.routing_pdv = [...deja, ...page]
+  }
+  catch (err: any) {
+    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+  }
+  finally {
+    chargementEtapes.value.delete(routing.id)
+  }
+}
+
 function toggleExpand(id: string) {
-  if (expandedRoutings.value.has(id)) expandedRoutings.value.delete(id)
-  else expandedRoutings.value.add(id)
+  if (expandedRoutings.value.has(id)) {
+    expandedRoutings.value.delete(id)
+    return
+  }
+  expandedRoutings.value.add(id)
+  const routing = routings.value.find(r => r.id === id)
+  if (routing && !routing.routing_pdv) void chargerEtapes(routing)
 }
 
 function getPDVName(pdvId: string) {
@@ -1610,13 +1671,23 @@ function openCreateRouting() {
   showCreateModal.value = true
 }
 
-function openEditRouting(routing: Routing) {
+async function openEditRouting(routing: Routing) {
+  // Toutes les étapes, pas seulement les pages affichées : l'enregistrement
+  // remplace la liste, une étape non chargée serait supprimée.
+  let etapes: RoutingPDV[]
+  try {
+    etapes = await routingStore.toutesEtapesRouting(routing.id)
+  }
+  catch (err: any) {
+    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+    return
+  }
   editingRoutingId.value = routing.id
   newRouting.userId = routing.user_id || routing.user?.id || ''
   newRouting.date = routing.date_routing
   newRouting.notes = routing.notes || ''
   newRouting.status = routing.status
-  newRouting.pdvItems = sortedPDVs(routing).map(rp => ({
+  newRouting.pdvItems = etapes.map(rp => ({
     pdv_id: rp.pdv_id,
     objectifs: { ...(rp.objectifs || {}) } as RoutingObjectives,
   }))
