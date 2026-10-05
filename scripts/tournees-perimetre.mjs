@@ -16,11 +16,12 @@
  * - Relance : la règle « Portefeuille périmètre » du compte est remplacée.
  *
  * Simulation par défaut ; --apply pour écrire.
+ * --compte=email : ne traite que ce compte (les autres règles restent intactes).
  * --pregenerer=N : matérialise tout de suite les N premiers jours, jour par jour
  * (materialiser_routing_jour, idempotente : un jour déjà créé est gardé).
  *
  * Usage :
- *   node scripts/tournees-perimetre.mjs [--debut=AAAA-MM-JJ] [--pregenerer=7] [--inclure-test] [--apply]
+ *   node scripts/tournees-perimetre.mjs [--compte=email] [--debut=AAAA-MM-JJ] [--pregenerer=7] [--inclure-test] [--apply]
  */
 import { createClient } from '@supabase/supabase-js'
 import { config } from 'dotenv'
@@ -35,6 +36,7 @@ config({ path: resolve(__dirname, '..', '.env'), quiet: true })
 const arg = (nom, defaut) => process.argv.find(a => a.startsWith(`--${nom}=`))?.split('=').slice(1).join('=') || defaut
 const APPLY = process.argv.includes('--apply')
 const INCLURE_TEST = process.argv.includes('--inclure-test')
+const COMPTE = arg('compte', '').toLowerCase() // un seul compte (email), sinon tous
 
 const aujourdhui = (() => {
   const d = new Date()
@@ -96,6 +98,7 @@ const dms = new Set(regles.filter(r => String(r.label || '').startsWith(PREFIXE_
 const comptes = []
 const ignores = []
 for (const p of profils.filter(p => p.is_active !== false && p.email)) {
+  if (COMPTE && p.email.toLowerCase() !== COMPTE) continue
   if (dms.has(p.id)) { ignores.push({ p, motif: 'tournée « Portefeuille DMS » (fichier DMS)' }); continue }
   if (!INCLURE_TEST && estCompteTest(p.email)) { ignores.push({ p, motif: 'compte de démonstration (--inclure-test pour l\'inclure)' }); continue }
   const t = (p.territoires_assignes || []).filter(Boolean)
