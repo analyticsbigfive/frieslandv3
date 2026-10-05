@@ -14,7 +14,7 @@
  *      23 quartiers du fichier, avec l'orthographe exacte de pdv.quartier (le
  *      périmètre compare les chaînes à l'identique). Commercial responsable :
  *      KACOU LEONARD (cnofcgagnoa@gmail.com), superviseur de Gagnoa.
- *   4. KACOU LEONARD : son périmètre doit couvrir ces quartiers (territoire
+ *   4. KACOU LEONARD : passe commercial s'il était merchandiser ; son périmètre doit couvrir ces quartiers (territoire
  *      GAGNOA ajouté au besoin ; quartiers ajoutés s'il en a une liste).
  *   5. zones_secteurs : DJESSOU JEMIMA devient merchandiser des 23 secteurs.
  *
@@ -148,12 +148,14 @@ async function main() {
   if (e3) throw e3
   if (!commercial) throw new Error(`Compte de KACOU LEONARD introuvable : ${COMMERCIAL_EMAIL}`)
   // Le trigger profiles_commercial_id_valide n'accepte qu'un commercial ou un admin.
-  if (!['commercial', 'admin'].includes(commercial.role)) {
+  // KACOU LEONARD était enregistré merchandiser : il passe commercial (validé le 05/10/2026).
+  const patchCom = {}
+  if (commercial.role === 'merchandiser') patchCom.role = 'commercial'
+  else if (!['commercial', 'admin'].includes(commercial.role)) {
     throw new Error(`${commercial.nom} a le rôle « ${commercial.role} » : il doit être commercial pour être responsable d'un merchandiser`)
   }
   const comTerr = tableau(commercial.territoires_assignes)
   const comQuart = tableau(commercial.quartiers_assignes)
-  const patchCom = {}
   if (!comTerr.some(t => norm(t) === LIBELLE)) {
     patchCom.territoires_assignes = [...comTerr, LIBELLE]
     if (!commercial.zone_assignee) patchCom.zone_assignee = LIBELLE
@@ -219,16 +221,17 @@ async function main() {
     user = data.user
     console.log(`  ✓ compte ${MERCH.email}`)
   }
+  if (Object.keys(patchCom).length) {
+    const { error } = await supabase.from('profiles').update(patchCom).eq('id', commercial.id)
+    if (error) throw error
+    console.log(`  ✓ profil de ${commercial.nom}`)
+  }
+
+  // Après le passage de KACOU en commercial : le trigger valide commercial_id.
   // La ligne profiles est créée par le trigger handle_new_user.
   const { error: eProfil } = await supabase.from('profiles').update(patch).eq('id', user.id)
   if (eProfil) throw eProfil
   console.log(`  ✓ profil ${MERCH.nom}`)
-
-  if (Object.keys(patchCom).length) {
-    const { error } = await supabase.from('profiles').update(patchCom).eq('id', commercial.id)
-    if (error) throw error
-    console.log(`  ✓ périmètre de ${commercial.nom}`)
-  }
 
   const { data: zs, error: eZs } = await supabase.from('zones_secteurs')
     .update({ merchandiser: MERCH.nom, email_merchandiser: MERCH.email })
