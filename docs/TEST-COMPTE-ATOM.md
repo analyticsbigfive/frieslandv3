@@ -9,15 +9,15 @@ Comptez 30 minutes. Logique décrite dans `docs/TOURNEES-ATOM-QUOTAS.md`.
 
 ## 1. Préparer le compte
 
-Sur le poste qui a le `.env` (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
-`SEED_DEFAULT_PASSWORD`) :
+Sur le poste qui a le `.env` (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`) :
 
 ```bash
-node scripts/compte-test-atom.mjs                          # simulation : ce qui sera fait
-node scripts/compte-test-atom.mjs --pregenerer=3 --apply   # compte + règle + 3 jours de tournées
+node scripts/compte-test-atom.mjs                                       # simulation : ce qui sera fait
+node scripts/compte-test-atom.mjs --pregenerer=3 --password=… --apply   # compte + règle + 3 jours de tournées
 ```
 
-Le script crée le compte (mot de passe = `SEED_DEFAULT_PASSWORD`), le marque
+Le script crée le compte (mot de passe = `--password`, ou à défaut
+`SEED_DEFAULT_PASSWORD` du `.env` ; un compte existant garde le sien), le marque
 **Atom**, recopie le périmètre et le portefeuille d'un vrai agent
 (`--source=…`, par défaut attecoubeone@gmail.com) dans une règle **« Test
 Atom »** en mode Quotas, puis crée les tournées. Il ne lui donne pas de

@@ -4,8 +4,9 @@
  * la tournée par quotas sur téléphone sans toucher aux vrais agents.
  *
  * Création (défaut) :
- *   - compte créé s'il manque, mot de passe = SEED_DEFAULT_PASSWORD du .env
- *     (jamais imprimé), sans changement imposé à la connexion ;
+ *   - compte créé s'il manque, mot de passe = --password=… ou, à défaut,
+ *     SEED_DEFAULT_PASSWORD du .env (jamais imprimé), sans changement imposé à
+ *     la connexion ; un compte existant garde son mot de passe ;
  *   - profil : merchandiser, employeur atom, périmètre recopié d'un agent Atom
  *     réel (--source, défaut attecoubeone@), SANS commercial responsable (le
  *     compte n'apparaît dans l'équipe de personne) ;
@@ -23,7 +24,7 @@
  * Simulation par défaut ; --apply pour écrire.
  *
  * Usage :
- *   node scripts/compte-test-atom.mjs [--source=attecoubeone@gmail.com] [--pregenerer=1] [--apply]
+ *   node scripts/compte-test-atom.mjs [--source=attecoubeone@gmail.com] [--pregenerer=1] [--password=…] [--apply]
  *   node scripts/compte-test-atom.mjs --nettoyer [--apply]
  */
 import { createClient } from '@supabase/supabase-js'
@@ -40,6 +41,7 @@ const APPLY = process.argv.includes('--apply')
 const NETTOYER = process.argv.includes('--nettoyer')
 const SOURCE = arg('source', 'attecoubeone@gmail.com').toLowerCase()
 const PREGENERER = Number(arg('pregenerer', 1))
+const PASSWORD = arg('password', process.env.SEED_DEFAULT_PASSWORD)
 
 const QA = { email: 'qa.atom@friesland-test.ci', nom: 'QA Atom' }
 const LABEL = 'Test Atom'
@@ -135,7 +137,11 @@ async function creer() {
 
   let user = await findAuthUser(QA.email)
   console.log(user ? `Compte ${QA.email} : existe, mot de passe inchangé` : `Compte ${QA.email} : création`)
-  if (!user && !process.env.SEED_DEFAULT_PASSWORD) throw new Error('SEED_DEFAULT_PASSWORD requis dans .env pour créer le compte')
+  if (!user && !PASSWORD) {
+    const msg = 'Mot de passe requis pour créer le compte : --password=… ou SEED_DEFAULT_PASSWORD dans .env'
+    if (APPLY) throw new Error(msg)
+    console.log(`  ⚠ ${msg}`)
+  }
 
   const anciennes = user
     ? (await supabase.from('routing_templates').select('id').eq('user_id', user.id)).data || []
@@ -156,7 +162,7 @@ async function creer() {
   if (!user) {
     const { data, error } = await supabase.auth.admin.createUser({
       email: QA.email,
-      password: process.env.SEED_DEFAULT_PASSWORD,
+      password: PASSWORD,
       email_confirm: true,
       user_metadata: { nom: QA.nom, role: 'merchandiser', must_change_password: false },
     })
@@ -214,7 +220,7 @@ async function creer() {
     if (jour) console.log(`  → tournée du ${AUJOURDHUI} : ${await compter('routing_pdv', 'routing_id', jour.id)} PDV`)
     else console.log(`  → pas de tournée le ${AUJOURDHUI} (dimanche ?)`)
   }
-  console.log(`\nTerminé. Connexion : ${QA.email} / mot de passe SEED_DEFAULT_PASSWORD du .env`)
+  console.log(`\nTerminé. Connexion : ${QA.email}, avec le mot de passe choisi à la création`)
 }
 
 ;(NETTOYER ? nettoyer() : creer()).catch((e) => {
