@@ -22,7 +22,8 @@
       </UButton>
     </div>
 
-    <ul v-if="actifs.length" class="mt-4 divide-y divide-slate-100 dark:divide-slate-700">
+    <ChargementContenu v-if="!charge" variante="compact" libelle="Recherche des commerciaux en tournée…" class="mt-3" />
+    <ul v-else-if="actifs.length" class="mt-4 divide-y divide-slate-100 dark:divide-slate-700">
       <li v-for="actif in actifs" :key="actif.userId" class="flex items-center justify-between gap-2 py-2">
         <div class="flex min-w-0 items-center gap-2">
           <span class="relative flex h-2.5 w-2.5 shrink-0">
@@ -58,6 +59,9 @@ const supabase = useSupabaseClient()
 
 const actifs = ref<Actif[]>([])
 const hidden = ref(false)
+// Faux jusqu'à la première réponse : « personne en tournée » ne doit pas
+// s'afficher avant.
+const charge = ref(false)
 let timer: ReturnType<typeof setInterval> | null = null
 
 function freshnessLabel(iso: string): string {
@@ -66,6 +70,15 @@ function freshnessLabel(iso: string): string {
 }
 
 async function refresh() {
+  try {
+    await chargerPositions()
+  }
+  finally {
+    charge.value = true
+  }
+}
+
+async function chargerPositions() {
   try {
     const since = new Date(Date.now() - WINDOW_MIN * 60_000).toISOString()
     const { data, error } = await supabase

@@ -13,6 +13,9 @@
       @filter="dashboard.fetchVisites()"
     />
 
+    <ChargementContenu v-if="dashboard.loading.value" libelle="Chargement des visites…" />
+    <template v-else>
+
     <!-- Filtres par élément -->
     <div class="admin-toolbar">
       <p class="mb-3 text-xs font-medium uppercase tracking-wide text-slate-400">Filtrer par élément</p>
@@ -80,6 +83,7 @@
         />
       </div>
     </section>
+    </template>
   </div>
 </template>
 

@@ -84,9 +84,7 @@
 
       <!-- Tournées regroupées par personne : une carte dépliable par merchandiser -->
       <div class="space-y-4">
-        <div v-if="loading" class="text-center py-12">
-          <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-fc-red mx-auto" />
-        </div>
+        <ChargementContenu v-if="loading" libelle="Chargement des tournées…" />
 
         <div v-else-if="routings.length === 0" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-12 text-center">
           <UIcon name="i-heroicons-map" class="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -151,6 +149,31 @@
 
             <!-- Tournées de la personne -->
             <div v-if="personneTourneesOuverte(p.id)" class="border-t border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 px-5 py-4 space-y-3">
+            <div class="flex flex-wrap items-center gap-2">
+              <div class="inline-flex rounded-lg bg-white p-0.5 shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700" role="tablist">
+                <button
+                  v-for="v in [{ k: false, l: 'Tournées', i: 'i-heroicons-list-bullet' }, { k: true, l: 'Calendrier', i: 'i-heroicons-calendar-days' }]"
+                  :key="v.l"
+                  type="button"
+                  role="tab"
+                  :aria-selected="vueCalendrier.has(p.id) === v.k"
+                  class="inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition"
+                  :class="vueCalendrier.has(p.id) === v.k ? 'bg-fc-red text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'"
+                  @click="v.k ? vueCalendrier.add(p.id) : vueCalendrier.delete(p.id)"
+                >
+                  <UIcon :name="v.i" class="h-3.5 w-3.5" />{{ v.l }}
+                </button>
+              </div>
+            </div>
+            <div v-if="vueCalendrier.has(p.id)" class="rounded-lg bg-white p-3 shadow-sm dark:bg-gray-800 sm:p-4">
+              <CalendrierTournees
+                :user-id="p.id"
+                :regles="reglesDe(p.id)"
+                :rafraichir="rafraichirCalendrier"
+                @jour="ouvrirJourCalendrier(p.id, p.user, $event)"
+              />
+            </div>
+            <template v-else>
               <div
                 v-for="routing in p.routings"
                 :key="routing.id"
@@ -187,6 +210,7 @@
                   Voir les PDV du jour et leur statut
                 </button>
               </div>
+            </template>
             </div>
           </div>
         </template>
@@ -227,9 +251,7 @@
         </div>
       </div>
 
-      <div v-if="templateLoading" class="text-center py-12">
-        <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-fc-red mx-auto" />
-      </div>
+      <ChargementContenu v-if="templateLoading || !reglesChargees" libelle="Chargement des règles récurrentes…" />
 
       <div v-else-if="groupedTemplates.length === 0" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-12 text-center">
         <UIcon name="i-heroicons-calendar" class="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -296,6 +318,31 @@
 
           <!-- Règles de la personne -->
           <div v-if="personneReglesOuverte(p.id)" class="border-t border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 px-5 py-4 space-y-4">
+            <div class="flex flex-wrap items-center gap-2">
+              <div class="inline-flex rounded-lg bg-white p-0.5 shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700" role="tablist">
+                <button
+                  v-for="v in [{ k: false, l: 'Règles', i: 'i-heroicons-list-bullet' }, { k: true, l: 'Calendrier', i: 'i-heroicons-calendar-days' }]"
+                  :key="v.l"
+                  type="button"
+                  role="tab"
+                  :aria-selected="vueCalendrier.has(p.id) === v.k"
+                  class="inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition"
+                  :class="vueCalendrier.has(p.id) === v.k ? 'bg-fc-red text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'"
+                  @click="v.k ? vueCalendrier.add(p.id) : vueCalendrier.delete(p.id)"
+                >
+                  <UIcon :name="v.i" class="h-3.5 w-3.5" />{{ v.l }}
+                </button>
+              </div>
+            </div>
+            <div v-if="vueCalendrier.has(p.id)" class="rounded-lg bg-white p-3 shadow-sm dark:bg-gray-800 sm:p-4">
+              <CalendrierTournees
+                :user-id="p.id"
+                :regles="reglesDe(p.id)"
+                :rafraichir="rafraichirCalendrier"
+                @jour="ouvrirJourCalendrier(p.id, p.user, $event)"
+              />
+            </div>
+            <template v-else>
             <div
               v-for="tpl in p.regles"
               :key="tpl.id"
@@ -408,7 +455,8 @@
                 <p v-if="tpl.notes" class="ml-auto text-xs text-gray-400">📝 {{ tpl.notes }}</p>
               </div>
             </div>
-          </div>
+            </template>
+            </div>
         </div>
       </div>
     </template>
@@ -1321,7 +1369,9 @@ const tabs = [
 const activeTab = ref('routings')
 
 // ---- Shared state ----
-const loading = ref(false)
+// true d'emblée : sans ça, « Aucun routing trouvé » s'affichait le temps du
+// premier chargement.
+const loading = ref(true)
 const creating = ref(false)
 const users = ref<any[]>([])
 const pdvList = ref<any[]>([])
@@ -1981,10 +2031,12 @@ async function chargerEtapesJour() {
   }
 }
 
-function ouvrirJour(userId: string, user: Profile | null, date: string, regle: RoutingTemplate | null = null) {
+// `routing` fourni par le calendrier, qui couvre n'importe quel mois ; sinon
+// lu dans la fenêtre des 4 semaines du bandeau.
+function ouvrirJour(userId: string, user: Profile | null, date: string, regle: RoutingTemplate | null = null, routing?: Routing | null) {
   Object.assign(jourModal, {
     ouvert: true, date, userId, user, regle, filtre: 'tous', etapes: [],
-    routing: tourneesParJour.value.get(userId)?.get(date) || null,
+    routing: routing !== undefined ? routing : (tourneesParJour.value.get(userId)?.get(date) || null),
   })
   void chargerEtapesJour()
 }
@@ -2001,9 +2053,9 @@ async function genererJour() {
   jourModal.generation = true
   try {
     await routingStore.materialiserPeriode(jourModal.userId, jourModal.date, jourModal.date)
-    tourneesParJour.value.delete(jourModal.userId)
-    await chargerJoursPersonne(jourModal.userId)
-    jourModal.routing = tourneesParJour.value.get(jourModal.userId)?.get(jourModal.date) || null
+    // Lecture directe du jour : il peut être hors de la fenêtre du bandeau (calendrier).
+    const [genere] = await routingStore.fetchRoutings({ userId: jourModal.userId, dateFrom: jourModal.date, dateTo: jourModal.date })
+    jourModal.routing = genere || null
     if (jourModal.routing) await chargerEtapesJour()
     else toast.add({ title: 'Aucune tournée générée', description: 'Aucun PDV à visiter ce jour : quotas déjà couverts dans le mois, ou exceptions.', color: 'amber' })
     loadRoutings()
@@ -2021,6 +2073,17 @@ function modifierTourneeDuJour() {
   const r = jourModal.routing
   jourModal.ouvert = false
   void openEditRouting(r)
+}
+
+// ---- Vue calendrier par personne ----
+const vueCalendrier = ref(new Set<string>())
+// Incrémenté à chaque rechargement des tournées : les calendriers ouverts se rechargent.
+const rafraichirCalendrier = ref(0)
+function reglesDe(userId: string) {
+  return groupedTemplates.value.filter(t => t.user_id === userId)
+}
+function ouvrirJourCalendrier(userId: string, user: Profile | null, j: { date: string; routing: Routing | null; regle: RoutingTemplate | null }) {
+  ouvrirJour(userId, user, j.date, j.regle, j.routing)
 }
 
 // ---- Popups d'affectation des PDV d'une règle ----
@@ -2195,19 +2258,35 @@ async function moveTemplatePDV(tpl: RoutingTemplate, idx: number, dir: number) {
 // ---- Load functions ----
 async function loadRoutings() {
   loading.value = true
-  // Les compteurs par jour des cartes Règles se rechargent avec les tournées.
+  // Les compteurs par jour des cartes Règles et les calendriers se rechargent avec les tournées.
   tourneesParJour.value = new Map()
-  routings.value = await routingStore.fetchRoutings({
-    dateFrom: filters.dateFrom || undefined,
-    dateTo: filters.dateTo || undefined,
-    userId: filters.userId || undefined,
-    status: filters.status || undefined,
-  })
-  loading.value = false
+  rafraichirCalendrier.value++
+  try {
+    routings.value = await routingStore.fetchRoutings({
+      dateFrom: filters.dateFrom || undefined,
+      dateTo: filters.dateTo || undefined,
+      userId: filters.userId || undefined,
+      status: filters.status || undefined,
+    })
+  }
+  catch (err: any) {
+    toast.add({ title: 'Erreur de chargement des tournées', description: err.message, color: 'red' })
+  }
+  finally {
+    loading.value = false
+  }
 }
 
+// Faux tant que le premier chargement des règles n'est pas fini : l'état
+// « Aucune règle récurrente » ne doit pas s'afficher avant.
+const reglesChargees = ref(false)
 async function loadTemplates() {
-  await routingStore.fetchTemplates(templateFilterUser.value || undefined)
+  try {
+    await routingStore.fetchTemplates(templateFilterUser.value || undefined)
+  }
+  finally {
+    reglesChargees.value = true
+  }
 }
 
 // ---- Create / Edit routing ----
@@ -2370,6 +2449,11 @@ async function handleGenerate() {
 
 // ---- Init ----
 onMounted(async () => {
+  // Tournées et règles n'attendent pas les ~25 000 PDV : ceux-ci ne servent
+  // qu'aux sélecteurs des popups.
+  loadRoutings()
+  loadTemplates()
+
   const { fetchUsers: fetchCachedUsers } = useUsersCache()
   const [cachedUsers, pdvResult] = await Promise.all([
     fetchCachedUsers(),
@@ -2383,8 +2467,5 @@ onMounted(async () => {
   ])
   users.value = cachedUsers.filter(u => u.is_active !== false)
   pdvList.value = pdvResult
-
-  loadRoutings()
-  loadTemplates()
 })
 </script>

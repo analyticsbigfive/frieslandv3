@@ -205,7 +205,10 @@
                   <td class="py-2 text-right tabular-nums text-amber-600">{{ fmtPct(sku.presence_pct) }}</td>
                   <td class="py-2 text-right tabular-nums text-emerald-600">{{ fmtPct(sku.disponibilite_pct) }}</td>
                 </tr>
-                <tr v-if="!presenceSkus.length">
+                <tr v-if="vague2EnCours && !presenceSkus.length">
+                  <td colspan="3" class="py-4"><ChargementContenu variante="compact" libelle="Chargement des relevés SKU…" /></td>
+                </tr>
+                <tr v-else-if="!presenceSkus.length">
                   <td colspan="3" class="py-4 text-center text-sm text-slate-400">Aucun relevé sur cette période.</td>
                 </tr>
               </tbody>
@@ -221,7 +224,14 @@
           <span class="text-xs text-slate-400">{{ periodeLabel }}</span>
         </div>
 
-        <div v-if="!couvertureCommerciaux.length" class="px-5 py-10 text-center text-sm text-slate-400">
+        <ChargementContenu
+          v-if="vague2EnCours && !couvertureCommerciaux.length"
+          variante="lignes"
+          :nombre="5"
+          libelle="Chargement des visites par merchandiser…"
+          class="px-5 py-4"
+        />
+        <div v-else-if="!couvertureCommerciaux.length" class="px-5 py-10 text-center text-sm text-slate-400">
           Aucune visite sur cette période et ce périmètre.
         </div>
 
@@ -535,7 +545,10 @@
                 <td class="px-4 py-2 text-center">{{ fmtRatio(t.visi_min) }}</td>
                 <td class="px-4 py-2 text-center text-gray-400">{{ t.promo_min == null ? 'Non évaluée' : fmtRatio(t.promo_min) }}</td>
               </tr>
-              <tr v-if="!tiers.length">
+              <tr v-if="!refsChargees && !tiers.length">
+                <td colspan="5" class="px-4 py-4"><ChargementContenu variante="compact" libelle="Chargement des seuils…" /></td>
+              </tr>
+              <tr v-else-if="!tiers.length">
                 <td colspan="5" class="px-4 py-6 text-center text-xs text-gray-400">Seuils indisponibles — lance les migrations Big Five.</td>
               </tr>
             </tbody>
@@ -592,6 +605,10 @@ const {
 } = usePerfectStore()
 
 const loading = ref(true)
+// Seconde vague (listes) et référentiels : leurs états vides attendent la fin
+// du chargement au lieu de s'afficher pendant.
+const vague2EnCours = ref(true)
+const refsChargees = ref(false)
 const global = ref<PerfectStoreDashboardKpi | null>(null)
 // Cause de l'absence de KPI : base saturée (504 / 57014) ou vraie erreur.
 const dashboardTimeout = computed(() => isTimeoutError(dashboardError.value))
@@ -734,15 +751,21 @@ async function applyDashboardFilters() {
   parType.value = t
   loading.value = false
 
-  const [cc, skus, mq] = await Promise.all([
-    fetchCouvertureParCommercial(f),
-    fetchPresenceSkus(f),
-    fetchPerfectStoreManques(f),
-    loadPerfectStoreList(1),
-  ])
-  couvertureCommerciaux.value = cc
-  presenceSkus.value = skus
-  manques.value = mq
+  vague2EnCours.value = true
+  try {
+    const [cc, skus, mq] = await Promise.all([
+      fetchCouvertureParCommercial(f),
+      fetchPresenceSkus(f),
+      fetchPerfectStoreManques(f),
+      loadPerfectStoreList(1),
+    ])
+    couvertureCommerciaux.value = cc
+    presenceSkus.value = skus
+    manques.value = mq
+  }
+  finally {
+    vague2EnCours.value = false
+  }
   // Listes « PDV par niveau » : rechargées page 1 sur le nouveau périmètre.
   // Accordéons par type : cache vidé, seuls les panneaux ouverts sont rechargés.
   const openList = [...openTypes]
@@ -976,13 +999,23 @@ onMounted(async () => {
   void fetchReferentiels()
   // Les seuils de niveau doivent être chargés avant applyDashboardFilters, qui
   // itère sur `tiers` pour peupler les listes « PDV par niveau ».
-  await fetchRefs()
+  try {
+    await fetchRefs()
+  }
+  catch (err) {
+    // Sans référentiels, le tableau « Seuils » l'indique ; le reste se charge.
+    console.error('Tableau de bord : référentiels indisponibles', err)
+  }
+  finally {
+    refsChargees.value = true
+  }
   try {
     // Un seul chemin de chargement, filtres + période compris (manques inclus) :
     // les vues globales sans paramètre ne savent pas filtrer par date.
     await applyDashboardFilters()
   } finally {
     loading.value = false
+    vague2EnCours.value = false
   }
 })
 </script>

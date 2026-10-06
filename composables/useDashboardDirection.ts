@@ -29,7 +29,10 @@ export function useDashboardDirection() {
   const toast = useToast()
 
   const visites = ref<VisiteWithPDV[]>([])
-  const loading = ref(false)
+  // true d'emblée : toutes les pages appellent fetchVisites au montage, et
+  // les états vides (« Aucune visite… », KPI à zéro) ne doivent pas
+  // s'afficher avant la fin du premier chargement.
+  const loading = ref(true)
   const error = ref<string | null>(null)
   const totalVisites = computed(() => visites.value.length)
 

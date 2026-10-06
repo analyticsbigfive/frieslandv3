@@ -182,9 +182,7 @@
         </table>
       </div>
 
-      <div v-if="loading" class="p-8 text-center">
-        <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-fc-blue mx-auto" />
-      </div>
+      <ChargementContenu v-if="loading" variante="lignes" :nombre="6" libelle="Chargement des points de vente…" class="p-5" />
 
       <div v-if="!loading && !pdvList.length" class="p-12 text-center text-gray-400">
         <MapPin class="w-12 h-12 mx-auto mb-3 opacity-50" />
@@ -486,7 +484,13 @@ const supabase = useSupabaseClient()
 
 const pdvList = computed(() => pdvStore.pdvList)
 const total = computed(() => pdvStore.total)
-const loading = computed(() => pdvStore.loading)
+// Le drapeau du store vaut false avant le premier fetch : sans
+// premierChargement, l'état vide s'affichait pendant le chargement initial.
+const premierChargement = ref(true)
+const loading = computed(() => pdvStore.loading || premierChargement.value)
+watch(() => pdvStore.loading, (enCours, avant) => {
+  if (avant && !enCours) premierChargement.value = false
+})
 
 const searchQuery = ref('')
 const selectedZone = ref('')

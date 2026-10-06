@@ -11,8 +11,12 @@
 const PAGE = 1000
 const LOT = 6
 
+//
+// `onProgres(n)` (facultatif) reçoit le nombre de lignes déjà reçues après
+// chaque lot : de quoi afficher « 2 000 PDV reçus… » pendant un long chargement.
 export async function fetchAllRows<T>(
   page: (from: number, to: number) => PromiseLike<{ data: T[] | null, error: any }>,
+  onProgres?: (nbLignes: number) => void,
 ): Promise<T[]> {
   const rows: T[] = []
   for (let debut = 0; ; debut += PAGE * LOT) {
@@ -22,7 +26,11 @@ export async function fetchAllRows<T>(
     for (const { data, error } of reponses) {
       if (error) throw error
       rows.push(...(data || []))
-      if (!data || data.length < PAGE) return rows
+      if (!data || data.length < PAGE) {
+        onProgres?.(rows.length)
+        return rows
+      }
     }
+    onProgres?.(rows.length)
   }
 }

@@ -51,7 +51,7 @@
         <p class="mt-1.5 text-[11px] text-gray-400">{{ reps.filter(r => r.pointCount > 0).length }} avec GPS · {{ reps.filter(r => r.live).length }} en tournée</p>
       </div>
 
-      <div v-if="loading" class="p-4 text-sm text-gray-400">Chargement…</div>
+      <ChargementContenu v-if="loading" variante="lignes" :nombre="6" libelle="Chargement des commerciaux…" class="p-4" />
       <ul v-else class="flex-1 divide-y divide-gray-100 overflow-auto dark:divide-gray-700">
         <li
           v-for="rep in repsAffiches"
@@ -206,6 +206,13 @@
           />
         </div>
 
+        <!-- Chargement des positions : la carte seule ne montre rien de l'attente. -->
+        <div v-if="loading" class="pointer-events-none absolute inset-0 z-[500] flex items-center justify-center p-4">
+          <div class="rounded-xl border border-gray-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur dark:border-gray-600 dark:bg-gray-800/95">
+            <ChargementContenu variante="compact" libelle="Chargement des positions GPS…" />
+          </div>
+        </div>
+
         <!-- Sans données, la carte reste figée sur la vue précédente : on le dit explicitement. -->
         <div
           v-if="emptyState"
@@ -300,7 +307,9 @@ const commerciaux = ref<{ id: string, nom: string | null, email: string | null }
 const visitCountByUser = ref<Record<string, number>>({})
 const selectedDate = ref(new Date().toISOString().slice(0, 10))
 const selectedUser = ref('')
-const loading = ref(false)
+// true d'emblée : la carte et la liste ne doivent pas annoncer « Aucun
+// commercial » / « Aucune tournée » avant la fin du premier chargement.
+const loading = ref(true)
 
 const cursorTime = ref<number | null>(null)
 const playing = ref(false)
@@ -956,7 +965,10 @@ function stopPlay() {
 }
 
 async function initMap() {
-  if (!mapContainer.value || !import.meta.client) return
+  if (!mapContainer.value || !import.meta.client) {
+    loading.value = false
+    return
+  }
 
   const L = await import('leaflet')
   await import('leaflet/dist/leaflet.css')
@@ -971,7 +983,13 @@ async function initMap() {
   trailGroup = L.featureGroup().addTo(map)
   searchGroup = L.layerGroup().addTo(map)
 
-  await Promise.all([loadCommerciaux(), loadPdv(), loadActivityDates()])
+  try {
+    await Promise.all([loadCommerciaux(), loadPdv(), loadActivityDates()])
+  }
+  catch (err) {
+    console.error('Trajets : chargement initial incomplet', err)
+  }
+  // loadPositions remet loading à false, même en cas d'erreur.
   await loadPositions()
 }
 

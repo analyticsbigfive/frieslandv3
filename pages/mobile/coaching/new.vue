@@ -49,7 +49,15 @@
           <div class="space-y-4 rounded-xl bg-white p-4 shadow-sm dark:bg-gray-800">
             <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100">I_3 · Point de vente</h3>
             <UFormGroup label="PDV" required>
-              <PDVSelector v-model="form.pdv_id" :pdv-list="pdvList" :loading="pdvLoading" />
+              <PDVSelector v-model="form.pdv_id" :pdv-list="pdvList" :loading="pdvLoading" :progression="pdvRecus" />
+              <ChargementContenu
+                v-if="pdvLoading"
+                variante="barre"
+                libelle="Chargement de vos PDV…"
+                :progression="pdvRecus || null"
+                unite="PDV"
+                class="mt-2"
+              />
             </UFormGroup>
             <UFormGroup label="Route du jour">
               <div class="flex flex-wrap gap-2">
@@ -204,6 +212,7 @@ function choisirFamillePdv(famille: string) {
 }
 const pdvList = ref<any[]>([])
 const pdvLoading = ref(true)
+const pdvRecus = ref(0)
 
 const stepStates = computed(() => ({
   identification: form.distributeur_nom && form.engin_code ? 'complete' : 'partial',
@@ -327,7 +336,7 @@ onMounted(async () => {
     superviseurs.value.unshift({ id: user.value.id, nom: authStore.profile?.nom || 'Moi' })
   }
   try {
-    pdvList.value = await pdvStore.fetchScopedPDV(authStore.profile)
+    pdvList.value = await pdvStore.fetchScopedPDV(authStore.profile, false, (n) => { pdvRecus.value = n })
   }
   finally {
     pdvLoading.value = false

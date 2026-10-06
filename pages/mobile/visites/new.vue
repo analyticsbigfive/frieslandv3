@@ -47,13 +47,55 @@
             <USelectMenu
               v-model="form.pdv_id"
               :options="pdvOptions"
-              placeholder="Sélectionner un PDV"
+              :loading="pdvLoading"
+              :placeholder="pdvLoading ? 'Chargement des PDV…' : 'Sélectionner un PDV'"
               searchable
               searchable-placeholder="Rechercher..."
               option-attribute="label"
               value-attribute="value"
               size="lg"
-            />
+            >
+              <!-- Liste ouverte avant l'arrivée des PDV : squelette, pas « vide ». -->
+              <template #empty>
+                <ChargementContenu
+                  v-if="pdvLoading"
+                  variante="lignes"
+                  :nombre="4"
+                  libelle="Chargement de vos PDV…"
+                  :progression="pdvRecus || null"
+                  unite="PDV"
+                  class="px-1 py-1 text-left"
+                />
+                <span v-else>Aucun PDV dans votre périmètre.</span>
+              </template>
+              <template #option-empty="{ query }">
+                <span v-if="pdvLoading">Recherche dans les {{ pdvRecus.toLocaleString('fr-FR') }} PDV déjà reçus… la liste continue de se charger.</span>
+                <span v-else>Aucun PDV pour « {{ query }} ».</span>
+              </template>
+            </USelectMenu>
+            <Transition
+              leave-active-class="transition-opacity duration-500"
+              leave-to-class="opacity-0"
+            >
+              <ChargementContenu
+                v-if="pdvLoading"
+                variante="barre"
+                libelle="Chargement de vos PDV…"
+                :progression="pdvRecus || null"
+                unite="PDV"
+                class="mt-2"
+              />
+            </Transition>
+            <div
+              v-if="pdvErreur"
+              class="mt-2 flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300"
+              role="alert"
+            >
+              <span>Impossible de charger les PDV. {{ pdvErreur }}</span>
+              <UButton size="xs" color="red" variant="soft" icon="i-heroicons-arrow-path" @click="chargerListePdv">
+                Réessayer
+              </UButton>
+            </div>
             <!-- Canal du PDV sélectionné (GT / MT) -->
             <div v-if="selectedPDV" class="mt-2 flex items-center gap-2">
               <span
@@ -66,8 +108,8 @@
             </div>
             <div class="mt-2 flex items-center justify-between gap-2">
               <p class="text-xs text-gray-400">Les suggestions ne remplacent jamais votre choix.</p>
-              <button type="button" class="shrink-0 text-xs font-semibold text-fc-red underline underline-offset-2 disabled:opacity-50" :disabled="nearestPdvLoading" @click="suggestNearestPdv">
-                {{ nearestPdvLoading ? 'Recherche GPS…' : 'PDV le plus proche' }}
+              <button type="button" class="shrink-0 text-xs font-semibold text-fc-red underline underline-offset-2 disabled:opacity-50" :disabled="nearestPdvLoading || pdvLoading" @click="suggestNearestPdv">
+                {{ pdvLoading ? 'Chargement des PDV…' : nearestPdvLoading ? 'Recherche GPS…' : 'PDV le plus proche' }}
               </button>
             </div>
             <p v-if="formError" class="mt-2 text-sm font-medium text-red-600" role="alert">
@@ -641,6 +683,7 @@ import type { PDV, VisiteData, VisiteProduits, VisiteConcurrence, VisiteActions 
 import { getSkus, quantityToLegacyStatus, categoryPresent } from '~/utils/products'
 import { statutMarqueDerive } from '~/utils/concurrence'
 import { CATEGORIES_RELEVE, categorieRenseignee } from '~/utils/visiteCompletude'
+import { describeSupabaseError } from '~/utils/supabaseErrors'
 import type { WizardStep } from '~/components/FormWizard.vue'
 
 // Helper types: exclude 'present', 'prix_respectes' & 'quantites' so indexed access yields ProductStatus only
@@ -928,6 +971,26 @@ function clearDraft() {
 
 // PDV list (filtered by user's zone/secteurs)
 const pdvList = ref<any[]>([])
+// Chargement de la liste déroulante : un périmètre compte jusqu'à plusieurs
+// milliers de PDV, lus par pages ; sans indicateur, la liste semblait vide.
+const pdvLoading = ref(true)
+const pdvRecus = ref(0)
+const pdvErreur = ref('')
+
+async function chargerListePdv() {
+  pdvLoading.value = true
+  pdvErreur.value = ''
+  pdvRecus.value = 0
+  try {
+    pdvList.value = await pdvStore.fetchScopedPDV(authStore.profile, false, (n) => { pdvRecus.value = n })
+  }
+  catch (err: any) {
+    pdvErreur.value = describeSupabaseError(err, 'Vérifiez la connexion puis réessayez.')
+  }
+  finally {
+    pdvLoading.value = false
+  }
+}
 const filteredPdvList = computed(() => {
   const profile = authStore.profile
   if (!profile || profile.role === 'admin' || profile.role === 'superviseur') {
@@ -1498,7 +1561,7 @@ onMounted(async () => {
   void fetchTypePdvLabels()
   void chargerMarquesConcurrence()
   void chargerCategoriesReleve()
-  pdvList.value = await pdvStore.fetchScopedPDV(authStore.profile)
+  await chargerListePdv()
   restoreDraft()
 
   // Pre-select PDV from routing context
