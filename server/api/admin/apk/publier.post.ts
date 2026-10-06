@@ -6,7 +6,7 @@
 //      boucle sur l'écran de mise à jour ;
 //   2. remplace le lien stable friesland-bonnet-rouge-latest.apk ;
 //   3. enregistre la version disponible (bandeau « nouvelle version » dans
-//      l'app 1.0.11+) et, si demandé, la rend obligatoire (version minimale).
+//      l'app 1.0.12+) et, si demandé, la rend obligatoire (version minimale).
 import { lireManifesteApk, nomFichierApk, NOM_APK_LATEST, PACKAGE_APP } from '~/utils/apkManifest'
 
 export default defineEventHandler(async (event) => {

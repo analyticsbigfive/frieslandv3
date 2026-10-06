@@ -178,7 +178,7 @@ async function publier() {
     etape.value = `Publiée : ${res.url}`
     toast.add({
       title: `Version ${m.versionName} publiée`,
-      description: obligatoire.value ? 'Elle est obligatoire : les anciennes versions sont bloquées.' : 'Les téléphones 1.0.11+ proposent la mise à jour sans bloquer.',
+      description: obligatoire.value ? 'Elle est obligatoire : les anciennes versions sont bloquées.' : 'Les téléphones 1.0.12+ proposent la mise à jour sans bloquer.',
       color: 'green',
     })
     fichier.value = null

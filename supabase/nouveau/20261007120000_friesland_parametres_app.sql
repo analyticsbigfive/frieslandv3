@@ -5,7 +5,7 @@
 -- changement demandait une nouvelle version de l'app), dans le SQL (30 m dans
 -- geolocaliser_pdv, 420 dans v_programme_atom) ou dans le code (objectif de
 -- 10 visites par jour). Désormais une table, éditable dans Référentiels ›
--- Application mobile › Paramètres terrain, lue par l'app 1.0.11 au lancement
+-- Application mobile › Paramètres terrain, lue par l'app 1.0.12 au lancement
 -- et au retour au premier plan (cache hors ligne).
 --
 -- Valeurs initiales = celles des téléphones en 1.0.10 (le .env du build fixait
@@ -249,7 +249,7 @@ grant select on public.v_programme_atom to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Version de l'app : dernière version publiée (Référentiels › Publier une
--- version). L'app 1.0.11+ propose la mise à jour sans bloquer tant que la
+-- version). L'app 1.0.12+ propose la mise à jour sans bloquer tant que la
 -- version minimale (version_code_min) n'est pas relevée.
 -- ---------------------------------------------------------------------------
 alter table public.version_app add column if not exists version_code_dispo integer;

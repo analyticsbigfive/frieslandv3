@@ -2,7 +2,7 @@
 /**
  * Sous-zones SSF et planning hebdomadaire des merchandisers Atom.
  *
- * Dérive des visites qui portent un SSF (export Atom importé, app 1.0.11) :
+ * Dérive des visites qui portent un SSF (export Atom importé, app 1.0.12) :
  *   - la sous-zone de chaque SSF (quartiers) → table ssf_quartier ;
  *   - pour chaque merchandiser Atom actif, une règle de tournée « SSF — <nom> »
  *     par SSF principal, sur les jours où ce SSF domine ses visites, avec les

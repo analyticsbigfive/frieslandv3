@@ -1,7 +1,7 @@
 /**
  * Sous-zones SSF et planning hebdomadaire des merchandisers Atom.
  *
- * À partir des visites qui portent un SSF (export Atom importé, puis app 1.0.11) :
+ * À partir des visites qui portent un SSF (export Atom importé, puis app 1.0.12) :
  *   A. sous-zone de chaque SSF = quartiers (pdv.zone + pdv.quartier) où il a
  *      accompagné des visites, au-dessus de seuils ;
  *   B. pour chaque merchandiser Atom actif, une règle de tournée par SSF
