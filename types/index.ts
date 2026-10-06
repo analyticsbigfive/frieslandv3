@@ -602,7 +602,7 @@ export interface CouvertureLigne {
 // ---- Offline Queue ----
 export interface OfflineQueueItem {
   id: string
-  type: 'visite' | 'pdv' | 'image' | 'positions_batch' | 'field_coaching'
+  type: 'visite' | 'pdv' | 'image' | 'positions_batch' | 'field_coaching' | 'routing_pdv'
   data: any
   timestamp: number
   retries: number

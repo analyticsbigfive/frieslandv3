@@ -42,3 +42,12 @@ export function describeSupabaseError(err: AnyError, fallback = 'Erreur inattend
   if (typeof err === 'string') return err || fallback
   return String(err?.message || fallback)
 }
+
+/**
+ * Vrai si l'appel n'a pas atteint le serveur (réseau coupé) : supabase-js
+ * renvoie alors une erreur à message « Failed to fetch » (Chrome/WebView),
+ * « Load failed » (Safari) ou « Network request failed », sans code HTTP.
+ */
+export function estErreurReseau(error: any): boolean {
+  return !error?.code && /failed to fetch|load failed|network ?request failed|networkerror/i.test(String(error?.message || ''))
+}

@@ -205,6 +205,18 @@ export function useOfflineSync() {
             }
           }
         }
+        else if (item.type === 'routing_pdv') {
+          // Statut d'une étape de tournée changé hors ligne (démarrée, faite,
+          // passée). Mis en file APRÈS la visite qu'il référence (visite_id) :
+          // la file est rejouée dans l'ordre, la visite arrive d'abord.
+          const { error } = await (supabase.from('routing_pdv') as any)
+            .update(item.data.update)
+            .eq('id', item.data.id)
+
+          if (error) {
+            throw error
+          }
+        }
         else if (item.type === 'positions_batch') {
           // Ids générés côté client : le rejeu d'un batch déjà reçu est
           // ignoré (on conflict do nothing), le renvoi est donc sans risque.

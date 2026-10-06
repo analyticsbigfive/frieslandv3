@@ -61,12 +61,13 @@ puis le compte est désactivé. Les vrais agents ne sont pas touchés.
 
 ## 4. APK de test (téléphone branché à l'ordinateur)
 
-L'app 1.0.10 n'a pas changé pour Atom : **l'APK 1.0.10 déjà publiée suffit**
-pour ce test.
+Utiliser l'**APK 1.0.11** : badge du canal dans la tournée, écrans « Mes
+tournées » et « Mes objectifs » (Plus › Autres écrans), étape de tournée mise
+en file hors ligne (ligne 8 du scénario).
 
 ```bash
 adb devices                                                        # le téléphone doit être listé « device »
-adb install -r dist-apk/friesland-bonnet-rouge-1.0.10-release.apk
+adb install -r dist-apk/friesland-bonnet-rouge-1.0.11-release.apk
 ```
 
 Pour tester du code modifié, construire un APK **debug** (prérequis : JDK 21,

@@ -245,14 +245,17 @@ const pullDistance = ref(0)
 const pulling = ref(false)
 const startY = ref(0)
 
-const dailyTarget = 10
+// Objectif du jour = nombre de PDV de la tournée du jour (20 en semaine pour
+// un agent Atom), chargée par TourneeCard ; 10 sans tournée.
+const routingStore = useRoutingStore()
+const dailyTarget = computed(() => routingStore.totalCount || 10)
 
 const todayCount = computed(() => {
   const today = new Date().toISOString().slice(0, 10)
   return visites.value.filter(v => v.date_visite?.startsWith(today)).length
 })
 
-const progressPercent = computed(() => (todayCount.value / dailyTarget) * 100)
+const progressPercent = computed(() => (todayCount.value / dailyTarget.value) * 100)
 
 const activeFilterCount = computed(() => Number(Boolean(dateFilter.value)))
 

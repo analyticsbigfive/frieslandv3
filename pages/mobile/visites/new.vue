@@ -683,7 +683,7 @@ import type { PDV, VisiteData, VisiteProduits, VisiteConcurrence, VisiteActions 
 import { getSkus, quantityToLegacyStatus, categoryPresent } from '~/utils/products'
 import { statutMarqueDerive } from '~/utils/concurrence'
 import { CATEGORIES_RELEVE, categorieRenseignee } from '~/utils/visiteCompletude'
-import { describeSupabaseError } from '~/utils/supabaseErrors'
+import { describeSupabaseError, estErreurReseau } from '~/utils/supabaseErrors'
 import type { WizardStep } from '~/components/FormWizard.vue'
 
 // Helper types: exclude 'present', 'prix_respectes' & 'quantites' so indexed access yields ProductStatus only
@@ -1407,13 +1407,6 @@ async function forceSubmit() {
 
 function onSaveComplete() {
   router.push('/mobile')
-}
-
-// supabase-js renvoie les pannes réseau comme une erreur à message
-// « Failed to fetch » (Chrome/WebView), « Load failed » (Safari) ou
-// « Network request failed », sans code HTTP.
-function estErreurReseau(error: any): boolean {
-  return !error?.code && /failed to fetch|load failed|network ?request failed|networkerror/i.test(String(error?.message || ''))
 }
 
 async function submitVisite(
