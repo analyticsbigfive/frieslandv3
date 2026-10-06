@@ -69,6 +69,7 @@ export const adminSectionTabs: Record<AdminSection, AdminSectionTab[]> = {
     { label: 'Référentiels', to: '/admin/referentiels', icon: 'i-heroicons-circle-stack' },
     { label: 'Utilisateurs', to: '/admin/users', icon: 'i-heroicons-users' },
     { label: 'Équipes', to: '/admin/users/equipes', icon: 'i-heroicons-user-group' },
+    { label: 'Versions de l\'app', to: '/admin/users/versions', icon: 'i-heroicons-device-phone-mobile' },
     { label: 'Permissions', to: '/admin/permissions', icon: 'i-heroicons-shield-check' },
     { label: 'Import / Export', to: '/admin/import-export', icon: 'i-heroicons-arrow-up-tray' },
   ],
