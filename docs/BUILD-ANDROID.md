@@ -97,6 +97,12 @@ Dans `android/app/build.gradle` : incrémenter `versionCode` (entier monotone)
 à **chaque** livraison ; aligner `versionName` sur la version de
 `package.json`.
 
+## Publier une mise à jour
+
+Procédure complète (build, vérification, APK direct depuis l'admin, AAB dans la
+Play Console, version obligatoire, retour arrière) :
+[play-store/PUBLIER-MISE-A-JOUR.md](play-store/PUBLIER-MISE-A-JOUR.md).
+
 ## Icônes / splash
 
 Source : `resources/icon.png` (1024×1024). Régénérer après changement :

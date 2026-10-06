@@ -199,3 +199,8 @@ figure.telephone figcaption { font-size: 8pt; color: var(--gris); margin-top: 2m
 
 /* Pied de page imprimé (Chrome ne gère pas @page margin boxes) */
 .pied-fixe { display: none; }
+
+/* Page « Ma semaine » des guides personnalisés Atom (avant le premier chapitre). */
+.semaine { margin: 0 0 6mm; }
+.semaine h2 { display: block; }
+.semaine .muet { color: var(--gris); font-size: 8.5pt; }
