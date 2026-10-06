@@ -73,7 +73,7 @@ export function useUsersCache() {
         const COLONNES_BASE = 'id, nom, email, role, zone_assignee, territoires_assignes, quartiers_assignes, region, telephone, is_active, created_at, updated_at'
         let { data, error } = await supabase
           .from('profiles')
-          .select(`${COLONNES_BASE}, commercial_id`)
+          .select(`${COLONNES_BASE}, commercial_id, employeur`)
           .order('nom')
 
         if (error && /commercial_id/i.test(error.message || '')) {

@@ -61,3 +61,47 @@ describe('couvertureJour', () => {
     expect(couvertureJour([{ ...regle, is_active: false }], '2026-10-06').regles).toHaveLength(0)
   })
 })
+
+describe('semaine du planning d\'équipe', () => {
+  it('lundi de la semaine, y compris un dimanche', async () => {
+    const { lundiDe } = await import('../utils/calendrierTournees')
+    expect(lundiDe('2026-10-06')).toBe('2026-10-05') // mardi
+    expect(lundiDe('2026-10-05')).toBe('2026-10-05') // lundi
+    expect(lundiDe('2026-10-11')).toBe('2026-10-05') // dimanche
+  })
+
+  it('décale de semaine en semaine, à travers les mois', async () => {
+    const { decalerSemaine } = await import('../utils/calendrierTournees')
+    expect(decalerSemaine('2026-10-26', 1)).toBe('2026-11-02')
+    expect(decalerSemaine('2026-10-05', -1)).toBe('2026-09-28')
+  })
+
+  it('lundi → samedi, dimanche seulement sur demande', async () => {
+    const { joursSemaine } = await import('../utils/calendrierTournees')
+    expect(joursSemaine('2026-10-05')).toEqual(['2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09', '2026-10-10'])
+    expect(joursSemaine('2026-10-05', true).at(-1)).toBe('2026-10-11')
+  })
+})
+
+describe('etatJourTournee', () => {
+  const regle = { id: 'r1', user_id: 'u', days_of_week: [1, 2, 3, 4, 5, 6], is_active: true } as any
+  const couvert = { regles: [regle], suspendues: [] }
+  const libre = { regles: [], suspendues: [] }
+  const auj = '2026-10-06'
+
+  it('tournée passée ou du jour : faits / prévus, faite ou incomplète', async () => {
+    const { etatJourTournee } = await import('../utils/calendrierTournees')
+    expect(etatJourTournee({ nb_pdv: 20, nb_faits: 20 }, couvert, '2026-10-05', auj)).toMatchObject({ etat: 'faite', texte: '20/20 faits', progression: 100 })
+    expect(etatJourTournee({ nb_pdv: 20, nb_faits: 5 }, couvert, auj, auj)).toMatchObject({ etat: 'incomplete', progression: 25 })
+  })
+
+  it('tournée à venir, annulée, règle sans tournée, suspension, jour libre', async () => {
+    const { etatJourTournee } = await import('../utils/calendrierTournees')
+    expect(etatJourTournee({ nb_pdv: 15, nb_faits: 0 }, couvert, '2026-10-09', auj)).toMatchObject({ etat: 'planifiee', texte: '15 PDV' })
+    expect(etatJourTournee({ nb_pdv: 15, status: 'cancelled' }, couvert, '2026-10-09', auj).etat).toBe('annulee')
+    expect(etatJourTournee(null, couvert, '2026-10-14', auj)).toMatchObject({ etat: 'a_generer', cliquable: true, regle })
+    expect(etatJourTournee(null, couvert, '2026-10-01', auj).etat).toBe('non_generee')
+    expect(etatJourTournee(null, { regles: [], suspendues: [{ regle, motif: 'Congé' }] }, '2026-10-14', auj)).toMatchObject({ etat: 'suspendue', texte: 'Congé', cliquable: false })
+    expect(etatJourTournee(null, libre, '2026-10-14', auj)).toMatchObject({ etat: 'vide', cliquable: false, regle: null })
+  })
+})
