@@ -189,6 +189,8 @@ export interface RoutingTemplate {
   date_fin?: string | null
   /** perimetre (défaut) ou quota (Atom : grille routing_quota_canal, un PDV par mois). */
   mode?: RoutingTemplateMode
+  /** SSF qui accompagne le merchandiser les jours de la règle (sous-zone : ssf_quartier). */
+  ssf_id?: number | null
   label?: string
   notes?: string
   is_active: boolean
