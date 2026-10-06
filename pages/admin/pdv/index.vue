@@ -395,6 +395,12 @@
                 <UFormGroup label="Adressage" size="md">
                   <UInput v-model="pdvForm.adressage" placeholder="Ex. Rue du Commerce, près du marché" size="md" class="w-full" />
                 </UFormGroup>
+                <UFormGroup label="Code client DMS" size="md" help="customer_code de l’export DMS : sert à rapprocher les imports.">
+                  <UInput v-model="pdvForm.mdm" placeholder="Ex. 150009895" size="md" class="w-full" />
+                </UFormGroup>
+                <UFormGroup label="Rayon de geofence (m)" size="md" help="Distance maximale pour démarrer une visite ici. Vide : rayon par défaut (Paramètres terrain).">
+                  <UInput v-model.number="pdvForm.rayon_geofence" type="number" min="20" max="2000" placeholder="Par défaut" size="md" class="w-full" />
+                </UFormGroup>
                 <UFormGroup label="Latitude" size="md">
                   <UInput v-model="pdvForm.geolocation_lat" type="number" step="any" placeholder="Ex. 5.3472" size="md" class="w-full" />
                 </UFormGroup>
@@ -585,6 +591,8 @@ const pdvForm = ref({
   quartier_nom: '',
   distributor_name: '',
   objectif_perfect_store: '',
+  mdm: '',
+  rayon_geofence: null as number | null,
 })
 
 // Options depuis les facettes (tout le parc scopé), pas la page paginée courante.
@@ -754,6 +762,8 @@ async function editPDV(pdv: PDV) {
   pdvForm.value.quartier_nom = ''
   pdvForm.value.distributor_name = ''
   pdvForm.value.objectif_perfect_store = ''
+  pdvForm.value.mdm = ''
+  pdvForm.value.rayon_geofence = null
   showCreate.value = true
   try {
     const full: any = await pdvStore.fetchPDVById(pdv.pdv_id)
@@ -762,6 +772,8 @@ async function editPDV(pdv: PDV) {
       pdvForm.value.area_code = full.area_code || ''
       pdvForm.value.distributor_name = full.distributor_name || ''
       pdvForm.value.objectif_perfect_store = full.objectif_perfect_store || ''
+      pdvForm.value.mdm = full.mdm || ''
+      pdvForm.value.rayon_geofence = full.rayon_geofence ?? null
       hydrateGeoCascade()
       // Préselection quartier si présent dans les options de l'area (byte-exact).
       pdvForm.value.quartier_nom = quartierCascadeOptions.value.some(o => o.value === full.quartier)
@@ -802,6 +814,8 @@ function openCreatePDV() {
     quartier_nom: '',
     distributor_name: '',
     objectif_perfect_store: '',
+    mdm: '',
+    rayon_geofence: null,
   }
   showCreate.value = true
 }
@@ -826,6 +840,11 @@ async function handleSavePDV() {
     payload.area_code = payload.area_code || null
     payload.distributor_name = payload.distributor_name || null
     payload.objectif_perfect_store = payload.objectif_perfect_store || null
+    payload.mdm = String(payload.mdm || '').trim() || null
+    // Rayon vide : rayon par défaut des Paramètres terrain (création : défaut de la base).
+    const rayon = payload.rayon_geofence === '' || payload.rayon_geofence == null ? null : Number(payload.rayon_geofence)
+    if (rayon == null && !editingPDV.value) delete payload.rayon_geofence
+    else payload.rayon_geofence = rayon
 
     if (editingPDV.value) {
       await pdvStore.updatePDV(editingPDV.value.pdv_id, payload)

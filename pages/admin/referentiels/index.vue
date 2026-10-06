@@ -8,7 +8,7 @@
           Géographie, distribution, points de vente, produits et paramètres Perfect Store <span class="text-xs">(Système B)</span>.
         </p>
       </div>
-      <UButton v-if="!activeDef.lectureSeule" icon="i-heroicons-plus" class="bg-fc-blue" @click="openCreate">Ajouter — {{ activeDef.label }}</UButton>
+      <UButton v-if="!activeVue && !activeDef.lectureSeule" icon="i-heroicons-plus" class="bg-fc-blue" @click="openCreate">Ajouter — {{ activeDef.label }}</UButton>
     </div>
 
     <div v-if="error" class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
@@ -35,7 +35,7 @@
     <div class="border-b border-gray-200 dark:border-gray-700">
       <nav class="flex flex-wrap gap-x-5 gap-y-1">
         <button
-          v-for="d in sectionDefs"
+          v-for="d in sectionEntrees"
           :key="d.id"
           type="button"
           class="whitespace-nowrap border-b-2 pb-2.5 text-sm font-medium transition-colors"
@@ -44,11 +44,17 @@
             : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'"
           @click="activeId = d.id"
         >
-          {{ d.label }} <span class="text-xs text-gray-400">({{ (store[d.id] || []).length }})</span>
+          {{ d.label }} <span v-if="!d.vue" class="text-xs text-gray-400">({{ (store[d.id] || []).length }})</span>
         </button>
       </nav>
     </div>
 
+    <!-- Écrans dédiés (grille, actions) : pas de table générique -->
+    <AdminQuotasAtom v-if="activeVue?.id === 'quotas_atom'" />
+    <AdminMaintenance v-else-if="activeVue?.id === 'maintenance'" />
+    <AdminPublierVersion v-else-if="activeVue?.id === 'publier_version'" />
+
+    <template v-if="!activeVue">
     <!-- Toolbar -->
     <div class="admin-toolbar flex items-center justify-between gap-3">
       <UInput v-model="search" icon="i-heroicons-magnifying-glass" placeholder="Rechercher..." size="sm" class="w-full sm:w-80" />
@@ -104,6 +110,8 @@
         <UIcon name="i-heroicons-arrow-path" class="mx-auto h-8 w-8 animate-spin text-fc-blue" />
       </div>
     </div>
+    <p v-if="activeDef.aide" class="text-xs text-gray-500 dark:text-gray-400">{{ activeDef.aide }}</p>
+    </template>
 
     <!-- CRUD Modal -->
     <AdminFormModal
@@ -186,6 +194,8 @@
 </template>
 
 <script setup lang="ts">
+import { fetchAllRows } from '~/utils/fetchAll'
+
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const supabase = useSupabaseClient()
@@ -231,7 +241,26 @@ function rebuildMaps() {
   maps.element_visibilite = byKey('element_visibilite', 'id')
   maps.zoneDistrib = new Map((store.zone_distributeur || []).map((r: any) => [r.zone_id, r.distributeur_id]))
   maps.quartierCount = (store.quartier || []).reduce((m: Map<any, number>, q: any) => m.set(q.zone_id, (m.get(q.zone_id) || 0) + 1), new Map())
+  maps.ssf_id = byKey('ssf', 'id')
+  maps.ssfQuartierCount = (store.ssf_quartier || []).reduce((m: Map<any, number>, q: any) => m.set(q.ssf_id, (m.get(q.ssf_id) || 0) + 1), new Map())
+  maps.parametreTous = new Map((store.parametre_app || []).filter((r: any) => r.portee === 'tous').map((r: any) => [r.cle, r]))
 }
+
+// Couples zone / quartier tels qu'écrits dans les PDV (v_quartiers_pdv, plus
+// de 1 000 lignes : lecture paginée à part, pour le choix des sous-zones SSF).
+const quartiersPdv = ref<{ zone: string, quartier: string, nb_pdv: number }[]>([])
+async function chargerQuartiersPdv() {
+  try {
+    quartiersPdv.value = await fetchAllRows<any>((from, to) => supabase.from('v_quartiers_pdv')
+      .select('zone, quartier, nb_pdv').order('zone').order('quartier').range(from, to))
+  }
+  catch { quartiersPdv.value = [] }
+}
+
+// Texte comparable : majuscules, sans accents ni ponctuation (comme les imports).
+const normaliser = (t: string) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .toUpperCase().replace(/[’']/g, ' ').replace(/[^A-Z0-9& ]/g, ' ').replace(/\s+/g, ' ').trim()
+const codeDepuisLibelle = (t: string) => normaliser(t).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
 
 // Option builders ----------------------------------------------------------
 const opt = <T,>(rows: T[], value: (r: T) => any, label: (r: T) => string) =>
@@ -267,6 +296,35 @@ const zoneTerrLabelOf = (id: number) => { const z = zoneOf(id); return z ? (maps
 const zoneDistribOf = (id: number) => { const did = maps.zoneDistrib?.get(id); return did ? distributeurNameOf(did) : '—' }
 const quartierCountOf = (id: number) => maps.quartierCount?.get(id) || 0
 const elementVisNameOf = (id: number) => { const e = maps.element_visibilite?.get(id); return e ? `${e.nom} (${e.segment})` : `#${id}` }
+const ssfNomOf = (id: number) => maps.ssf_id?.get(id)?.nom || `#${id}`
+const ssfQuartierCountOf = (id: number) => maps.ssfQuartierCount?.get(id) || 0
+const ssfOpts = () => opt((store.ssf || []).filter((r: any) => r.actif !== false), r => r.id, r => `${r.nom}${r.distributeur_id ? ' · ' + distributeurNameOf(r.distributeur_id) : ''}`)
+const quartierPdvOpts = () => quartiersPdv.value.map(q => ({ value: `${q.zone}|${q.quartier}`, label: `${q.zone} › ${q.quartier} (${q.nb_pdv})` }))
+const ORIGINES_SOUS_ZONE: Record<string, { label: string, color: string }> = {
+  derive: { label: 'Dérivée des visites', color: 'amber' },
+  client: { label: 'Fichier client', color: 'green' },
+  admin: { label: 'Saisie admin', color: 'blue' },
+}
+const origineSousZone = (source?: string) => (source?.startsWith('derive-') ? ORIGINES_SOUS_ZONE.derive
+  : source?.startsWith('client-') ? ORIGINES_SOUS_ZONE.client : ORIGINES_SOUS_ZONE.admin)
+const TYPES_ALIAS = [
+  { value: 'merchandiser', label: 'Merchandiser → e-mail du compte' },
+  { value: 'distributeur', label: 'Distributeur → nom du référentiel' },
+  { value: 'ssf', label: 'SSF → nom du référentiel SSF' },
+]
+const MODES_ALIAS = [
+  { value: 'exact', label: 'Texte exact' },
+  { value: 'commence', label: 'Commence par' },
+  { value: 'contient', label: 'Contient' },
+]
+const PORTEES = [
+  { value: 'tous', label: 'Tous les utilisateurs' },
+  { value: 'friesland', label: 'Friesland uniquement' },
+  { value: 'atom', label: 'Atom uniquement' },
+]
+const libellePortee = (p: string) => PORTEES.find(x => x.value === p)?.label || p
+const valeurParametre = (r: any) => (r.valeur == null ? 'Non défini' : `${r.valeur} ${r.unite || ''}`.trim())
+const bornesParametre = (r: any) => (r.min == null && r.max == null ? '—' : `${r.min ?? '…'} → ${r.max ?? '…'} ${r.unite || ''}`.trim())
 
 const tierColor = (v: string) => v === 'MT' ? 'purple' : 'blue'
 
@@ -289,7 +347,11 @@ interface Def {
   save: (form: any, editing: boolean) => Promise<{ error: any }>
   del: (row: any) => Promise<{ error: any }>
   valid: (f: any) => boolean
+  /** Texte d'aide affiché sous la table. */
+  aide?: string
 }
+/** Écran dédié (grille, actions) affiché à la place de la table générique. */
+interface Vue { id: string, section: string, label: string, vue: true }
 
 const defs: Def[] = [
   // ===== GÉOGRAPHIE =====
@@ -439,16 +501,21 @@ const defs: Def[] = [
       { label: 'Couverture', cell: r => r.national ? 'National' : 'Local', align: 'c', kind: 'badge', color: r => r.national ? 'purple' : 'blue' },
     ],
     fields: [
-      { key: 'nom', label: 'Nom', type: 'text', required: true, lockEdit: true },
+      { key: 'nom', label: 'Nom', type: 'text', required: true, hint: 'Renommer met aussi à jour les PDV et les règles de tournée qui portent l’ancien nom ; l’ancien nom reste reconnu dans les imports.' },
       { key: 'national', label: 'Couverture nationale', type: 'bool' },
     ],
     blank: () => ({ nom: '', national: false }),
-    fill: r => ({ ...r }),
+    fill: r => ({ ...r, nomInitial: r.nom }),
     rowKey: r => String(r.id), search: r => r.nom.toLowerCase(),
     valid: f => !!f.nom,
-    save: (f, e) => e
-      ? supabase.from('distributeur').update({ national: !!f.national }).eq('id', f.id)
-      : supabase.from('distributeur').insert({ nom: f.nom, national: !!f.national }),
+    save: async (f, e) => {
+      if (!e) return await supabase.from('distributeur').insert({ nom: f.nom.trim(), national: !!f.national })
+      if (f.nom.trim() !== f.nomInitial) {
+        const { error } = await supabase.rpc('renommer_distributeur', { p_id: f.id, p_nom: f.nom.trim() })
+        if (error) return { error }
+      }
+      return await supabase.from('distributeur').update({ national: !!f.national }).eq('id', f.id)
+    },
     del: r => supabase.from('distributeur').delete().eq('id', r.id),
   },
   {
@@ -493,43 +560,47 @@ const defs: Def[] = [
   // ===== POINTS DE VENTE =====
   {
     id: 'categorie_pdv', section: 'pdv', label: 'Catégories PDV', table: 'categorie_pdv',
-    select: 'id, nom, canal', order: q => q.order('nom'),
+    select: 'id, nom, nom_fr, canal', order: q => q.order('nom'),
     columns: [
       { label: 'Catégorie (niveau 3)', cell: r => r.nom },
+      { label: 'Libellé affiché', cell: r => r.nom_fr || '—', muted: true },
       { label: 'Canal', cell: r => r.canal || '—', align: 'c', kind: 'badge', color: r => tierColor(r.canal) },
     ],
     fields: [
       { key: 'nom', label: 'Nom', type: 'text', required: true },
+      { key: 'nom_fr', label: 'Libellé affiché (français)', type: 'text', hint: 'Montré dans l’app et l’admin à la place du nom de référence.' },
       { key: 'canal', label: 'Canal', type: 'select', opts: () => CANAUX, required: true },
     ],
-    blank: () => ({ nom: '', canal: 'GT' }),
+    blank: () => ({ nom: '', nom_fr: '', canal: 'GT' }),
     fill: r => ({ ...r }),
-    rowKey: r => String(r.id), search: r => r.nom.toLowerCase(),
+    rowKey: r => String(r.id), search: r => `${r.nom} ${r.nom_fr || ''}`.toLowerCase(),
     valid: f => !!f.nom && !!f.canal,
     save: (f, e) => e
-      ? supabase.from('categorie_pdv').update({ nom: f.nom, canal: f.canal }).eq('id', f.id)
-      : supabase.from('categorie_pdv').insert({ nom: f.nom, canal: f.canal }),
+      ? supabase.from('categorie_pdv').update({ nom: f.nom, nom_fr: f.nom_fr || null, canal: f.canal }).eq('id', f.id)
+      : supabase.from('categorie_pdv').insert({ nom: f.nom, nom_fr: f.nom_fr || null, canal: f.canal }),
     del: r => supabase.from('categorie_pdv').delete().eq('id', r.id),
   },
   {
     id: 'type_pdv', section: 'pdv', label: 'Types PDV', table: 'type_pdv',
-    select: 'id, nom, categorie_pdv_id', order: q => q.order('nom'),
+    select: 'id, nom, nom_fr, categorie_pdv_id', order: q => q.order('nom'),
     columns: [
       { label: 'Type (niveau 4)', cell: r => r.nom },
+      { label: 'Libellé affiché', cell: r => r.nom_fr || '—', muted: true },
       { label: 'Catégorie (niveau 3)', cell: r => maps.categorie_pdv?.get(r.categorie_pdv_id)?.nom || '—', muted: true },
       { label: 'Canal', cell: r => maps.categorie_pdv?.get(r.categorie_pdv_id)?.canal || '—', align: 'c', kind: 'badge', color: r => tierColor(maps.categorie_pdv?.get(r.categorie_pdv_id)?.canal) },
     ],
     fields: [
       { key: 'nom', label: 'Type', type: 'text', required: true },
+      { key: 'nom_fr', label: 'Libellé affiché (français)', type: 'text', hint: 'Montré dans l’app et l’admin à la place du nom de référence.' },
       { key: 'categorie_pdv_id', label: 'Catégorie', type: 'select', opts: categoriePdvOpts, required: true },
     ],
-    blank: () => ({ nom: '', categorie_pdv_id: null }),
+    blank: () => ({ nom: '', nom_fr: '', categorie_pdv_id: null }),
     fill: r => ({ ...r }),
-    rowKey: r => String(r.id), search: r => r.nom.toLowerCase(),
+    rowKey: r => String(r.id), search: r => `${r.nom} ${r.nom_fr || ''}`.toLowerCase(),
     valid: f => !!f.nom && !!f.categorie_pdv_id,
     save: (f, e) => e
-      ? supabase.from('type_pdv').update({ nom: f.nom, categorie_pdv_id: f.categorie_pdv_id }).eq('id', f.id)
-      : supabase.from('type_pdv').insert({ nom: f.nom, categorie_pdv_id: f.categorie_pdv_id }),
+      ? supabase.from('type_pdv').update({ nom: f.nom, nom_fr: f.nom_fr || null, categorie_pdv_id: f.categorie_pdv_id }).eq('id', f.id)
+      : supabase.from('type_pdv').insert({ nom: f.nom, nom_fr: f.nom_fr || null, categorie_pdv_id: f.categorie_pdv_id }),
     del: r => supabase.from('type_pdv').delete().eq('id', r.id),
   },
   {
@@ -582,6 +653,121 @@ const defs: Def[] = [
     del: async () => ({ error: new Error('Ce paramètre ne se supprime pas : modifiez sa valeur.') }),
   },
   {
+    id: 'parametre_app', section: 'app', label: 'Paramètres terrain', table: 'parametre_app',
+    select: 'cle, portee, valeur, libelle, description, unite, min, max, ordre', order: q => q.order('ordre').order('portee'),
+    aide: 'Lus par l’application à son lancement et à chaque retour au premier plan (version 1.0.11 et suivantes). Une valeur « Atom » ou « Friesland » prime sur « Tous » pour ces utilisateurs.',
+    columns: [
+      { label: 'Paramètre', cell: r => r.libelle },
+      { label: 'Portée', cell: r => libellePortee(r.portee), kind: 'badge', color: r => (r.portee === 'tous' ? 'gray' : r.portee === 'atom' ? 'purple' : 'blue') },
+      { label: 'Valeur', cell: r => valeurParametre(r), align: 'c', kind: 'num' },
+      { label: 'Bornes', cell: r => bornesParametre(r), align: 'c', muted: true },
+      { label: 'Effet', cell: r => r.description, muted: true },
+    ],
+    fields: [
+      { key: 'cle', label: 'Paramètre', type: 'select', opts: () => [...(maps.parametreTous?.values() || [])].map((r: any) => ({ value: r.cle, label: r.libelle })), required: true, lockEdit: true },
+      { key: 'portee', label: 'Portée', type: 'select', opts: () => PORTEES, required: true, lockEdit: true },
+      { key: 'valeur', label: 'Valeur', type: 'num', hint: 'Vide = non défini (pour l’objectif de visites : taille de la tournée du jour).' },
+    ],
+    blank: () => ({ cle: null, portee: 'atom', valeur: null }),
+    fill: r => ({ ...r }),
+    rowKey: r => `${r.cle}|${r.portee}`, search: r => `${r.libelle} ${r.cle} ${r.portee}`.toLowerCase(),
+    valid: (f) => {
+      if (!f.cle || !f.portee) return false
+      const base = maps.parametreTous?.get(f.cle) || f
+      const v = f.valeur === '' || f.valeur == null ? null : Number(f.valeur)
+      if (v == null) return true
+      return Number.isFinite(v) && (base.min == null || v >= base.min) && (base.max == null || v <= base.max)
+    },
+    save: (f, e) => {
+      const valeur = f.valeur === '' || f.valeur == null ? null : Number(f.valeur)
+      if (e) return supabase.from('parametre_app').update({ valeur }).eq('cle', f.cle).eq('portee', f.portee)
+      const base = maps.parametreTous?.get(f.cle) || {}
+      return supabase.from('parametre_app').insert({
+        cle: f.cle, portee: f.portee, valeur,
+        libelle: `${base.libelle || f.cle} (${libellePortee(f.portee)})`,
+        description: base.description || null, unite: base.unite || null, min: base.min ?? null, max: base.max ?? null,
+        ordre: (base.ordre ?? 100) + 1,
+      })
+    },
+    del: async r => (r.portee === 'tous'
+      ? { error: new Error('Valeur de référence : modifiez-la plutôt que de la supprimer.') }
+      : await supabase.from('parametre_app').delete().eq('cle', r.cle).eq('portee', r.portee)),
+  },
+  {
+    id: 'canal_atom_sous_categorie', section: 'app', label: 'Canal Atom', table: 'canal_atom_sous_categorie',
+    select: 'sous_categorie, canal', order: q => q.order('sous_categorie'),
+    aide: 'Canal de la grille de quotas Atom pour chaque sous-catégorie de PDV. « Hors quota » : jamais proposé dans les tournées Atom. Une sous-catégorie absente suit la règle par défaut (Boutique, Superette, Kiosque…).',
+    columns: [
+      { label: 'Sous-catégorie PDV', cell: r => r.sous_categorie },
+      { label: 'Canal Atom', cell: r => r.canal || 'Hors quota', kind: 'badge', color: r => (r.canal ? 'purple' : 'gray') },
+    ],
+    fields: [
+      { key: 'sous_categorie', label: 'Sous-catégorie PDV', type: 'text', required: true, lockEdit: true, hint: 'Texte exact de la sous-catégorie des PDV.' },
+      { key: 'canal', label: 'Canal Atom', type: 'select', opts: () => [...CANAUX_ATOM.map(c => ({ value: c, label: c })), { value: 'hors', label: 'Hors quota' }], required: true },
+    ],
+    blank: () => ({ sous_categorie: '', canal: 'Boutique' }),
+    fill: r => ({ ...r, canal: r.canal || 'hors' }),
+    rowKey: r => r.sous_categorie, search: r => `${r.sous_categorie} ${r.canal || 'hors quota'}`.toLowerCase(),
+    valid: f => !!String(f.sous_categorie || '').trim() && !!f.canal,
+    save: (f, e) => {
+      const canal = f.canal === 'hors' ? null : f.canal
+      return e
+        ? supabase.from('canal_atom_sous_categorie').update({ canal, updated_at: new Date().toISOString() }).eq('sous_categorie', f.sous_categorie)
+        : supabase.from('canal_atom_sous_categorie').insert({ sous_categorie: String(f.sous_categorie).trim(), canal })
+    },
+    del: r => supabase.from('canal_atom_sous_categorie').delete().eq('sous_categorie', r.sous_categorie),
+  },
+  {
+    id: 'type_action_commerciale', section: 'app', label: 'Types d’action', table: 'type_action_commerciale',
+    select: 'code, libelle, ordre, actif', order: q => q.order('ordre'),
+    noDelete: true,
+    aide: 'Actions qu’un commercial peut décider après une visite (Actions commerciales).',
+    columns: [
+      { label: 'Action', cell: r => r.libelle },
+      { label: 'Code', cell: r => r.code, kind: 'mono', muted: true },
+      { label: 'Ordre', cell: r => r.ordre, align: 'c', kind: 'num' },
+      { label: 'Active', cell: r => r.actif, align: 'c', kind: 'bool' },
+    ],
+    fields: [
+      { key: 'libelle', label: 'Libellé', type: 'text', required: true },
+      { key: 'ordre', label: 'Ordre', type: 'num', min: 0 },
+      { key: 'actif', label: 'Active', type: 'bool', hint: 'Désactivée : n’est plus proposée ; les actions déjà créées sont conservées.' },
+    ],
+    blank: () => ({ libelle: '', ordre: 100, actif: true }),
+    fill: r => ({ ...r }),
+    rowKey: r => r.code, search: r => `${r.libelle} ${r.code}`.toLowerCase(),
+    valid: f => !!String(f.libelle || '').trim(),
+    save: (f, e) => e
+      ? supabase.from('type_action_commerciale').update({ libelle: f.libelle, ordre: f.ordre ?? 100, actif: f.actif !== false }).eq('code', f.code)
+      : supabase.from('type_action_commerciale').insert({ code: codeDepuisLibelle(f.libelle), libelle: f.libelle, ordre: f.ordre ?? 100, actif: f.actif !== false }),
+    del: async () => ({ error: new Error('Suppression désactivée : désactivez le type.') }),
+  },
+  {
+    id: 'engin_vente', section: 'app', label: 'Engins de vente', table: 'engin_vente',
+    select: 'code, libelle, ordre, actif', order: q => q.order('ordre'),
+    noDelete: true,
+    aide: 'Engins proposés dans le field coaching des vendeurs.',
+    columns: [
+      { label: 'Engin', cell: r => r.libelle },
+      { label: 'Code', cell: r => r.code, kind: 'mono', muted: true },
+      { label: 'Ordre', cell: r => r.ordre, align: 'c', kind: 'num' },
+      { label: 'Actif', cell: r => r.actif, align: 'c', kind: 'bool' },
+    ],
+    fields: [
+      { key: 'libelle', label: 'Libellé', type: 'text', required: true },
+      { key: 'ordre', label: 'Ordre', type: 'num', min: 0 },
+      { key: 'actif', label: 'Actif', type: 'bool' },
+    ],
+    blank: () => ({ libelle: '', ordre: 100, actif: true }),
+    fill: r => ({ ...r }),
+    rowKey: r => r.code, search: r => `${r.libelle} ${r.code}`.toLowerCase(),
+    valid: f => !!String(f.libelle || '').trim(),
+    save: (f, e) => e
+      ? supabase.from('engin_vente').update({ libelle: f.libelle, ordre: f.ordre ?? 100, actif: f.actif !== false }).eq('code', f.code)
+      : supabase.from('engin_vente').insert({ code: codeDepuisLibelle(f.libelle), libelle: f.libelle, ordre: f.ordre ?? 100, actif: f.actif !== false }),
+    del: async () => ({ error: new Error('Suppression désactivée : désactivez l’engin.') }),
+  },
+  {
     // Mise à jour obligatoire de l'app mobile (migration 20260930091000,
     // plugins/version-app.client.ts). Une ligne par plateforme.
     id: 'version_app', section: 'app', label: 'Version minimale', table: 'version_app',
@@ -594,7 +780,7 @@ const defs: Def[] = [
     fields: [
       { key: 'version_code_min', label: 'Code de version minimal (versionCode)', type: 'num', required: true, min: 1, hint: 'En dessous, l’app est bloquée sur un écran de mise à jour. 1.0.9 = 11, 1.0.10 = 13. Vérifier d’abord la version installée dans « Versions installées ».' },
       { key: 'version_nom_min', label: 'Version affichée', type: 'text', hint: 'Ex. 1.0.10' },
-      { key: 'url_telechargement', label: 'Lien de téléchargement', type: 'text', hint: 'Lien stable de l’APK (node scripts/upload-apk.mjs … --latest).' },
+      { key: 'url_telechargement', label: 'Lien de téléchargement', type: 'text', hint: 'Lien stable de l’APK, rempli par l’onglet « Publier une version ».' },
       { key: 'message', label: 'Message affiché', type: 'text' },
     ],
     blank: () => ({ plateforme: 'android', version_code_min: 11, version_nom_min: '1.0.9', url_telechargement: '', message: '' }),
@@ -841,6 +1027,108 @@ const defs: Def[] = [
     del: async () => ({ error: new Error('Suppression désactivée : désactivez la catégorie.') }),
     noDelete: true,
   },
+  // ===== DISTRIBUTION : SSF et sous-zones =====
+  {
+    id: 'ssf', section: 'distrib', label: 'SSF (vendeurs)', table: 'ssf',
+    select: 'id, nom, nom_brut, telephone, distributeur_id, actif, a_confirmer, source, commentaire', order: q => q.order('nom'),
+    noDelete: true,
+    aide: 'SSF : vendeur du distributeur qui accompagne le merchandiser. Sa sous-zone (onglet SSF ↔ Quartiers) borne les PDV des tournées des jours où il accompagne l’agent (Routing › Règles).',
+    columns: [
+      { label: 'SSF', cell: r => r.nom },
+      { label: 'Distributeur', cell: r => (r.distributeur_id ? distributeurNameOf(r.distributeur_id) : '—'), muted: true },
+      { label: 'Téléphone', cell: r => r.telephone, kind: 'mono' },
+      { label: 'Quartiers', cell: r => ssfQuartierCountOf(r.id), align: 'c', kind: 'num' },
+      { label: 'À confirmer', cell: r => r.a_confirmer, align: 'c', kind: 'bool' },
+      { label: 'Actif', cell: r => r.actif, align: 'c', kind: 'bool' },
+    ],
+    fields: [
+      { key: 'nom', label: 'Nom', type: 'text', required: true },
+      { key: 'distributeur_id', label: 'Distributeur', type: 'select', opts: distributeurIdOpts },
+      { key: 'telephone', label: 'Téléphone', type: 'text' },
+      { key: 'nom_brut', label: 'Autres orthographes', type: 'text', hint: 'Variantes vues dans les fichiers, séparées par « | » (ex. Tra bi ta Arsène|TRA BI TA).' },
+      { key: 'actif', label: 'Actif', type: 'bool', hint: 'Désactivé : n’est plus proposé dans l’app ni dans les règles. Les visites gardent leur SSF.' },
+      { key: 'a_confirmer', label: 'Distributeur à confirmer', type: 'bool', hint: 'Rattachement déduit d’un export, à confirmer par le client.' },
+      { key: 'commentaire', label: 'Commentaire', type: 'text' },
+    ],
+    blank: () => ({ nom: '', distributeur_id: null, telephone: '', nom_brut: '', actif: true, a_confirmer: false, commentaire: '' }),
+    fill: r => ({ ...r }),
+    rowKey: r => String(r.id),
+    search: r => `${r.nom} ${r.nom_brut || ''} ${r.distributeur_id ? distributeurNameOf(r.distributeur_id) : ''}`.toLowerCase(),
+    valid: f => !!String(f.nom || '').trim(),
+    save: (f, e) => {
+      const rec = {
+        nom: String(f.nom).trim(),
+        distributeur_id: f.distributeur_id || null,
+        telephone: f.telephone || null,
+        nom_brut: f.nom_brut || null,
+        actif: f.actif !== false,
+        a_confirmer: !!f.a_confirmer,
+        commentaire: f.commentaire || null,
+        updated_at: new Date().toISOString(),
+      }
+      return e
+        ? supabase.from('ssf').update(rec).eq('id', f.id)
+        : supabase.from('ssf').insert({ ...rec, source: 'admin' })
+    },
+    del: async () => ({ error: new Error('Suppression désactivée : désactivez le SSF (ses visites gardent son nom).') }),
+  },
+  {
+    id: 'ssf_quartier', section: 'distrib', label: 'SSF ↔ Quartiers', table: 'ssf_quartier',
+    select: 'id, ssf_id, zone, quartier, source, a_confirmer', order: q => q.order('ssf_id').order('zone').order('quartier'),
+    aide: 'Sous-zone d’un SSF : ses quartiers. « Dérivée des visites » = proposée d’après les visites passées, à confirmer ; une ligne modifiée ici devient une saisie admin et n’est plus recalculée par les imports.',
+    columns: [
+      { label: 'SSF', cell: r => ssfNomOf(r.ssf_id) },
+      { label: 'Zone', cell: r => r.zone, muted: true },
+      { label: 'Quartier', cell: r => r.quartier },
+      { label: 'Origine', cell: r => origineSousZone(r.source).label, kind: 'badge', color: r => origineSousZone(r.source).color },
+      { label: 'À confirmer', cell: r => r.a_confirmer, align: 'c', kind: 'bool' },
+    ],
+    fields: [
+      { key: 'ssf_id', label: 'SSF', type: 'select', opts: ssfOpts, required: true },
+      { key: 'zq', label: 'Zone › quartier', type: 'select', opts: quartierPdvOpts, required: true, hint: 'Libellés exacts des PDV ; entre parenthèses, le nombre de PDV actifs du quartier.' },
+      { key: 'a_confirmer', label: 'À confirmer', type: 'bool' },
+    ],
+    blank: () => ({ ssf_id: null, zq: null, a_confirmer: false }),
+    fill: r => ({ ...r, zq: `${r.zone}|${r.quartier}` }),
+    rowKey: r => String(r.id), search: r => `${ssfNomOf(r.ssf_id)} ${r.zone} ${r.quartier}`.toLowerCase(),
+    valid: f => !!f.ssf_id && !!f.zq,
+    save: (f, e) => {
+      const [zone, quartier] = String(f.zq).split('|')
+      const rec = { ssf_id: f.ssf_id, zone, quartier, a_confirmer: !!f.a_confirmer, source: 'admin' }
+      return e
+        ? supabase.from('ssf_quartier').update(rec).eq('id', f.id)
+        : supabase.from('ssf_quartier').insert(rec)
+    },
+    del: r => supabase.from('ssf_quartier').delete().eq('id', r.id),
+  },
+  {
+    id: 'alias_import', section: 'distrib', label: 'Alias d’import', table: 'alias_import',
+    select: 'id, type, motif, mode, cible, commentaire', order: q => q.order('type').order('motif'),
+    aide: 'Orthographes rencontrées dans les fichiers d’import (export Atom, DMS, fichier SSF) et leur correspondance dans le référentiel. Le texte est comparé en majuscules, sans accents ni ponctuation.',
+    columns: [
+      { label: 'Type', cell: r => r.type, kind: 'badge' },
+      { label: 'Texte du fichier', cell: r => r.motif, kind: 'mono' },
+      { label: 'Correspondance', cell: r => MODES_ALIAS.find(m => m.value === r.mode)?.label || r.mode, muted: true },
+      { label: 'Cible', cell: r => r.cible },
+      { label: 'Commentaire', cell: r => r.commentaire || '—', muted: true },
+    ],
+    fields: [
+      { key: 'type', label: 'Type', type: 'select', opts: () => TYPES_ALIAS, required: true },
+      { key: 'motif', label: 'Texte du fichier', type: 'text', required: true, hint: 'Ex. DEHO WILFRIED, BOUSSOURA, NIARE…' },
+      { key: 'mode', label: 'Correspondance', type: 'select', opts: () => MODES_ALIAS, required: true },
+      { key: 'cible', label: 'Cible', type: 'text', required: true, hint: 'Merchandiser : e-mail du compte. Distributeur : nom exact du référentiel. SSF : nom exact du SSF.' },
+      { key: 'commentaire', label: 'Commentaire', type: 'text' },
+    ],
+    blank: () => ({ type: 'merchandiser', motif: '', mode: 'exact', cible: '', commentaire: '' }),
+    fill: r => ({ ...r }),
+    rowKey: r => String(r.id), search: r => `${r.type} ${r.motif} ${r.cible}`.toLowerCase(),
+    valid: f => !!f.type && !!normaliser(f.motif) && !!String(f.cible || '').trim() && !!f.mode,
+    save: (f, e) => {
+      const rec = { type: f.type, motif: normaliser(f.motif), mode: f.mode, cible: String(f.cible).trim(), commentaire: f.commentaire || null }
+      return e ? supabase.from('alias_import').update(rec).eq('id', f.id) : supabase.from('alias_import').insert(rec)
+    },
+    del: r => supabase.from('alias_import').delete().eq('id', r.id),
+  },
   // ===== PERFECT STORE =====
   {
     id: 'niveau_perfect_store', section: 'ps', label: 'Niveaux Perfect Store', table: 'niveau_perfect_store',
@@ -1040,6 +1328,12 @@ const sections = [
   { key: 'app', label: 'Application mobile' },
 ]
 
+const vues: Vue[] = [
+  { id: 'quotas_atom', section: 'app', label: 'Quotas Atom', vue: true },
+  { id: 'publier_version', section: 'app', label: 'Publier une version', vue: true },
+  { id: 'maintenance', section: 'app', label: 'Maintenance', vue: true },
+]
+
 const section = ref('geo')
 const activeId = ref(defs[0].id)
 const search = ref('')
@@ -1048,15 +1342,24 @@ const editing = ref(false)
 const saving = ref(false)
 const form = ref<any>({})
 
-const sectionDefs = computed(() => defs.filter(d => d.section === section.value))
+const sectionEntrees = computed<(Def | Vue)[]>(() => [...defs, ...vues].filter(d => d.section === section.value))
+const activeVue = computed(() => vues.find(v => v.id === activeId.value) || null)
 const activeDef = computed(() => defs.find(d => d.id === activeId.value) || defs[0])
 
 function selectSection(key: string) {
   section.value = key
-  const first = defs.find(d => d.section === key)
+  const first = [...defs, ...vues].find(d => d.section === key)
   if (first) activeId.value = first.id
   search.value = ''
 }
+
+// Lien direct vers un onglet : /admin/referentiels?onglet=ssf
+const route = useRoute()
+onMounted(() => {
+  const onglet = String(route.query.onglet || '')
+  const cible = [...defs, ...vues].find(d => d.id === onglet)
+  if (cible) { section.value = cible.section; activeId.value = cible.id }
+})
 
 watch(activeId, () => { search.value = '' })
 
@@ -1172,7 +1475,7 @@ async function fetchAll() {
   }
 }
 
-onMounted(fetchAll)
+onMounted(() => { void fetchAll(); void chargerQuartiersPdv() })
 </script>
 
 <style scoped>

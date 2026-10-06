@@ -184,6 +184,7 @@ const pageTitle = computed(() => {
   const titles: Record<string, string> = {
     '/admin': 'Dashboard',
     '/admin/routing': 'Routing & Planning',
+    '/admin/routing/programme-atom': 'Programme Atom',
     '/admin/visites': 'Visites',
     '/admin/pdv': 'Points de Vente',
     '/admin/users': 'Utilisateurs',
