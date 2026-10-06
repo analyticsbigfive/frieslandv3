@@ -10,8 +10,9 @@
  *   - profil : merchandiser, employeur atom, périmètre recopié d'un agent Atom
  *     réel (--source, défaut attecoubeone@), SANS commercial responsable (le
  *     compte n'apparaît dans l'équipe de personne) ;
- *   - une règle « Test Atom » en mode quota, lundi → samedi, avec les PDV des
- *     règles quota actives de l'agent source ;
+ *   - une copie de CHAQUE règle quota active de l'agent source (« Test Atom —
+ *     <libellé> » : mêmes jours, même SSF, même territoire, mêmes PDV), pour
+ *     tester le planning par SSF (une sous-zone par jour) comme l'agent ;
  *   - tournées du compte à partir d'aujourd'hui supprimées puis recréées
  *     (--pregenerer=N jours, défaut 1) : une relance repart de zéro.
  *   Les quotas sont calculés compte par compte (etapes_quota_du_jour) : le
@@ -45,7 +46,6 @@ const PASSWORD = arg('password', process.env.SEED_DEFAULT_PASSWORD)
 
 const QA = { email: 'qa.atom@friesland-test.ci', nom: 'QA Atom' }
 const LABEL = 'Test Atom'
-const JOURS = [1, 2, 3, 4, 5, 6] // lundi → samedi (0 = dimanche, comme extract(dow))
 const OBJECTIFS = { releve_stock: true, photos: true }
 
 const jourIso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -121,9 +121,16 @@ async function creer() {
     throw new Error(`${SOURCE} n'est pas un merchandiser Atom (rôle ${source.role}, employeur ${source.employeur})`)
   }
 
-  const { data: reglesSource, error: e2 } = await supabase
-    .from('routing_templates').select('id, label, distributeur')
-    .eq('user_id', source.id).eq('mode', 'quota').eq('is_active', true)
+  // ssf_id n'existe qu'après la migration 20261007100000 (sous-zones SSF).
+  const colonnes = 'id, label, distributeur, territoire, days_of_week, day_of_week, created_at'
+  let { data: reglesSource, error: e2 } = await supabase
+    .from('routing_templates').select(`${colonnes}, ssf_id`)
+    .eq('user_id', source.id).eq('mode', 'quota').eq('is_active', true).order('created_at')
+  if (e2) {
+    ({ data: reglesSource, error: e2 } = await supabase
+      .from('routing_templates').select(colonnes)
+      .eq('user_id', source.id).eq('mode', 'quota').eq('is_active', true).order('created_at'))
+  }
   if (e2) throw e2
   if (!reglesSource.length) throw new Error(`${SOURCE} n'a aucune règle quota active : choisir un autre --source`)
 
@@ -133,6 +140,10 @@ async function creer() {
   const pdvIds = [...new Set(lignesSource.map(l => l.pdv_id))]
 
   console.log(`Source : ${source.nom} <${SOURCE}> — ${reglesSource.length} règle(s) quota, ${pdvIds.length} PDV`)
+  for (const r of reglesSource) {
+    const jours = r.days_of_week || [r.day_of_week]
+    console.log(`  · ${r.label} : ${jours.join(',')}${r.ssf_id ? ` (SSF ${r.ssf_id})` : ''}, ${lignesSource.filter(l => l.template_id === r.id).length} PDV`)
+  }
   console.log(`  périmètre : ${JSON.stringify(source.territoires_assignes)}, ${(source.quartiers_assignes || []).length} quartier(s), région ${source.region}`)
 
   let user = await findAuthUser(QA.email)
@@ -149,7 +160,7 @@ async function creer() {
   const tourneesAVenir = user
     ? (await supabase.from('routings').select('id').eq('user_id', user.id).gte('date_routing', AUJOURDHUI)).data || []
     : []
-  console.log(`Règle « ${LABEL} » (quota, lun → sam) : ${pdvIds.length} PDV${anciennes.length ? `, remplace ${anciennes.length} règle(s)` : ''}`)
+  console.log(`Règles « ${LABEL} — … » : ${reglesSource.length} copie(s)${anciennes.length ? `, remplacent ${anciennes.length} règle(s)` : ''}`)
   if (tourneesAVenir.length) console.log(`Tournées du compte à partir du ${AUJOURDHUI} : ${tourneesAVenir.length}, recréées`)
   console.log(`Tournées créées : ${PREGENERER} jour(s) à partir du ${AUJOURDHUI}`)
 
@@ -188,25 +199,31 @@ async function creer() {
   if (tourneesAVenir.length) ok(await supabase.from('routings').delete().in('id', tourneesAVenir.map(t => t.id)), 'tournées à venir')
   if (anciennes.length) ok(await supabase.from('routing_templates').delete().in('id', anciennes.map(r => r.id)), 'anciennes règles')
 
-  const { data: regle, error: e3 } = await supabase.from('routing_templates').insert({
-    user_id: user.id,
-    days_of_week: JOURS,
-    day_of_week: JOURS[0],
-    label: LABEL,
-    mode: 'quota',
-    notes: `Compte de test : PDV recopiés des règles quota de ${SOURCE} (${pdvIds.length} PDV).`,
-    territoire: null,
-    distributeur: reglesSource[0].distributeur || null,
-    date_debut: AUJOURDHUI,
-    date_fin: null,
-    is_active: true,
-  }).select('id').single()
-  if (e3) throw e3
-  const lignes = pdvIds.map((pdv_id, k) => ({ template_id: regle.id, pdv_id, position_order: k + 1, objectifs: OBJECTIFS }))
-  for (let i = 0; i < lignes.length; i += 500) {
-    ok(await supabase.from('routing_template_pdv').insert(lignes.slice(i, i + 500)), 'PDV de la règle')
+  for (const r of reglesSource) {
+    const jours = r.days_of_week || [r.day_of_week]
+    const regleTest = {
+      user_id: user.id,
+      days_of_week: jours,
+      day_of_week: jours[0],
+      label: `${LABEL} — ${r.label}`,
+      mode: 'quota',
+      notes: `Compte de test : copie de la règle « ${r.label} » de ${SOURCE}.`,
+      territoire: r.territoire || null,
+      distributeur: r.distributeur || null,
+      date_debut: AUJOURDHUI,
+      date_fin: null,
+      is_active: true,
+    }
+    if (r.ssf_id) regleTest.ssf_id = r.ssf_id
+    const { data: regle, error: e3 } = await supabase.from('routing_templates').insert(regleTest).select('id').single()
+    if (e3) throw e3
+    const lignes = lignesSource.filter(l => l.template_id === r.id)
+      .map((l, k) => ({ template_id: regle.id, pdv_id: l.pdv_id, position_order: k + 1, objectifs: OBJECTIFS }))
+    for (let i = 0; i < lignes.length; i += 500) {
+      ok(await supabase.from('routing_template_pdv').insert(lignes.slice(i, i + 500)), 'PDV de la règle')
+    }
+    console.log(`  ✓ règle « ${regleTest.label} » : ${jours.join(',')}, ${lignes.length} PDV`)
   }
-  console.log(`  ✓ règle « ${LABEL} » : ${lignes.length} PDV`)
 
   if (PREGENERER > 0) {
     const fin = new Date()

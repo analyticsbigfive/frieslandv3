@@ -106,7 +106,9 @@ const mailParEmail = new Map(mails.map(m => [m.email, m]))
 // ---------- 3. Comptes ----------
 
 const profils = await toutesLesLignes(() => supabase.from('profiles')
-  .select('id,email,nom,role,is_active,zone_assignee,territoires_assignes,quartiers_assignes')
+  // employeur : sans lui, `mode` ci-dessous retomberait toujours sur 'perimetre'
+  // et une relance repasserait les règles Atom hors quotas.
+  .select('id,email,nom,role,is_active,employeur,zone_assignee,territoires_assignes,quartiers_assignes')
   .in('role', ['merchandiser', 'admin']).order('id'))
 const merchsActifs = profils.filter(p => p.role === 'merchandiser' && p.is_active !== false && p.email)
 const auteur = AUTEUR ? profils.find(p => p.email?.toLowerCase() === AUTEUR.toLowerCase() && p.role === 'admin') : null
@@ -204,6 +206,12 @@ const { data: appareils, error: appareilsErr } = await supabase.from('version_in
 
 for (const m of merchs.filter(m => m.profil)) {
   m.reglesDms = (regles || []).filter(r => r.user_id === m.profil.id && String(r.label || '').startsWith(PREFIXE_REGLE))
+  // Règles par SSF (scripts/deriver-ssf-sous-zones.mjs, Routing › Règles) : la
+  // règle DMS recréée ne garde que les jours qu'elles ne couvrent pas.
+  m.joursSsf = [...new Set((regles || [])
+    .filter(r => r.user_id === m.profil.id && String(r.label || '').startsWith('SSF — ') && r.is_active !== false)
+    .flatMap(r => r.days_of_week || []))]
+  m.joursDms = JOURS.filter(j => !m.joursSsf.includes(j))
   m.autresRegles = (regles || []).filter(r => r.user_id === m.profil.id && r.is_active && !String(r.label || '').startsWith(PREFIXE_REGLE))
   m.tourneesExistantes = (tournees || []).filter(t => t.user_id === m.profil.id).map(t => t.date_routing).sort()
   const siens = (appareils || []).filter(a => a.user_id === m.profil.id).sort((a, b) => String(b.vu_le).localeCompare(String(a.vu_le)))
@@ -238,8 +246,8 @@ if (APPLY) {
     }
     const { data: regle, error: regleErr } = await supabase.from('routing_templates').insert({
       user_id: m.profil.id,
-      days_of_week: JOURS,
-      day_of_week: JOURS[0],
+      days_of_week: m.joursDms.length ? m.joursDms : JOURS,
+      day_of_week: (m.joursDms.length ? m.joursDms : JOURS)[0],
       label: m.label,
       // Atom : N PDV par canal et par jour, chaque PDV une fois par mois (etapes_quota_du_jour).
       mode: m.profil.employeur === 'atom' ? 'quota' : 'perimetre',
@@ -248,10 +256,13 @@ if (APPLY) {
       distributeur: m.distributeur || null,
       date_debut: DATE_DEBUT,
       date_fin: null,
-      is_active: true,
+      // Tous les jours couverts par des règles SSF : la règle DMS est gardée
+      // (portefeuille de référence) mais inactive.
+      is_active: m.joursDms.length > 0,
       created_by: auteur?.id || null,
     }).select('id').single()
     if (regleErr) throw new Error(`règle ${email} : ${regleErr.message}`)
+    if (m.joursSsf.length) console.log(`  ⚠ ${email} : règles SSF sur ${m.joursSsf.join(',')} → règle DMS limitée à ${m.joursDms.join(',') || 'aucun jour (inactive)'} ; relancer scripts/deriver-ssf-sous-zones.mjs pour recalculer leurs portefeuilles`)
 
     const lignes = m.ordre.map((p, k) => ({ template_id: regle.id, pdv_id: p.pdv_id, position_order: k + 1, objectifs: OBJECTIFS }))
     for (let i = 0; i < lignes.length; i += 500) {
