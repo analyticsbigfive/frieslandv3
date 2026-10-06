@@ -3,6 +3,7 @@ import { defineStore, skipHydrate } from 'pinia'
 import { isPrivilegedProfile } from '~/utils/roles'
 import { markRaw } from 'vue'
 import { fetchAllRows } from '~/utils/fetchAll'
+import { regrouperLignesTournees } from '~/utils/routingImport'
 import type { Routing, RoutingPDV, RoutingObjectives, RoutingTemplate, RoutingTemplatePDV, RoutingTemplateException, Profile, RoutingTemplateMode } from '~/types'
 
 export const useRoutingStore = defineStore('routing', () => {
@@ -462,11 +463,13 @@ export const useRoutingStore = defineStore('routing', () => {
     // 2. Sync PDV list (only if provided)
     if (!pdvItems) return
 
-    const { data: existing, error: exErr } = await (supabase
+    // Paginé : une tournée « portefeuille » dépasse le plafond de 1 000 lignes.
+    const existing = await fetchAllRows<any>((from, to) => (supabase
       .from('routing_pdv') as any)
-      .select('id, pdv_id')
+      .select('id, pdv_id, position_order')
       .eq('routing_id', routingId)
-    if (exErr) throw exErr
+      .order('position_order').order('id')
+      .range(from, to))
 
     const existingByPdv = new Map<string, any>((existing || []).map((r: any) => [r.pdv_id, r]))
     const desiredPdvIds = new Set(pdvItems.map(i => i.pdv_id))
@@ -506,6 +509,22 @@ export const useRoutingStore = defineStore('routing', () => {
         if (error) throw error
       }
     }
+
+    // Fusion : les PDV conservés hors fichier passent après ceux du fichier,
+    // dans leur ordre d'origine (sinon deux PDV partagent la même position et
+    // l'ordre de visite s'entrelace).
+    if (!supprimerAbsents) {
+      const conserves = (existing || []).filter((r: any) => !desiredPdvIds.has(r.pdv_id))
+      for (let i = 0; i < conserves.length; i += 20) {
+        const lot = conserves.slice(i, i + 20)
+        const res = await Promise.all(lot.map((r: any, j: number) => (supabase
+          .from('routing_pdv') as any)
+          .update({ position_order: pdvItems.length + i + j + 1 })
+          .eq('id', r.id)))
+        const err = res.find((x: any) => x.error)?.error
+        if (err) throw err
+      }
+    }
   }
 
   // ---- Admin: bulk import routings from CSV (1 ligne = 1 PDV) ----
@@ -524,12 +543,16 @@ export const useRoutingStore = defineStore('routing', () => {
     const summary = { created: 0, updated: 0, pdvCount: 0, errors: [] as string[] }
     if (!rows.length) return summary
 
-    // Résolution email -> profil (id + périmètre pour la garde territoire)
-    const { data: profiles, error: pErr } = await (supabase.from('profiles') as any)
-      .select('id, email, role, zone_assignee, territoires_assignes, quartiers_assignes')
-    if (pErr) throw pErr
+    // Résolution email -> profil (id + périmètre pour la garde territoire).
+    // Paginé (plafond PostgREST de 1 000 lignes) ; comptes inactifs écartés.
+    const profiles = await fetchAllRows<any>((from, to) => (supabase.from('profiles') as any)
+      .select('id, email, role, is_active, zone_assignee, territoires_assignes, quartiers_assignes')
+      .order('id')
+      .range(from, to))
     const emailToProfile = new Map<string, any>(
-      (profiles || []).map((p: any) => [String(p.email || '').trim().toLowerCase(), p])
+      profiles
+        .filter((p: any) => p.is_active !== false && p.email)
+        .map((p: any) => [String(p.email).trim().toLowerCase(), p])
     )
 
     // PDV valides + leur zone/quartier (pour vérifier le périmètre). Paginé :
@@ -541,69 +564,26 @@ export const useRoutingStore = defineStore('routing', () => {
       .order('pdv_id')
       .range(from, to))
     const pdvById = new Map<string, any>(pdvs.map((p: any) => [p.pdv_id, p]))
-    const validPdv = new Set(pdvById.keys())
 
-    const parseBool = (v?: string) => {
-      const s = (v || '').trim().toLowerCase()
-      return s === 'true' || s === '1' || s === 'oui' || s === 'yes' || s === 'x'
-    }
+    // Regroupement par email + date, PDV en double et dates invalides refusés.
+    const { groupes, erreurs } = regrouperLignesTournees(rows)
+    summary.errors.push(...erreurs)
 
-    // Regroupement par email + date
-    type Grp = { email: string; date: string; notes: string; status: string; items: { pdv_id: string; ordre: number; objectifs: RoutingObjectives }[] }
-    const groups = new Map<string, Grp>()
-
-    rows.forEach((r, i) => {
-      // __ligne : numéro de ligne réel du fichier (useRoutingExcel saute les
-      // lignes vides) ; à défaut, ligne 1 = en-têtes.
-      const lineNo = Number(r.__ligne) || i + 2
-      const email = (r.email || '').trim().toLowerCase()
-      const date = (r.date || '').trim()
-      const pdvId = (r.pdv_id || '').trim()
-
-      if (!email || !date || !pdvId) {
-        const manque = [!email && 'merchandiser', !date && 'date', !pdvId && 'point de vente'].filter(Boolean).join(', ')
-        summary.errors.push(`Ligne ${lineNo} : ${manque} manquant(e)`)
-        return
-      }
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        summary.errors.push(`Ligne ${lineNo} : date « ${date} » non reconnue (attendu : 25/06/2026)`)
-        return
-      }
-
-      const key = `${email}__${date}`
-      let g = groups.get(key)
-      if (!g) {
-        g = { email, date, notes: '', status: 'pending', items: [] }
-        groups.set(key, g)
-      }
-      if (r.notes && r.notes.trim() && !g.notes) g.notes = r.notes.trim()
-      if (r.statut && r.statut.trim()) g.status = r.statut.trim().toLowerCase()
-
-      g.items.push({
-        pdv_id: pdvId,
-        ordre: parseInt(r.ordre) || g.items.length + 1,
-        objectifs: {
-          releve_stock: parseBool(r.releve_stock),
-          encaissement: parseBool(r.encaissement),
-          photos: parseBool(r.photos),
-          merchandising: parseBool(r.merchandising),
-          prospection: parseBool(r.prospection),
-        },
-      })
-    })
-
-    // Traitement de chaque groupe (routing)
-    for (const g of groups.values()) {
+    for (const g of groupes) {
       const profile = emailToProfile.get(g.email)
       if (!profile) {
-        summary.errors.push(`${g.email} (${g.date}) : merchandiser introuvable`)
+        summary.errors.push(`${g.email} (${g.date}) : merchandiser introuvable ou compte désactivé`)
+        continue
+      }
+      if (!['merchandiser', 'commercial'].includes(profile.role)) {
+        summary.errors.push(`${g.email} (${g.date}) : compte « ${profile.role} », pas un merchandiser, tournée ignorée`)
         continue
       }
       const userId = profile.id
 
       const items = g.items
         .filter((it) => {
-          if (!validPdv.has(it.pdv_id)) {
+          if (!pdvById.has(it.pdv_id)) {
             summary.errors.push(`${g.email} (${g.date}) : point de vente « ${it.pdv_id} » introuvable ou inactif, ignoré`)
             return false
           }
@@ -614,7 +594,6 @@ export const useRoutingStore = defineStore('routing', () => {
           }
           return true
         })
-        .sort((a, b) => a.ordre - b.ordre)
         .map(it => ({ pdv_id: it.pdv_id, objectifs: it.objectifs }))
 
       if (!items.length) {
@@ -622,34 +601,39 @@ export const useRoutingStore = defineStore('routing', () => {
         continue
       }
 
-      const validStatus = ['pending', 'in_progress', 'completed', 'cancelled'].includes(g.status) ? g.status : 'pending'
-
       // Routing existant ? (UNIQUE user_id + date_routing)
-      const { data: existing } = await (supabase.from('routings') as any)
+      const { data: existing, error: exErr } = await (supabase.from('routings') as any)
         .select('id')
         .eq('user_id', userId)
         .eq('date_routing', g.date)
         .maybeSingle()
+      if (exErr) {
+        summary.errors.push(`${g.email} (${g.date}) : lecture de la tournée existante impossible (${exErr.message}), ignorée`)
+        continue
+      }
 
       try {
         if (existing?.id) {
-          await updateRouting(
-            existing.id,
-            { notes: g.notes || null, status: validStatus },
-            items,
-            { supprimerAbsents: mode === 'remplacement' },
-          )
+          // Ce que le fichier ne dit pas reste tel quel : le modèle n'a pas de
+          // colonne Statut, et une tournée en cours ne doit pas repasser « en
+          // attente ». En remplacement, les notes suivent le fichier.
+          const maj: { notes?: string | null; status?: string } = {}
+          if (g.status) maj.status = g.status
+          if (g.notes !== undefined) maj.notes = g.notes
+          else if (mode === 'remplacement') maj.notes = null
+          await updateRouting(existing.id, maj, items, { supprimerAbsents: mode === 'remplacement' })
           summary.updated++
         } else {
-          const created = await createRouting(userId, g.date, items, createdBy, g.notes || undefined)
-          if (validStatus !== 'pending') {
-            await (supabase.from('routings') as any).update({ status: validStatus }).eq('id', (created as any).id)
+          const created = await createRouting(userId, g.date, items, createdBy, g.notes)
+          if (g.status && g.status !== 'pending') {
+            const { error: stErr } = await (supabase.from('routings') as any).update({ status: g.status }).eq('id', (created as any).id)
+            if (stErr) summary.errors.push(`${g.email} (${g.date}) : tournée créée, mais statut non appliqué (${stErr.message})`)
           }
           summary.created++
         }
         summary.pdvCount += items.length
       } catch (err: any) {
-        summary.errors.push(`${g.email} (${g.date}): ${err.message}`)
+        summary.errors.push(`${g.email} (${g.date}) : ${err.message}`)
       }
     }
 

@@ -14,21 +14,12 @@
 // Territoire et quartier ne servent qu'à filtrer les listes.
 import ExcelJS from 'exceljs'
 import { fetchAllRows } from '~/utils/fetchAll'
-
-export const ROUTING_ACTIONS = [
-  { key: 'releve_stock', label: 'Relevé de stock' },
-  { key: 'encaissement', label: 'Encaissement' },
-  { key: 'photos', label: 'Photos' },
-  { key: 'merchandising', label: 'Merchandising' },
-  { key: 'prospection', label: 'Prospection' },
-] as const
+import { COLONNES_EXPORT, ROUTING_ACTIONS, SEP_MERCH, SEP_PDV, lignesExportTournees, normaliserLigneTournee, type EtapeExport, type TourneeExport } from '~/utils/routingImport'
 
 const FEUILLE_SAISIE = 'Tournées'
 const LIGNES_SAISIE = 1000
 const SANS_TERRITOIRE = '(SANS TERRITOIRE)'
 const SANS_QUARTIER = '(SANS QUARTIER)'
-const SEP_MERCH = ' — '
-const SEP_PDV = ' · '
 
 const COLONNES = [
   { header: 'Merchandiser', width: 42 },
@@ -47,24 +38,6 @@ const COLONNES = [
 function libelle(v: unknown, vide: string): string {
   const s = String(v ?? '').replace(/[*?~]/g, ' ').replace(/\s+/g, ' ').trim().toUpperCase()
   return s || vide
-}
-
-// Sans accents, minuscules : pour reconnaître les en-têtes quelle que soit la saisie.
-function cle(v: string): string {
-  return v.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
-}
-
-const pad = (n: number) => String(n).padStart(2, '0')
-
-// Date Excel (Date UTC minuit), « 25/06/2026 » ou « 2026-06-25 » → AAAA-MM-JJ.
-function versIsoJour(v: unknown): string {
-  if (v instanceof Date && !Number.isNaN(v.getTime())) {
-    return `${v.getUTCFullYear()}-${pad(v.getUTCMonth() + 1)}-${pad(v.getUTCDate())}`
-  }
-  const s = String(v ?? '').trim()
-  const fr = s.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/)
-  if (fr) return `${fr[3]}-${pad(Number(fr[2]))}-${pad(Number(fr[1]))}`
-  return s
 }
 
 // Valeur affichée d'une cellule ExcelJS (texte riche, lien, formule…).
@@ -252,30 +225,40 @@ export function useRoutingExcel() {
       brutes = parseCsv(await file.text()).map((valeurs, i) => ({ ligne: i + 2, valeurs }))
     }
 
-    // En-têtes du modèle Excel et de l'ancien CSV.
-    const champ: Record<string, string> = {
-      'merchandiser': 'email', 'email': 'email',
-      'date': 'date',
-      'point de vente': 'pdv_id', 'pdv id': 'pdv_id', 'pdv': 'pdv_id',
-      'ordre': 'ordre', 'notes': 'notes', 'statut': 'statut',
-      ...Object.fromEntries(ROUTING_ACTIONS.flatMap(a => [[cle(a.label), a.key], [cle(a.key), a.key]])),
-    }
-
     return brutes.flatMap(({ ligne, valeurs }) => {
-      const out: Record<string, string> = { __ligne: String(ligne) }
-      for (const [h, v] of Object.entries(valeurs)) {
-        const k = champ[cle(h)]
-        if (!k) continue
-        if (k === 'date') out.date = versIsoJour(v)
-        else if (k === 'email') out.email = (String(v ?? '').match(/[^\s—<>()]+@[^\s—<>()]+/)?.[0] || String(v ?? '')).trim().toLowerCase()
-        else if (k === 'pdv_id') { const s = String(v ?? '').trim(); out.pdv_id = s.includes(SEP_PDV.trim()) ? s.split(SEP_PDV.trim()).pop()!.trim() : s }
-        else out[k] = String(v ?? '').trim()
-      }
+      const out = normaliserLigneTournee(valeurs, ligne)
       // Ligne entièrement vide (fin de tableau, ligne sautée) : ignorée.
-      const utile = ['email', 'date', 'pdv_id'].some(k => out[k])
-      return utile ? [out] : []
+      return out ? [out] : []
     })
   }
 
-  return { downloadRoutingExcelTemplate, readRoutingFile }
+  /**
+   * Exporte des tournées au format du modèle d'import (une ligne par PDV) :
+   * le fichier se corrige puis se réimporte tel quel.
+   */
+  async function exporterTournees(tournees: { tournee: TourneeExport; etapes: EtapeExport[] }[], nomFichier: string) {
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet(FEUILLE_SAISIE, { views: [{ state: 'frozen', ySplit: 1 }] })
+    ws.columns = COLONNES_EXPORT.map(h => ({
+      header: h,
+      key: h,
+      width: COLONNES.find(c => c.header === h)?.width ?? 14,
+    }))
+    ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
+    ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC8102E' } }
+    for (const l of lignesExportTournees(tournees)) ws.addRow(l)
+    // Dates en texte jj/mm/aaaa : Excel ne les convertit pas en série au réenregistrement.
+    ws.getColumn('Date').numFmt = '@'
+
+    const buffer = await wb.xlsx.writeBuffer()
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = nomFichier
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  return { downloadRoutingExcelTemplate, readRoutingFile, exporterTournees }
 }
