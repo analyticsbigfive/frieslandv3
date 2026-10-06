@@ -236,6 +236,8 @@ function rebuildMaps() {
 // Option builders ----------------------------------------------------------
 const opt = <T,>(rows: T[], value: (r: T) => any, label: (r: T) => string) =>
   rows.map(r => ({ value: value(r), label: label(r) }))
+const JOURS_SEMAINE: Record<number, string> = { 0: 'Dimanche', 1: 'Lundi', 2: 'Mardi', 3: 'Mercredi', 4: 'Jeudi', 5: 'Vendredi', 6: 'Samedi' }
+const CANAUX_ATOM = ['Superette', 'Boutique', 'Aboki & Kiosque', 'Pushcart', 'Porridge']
 const regionOpts = () => opt(store.region || [], r => r.code, r => `${r.nom_affichage || r.nom} · ${r.code}`)
 const sousRegionOpts = () => opt(store.sous_region || [], r => r.code, r => `${r.nom_affichage || r.nom} · ${r.code}`)
 const territoireOpts = () => opt(store.territoire || [], r => r.code, r => `${r.nom} · ${r.code}`)
@@ -590,7 +592,7 @@ const defs: Def[] = [
       { label: 'Lien de téléchargement', cell: r => r.url_telechargement || '—', muted: true },
     ],
     fields: [
-      { key: 'version_code_min', label: 'Code de version minimal (versionCode)', type: 'num', required: true, min: 1, hint: 'En dessous, l’app est bloquée sur un écran de mise à jour. 1.0.9 = 11, 1.0.10 = 12. Vérifier d’abord la version installée dans « Versions installées ».' },
+      { key: 'version_code_min', label: 'Code de version minimal (versionCode)', type: 'num', required: true, min: 1, hint: 'En dessous, l’app est bloquée sur un écran de mise à jour. 1.0.9 = 11, 1.0.10 = 13. Vérifier d’abord la version installée dans « Versions installées ».' },
       { key: 'version_nom_min', label: 'Version affichée', type: 'text', hint: 'Ex. 1.0.10' },
       { key: 'url_telechargement', label: 'Lien de téléchargement', type: 'text', hint: 'Lien stable de l’APK (node scripts/upload-apk.mjs … --latest).' },
       { key: 'message', label: 'Message affiché', type: 'text' },

@@ -41,6 +41,7 @@ export default defineEventHandler(async (event) => {
   const zoneAssignee = body?.zone_assignee ? String(body.zone_assignee) : (territoires[0] || null)
   const commercialId = body?.commercial_id ? String(body.commercial_id) : null
   const region = body?.region ? String(body.region) : null
+  const employeur = body?.employeur === 'atom' ? 'atom' : 'friesland'
 
   return await createUserWithProfile(service, {
     email,
@@ -50,6 +51,7 @@ export default defineEventHandler(async (event) => {
     telephone,
     zone_assignee: zoneAssignee,
     commercial_id: commercialId,
+    employeur,
     territoires_assignes: territoires,
     quartiers_assignes: quartiers,
     region,

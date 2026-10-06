@@ -66,7 +66,7 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 
 const [profils, territoires, alias, pdvs, regles] = await Promise.all([
   toutesLesLignes(() => supabase.from('profiles')
-    .select('id,email,nom,role,is_active,zone_assignee,territoires_assignes,quartiers_assignes')
+    .select('id,email,nom,role,is_active,zone_assignee,territoires_assignes,quartiers_assignes,employeur')
     .eq('role', 'merchandiser').order('id')),
   toutesLesLignes(() => supabase.from('territoire').select('code,nom').order('code')),
   toutesLesLignes(() => supabase.from('territoire_alias').select('alias,territoire_code').order('alias')),
@@ -99,6 +99,9 @@ const comptes = []
 const ignores = []
 for (const p of profils.filter(p => p.is_active !== false && p.email)) {
   if (COMPTE && p.email.toLowerCase() !== COMPTE) continue
+  // Atom BTL : tournée par quotas depuis le portefeuille DMS (affecter-merch-dms.mjs),
+  // jamais « tout le périmètre ». Sans fichier DMS, le compte n'a pas de tournée.
+  if (p.employeur === 'atom') { ignores.push({ p, motif: 'merchandiser Atom (tournée par quotas, fichier DMS)' }); continue }
   if (dms.has(p.id)) { ignores.push({ p, motif: 'tournée « Portefeuille DMS » (fichier DMS)' }); continue }
   if (!INCLURE_TEST && estCompteTest(p.email)) { ignores.push({ p, motif: 'compte de démonstration (--inclure-test pour l\'inclure)' }); continue }
   const t = (p.territoires_assignes || []).filter(Boolean)

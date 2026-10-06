@@ -241,6 +241,8 @@ if (APPLY) {
       days_of_week: JOURS,
       day_of_week: JOURS[0],
       label: m.label,
+      // Atom : N PDV par canal et par jour, chaque PDV une fois par mois (etapes_quota_du_jour).
+      mode: m.profil.employeur === 'atom' ? 'quota' : 'perimetre',
       notes: `Clients DMS du fichier ${DMS_PATH.split('/').pop()} (${m.pdvs.length} PDV).`,
       territoire: null,
       distributeur: m.distributeur || null,

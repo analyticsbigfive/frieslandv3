@@ -268,6 +268,9 @@
               </div>
             </div>
             <div class="flex items-center gap-2">
+              <UBadge v-if="tpl.mode === 'quota'" color="violet" variant="soft" size="sm" title="N PDV par canal et par jour, chaque PDV une fois par mois (Atom)">
+                Quotas
+              </UBadge>
               <UBadge :color="tpl.is_active ? 'green' : 'gray'" variant="soft" size="sm">
                 {{ tpl.is_active ? 'Actif' : 'Inactif' }}
               </UBadge>
@@ -740,6 +743,22 @@
           <UInput v-model="newTemplate.distributeur" placeholder="Ex. Distributeur A" size="md" class="w-full" />
         </UFormGroup>
 
+        <UFormGroup
+          label="Logique de tournée"
+          help="Quotas : la tournée du jour pioche dans le portefeuille selon la grille Référentiels › Quotas Atom ; un PDV déjà planifié ou visité dans le mois n'est pas repris."
+          size="md"
+          class="sm:col-span-2"
+        >
+          <USelectMenu
+            v-model="newTemplate.mode"
+            :options="modeOptions"
+            option-attribute="label"
+            value-attribute="value"
+            size="md"
+            class="w-full"
+          />
+        </UFormGroup>
+
         <UFormGroup label="À partir du" size="md">
           <UInput v-model="newTemplate.dateDebut" type="date" size="md" class="w-full" />
         </UFormGroup>
@@ -945,7 +964,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Routing, RoutingPDV, RoutingObjectives, RoutingTemplate, RoutingTemplatePDV, RoutingTemplateException } from '~/types'
+import type { Routing, RoutingPDV, RoutingObjectives, RoutingTemplate, RoutingTemplatePDV, RoutingTemplateException, RoutingTemplateMode } from '~/types'
 import { toIsoJour, debutDeSemaine } from '~/utils/periode'
 import { fetchAllRows } from '~/utils/fetchAll'
 import { JOURS_SEMAINE, joursDeRegle, libelleJours, datesDeRegle } from '~/utils/routingRecurrence'
@@ -1088,7 +1107,13 @@ const newTemplate = reactive({
   distributeur: '',
   dateDebut: toIsoJour(new Date()),
   dateFin: '',
+  // perimetre = tout le portefeuille chaque jour ; quota = Atom (grille Référentiels › Quotas Atom).
+  mode: 'perimetre' as RoutingTemplateMode,
 })
+const modeOptions = [
+  { value: 'perimetre', label: 'Périmètre — tout le portefeuille chaque jour (Friesland)' },
+  { value: 'quota', label: 'Quotas — N PDV par canal et par jour, chaque PDV une fois par mois (Atom)' },
+]
 
 // ---- Exceptions : « cette semaine, il ne visite pas ce PDV » ----
 const showExceptionModal = ref(false)
@@ -1764,6 +1789,7 @@ async function handleCreateTemplate() {
         distributeur: newTemplate.distributeur,
         dateDebut: newTemplate.dateDebut,
         dateFin: newTemplate.dateFin,
+        mode: newTemplate.mode,
       },
     )
     toast.add({
@@ -1779,6 +1805,7 @@ async function handleCreateTemplate() {
     newTemplate.territoire = ''
     newTemplate.distributeur = ''
     newTemplate.dateFin = ''
+    newTemplate.mode = 'perimetre'
     loadTemplates()
   } catch (err: any) {
     toast.add({ title: 'Erreur', description: err.message, color: 'red' })
