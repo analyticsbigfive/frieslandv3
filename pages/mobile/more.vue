@@ -40,6 +40,14 @@ const roleItems = computed(() => {
   if (authStore.isCommercial || authStore.isSuperviseur) {
     items.unshift({ label: "Visites de l'équipe", description: 'Suivi des merchandiseurs du périmètre', to: '/mobile/equipe', icon: 'i-heroicons-users' })
   }
+  // Tournées et objectifs : rôles terrain (le commercial n'a pas de tournée,
+  // l'onglet Routing lui est déjà masqué).
+  if (!authStore.isCommercial) {
+    items.push(
+      { label: 'Calendrier des tournées', description: 'Tournées passées et à venir, PDV de chaque jour', to: '/mobile/tournees', icon: 'i-heroicons-calendar' },
+      { label: 'Objectifs du mois', description: 'PDV à visiter par canal, semaine et mois', to: '/mobile/objectifs', icon: 'i-heroicons-flag' },
+    )
+  }
   // Le commercial a le coaching en onglet du bas : pas de doublon ici.
   if (authStore.isSuperviseur) {
     items.push({ label: 'Field coaching', description: 'Questionnaire de suivi des activités de prospection', to: '/mobile/coaching', icon: 'i-heroicons-academic-cap' })

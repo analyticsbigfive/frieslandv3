@@ -209,6 +209,8 @@ const pageTitle = computed(() => {
     '/mobile/pdv': 'Points de Vente',
     '/mobile/routing': 'Mon Routing',
     '/mobile/calendar': 'Calendrier',
+    '/mobile/tournees': 'Mes tournées',
+    '/mobile/objectifs': 'Mes objectifs',
     '/mobile/map': 'Carte',
     '/mobile/contacts': 'Contacts',
     '/mobile/more': 'Plus',

@@ -40,6 +40,8 @@
                 <UInput
                   v-model="email"
                   type="email"
+                  name="email"
+                  autocomplete="username"
                   placeholder="nom@entreprise.com"
                   size="lg"
                   icon="i-heroicons-envelope"
@@ -51,6 +53,8 @@
                 <UInput
                   v-model="password"
                   :type="showPassword ? 'text' : 'password'"
+                  name="password"
+                  autocomplete="current-password"
                   placeholder="••••••••"
                   size="lg"
                   icon="i-heroicons-lock-closed"
@@ -68,6 +72,12 @@
                   </template>
                 </UInput>
               </UFormGroup>
+
+              <!-- Se souvenir de moi : l'email est prérempli à la prochaine
+                   connexion ; le mot de passe n'est jamais stocké par l'app,
+                   c'est le gestionnaire de mots de passe du téléphone qui le
+                   propose (autocomplete ci-dessus). -->
+              <UCheckbox v-model="seSouvenir" label="Se souvenir de moi" :disabled="loading" />
 
               <!-- Error Message -->
               <div
@@ -102,8 +112,11 @@
 </template>
 
 <script setup lang="ts">
+import { Preferences } from '@capacitor/preferences'
 import { homePathForRole } from '~/utils/roles'
 definePageMeta({ layout: false })
+
+const EMAIL_KEY = 'fc-login-email'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -121,6 +134,26 @@ const password = ref('')
 const showPassword = ref(false)
 const loading = ref(false)
 const errorMessage = ref('')
+const seSouvenir = ref(false)
+
+onMounted(async () => {
+  try {
+    const { value } = await Preferences.get({ key: EMAIL_KEY })
+    if (value) {
+      email.value ||= value
+      seSouvenir.value = true
+    }
+  }
+  catch {}
+})
+
+async function memoriserEmail() {
+  try {
+    if (seSouvenir.value) await Preferences.set({ key: EMAIL_KEY, value: email.value.trim() })
+    else await Preferences.remove({ key: EMAIL_KEY })
+  }
+  catch {}
+}
 
 // Redirect if already logged in
 watch(() => authStore.isAuthenticated, async (isAuth) => {
@@ -147,6 +180,7 @@ async function handleLogin() {
 
   try {
     await authStore.login(email.value, password.value)
+    await memoriserEmail()
 
     // Récupérer la géolocalisation de l'utilisateur après connexion
     const { initialize: initGeo } = useUserGeolocation()

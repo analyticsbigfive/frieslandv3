@@ -10,7 +10,7 @@ Mise en place le 06/10/2026. Migrations `supabase/nouveau/20261006100000_*` et `
 | Règle de tournée | `routing_templates.mode = 'perimetre'` | `routing_templates.mode = 'quota'` |
 | Portefeuille | tout le périmètre (`scripts/tournees-perimetre.mjs`) | clients DMS du merchandiser (`scripts/affecter-merch-dms.mjs`) |
 | Tournée du jour | tout le portefeuille, lundi → samedi | N PDV par canal selon la grille, chaque PDV **une fois par mois civil** |
-| Suivi | — | Référentiels › Application mobile › **Programme Atom** (vue `v_programme_atom`, objectif 420 PDV/mois) |
+| Suivi | — | Référentiels › Application mobile › **Programme Atom** (vue `v_programme_atom`, objectif = grille × jours de tournée du mois : 420 sur 4 semaines pleines, 465 en octobre 2026) |
 
 Grille client (Référentiels › Application mobile › **Quotas Atom**, table `routing_quota_canal`) :
 

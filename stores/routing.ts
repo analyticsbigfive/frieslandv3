@@ -4,10 +4,12 @@ import { isPrivilegedProfile } from '~/utils/roles'
 import { markRaw } from 'vue'
 import { fetchAllRows } from '~/utils/fetchAll'
 import { regrouperLignesTournees } from '~/utils/routingImport'
+import { estErreurReseau } from '~/utils/supabaseErrors'
 import type { Routing, RoutingPDV, RoutingObjectives, RoutingTemplate, RoutingTemplatePDV, RoutingTemplateException, Profile, RoutingTemplateMode } from '~/types'
 
 export const useRoutingStore = defineStore('routing', () => {
   const supabase = skipHydrate(markRaw(useSupabaseClient()))
+  const { addToQueue, isOnline } = useOfflineSync()
 
   const todayRouting = ref<Routing | null>(null)
   // Étapes de la tournée du jour DÉJÀ CHARGÉES, par pages de PAGE_ETAPES : une
@@ -122,7 +124,7 @@ export const useRoutingStore = defineStore('routing', () => {
 
   const PAGE_ETAPES = 50
   const SELECT_ETAPE = `*,
-    pdv:pdv_id(pdv_id, nom_pdv, zone, quartier, geolocation_lat, geolocation_lng, rayon_geofence, canal, adressage, image_url)`
+    pdv:pdv_id(pdv_id, nom_pdv, zone, quartier, geolocation_lat, geolocation_lng, rayon_geofence, canal, sous_categorie_pdv, adressage, image_url)`
 
   // clos = fait ou passé (tournée terminée quand tout est clos) ;
   // entamés = en cours ou fait (tournée « en cours » dès le premier).
@@ -150,6 +152,31 @@ export const useRoutingStore = defineStore('routing', () => {
   }
 
   const toutCharge = computed(() => routingPDVList.value.length >= compteurs.value.total)
+
+  // ---- Mobile : calendrier des tournées (lecture seule) ----
+  /**
+   * Tournées du merchandiser entre deux dates (AAAA-MM-JJ, incluses), avec le
+   * nombre d'étapes et d'étapes faites. Compteurs seuls, comme fetchRoutings :
+   * les étapes d'un jour se lisent à l'ouverture (chargerEtapesRouting).
+   * Les erreurs remontent : hors ligne, la page affiche son propre état.
+   */
+  async function fetchCalendrierTournees(userId: string, dateDebut: string, dateFin: string) {
+    const { data, error } = await (supabase
+      .from('routings') as any)
+      .select('id, date_routing, status, total:routing_pdv(count), faits:routing_pdv(count)')
+      .eq('faits.status', 'completed')
+      .eq('user_id', userId)
+      .gte('date_routing', dateDebut)
+      .lte('date_routing', dateFin)
+      .neq('status', 'cancelled')
+      .order('date_routing')
+    if (error) throw error
+    return (data || []).map(({ total, faits, ...r }: any) => ({
+      ...r,
+      nb_pdv: total?.[0]?.count ?? 0,
+      nb_faits: faits?.[0]?.count ?? 0,
+    })) as Pick<Routing, 'id' | 'date_routing' | 'status' | 'nb_pdv' | 'nb_faits'>[]
+  }
 
   /** Page suivante des étapes de la tournée du jour, dans l'ordre de passage. */
   async function chargerPageRouting() {
@@ -227,17 +254,26 @@ export const useRoutingStore = defineStore('routing', () => {
     // dans les pages chargées (clôture depuis le formulaire de visite).
     const idx = routingPDVList.value.findIndex(rp => rp.id === routingPdvId)
     let avant = idx !== -1 ? routingPDVList.value[idx].status : undefined
-    if (!avant) {
+    if (!avant && isOnline.value) {
       const { data } = await (supabase.from('routing_pdv') as any).select('status').eq('id', routingPdvId).maybeSingle()
       avant = (data as any)?.status
     }
 
-    const { error } = await (supabase
-      .from('routing_pdv') as any)
-      .update(update)
-      .eq('id', routingPdvId)
+    // Hors ligne (ou réseau coupé pendant l'envoi) : la mise à jour part dans
+    // la file et sera rejouée à la reconnexion ; l'écran avance quand même.
+    // Sans cela, une visite enregistrée hors ligne affichait « Erreur » et son
+    // étape restait « en cours » (test du 06/10/2026).
+    let enFile = !isOnline.value
+    if (!enFile) {
+      const { error } = await (supabase
+        .from('routing_pdv') as any)
+        .update(update)
+        .eq('id', routingPdvId)
 
-    if (error) throw error
+      if (error && estErreurReseau(error)) enFile = true
+      else if (error) throw error
+    }
+    if (enFile) addToQueue({ type: 'routing_pdv', data: { id: routingPdvId, update } })
 
     // Update local state
     if (idx !== -1) {
@@ -245,8 +281,8 @@ export const useRoutingStore = defineStore('routing', () => {
     }
     ajusterCompteurs(avant, status)
 
-    // Auto-update routing status
-    await syncRoutingStatus()
+    // Auto-update routing status (recalculé au prochain changement si hors ligne)
+    if (!enFile) await syncRoutingStatus()
   }
 
   // ---- Auto-update routing status based on PDV progress ----
@@ -317,9 +353,13 @@ export const useRoutingStore = defineStore('routing', () => {
   }
 
   const SELECT_ETAPE_ADMIN = `id, pdv_id, position_order, objectifs, status, geofence_validated, arrived_at, completed_at, visite_id,
-    pdv:pdv_id(pdv_id, nom_pdv, zone, quartier, geolocation_lat, geolocation_lng)`
+    pdv:pdv_id(pdv_id, nom_pdv, zone, quartier, sous_categorie_pdv, geolocation_lat, geolocation_lng)`
 
-  /** Admin : une page d'étapes d'une tournée, dans l'ordre de passage. */
+  /**
+   * Une page d'étapes d'une tournée, dans l'ordre de passage. Admin, et
+   * calendrier des tournées mobile (lecture seule, la RLS limite le
+   * merchandiser à ses propres tournées).
+   */
   async function chargerEtapesRouting(routingId: string, debut = 0, taille = PAGE_ETAPES): Promise<RoutingPDV[]> {
     const { data, error } = await (supabase.from('routing_pdv') as any)
       .select(SELECT_ETAPE_ADMIN)
@@ -1040,6 +1080,7 @@ export const useRoutingStore = defineStore('routing', () => {
     fetchTodayRouting,
     chargerPageRouting,
     chargementPage,
+    fetchCalendrierTournees,
     toutCharge,
     getRoutingPDV,
     updateRoutingPDVStatus,
