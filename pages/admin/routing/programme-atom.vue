@@ -3,7 +3,7 @@
     <AdminPageHeader
       title="Programme Atom"
       eyebrow="Routing & Planning"
-      :description="`Couverture du mois par merchandiser Atom : chaque PDV une fois par mois, objectif de ${objectifAffiche} PDV par agent.`"
+      :description="`Couverture du mois par merchandiser Atom : chaque PDV une fois par mois. Objectif de chaque agent = quotas de la grille sur ses jours de tournée du mois (${objectifAffiche}).`"
     >
       <template #actions>
         <UInput v-model="mois" type="month" size="sm" class="w-44" aria-label="Mois" />
@@ -83,10 +83,8 @@
     </div>
 
     <p class="text-xs text-gray-500 dark:text-gray-400">
-      Réglages : grille des quotas et canal des sous-catégories dans
+      Réglages : grille des quotas (elle fixe aussi l'objectif mensuel) et canal des sous-catégories dans
       <NuxtLink to="/admin/referentiels?onglet=quotas_atom" class="font-semibold text-fc-red underline">Référentiels › Quotas Atom</NuxtLink>,
-      objectif mensuel dans
-      <NuxtLink to="/admin/referentiels?onglet=parametre_app" class="font-semibold text-fc-red underline">Paramètres terrain</NuxtLink>,
       planning par SSF dans <NuxtLink to="/admin/routing" class="font-semibold text-fc-red underline">Routing › Règles</NuxtLink>.
     </p>
   </div>
@@ -106,7 +104,12 @@ const erreur = ref('')
 const total = (cle: string) => lignes.value.reduce((n, r) => n + Number(r[cle] || 0), 0)
 const taux = (r: any) => (Number(r.objectif_mensuel) > 0 ? Math.round((Number(r.nb_visites) / Number(r.objectif_mensuel)) * 100) : 0)
 const tauxGlobal = computed(() => (total('objectif_mensuel') > 0 ? Math.round((total('nb_visites') / total('objectif_mensuel')) * 100) : 0))
-const objectifAffiche = computed(() => lignes.value[0]?.objectif_mensuel ?? 420)
+// Objectifs du mois : souvent identiques (même grille, mêmes jours), sinon la fourchette.
+const objectifAffiche = computed(() => {
+  const valeurs = [...new Set(lignes.value.map(r => Number(r.objectif_mensuel) || 0))].sort((a, b) => a - b)
+  if (!valeurs.length) return 'aucun agent'
+  return valeurs.length === 1 ? `${valeurs[0]} PDV` : `de ${valeurs[0]} à ${valeurs[valeurs.length - 1]} PDV`
+})
 
 // Rythme attendu : part du mois écoulée (mois en cours seulement).
 const joursEcoules = computed(() => {

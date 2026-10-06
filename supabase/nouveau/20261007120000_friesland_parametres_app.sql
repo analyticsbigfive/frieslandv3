@@ -3,8 +3,7 @@
 --
 -- Jusqu'ici figés dans l'APK (nuxt.config.ts + .env au moment du build : un
 -- changement demandait une nouvelle version de l'app), dans le SQL (30 m dans
--- geolocaliser_pdv, 420 dans v_programme_atom) ou dans le code (objectif de
--- 10 visites par jour). Désormais une table, éditable dans Référentiels ›
+-- geolocaliser_pdv) ou dans le code (objectif de 10 visites par jour). Désormais une table, éditable dans Référentiels ›
 -- Application mobile › Paramètres terrain, lue par l'app 1.0.12 au lancement
 -- et au retour au premier plan (cache hors ligne).
 --
@@ -78,10 +77,12 @@ insert into public.parametre_app (cle, portee, valeur, libelle, description, uni
   ('objectif_visites_jour', 'tous', 10, 'Objectif de visites par jour',
    'Affiché sur l''accueil de l''app. Vide = taille de la tournée du jour.', 'visites', 1, 100, 90),
   ('objectif_visites_jour', 'atom', null, 'Objectif de visites par jour (Atom)',
-   'Vide : l''objectif est le nombre de PDV de la tournée du jour (quotas Atom).', 'visites', 1, 100, 91),
-  ('atom_objectif_mensuel', 'atom', 420, 'Objectif mensuel Atom',
-   'PDV distincts à visiter par merchandiser Atom et par mois (Programme Atom).', 'PDV', 1, 5000, 100)
+   'Vide : l''objectif est le nombre de PDV de la tournée du jour (quotas Atom).', 'visites', 1, 100, 91)
 on conflict (cle, portee) do nothing;
+
+-- L'objectif mensuel Atom n'est pas un paramètre : il suit la grille des
+-- quotas (Référentiels › Quotas Atom), comme l'écran mobile « Mes objectifs ».
+delete from public.parametre_app where cle = 'atom_objectif_mensuel';
 
 -- Valeur effective d'un paramètre : celle de la portée demandée, sinon « tous ».
 create or replace function public.parametre_app_valeur(p_cle text, p_portee text default 'tous')
@@ -167,15 +168,22 @@ revoke all on function public.geolocaliser_pdv(text, double precision, double pr
 grant execute on function public.geolocaliser_pdv(text, double precision, double precision, integer) to authenticated;
 
 -- ---------------------------------------------------------------------------
--- Programme Atom : pour un mois donné, objectif lu dans les paramètres.
+-- Programme Atom : pour un mois donné (objectif sur la grille des quotas).
 -- ---------------------------------------------------------------------------
 -- security invoker (défaut) : la RLS de profiles / routings / visites
 -- s'applique au lecteur (un merchandiser ne voit que ses lignes).
-create or replace function public.programme_atom(p_mois date default current_date)
+drop view if exists public.v_programme_atom;
+drop function if exists public.programme_atom(date);
+
+-- Programme Atom d'un mois quelconque (écran Routing › Programme Atom). Même
+-- calcul que v_programme_atom (migration 20261006120000) : objectif = somme
+-- des quotas de la grille sur les jours du mois où une règle quota de l'agent
+-- s'applique ; sans règle quota, la grille sur tous les jours du mois.
+create function public.programme_atom(p_mois date default current_date)
 returns table (
   user_id uuid, nom text, email text, mois date,
-  nb_portefeuille bigint, nb_eligibles bigint, nb_planifies bigint,
-  nb_visites bigint, nb_perfect_store bigint, objectif_mensuel numeric, reste_a_visiter numeric
+  nb_portefeuille integer, nb_eligibles integer, nb_planifies integer,
+  nb_visites integer, nb_perfect_store integer, objectif_mensuel integer, reste_a_visiter integer
 )
 language sql
 stable
@@ -191,9 +199,6 @@ as $$
     select date_trunc('month', coalesce(p_mois, current_date))::date as debut,
            (date_trunc('month', coalesce(p_mois, current_date)) + interval '1 month - 1 day')::date as fin
   ),
-  objectif as (
-    select coalesce(parametre_app_valeur('atom_objectif_mensuel', 'atom'), 420) as valeur
-  ),
   portefeuille as (
     select r.user_id, count(distinct tp.pdv_id) as nb_portefeuille,
            count(distinct tp.pdv_id) filter (where canal_atom(p.sous_categorie_pdv) is not null) as nb_eligibles
@@ -201,6 +206,30 @@ as $$
     join routing_template_pdv tp on tp.template_id = r.template_id
     join pdv p on p.pdv_id = tp.pdv_id
     group by r.user_id
+  ),
+  -- Jours du mois où une règle quota s'applique : plusieurs règles le même
+  -- jour ne cumulent pas (la grille s'applique une fois par jour).
+  jours_actifs as (
+    select u.user_id, g.jour::date as jour
+    from (select distinct user_id from regles) u
+    cross join mois m
+    cross join lateral generate_series(m.debut, m.fin, interval '1 day') as g(jour)
+    where exists (
+      select 1 from routing_regles_du_jour(u.user_id, g.jour::date) r
+      where r.mode = 'quota'
+    )
+  ),
+  objectifs as (
+    select j.user_id, sum(q.quota)::int as objectif_mensuel
+    from jours_actifs j
+    join routing_quota_canal q on q.jour_semaine = extract(dow from j.jour)::int
+    group by j.user_id
+  ),
+  grille_mois as (
+    select sum(q.quota)::int as objectif_mensuel
+    from mois m
+    cross join lateral generate_series(m.debut, m.fin, interval '1 day') as g(jour)
+    join routing_quota_canal q on q.jour_semaine = extract(dow from g.jour)::int
   ),
   planifies as (
     select rt.user_id, count(distinct rp.pdv_id) as nb_planifies
@@ -222,13 +251,15 @@ as $$
   )
   select
     p.id, p.nom, p.email, m.debut,
-    coalesce(pf.nb_portefeuille, 0), coalesce(pf.nb_eligibles, 0), coalesce(pl.nb_planifies, 0),
-    coalesce(vi.nb_visites, 0), coalesce(vi.nb_perfect_store, 0),
-    o.valeur, greatest(o.valeur - coalesce(vi.nb_visites, 0), 0)
+    coalesce(pf.nb_portefeuille, 0)::int, coalesce(pf.nb_eligibles, 0)::int, coalesce(pl.nb_planifies, 0)::int,
+    coalesce(vi.nb_visites, 0)::int, coalesce(vi.nb_perfect_store, 0)::int,
+    coalesce(o.objectif_mensuel, gm.objectif_mensuel, 0),
+    greatest(coalesce(o.objectif_mensuel, gm.objectif_mensuel, 0) - coalesce(vi.nb_visites, 0), 0)::int
   from profiles p
   cross join mois m
-  cross join objectif o
+  cross join grille_mois gm
   left join portefeuille pf on pf.user_id = p.id
+  left join objectifs o on o.user_id = p.id
   left join planifies pl on pl.user_id = p.id
   left join visitees vi on vi.user_id = p.id
   where p.employeur = 'atom' and p.role = 'merchandiser' and coalesce(p.is_active, true)
@@ -236,12 +267,11 @@ as $$
 $$;
 
 comment on function public.programme_atom(date) is
-  'Programme Atom d''un mois : par merchandiser, portefeuille, PDV éligibles, planifiés, visités, en perfect store, objectif (paramètre atom_objectif_mensuel) et reste à visiter.';
+  'Programme Atom d''un mois : par merchandiser, portefeuille, PDV éligibles, planifiés, visités, en perfect store, objectif (grille des quotas × jours de tournée du mois) et reste à visiter.';
 
 grant execute on function public.programme_atom(date) to authenticated;
 
 -- La vue garde ses colonnes (mois en cours), branchée sur la fonction.
-drop view if exists public.v_programme_atom;
 create view public.v_programme_atom with (security_invoker = true) as
 select * from public.programme_atom(current_date);
 

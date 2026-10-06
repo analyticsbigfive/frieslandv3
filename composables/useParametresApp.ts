@@ -17,7 +17,6 @@ export interface ParametresApp {
   tracking_lot_max: number
   /** null : objectif = nombre de PDV de la tournée du jour (merchandisers Atom). */
   objectif_visites_jour: number | null
-  atom_objectif_mensuel: number
 }
 
 const CLE_CACHE = 'offline:parametres'
@@ -35,7 +34,6 @@ export function parametresParDefaut(pub: Record<string, any> = {}): ParametresAp
     tracking_envoi_s: nombre(pub.trackingFlushMs, 300_000) / 1000,
     tracking_lot_max: nombre(pub.trackingBatchMax, 200),
     objectif_visites_jour: 10,
-    atom_objectif_mensuel: 420,
   }
 }
 
