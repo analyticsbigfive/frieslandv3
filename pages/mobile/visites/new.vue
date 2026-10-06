@@ -132,6 +132,23 @@
             <UInput v-model="form.date_visite" type="datetime-local" size="lg" />
           </div>
 
+          <!-- SSF (merchandisers Atom) : vendeur du distributeur présent à la visite. -->
+          <div v-if="estAtom">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SSF (avec qui)</label>
+            <USelect v-model="ssfSelection" :options="optionsSsf" placeholder="Choisir le SSF" size="lg" />
+            <UInput v-if="ssfSelection === 'autre'" v-model="form.ssf_brut" class="mt-2" size="lg" placeholder="Nom du SSF" maxlength="80" />
+            <p v-if="ssfPrevu" class="mt-1 text-xs text-gray-400">
+              Prévu ce jour : {{ ssfPrevu.ssf_nom }}<template v-if="ssfPrevu.ssf_telephone"> · {{ ssfPrevu.ssf_telephone }}</template>
+            </p>
+            <p
+              v-if="horsSousZone"
+              class="mt-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 px-3 py-2 text-xs text-amber-800 dark:text-amber-200"
+              role="status"
+            >
+              Ce PDV n'est pas dans la sous-zone de {{ nomSsfChoisi }} ({{ sousZoneChoisie }}). La visite peut être enregistrée : vérifiez le PDV ou le SSF.
+            </p>
+          </div>
+
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email du compte *</label>
             <UInput :model-value="userEmail" disabled size="lg" />
@@ -509,6 +526,7 @@ import type { PDV, VisiteData, VisiteConcurrence, VisiteActions } from '~/types'
 import { getSkus, quantityToLegacyStatus, categoryPresent, categoriesProduitsActives, type ProductCategoryDef } from '~/utils/products'
 import { statutMarqueDerive } from '~/utils/concurrence'
 import { CATEGORIES_RELEVE, categorieRenseignee } from '~/utils/visiteCompletude'
+import { ssfDuJour, pdvDansSousZone, libelleSousZone } from '~/utils/ssfTerrain'
 import { describeSupabaseError, estErreurReseau } from '~/utils/supabaseErrors'
 import type { WizardStep } from '~/components/FormWizard.vue'
 
@@ -634,7 +652,49 @@ const form = reactive({
   actions: defaultData.actions,
   commentaires: '',
   images: [] as File[],
+  // SSF de la visite (Atom) : id de la liste, ou nom saisi (« autre »).
+  ssf_id: null as number | null,
+  ssf_brut: '',
 })
+
+// SSF (merchandisers Atom) : par défaut celui prévu ce jour-là (planning
+// ssf_semaine, gardé hors ligne), modifiable ; « autre » pour un SSF absent de
+// la liste. Un PDV hors de la sous-zone du SSF choisi est signalé, sans bloquer.
+const estAtom = computed(() => authStore.profile?.employeur === 'atom')
+const { semaine: semaineSsf, listeSsf, quartiers: quartiersSsf, chargerSemaine: chargerSemaineSsf, chargerListe: chargerListeSsf } = useSsfTerrain()
+const ssfAutre = ref(false)
+const ssfSelection = computed<string>({
+  get: () => (form.ssf_id ? String(form.ssf_id) : ssfAutre.value ? 'autre' : ''),
+  set: (v) => {
+    ssfAutre.value = v === 'autre'
+    form.ssf_id = v && v !== 'autre' ? Number(v) : null
+    if (!ssfAutre.value) form.ssf_brut = ''
+  },
+})
+const ssfPrevu = computed(() => {
+  const jour = new Date(form.date_visite).getDay()
+  return ssfDuJour(semaineSsf.value, Number.isNaN(jour) ? new Date().getDay() : jour, routingStore.todayRouting?.template_id)
+})
+const optionsSsf = computed(() => {
+  const semaine = new Set(semaineSsf.value.map(l => l.ssf_id))
+  const liste = [...listeSsf.value].sort((a, b) => Number(semaine.has(b.id)) - Number(semaine.has(a.id)) || a.nom.localeCompare(b.nom, 'fr'))
+  // Un SSF prévu mais absent de la liste (cache incomplet) reste choisissable.
+  for (const l of semaineSsf.value) if (!liste.some(s => s.id === l.ssf_id)) liste.unshift({ id: l.ssf_id, nom: l.ssf_nom, telephone: l.ssf_telephone, distributeur: l.distributeur })
+  return [
+    ...liste.map(s => ({ value: String(s.id), label: s.distributeur ? `${s.nom} — ${s.distributeur}` : s.nom })),
+    { value: 'autre', label: 'Autre SSF (saisir le nom)' },
+  ]
+})
+const nomSsfChoisi = computed(() => listeSsf.value.find(s => s.id === form.ssf_id)?.nom
+  || semaineSsf.value.find(l => l.ssf_id === form.ssf_id)?.ssf_nom || 'ce SSF')
+const sousZoneChoisie = computed(() => libelleSousZone(quartiersSsf.value, form.ssf_id))
+const horsSousZone = computed(() => estAtom.value && pdvDansSousZone(selectedPDV.value, quartiersSsf.value, form.ssf_id) === false)
+// SSF prévu proposé tant que l'agent n'a rien choisi (ni brouillon).
+function proposerSsfPrevu() {
+  if (!estAtom.value || form.ssf_id || ssfAutre.value || form.ssf_brut) return
+  if (ssfPrevu.value) form.ssf_id = ssfPrevu.value.ssf_id
+}
+watch(ssfPrevu, proposerSsfPrevu)
 
 // Marques concurrentes : référentiel partagé avec le dashboard, repli sur les
 // marques historiques hors ligne (voir useMarquesConcurrentes).
@@ -710,6 +770,9 @@ function saveDraft() {
       visibilite: form.visibilite,
       actions: form.actions,
       commentaires: form.commentaires,
+      ssf_id: form.ssf_id,
+      ssf_brut: form.ssf_brut,
+      ssf_autre: ssfAutre.value,
       savedAt: Date.now(),
     }))
     draftSavedAt.value = new Date()
@@ -736,6 +799,9 @@ function restoreDraft() {
     if (draft.visibilite) form.visibilite = draft.visibilite
     if (draft.actions) form.actions = draft.actions
     if (typeof draft.commentaires === 'string') form.commentaires = draft.commentaires
+    if ('ssf_id' in draft) form.ssf_id = typeof draft.ssf_id === 'number' ? draft.ssf_id : null
+    if (typeof draft.ssf_brut === 'string') form.ssf_brut = draft.ssf_brut
+    if (draft.ssf_autre === true) ssfAutre.value = true
     assurerBlocsProduits()
     const indexEtape = draft.etape ? wizardSteps.value.findIndex(s => s.key === draft.etape) : -1
     if (indexEtape >= 0) currentTab.value = indexEtape
@@ -1158,6 +1224,7 @@ async function persistVisit() {
     animateProgress(50, 400)
     const selectedPDV = pdvList.value.find(p => p.pdv_id === form.pdv_id)
     let geofenceOk = false
+    let gps: VisiteData['gps'] | undefined
 
     if (selectedPDV?.geolocation_lat && position) {
       try {
@@ -1171,14 +1238,28 @@ async function persistVisit() {
           return
         }
       }
-      catch {
+      catch (err: any) {
         geofenceOk = false
+        // Précision insuffisante : la visite part sans validation GPS, sans
+        // bloquer le terrain, mais l'agent est prévenu et l'admin le voit.
+        if (err?.precisionInsuffisante) {
+          gps = { motif: 'precision', precision_m: err.precision ?? null, precision_exigee_m: parametres.value.gps_precision_min_m ?? null }
+        }
       }
     }
 
     // Phase 3: Submit (50→100%)
     animateProgress(90, 600)
-    await submitVisite(position, geofenceOk)
+    await submitVisite(position, geofenceOk, gps)
+    if (gps) {
+      toast.add({
+        title: 'Visite enregistrée sans validation GPS',
+        description: `Précision obtenue : ${gps.precision_m ?? '?'} m (exigée : ${gps.precision_exigee_m ?? '?'} m). Dans l'admin, « GPS validé » indique Non (précision).`,
+        color: 'amber',
+        icon: 'i-heroicons-exclamation-triangle',
+        timeout: 9000,
+      })
+    }
 
     // PDV sans GPS (import DMS) : la position de la visite devient la sienne.
     if (selectedPDV && !selectedPDV.geolocation_lat && position && isOnline.value) {
@@ -1232,7 +1313,8 @@ function onSaveComplete() {
 
 async function submitVisite(
   position: { lat: number; lng: number; accuracy: number } | null,
-  geofenceOk: boolean
+  geofenceOk: boolean,
+  gps?: VisiteData['gps'],
 ) {
   const visiteId = activeVisiteId.value || crypto.randomUUID().replace(/-/g, '').slice(0, 24)
   activeVisiteId.value = visiteId
@@ -1245,6 +1327,7 @@ async function submitVisite(
   }
   const commentaire = form.commentaires?.trim()
   if (commentaire) visiteData.commentaires = commentaire.slice(0, 1000)
+  if (gps) visiteData.gps = gps
 
   // Les indicateurs historiques restent alimentés pour les dashboards existants.
   const observed = visiteData.visibilite.standards
@@ -1322,6 +1405,8 @@ async function submitVisite(
     data: visiteData,
     image_urls: imageUrls,
     sync_status: 'synced',
+    // SSF de la visite (Atom uniquement : les autres visites n'y touchent pas).
+    ...(estAtom.value ? { ssf_id: form.ssf_id, ssf_brut: form.ssf_id ? null : (form.ssf_brut.trim() || null) } : {}),
   }
 
   let visiteEnFile = !isOnline.value
@@ -1380,6 +1465,10 @@ onMounted(async () => {
   void chargerMarquesConcurrence()
   void chargerCategoriesReleve()
   void chargerCatalogue().then(assurerBlocsProduits)
+  if (estAtom.value) {
+    void chargerListeSsf()
+    void chargerSemaineSsf(user.value?.id).then(proposerSsfPrevu)
+  }
   await chargerListePdv()
   restoreDraft()
 

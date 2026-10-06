@@ -211,6 +211,7 @@ const pageTitle = computed(() => {
     '/mobile/calendar': 'Calendrier',
     '/mobile/tournees': 'Mes tournées',
     '/mobile/objectifs': 'Mes objectifs',
+    '/mobile/semaine': 'Ma semaine',
     '/mobile/map': 'Carte',
     '/mobile/contacts': 'Contacts',
     '/mobile/more': 'Plus',

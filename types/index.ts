@@ -141,6 +141,8 @@ export interface Routing {
   id: string
   user_id: string
   date_routing: string
+  /** Règle qui a produit la tournée (matérialisation). */
+  template_id?: string | null
   created_by?: string
   notes?: string
   status: RoutingStatus
@@ -438,6 +440,12 @@ export interface VisiteData {
   actions: VisiteActions
   // Texte libre du merchandiseur (lot 3.4, 1.0.4) : « propriétaire absent »…
   commentaires?: string
+  /**
+   * Visite enregistrée sans validation GPS (1.0.12) : `motif = 'precision'`
+   * quand la précision obtenue dépassait la précision exigée (Paramètres
+   * terrain) ; la visite n'est pas bloquée, l'admin le voit.
+   */
+  gps?: { motif: 'precision', precision_m?: number | null, precision_exigee_m?: number | null }
 }
 
 // ---- Field coaching (lot 4, 1.0.4) ----
@@ -528,6 +536,10 @@ export interface Visite {
   synced_at?: string
   created_at: string
   updated_at: string
+  /** SSF (vendeur du distributeur) présent pendant la visite : merchandisers Atom. */
+  ssf_id?: number | null
+  /** Nom du SSF saisi quand il n'est pas dans la liste (ou tel qu'importé). */
+  ssf_brut?: string | null
   // Joined
   pdv?: PDV
   profile?: Profile

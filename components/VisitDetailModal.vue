@@ -314,6 +314,15 @@ const competitorCategories = [
   { key: 'uht', label: 'UHT' },
 ]
 
+// SSF de la visite (Atom) : nom depuis la liste des SSF, sinon tel que saisi.
+const { listeSsf, chargerListe: chargerListeSsf } = useSsfTerrain()
+const ssfVisite = computed(() => {
+  const v = props.visite
+  if (!v?.ssf_id && !v?.ssf_brut) return ''
+  return listeSsf.value.find(s => s.id === v.ssf_id)?.nom || v.ssf_brut || `SSF n° ${v.ssf_id}`
+})
+watch(() => props.visite?.ssf_id, (id) => { if (id && !listeSsf.value.length) void chargerListeSsf() }, { immediate: true })
+
 const generalInfo = computed(() => [
   { label: 'Commercial', value: props.visite?.commercial || '—' },
   { label: 'Date', value: formatDate(props.visite?.date_visite) },
@@ -323,9 +332,15 @@ const generalInfo = computed(() => [
   { label: 'Région', value: props.visite?.pdv?.region || '—' },
   { label: 'Zone', value: props.visite?.pdv?.zone || '—' },
   { label: 'Quartier', value: props.visite?.pdv?.quartier || '—' },
+  ...(ssfVisite.value ? [{ label: 'SSF', value: ssfVisite.value }] : []),
   {
     label: 'GPS validé',
-    value: props.visite?.geofence_validated ? 'Oui' : 'Non',
+    // 1.0.12 : précision insuffisante à l'enregistrement (non bloquant).
+    value: props.visite?.geofence_validated
+      ? 'Oui'
+      : props.visite?.data?.gps?.motif === 'precision'
+        ? `Non (précision ${props.visite.data.gps.precision_m ?? '?'} m)`
+        : 'Non',
     className: props.visite?.geofence_validated ? 'text-emerald-600' : 'text-fc-red',
   },
 ])
