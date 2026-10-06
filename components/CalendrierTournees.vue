@@ -67,7 +67,8 @@
 <script setup lang="ts">
 import type { Routing, RoutingTemplate } from '~/types'
 import { toIsoJour } from '~/utils/periode'
-import { grilleMois, decalerMois, moisDe, couvertureJour } from '~/utils/calendrierTournees'
+import { grilleMois, decalerMois, moisDe, couvertureJour, etatJourTournee } from '~/utils/calendrierTournees'
+import { CLASSES_ETAT_TOURNEE } from '~/composables/classesEtatTournee'
 
 const props = withDefaults(defineProps<{
   userId: string
@@ -131,44 +132,9 @@ interface EtatJour {
 const jours = computed<Record<string, EtatJour>>(() => {
   const out: Record<string, EtatJour> = {}
   for (const d of grille.value.flat()) {
-    const r = tournees.value.get(d)
-    const couv = couvertureJour(props.regles as any, d)
-    const regle = (couv.regles[0] || couv.suspendues[0]?.regle || null) as RoutingTemplate | null
-    const passe = d <= aujourdhui
-
-    if (r) {
-      const nb = r.nb_pdv ?? 0
-      const faits = r.nb_faits ?? 0
-      if (r.status === 'cancelled') {
-        out[d] = { classe: 'bg-gray-100 dark:bg-gray-700/60', classeTexte: 'text-gray-500 line-through', texte: `${nb} PDV`, titre: 'Tournée annulée', progression: null, cliquable: true, regle }
-      }
-      else if (passe) {
-        const complete = nb > 0 && faits >= nb
-        out[d] = {
-          classe: complete ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300' : 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300',
-          classeTexte: 'font-semibold',
-          texte: `${faits}/${nb} faits`,
-          titre: `${faits} PDV faits sur ${nb}`,
-          progression: nb ? Math.round((faits / nb) * 100) : 0,
-          cliquable: true,
-          regle,
-        }
-      }
-      else {
-        out[d] = { classe: 'bg-sky-50 dark:bg-sky-500/10', classeTexte: 'font-semibold text-sky-700 dark:text-sky-300', texte: `${nb} PDV`, titre: `Tournée planifiée : ${nb} PDV`, progression: null, cliquable: true, regle }
-      }
-    }
-    else if (couv.regles.length) {
-      out[d] = d >= aujourdhui
-        ? { classe: 'outline-dashed outline-1 -outline-offset-4 outline-gray-300 dark:outline-gray-600', classeTexte: 'text-gray-400', texte: 'à générer', titre: 'Prévue par une règle, pas encore générée', progression: null, cliquable: true, regle }
-        : { classe: '', classeTexte: 'text-gray-400', texte: 'non générée', titre: 'Jour couvert par une règle, mais aucune tournée n\'a été générée', progression: null, cliquable: true, regle }
-    }
-    else if (couv.suspendues.length) {
-      out[d] = { classe: 'bg-gray-100 dark:bg-gray-700/60', classeTexte: 'text-gray-500', texte: couv.suspendues[0]!.motif, titre: `Suspendue : ${couv.suspendues[0]!.motif}`, progression: null, cliquable: false, regle }
-    }
-    else {
-      out[d] = { classe: '', classeTexte: '', texte: '', titre: '', progression: null, cliquable: false, regle: null }
-    }
+    const e = etatJourTournee(tournees.value.get(d), couvertureJour(props.regles as any, d), d, aujourdhui)
+    const c = CLASSES_ETAT_TOURNEE[e.etat]
+    out[d] = { classe: c.fond, classeTexte: c.texte, texte: e.texte, titre: e.titre, progression: e.progression, cliquable: e.cliquable, regle: e.regle as RoutingTemplate | null }
   }
   return out
 })

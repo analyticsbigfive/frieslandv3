@@ -314,6 +314,8 @@ export const useRoutingStore = defineStore('routing', () => {
     dateTo?: string
     userId?: string
     status?: string
+    /** Nombre maximal de tournées (200 par défaut ; planning d'équipe : une semaine de toute l'équipe). */
+    limite?: number
   }) {
     loading.value = true
     try {
@@ -337,7 +339,7 @@ export const useRoutingStore = defineStore('routing', () => {
       if (filters?.userId) query = query.eq('user_id', filters.userId)
       if (filters?.status) query = query.eq('status', filters.status)
 
-      const { data, error } = await query.limit(200)
+      const { data, error } = await query.limit(filters?.limite ?? 200)
       if (error) throw error
       return (data || []).map(({ total, faits, ...r }: any) => ({
         ...r,

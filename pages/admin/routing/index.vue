@@ -30,11 +30,11 @@
       <!-- Action bar -->
       <div class="flex items-center justify-between">
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 flex flex-wrap items-end gap-4 flex-1">
-          <div>
+          <div v-if="vueTournees === 'personnes'">
             <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Date début</label>
             <UInput v-model="filters.dateFrom" type="date" size="sm" />
           </div>
-          <div>
+          <div v-if="vueTournees === 'personnes'">
             <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Date fin</label>
             <UInput v-model="filters.dateTo" type="date" size="sm" />
           </div>
@@ -50,7 +50,7 @@
               class="w-48"
             />
           </div>
-          <div>
+          <div v-if="vueTournees === 'personnes'">
             <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Statut</label>
             <USelectMenu
               v-model="filters.status"
@@ -82,8 +82,36 @@
         </div>
       </div>
 
+      <!-- Planning d'équipe (une ligne par personne, une colonne par jour) ou
+           cartes par personne (liste et calendrier mensuel de chacun). -->
+      <div class="inline-flex rounded-lg bg-white p-0.5 shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700" role="tablist" aria-label="Affichage des tournées">
+        <button
+          v-for="v in VUES_TOURNEES"
+          :key="v.k"
+          type="button"
+          role="tab"
+          :aria-selected="vueTournees === v.k"
+          class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition"
+          :class="vueTournees === v.k ? 'bg-fc-red text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'"
+          @click="choisirVueTournees(v.k)"
+        >
+          <UIcon :name="v.i" class="h-4 w-4" />{{ v.l }}
+        </button>
+      </div>
+
+      <div v-if="vueTournees === 'planning'" class="rounded-xl bg-white p-3 shadow-sm dark:bg-gray-800 sm:p-4">
+        <PlanningEquipe
+          :regles="groupedTemplates"
+          :utilisateurs="users"
+          :nom-ssf="nomSsf"
+          :utilisateur-id="filters.userId"
+          :rafraichir="rafraichirCalendrier"
+          @jour="ouvrirJourCalendrier($event.userId, $event.user, $event)"
+        />
+      </div>
+
       <!-- Tournées regroupées par personne : une carte dépliable par merchandiser -->
-      <div class="space-y-4">
+      <div v-else class="space-y-4">
         <ChargementContenu v-if="loading" libelle="Chargement des tournées…" />
 
         <div v-else-if="routings.length === 0" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-12 text-center">
@@ -2180,6 +2208,27 @@ function modifierTourneeDuJour() {
   jourModal.ouvert = false
   void openEditRouting(r)
 }
+
+// ---- Planning d'équipe ou cartes par personne (onglet Tournées) ----
+const VUES_TOURNEES = [
+  { k: 'planning', l: 'Planning d\'équipe', i: 'i-heroicons-table-cells' },
+  { k: 'personnes', l: 'Par personne', i: 'i-heroicons-user-group' },
+] as const
+type VueTournees = typeof VUES_TOURNEES[number]['k']
+const CLE_VUE_TOURNEES = 'admin-routing-vue'
+const vueTournees = ref<VueTournees>('planning')
+function choisirVueTournees(v: VueTournees) {
+  vueTournees.value = v
+  try { localStorage.setItem(CLE_VUE_TOURNEES, v) }
+  catch { /* stockage indisponible : le choix vaut pour la session */ }
+}
+onMounted(() => {
+  try {
+    const v = localStorage.getItem(CLE_VUE_TOURNEES)
+    if (v === 'planning' || v === 'personnes') vueTournees.value = v
+  }
+  catch { /* stockage indisponible */ }
+})
 
 // ---- Vue calendrier par personne ----
 const vueCalendrier = ref(new Set<string>())

@@ -259,6 +259,11 @@ préremplit libellé, territoire, distributeur et mode quota ; la liste des PDV
 est limitée à la sous-zone et un PDV hors sous-zone est refusé. La règle
 « Portefeuille DMS » du merchandiser couvre les jours sans SSF.
 
+**Planning d'équipe** : Routing & Planning › Tournées planifiées s'ouvre sur
+une grille personne × jour (lundi → samedi) : PDV faits / prévus, « à générer »,
+SSF du jour pour Atom ; un clic ouvre la tournée du jour. « Par personne »
+revient aux cartes individuelles (liste et calendrier du mois).
+
 **Objectif mensuel** (Programme Atom et écran mobile « Mes objectifs ») : la
 grille additionnée sur les jours de tournée du mois (420 sur quatre semaines
 pleines, 465 en octobre 2026). Il se change en modifiant la grille.
