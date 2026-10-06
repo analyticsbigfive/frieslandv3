@@ -187,12 +187,11 @@ export function simulerMerchDms(classeurDms, classeurMails, donnees, options = {
     const p = m.profil
     operations.push({ type: 'profil.perimetre', user_id: p.id, territoires_assignes: m.territoires, quartiers_assignes: m.quartiers, zone_assignee: m.territoires[0] || null })
     retour.push({ type: 'profil.perimetre', user_id: p.id, territoires_assignes: p.territoires_assignes || [], quartiers_assignes: p.quartiers_assignes || [], zone_assignee: p.zone_assignee || null })
-    const jours = m.joursDms.length ? m.joursDms : JOURS
     operations.push({
       type: 'regle_dms.remplacer', user_id: p.id, created_by: auteur?.id || null,
       regle: {
         label: m.label, mode: p.employeur === 'atom' ? 'quota' : 'perimetre', distributeur: m.distributeur || null,
-        days_of_week: jours, date_debut: debut, is_active: m.joursDms.length > 0,
+        days_of_week: m.joursDms, date_debut: debut, is_active: true,
         notes: `Clients DMS du fichier ${nomFichier} (${m.pdvs.length} PDV).`,
         pdv_ids: m.ordre.map(x => x.pdv_id),
       },
@@ -225,7 +224,7 @@ export function simulerMerchDms(classeurDms, classeurMails, donnees, options = {
     if (mails.length && !m.mail) anomalies.push(`**${m.nomFichier}** : compte ${m.profil.email} absent du fichier des mails.`)
     else if (m.mail?.nom && cleNom(m.mail.nom) !== cleNom(m.nomFichier)) anomalies.push(`**${m.nomFichier}** : le fichier des mails donne « ${m.mail.nom} » pour ${m.profil.email} (${m.mail.commune}).`)
     if (m.reglesDms.length > 1) anomalies.push(`**${m.nomFichier}** : ${m.reglesDms.length} règles « ${PREFIXE_REGLE_DMS} » existantes, remplacées par une seule (le retour arrière ne recrée que la première).`)
-    if (m.joursSsf.length) anomalies.push(`**${m.nomFichier}** : règles SSF sur ${m.joursSsf.join(', ')} → la règle DMS ne garde que ${m.joursDms.join(', ') || 'aucun jour (inactive)'} ; relancer l'import « Sous-zones SSF » pour recalculer leurs portefeuilles.`)
+    if (m.joursSsf.length) anomalies.push(`**${m.nomFichier}** : règles SSF sur ${m.joursSsf.join(', ')} → la règle DMS ne garde que ${m.joursDms.join(', ') || 'aucun jour'} ; relancer l'import « Sous-zones SSF » pour recalculer leurs portefeuilles.`)
     if (m.autresRegles.length) anomalies.push(`**${m.nomFichier}** : ${m.autresRegles.length} autre(s) règle(s) active(s) conservée(s) — leurs PDV s'ajoutent à la tournée.`)
     if (m.tourneesExistantes.length) anomalies.push(`**${m.nomFichier}** : ${m.tourneesExistantes.length} tournée(s) déjà générée(s) à partir du ${debut} (${liste(m.tourneesExistantes, 6)}) — elles priment ces jours-là (Maintenance › Recalculer les tournées à venir).`)
   }

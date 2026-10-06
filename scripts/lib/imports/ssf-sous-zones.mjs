@@ -16,7 +16,8 @@
  *      dérivation pour les SSF et merchandisers qu'il cite.
  *
  * La règle « Portefeuille DMS » du merchandiser garde les jours qu'aucun SSF
- * ne couvre (désactivée s'ils sont tous couverts, jamais supprimée).
+ * ne couvre (« aucun jour » s'ils sont tous couverts : elle reste visible comme
+ * portefeuille de référence, jamais supprimée).
  *
  * Module pur (aucune dépendance Node) : utilisé par
  * scripts/deriver-ssf-sous-zones.mjs et par Admin › Imports terrain.
@@ -494,7 +495,7 @@ export function deriverSsf(donnees, options = {}) {
     })
     for (const r of pl.dms) {
       const jours = pl.regles.length ? pl.nonCouverts : (r.days_of_week || OUVRES)
-      operations.push({ type: 'regle.jours', template_id: r.id, days_of_week: jours, is_active: jours.length > 0 })
+      operations.push({ type: 'regle.jours', template_id: r.id, days_of_week: jours, is_active: true })
       retour.push({ type: 'regle.jours', template_id: r.id, days_of_week: r.days_of_week || [r.day_of_week], is_active: r.is_active !== false })
     }
     if (pl.perimetre.change) {

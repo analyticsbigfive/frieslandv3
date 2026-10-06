@@ -137,7 +137,7 @@ const VALIDATEURS = {
     if (r === null) return
     exiger(estObjet(r) && estTexte(r.label, 200) && r.label.startsWith('Portefeuille DMS'), 'regle_dms.remplacer : libellé « Portefeuille DMS… » requis')
     exiger(['quota', 'perimetre'].includes(r.mode), 'regle_dms.remplacer : mode invalide')
-    exiger(estJours(r.days_of_week) && r.days_of_week.length, 'regle_dms.remplacer : jours requis')
+    exiger(estJours(r.days_of_week), 'regle_dms.remplacer : jours invalides')
     exiger(r.date_debut == null || DATE.test(r.date_debut), 'regle_dms.remplacer : date_debut invalide')
     exiger(typeof (r.is_active ?? true) === 'boolean' && texteOuNul(r.distributeur, 200) && texteOuNul(r.notes, 4000), 'regle_dms.remplacer : champs invalides')
     exiger(estListeTextes(r.pdv_ids, 20000, 64) && r.pdv_ids.every(id => PDV_ID.test(id)), 'regle_dms.remplacer : pdv_ids invalides')
@@ -240,10 +240,12 @@ const EXECUTEURS = {
 
   async 'regle.jours'(sb, op) {
     const jours = [...new Set(op.days_of_week)].sort((a, b) => a - b)
-    const maj = { days_of_week: jours, is_active: op.is_active }
-    if (jours.length) maj.day_of_week = jours[0]
+    // Aucun jour : la règle reste visible (portefeuille de référence) mais ne
+    // s'applique plus (day_of_week nul, sinon l'ancien jour unique reprendrait).
+    const maj = { days_of_week: jours, day_of_week: jours.length ? jours[0] : null, is_active: op.is_active }
     ok(await sb.from('routing_templates').update(maj).eq('id', op.template_id), 'regle.jours')
-    return op.is_active ? `règle ${op.template_id} : jours ${jours.join(',')}` : `règle ${op.template_id} désactivée`
+    if (!op.is_active) return `règle ${op.template_id} désactivée`
+    return jours.length ? `règle ${op.template_id} : jours ${jours.join(',')}` : `règle ${op.template_id} : aucun jour (couverte par les règles SSF)`
   },
 
   async 'profil.perimetre'(sb, op) {
@@ -306,7 +308,7 @@ const EXECUTEURS = {
     if (!r) return 'règle DMS supprimée'
     const jours = [...new Set(r.days_of_week)].sort((a, b) => a - b)
     const { data: regle, error } = await sb.from('routing_templates').insert({
-      user_id: op.user_id, label: r.label, mode: r.mode, days_of_week: jours, day_of_week: jours[0],
+      user_id: op.user_id, label: r.label, mode: r.mode, days_of_week: jours, day_of_week: jours.length ? jours[0] : null,
       territoire: null, distributeur: r.distributeur || null, date_debut: r.date_debut || null, date_fin: null,
       notes: r.notes || null, is_active: r.is_active !== false, created_by: op.created_by || null,
     }).select('id').single()
