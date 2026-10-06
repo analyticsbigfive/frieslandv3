@@ -44,7 +44,7 @@
             : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'"
           @click="activeId = d.id"
         >
-          {{ d.label }} <span v-if="!d.vue" class="text-xs text-gray-400">({{ (store[d.id] || []).length }})</span>
+          {{ d.label }} <span v-if="!('vue' in d)" class="text-xs text-gray-400">({{ (store[d.id] || []).length }})</span>
         </button>
       </nav>
     </div>
@@ -199,6 +199,8 @@ import { fetchAllRows } from '~/utils/fetchAll'
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const supabase = useSupabaseClient()
+// Tables ajoutées après la génération des types Supabase : client non typé.
+const table = (nom: string): any => (supabase as any).from(nom)
 const toast = useToast()
 
 // -- Enumérations métier (Système B) --------------------------------------
@@ -251,7 +253,7 @@ function rebuildMaps() {
 const quartiersPdv = ref<{ zone: string, quartier: string, nb_pdv: number }[]>([])
 async function chargerQuartiersPdv() {
   try {
-    quartiersPdv.value = await fetchAllRows<any>((from, to) => supabase.from('v_quartiers_pdv')
+    quartiersPdv.value = await fetchAllRows<any>((from, to) => table('v_quartiers_pdv')
       .select('zone, quartier, nb_pdv').order('zone').order('quartier').range(from, to))
   }
   catch { quartiersPdv.value = [] }
@@ -509,12 +511,12 @@ const defs: Def[] = [
     rowKey: r => String(r.id), search: r => r.nom.toLowerCase(),
     valid: f => !!f.nom,
     save: async (f, e) => {
-      if (!e) return await supabase.from('distributeur').insert({ nom: f.nom.trim(), national: !!f.national })
+      if (!e) return await table('distributeur').insert({ nom: f.nom.trim(), national: !!f.national })
       if (f.nom.trim() !== f.nomInitial) {
-        const { error } = await supabase.rpc('renommer_distributeur', { p_id: f.id, p_nom: f.nom.trim() })
+        const { error } = await (supabase.rpc as any)('renommer_distributeur', { p_id: f.id, p_nom: f.nom.trim() })
         if (error) return { error }
       }
-      return await supabase.from('distributeur').update({ national: !!f.national }).eq('id', f.id)
+      return await table('distributeur').update({ national: !!f.national }).eq('id', f.id)
     },
     del: r => supabase.from('distributeur').delete().eq('id', r.id),
   },
@@ -680,9 +682,9 @@ const defs: Def[] = [
     },
     save: (f, e) => {
       const valeur = f.valeur === '' || f.valeur == null ? null : Number(f.valeur)
-      if (e) return supabase.from('parametre_app').update({ valeur }).eq('cle', f.cle).eq('portee', f.portee)
+      if (e) return table('parametre_app').update({ valeur }).eq('cle', f.cle).eq('portee', f.portee)
       const base = maps.parametreTous?.get(f.cle) || {}
-      return supabase.from('parametre_app').insert({
+      return table('parametre_app').insert({
         cle: f.cle, portee: f.portee, valeur,
         libelle: `${base.libelle || f.cle} (${libellePortee(f.portee)})`,
         description: base.description || null, unite: base.unite || null, min: base.min ?? null, max: base.max ?? null,
@@ -691,7 +693,7 @@ const defs: Def[] = [
     },
     del: async r => (r.portee === 'tous'
       ? { error: new Error('Valeur de référence : modifiez-la plutôt que de la supprimer.') }
-      : await supabase.from('parametre_app').delete().eq('cle', r.cle).eq('portee', r.portee)),
+      : await table('parametre_app').delete().eq('cle', r.cle).eq('portee', r.portee)),
   },
   {
     id: 'canal_atom_sous_categorie', section: 'app', label: 'Canal Atom', table: 'canal_atom_sous_categorie',
@@ -712,10 +714,10 @@ const defs: Def[] = [
     save: (f, e) => {
       const canal = f.canal === 'hors' ? null : f.canal
       return e
-        ? supabase.from('canal_atom_sous_categorie').update({ canal, updated_at: new Date().toISOString() }).eq('sous_categorie', f.sous_categorie)
-        : supabase.from('canal_atom_sous_categorie').insert({ sous_categorie: String(f.sous_categorie).trim(), canal })
+        ? table('canal_atom_sous_categorie').update({ canal, updated_at: new Date().toISOString() }).eq('sous_categorie', f.sous_categorie)
+        : table('canal_atom_sous_categorie').insert({ sous_categorie: String(f.sous_categorie).trim(), canal })
     },
-    del: r => supabase.from('canal_atom_sous_categorie').delete().eq('sous_categorie', r.sous_categorie),
+    del: r => table('canal_atom_sous_categorie').delete().eq('sous_categorie', r.sous_categorie),
   },
   {
     id: 'type_action_commerciale', section: 'app', label: 'Types d’action', table: 'type_action_commerciale',
@@ -738,8 +740,8 @@ const defs: Def[] = [
     rowKey: r => r.code, search: r => `${r.libelle} ${r.code}`.toLowerCase(),
     valid: f => !!String(f.libelle || '').trim(),
     save: (f, e) => e
-      ? supabase.from('type_action_commerciale').update({ libelle: f.libelle, ordre: f.ordre ?? 100, actif: f.actif !== false }).eq('code', f.code)
-      : supabase.from('type_action_commerciale').insert({ code: codeDepuisLibelle(f.libelle), libelle: f.libelle, ordre: f.ordre ?? 100, actif: f.actif !== false }),
+      ? table('type_action_commerciale').update({ libelle: f.libelle, ordre: f.ordre ?? 100, actif: f.actif !== false }).eq('code', f.code)
+      : table('type_action_commerciale').insert({ code: codeDepuisLibelle(f.libelle), libelle: f.libelle, ordre: f.ordre ?? 100, actif: f.actif !== false }),
     del: async () => ({ error: new Error('Suppression désactivée : désactivez le type.') }),
   },
   {
@@ -763,8 +765,8 @@ const defs: Def[] = [
     rowKey: r => r.code, search: r => `${r.libelle} ${r.code}`.toLowerCase(),
     valid: f => !!String(f.libelle || '').trim(),
     save: (f, e) => e
-      ? supabase.from('engin_vente').update({ libelle: f.libelle, ordre: f.ordre ?? 100, actif: f.actif !== false }).eq('code', f.code)
-      : supabase.from('engin_vente').insert({ code: codeDepuisLibelle(f.libelle), libelle: f.libelle, ordre: f.ordre ?? 100, actif: f.actif !== false }),
+      ? table('engin_vente').update({ libelle: f.libelle, ordre: f.ordre ?? 100, actif: f.actif !== false }).eq('code', f.code)
+      : table('engin_vente').insert({ code: codeDepuisLibelle(f.libelle), libelle: f.libelle, ordre: f.ordre ?? 100, actif: f.actif !== false }),
     del: async () => ({ error: new Error('Suppression désactivée : désactivez l’engin.') }),
   },
   {
@@ -1067,8 +1069,8 @@ const defs: Def[] = [
         updated_at: new Date().toISOString(),
       }
       return e
-        ? supabase.from('ssf').update(rec).eq('id', f.id)
-        : supabase.from('ssf').insert({ ...rec, source: 'admin' })
+        ? table('ssf').update(rec).eq('id', f.id)
+        : table('ssf').insert({ ...rec, source: 'admin' })
     },
     del: async () => ({ error: new Error('Suppression désactivée : désactivez le SSF (ses visites gardent son nom).') }),
   },
@@ -1096,10 +1098,10 @@ const defs: Def[] = [
       const [zone, quartier] = String(f.zq).split('|')
       const rec = { ssf_id: f.ssf_id, zone, quartier, a_confirmer: !!f.a_confirmer, source: 'admin' }
       return e
-        ? supabase.from('ssf_quartier').update(rec).eq('id', f.id)
-        : supabase.from('ssf_quartier').insert(rec)
+        ? table('ssf_quartier').update(rec).eq('id', f.id)
+        : table('ssf_quartier').insert(rec)
     },
-    del: r => supabase.from('ssf_quartier').delete().eq('id', r.id),
+    del: r => table('ssf_quartier').delete().eq('id', r.id),
   },
   {
     id: 'alias_import', section: 'distrib', label: 'Alias d’import', table: 'alias_import',
@@ -1125,9 +1127,9 @@ const defs: Def[] = [
     valid: f => !!f.type && !!normaliser(f.motif) && !!String(f.cible || '').trim() && !!f.mode,
     save: (f, e) => {
       const rec = { type: f.type, motif: normaliser(f.motif), mode: f.mode, cible: String(f.cible).trim(), commentaire: f.commentaire || null }
-      return e ? supabase.from('alias_import').update(rec).eq('id', f.id) : supabase.from('alias_import').insert(rec)
+      return e ? table('alias_import').update(rec).eq('id', f.id) : table('alias_import').insert(rec)
     },
-    del: r => supabase.from('alias_import').delete().eq('id', r.id),
+    del: r => table('alias_import').delete().eq('id', r.id),
   },
   // ===== PERFECT STORE =====
   {

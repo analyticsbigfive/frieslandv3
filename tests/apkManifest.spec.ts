@@ -8,7 +8,7 @@ const APK_1_0_10 = resolve(__dirname, '../dist-apk/friesland-bonnet-rouge-1.0.10
 
 describe('lecture du manifeste APK', () => {
   it.skipIf(!existsSync(APK_1_0_10))('lit versionCode, versionName et package de l’APK 1.0.10', async () => {
-    const m = await lireManifesteApk(readFileSync(APK_1_0_10))
+    const m = await lireManifesteApk(new Uint8Array(readFileSync(APK_1_0_10)))
     expect(m).toEqual({ versionCode: 13, versionName: '1.0.10', package: PACKAGE_APP })
   })
 

@@ -592,7 +592,7 @@ const pdvForm = ref({
   distributor_name: '',
   objectif_perfect_store: '',
   mdm: '',
-  rayon_geofence: null as number | null,
+  rayon_geofence: undefined as number | undefined,
 })
 
 // Options depuis les facettes (tout le parc scopé), pas la page paginée courante.
@@ -763,7 +763,7 @@ async function editPDV(pdv: PDV) {
   pdvForm.value.distributor_name = ''
   pdvForm.value.objectif_perfect_store = ''
   pdvForm.value.mdm = ''
-  pdvForm.value.rayon_geofence = null
+  pdvForm.value.rayon_geofence = undefined
   showCreate.value = true
   try {
     const full: any = await pdvStore.fetchPDVById(pdv.pdv_id)
@@ -773,7 +773,7 @@ async function editPDV(pdv: PDV) {
       pdvForm.value.distributor_name = full.distributor_name || ''
       pdvForm.value.objectif_perfect_store = full.objectif_perfect_store || ''
       pdvForm.value.mdm = full.mdm || ''
-      pdvForm.value.rayon_geofence = full.rayon_geofence ?? null
+      pdvForm.value.rayon_geofence = full.rayon_geofence ?? undefined
       hydrateGeoCascade()
       // Préselection quartier si présent dans les options de l'area (byte-exact).
       pdvForm.value.quartier_nom = quartierCascadeOptions.value.some(o => o.value === full.quartier)
@@ -815,7 +815,7 @@ function openCreatePDV() {
     distributor_name: '',
     objectif_perfect_store: '',
     mdm: '',
-    rayon_geofence: null,
+    rayon_geofence: undefined,
   }
   showCreate.value = true
 }

@@ -72,7 +72,7 @@ describe('dérivation des sous-zones SSF', () => {
   })
 
   it('portefeuille de la règle = PDV DMS et visités, dans la sous-zone uniquement', () => {
-    const r = res.plannings[0].regles.find((x: any) => x.ssf.id === 1)
+    const r = res.plannings[0].regles.find((x: any) => x.ssf.id === 1)!
     expect(r.pdv_ids).toContain('L7') // portefeuille DMS, dans 220 LGTs
     expect(r.pdv_ids).toContain('L0') // visité avec le SSF
     expect(r.pdv_ids).not.toContain('Y9') // portefeuille DMS mais hors sous-zone
@@ -80,17 +80,17 @@ describe('dérivation des sous-zones SSF', () => {
   })
 
   it('la règle DMS garde les jours non couverts, le périmètre gagne les quartiers', () => {
-    const jours = res.operations.find((o: any) => o.type === 'regle.jours')
+    const jours = res.operations.find((o: any) => o.type === 'regle.jours')!
     expect(jours.days_of_week).toEqual([5, 6])
     expect(jours.is_active).toBe(true)
-    const perim = res.operations.find((o: any) => o.type === 'profil.perimetre')
+    const perim = res.operations.find((o: any) => o.type === 'profil.perimetre')!
     expect(perim.quartiers_assignes).toEqual(['220 LGTs', 'BRACODI'])
     expect(perim.territoires_assignes).toEqual(['ADJAME'])
   })
 
   it('produit des opérations valides et leur retour arrière', () => {
     for (const op of [...res.operations, ...res.retour]) expect(() => validerOperation(op)).not.toThrow()
-    const retourJours = res.retour.find((o: any) => o.type === 'regle.jours')
+    const retourJours = res.retour.find((o: any) => o.type === 'regle.jours')!
     expect(retourJours.days_of_week).toEqual([1, 2, 3, 4, 5, 6])
   })
 })
@@ -110,7 +110,7 @@ describe('Excel du client', () => {
     expect(sz.origine).toBe('client')
     expect(sz.lignes).toEqual([{ zone: 'ADJAME', quartier: 'BRACODI' }])
     expect(res.operations[0]).toMatchObject({ type: 'ssf.creer', nom: 'Nouveau SSF', distributeur: 'NDA' })
-    const regles = res.operations.find((o: any) => o.type === 'regles_ssf.remplacer').regles
+    const regles = (res.operations.find((o: any) => o.type === 'regles_ssf.remplacer') as any).regles
     expect(regles.map((r: any) => [r.ssf.nom, r.days_of_week])).toEqual([['Tra Bi Ta Arsène', [1, 2, 3]], ['Nouveau SSF', [4, 5, 6]]])
     expect(res.resume.rejetsClient).toBe(1)
   })
