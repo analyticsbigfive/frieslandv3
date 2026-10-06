@@ -15,9 +15,12 @@
  *   C. l'Excel « SSF ↔ zones » du client, quand il est fourni, remplace la
  *      dérivation pour les SSF et merchandisers qu'il cite.
  *
- * La règle « Portefeuille DMS » du merchandiser garde les jours qu'aucun SSF
- * ne couvre (« aucun jour » s'ils sont tous couverts : elle reste visible comme
- * portefeuille de référence, jamais supprimée).
+ * La règle de portefeuille du merchandiser (« Portefeuille DMS » ou
+ * « Portefeuille périmètre ») garde les jours qu'aucun SSF ne couvre (« aucun
+ * jour » s'ils sont tous couverts : elle reste visible comme portefeuille de
+ * référence, jamais supprimée). Un agent Atom est toujours en quotas : une
+ * règle de portefeuille encore en mode « périmètre » (tout le portefeuille
+ * chaque jour) passe en quotas, qu'il ait des SSF ou non.
  *
  * Module pur (aucune dépendance Node) : utilisé par
  * scripts/deriver-ssf-sous-zones.mjs et par Admin › Imports terrain.
@@ -360,7 +363,8 @@ export function deriverSsf(donnees, options = {}) {
   const hors = new Map() // user_id → SSF écartés car hors de sa zone
   for (const p of profils.filter(x => x.is_active !== false && x.role === 'merchandiser')) {
     const siennes = regles.filter(r => r.user_id === p.id)
-    const dms = siennes.filter(r => r.mode === 'quota' && !r.ssf_id && !String(r.label || '').startsWith(LIBELLE_PREFIXE))
+    // Règles de portefeuille actives (DMS ou périmètre), hors règles SSF.
+    const dms = siennes.filter(r => r.is_active !== false && !r.ssf_id && !String(r.label || '').startsWith(LIBELLE_PREFIXE))
     const ssfAvant = siennes.filter(r => String(r.label || '').startsWith(LIBELLE_PREFIXE))
     const vis = (visitesParMerch.get(p.id) || []).filter(v => sousZones.has(`id:${v.ssf_id}`))
     const total = vis.length
@@ -454,6 +458,7 @@ export function deriverSsf(donnees, options = {}) {
 
     plannings.push({
       profil: p, total, parSsf, choixJours, regles: regleOps, dms, ssfAvant, nonCouverts,
+      versQuota: dms.filter(r => r.mode !== 'quota'),
       perimetre: { terrAvant, terrApres, qAvant, qApres, change: terrApres.length !== terrAvant.length || qApres.length !== qAvant.length },
       deficits: regleOps.flatMap(r => r.days_of_week.flatMap(j => CANAUX
         .filter(c => r._sz.parCanal[c] < quotaJour(c, j))
@@ -483,9 +488,10 @@ export function deriverSsf(donnees, options = {}) {
   const finPre = o.pregenererJours > 0 ? plusJours(jourIso(new Date()), o.pregenererJours) : null
   const debutPre = plusJours(jourIso(new Date()), 1)
   for (const pl of plannings) {
-    if (!pl.regles.length && !pl.ssfAvant.length) continue
-    operations.push({ type: 'regles_ssf.remplacer', user_id: pl.profil.id, created_by: o.auteurId || null, regles: pl.regles.map(sansMarque) })
-    retour.push({
+    const avecSsf = pl.regles.length > 0 || pl.ssfAvant.length > 0
+    if (!avecSsf && !pl.versQuota.length) continue
+    if (avecSsf) operations.push({ type: 'regles_ssf.remplacer', user_id: pl.profil.id, created_by: o.auteurId || null, regles: pl.regles.map(sansMarque) })
+    if (avecSsf) retour.push({
       type: 'regles_ssf.remplacer', user_id: pl.profil.id,
       regles: pl.ssfAvant.filter(r => r.ssf_id).map(r => ({
         ssf: { id: r.ssf_id, nom: ssfParId.get(r.ssf_id)?.nom }, label: r.label, territoire: r.territoire, distributeur: r.distributeur,
@@ -494,9 +500,12 @@ export function deriverSsf(donnees, options = {}) {
       })).filter(r => r.days_of_week.length),
     })
     for (const r of pl.dms) {
+      // Mode « périmètre » chez un agent Atom : passage en quotas (retour : mode d'avant).
+      const versQuota = r.mode !== 'quota'
+      if (!avecSsf && !versQuota) continue
       const jours = pl.regles.length ? pl.nonCouverts : (r.days_of_week || OUVRES)
-      operations.push({ type: 'regle.jours', template_id: r.id, days_of_week: jours, is_active: true })
-      retour.push({ type: 'regle.jours', template_id: r.id, days_of_week: r.days_of_week || [r.day_of_week], is_active: r.is_active !== false })
+      operations.push({ type: 'regle.jours', template_id: r.id, days_of_week: jours, is_active: true, ...(versQuota ? { mode: 'quota' } : {}) })
+      retour.push({ type: 'regle.jours', template_id: r.id, days_of_week: r.days_of_week || [r.day_of_week], is_active: r.is_active !== false, ...(versQuota ? { mode: r.mode || 'perimetre' } : {}) })
     }
     if (pl.perimetre.change) {
       operations.push({ type: 'profil.perimetre', user_id: pl.profil.id, territoires_assignes: pl.perimetre.terrApres, quartiers_assignes: pl.perimetre.qApres })
@@ -520,6 +529,7 @@ export function deriverSsf(donnees, options = {}) {
     merchandisersAvecRegles: avecRegles.length,
     regles: avecRegles.reduce((n, p) => n + p.regles.length, 0),
     joursNonCouverts: plannings.reduce((n, p) => n + (p.regles.length ? p.nonCouverts.length : 0), 0),
+    reglesPasseesEnQuotas: plannings.reduce((n, p) => n + p.versQuota.length, 0),
     rejetsClient: client.rejets.length,
     operations: operations.length,
     moisReference: moisRef,
@@ -533,13 +543,15 @@ export function deriverSsf(donnees, options = {}) {
   md.push(`- Sous-zones : ${resume.sousZonesDerivees} dérivées, ${resume.sousZonesClient} du fichier client, ${resume.sousZonesConservees} déjà saisies (conservées).`)
   md.push(`- SSF sans sous-zone (bruit ou trop peu de visites) : ${resume.ssfBruit}.`)
   md.push(`- Merchandisers Atom actifs : ${resume.merchandisers}, dont ${resume.merchandisersAvecRegles} avec un planning SSF (${resume.regles} règles).`)
-  md.push(`- Jours sans SSF (laissés à la règle « Portefeuille DMS ») : ${resume.joursNonCouverts}.`)
+  md.push(`- Jours sans SSF (laissés à la règle de portefeuille) : ${resume.joursNonCouverts}.`)
+  if (resume.reglesPasseesEnQuotas) md.push(`- Règles de portefeuille passées du mode périmètre (tout le portefeuille chaque jour) aux quotas : ${resume.reglesPasseesEnQuotas}.`)
   if (o.pregenererJours > 0) md.push(`- Tournées intactes du ${debutPre} au ${finPre} recalculées après écriture.`)
   md.push('', '## Planning par merchandiser', '')
   for (const pl of plannings) {
     md.push(`### ${pl.profil.nom || pl.profil.email} — ${pl.profil.email || ''}`, '')
+    for (const r of pl.versQuota) md.push(`Règle « ${r.label} » passée en quotas : ${pl.regles.length ? 'les jours sans SSF' : 'chaque jour'}, la tournée prend le nombre de PDV par canal de la grille au lieu de tout le portefeuille.`, '')
     if (!pl.regles.length) {
-      md.push(`Aucun SSF principal dans sa zone en ${moisRef} (${pl.total} visites avec SSF au total) : la règle « Portefeuille DMS » reste seule.`, '')
+      md.push(`Aucun SSF principal dans sa zone en ${moisRef} (${pl.total} visites avec SSF au total) : la règle de portefeuille reste seule.`, '')
       if (hors.has(pl.profil.id)) md.push(`SSF écartés car hors de sa zone : ${liste(hors.get(pl.profil.id), 6)}.`, '')
       continue
     }
@@ -548,7 +560,7 @@ export function deriverSsf(donnees, options = {}) {
       const r = pl.regles.find(x => x.days_of_week.includes(j))
       md.push(r
         ? `| ${JOURS[j]} | ${r.ssf.nom} | ${sousZoneTexte(r._sz.lignes)} | ${r.pdv_ids.length} | ${pl.choixJours[j] || ''} |`
-        : `| ${JOURS[j]} | — (Portefeuille DMS) | | | ${pl.choixJours[j] || ''} |`)
+        : `| ${JOURS[j]} | — (règle de portefeuille) | | | ${pl.choixJours[j] || ''} |`)
     }
     md.push('')
     if (pl.perimetre.change) {
@@ -572,7 +584,7 @@ export function deriverSsf(donnees, options = {}) {
   }
   if (client.rejets.length) md.push('', '## Lignes du fichier client rejetées', '', ...client.rejets.map(r => `- ${r}`))
   if (avertissements.length) md.push('', '## Avertissements', '', ...avertissements.map(a => `- ${a}`))
-  md.push('', '## Retour arrière', '', 'Les opérations inverses (règles SSF, jours de la règle DMS, périmètres, sous-zones) sont produites avec la simulation : bouton « Annuler le lot » dans Admin › Imports terrain, ou `node scripts/deriver-ssf-sous-zones.mjs --retour=<fichier .json> --apply`.')
+  md.push('', '## Retour arrière', '', 'Les opérations inverses (règles SSF, jours et mode de la règle de portefeuille, périmètres, sous-zones) sont produites avec la simulation : bouton « Annuler le lot » dans Admin › Imports terrain, ou `node scripts/deriver-ssf-sous-zones.mjs --retour=<fichier .json> --apply`.')
 
   const csv = {
     'ssf-sous-zones.csv': csvTexte(['SSF', 'Distributeur', 'Origine', 'Zone', 'Quartier', 'Visites', 'Part', 'PDV actifs du quartier'],
@@ -580,7 +592,7 @@ export function deriverSsf(donnees, options = {}) {
     'ssf-planning.csv': csvTexte(['Merchandiser', 'Email', 'Jour', 'SSF', 'Zone', 'Quartiers', 'PDV portefeuille', ...CANAUX.map(c => `${c} (sous-zone)`), 'Choix'],
       plannings.flatMap(pl => OUVRES.map(j => {
         const r = pl.regles.find(x => x.days_of_week.includes(j))
-        return [pl.profil.nom || '', pl.profil.email || '', JOURS[j], r?.ssf.nom || 'Portefeuille DMS', r?._sz.zone || '', r ? r._sz.lignes.map(l => l.quartier).join(', ') : '', r?.pdv_ids.length ?? '', ...CANAUX.map(c => r?._sz.parCanal[c] ?? ''), pl.choixJours[j] || '']
+        return [pl.profil.nom || '', pl.profil.email || '', JOURS[j], r?.ssf.nom || 'Règle de portefeuille', r?._sz.zone || '', r ? r._sz.lignes.map(l => l.quartier).join(', ') : '', r?.pdv_ids.length ?? '', ...CANAUX.map(c => r?._sz.parCanal[c] ?? ''), pl.choixJours[j] || '']
       }))),
   }
 

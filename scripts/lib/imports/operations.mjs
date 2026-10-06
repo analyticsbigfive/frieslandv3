@@ -85,6 +85,7 @@ const VALIDATEURS = {
     exiger(UUID.test(op.template_id || ''), 'regle.jours : template_id invalide')
     exiger(estJours(op.days_of_week), 'regle.jours : jours invalides')
     exiger(typeof op.is_active === 'boolean', 'regle.jours : is_active requis')
+    exiger(op.mode === undefined || ['quota', 'perimetre'].includes(op.mode), 'regle.jours : mode invalide')
   },
   'profil.perimetre'(op) {
     exiger(UUID.test(op.user_id || ''), 'profil.perimetre : user_id invalide')
@@ -243,9 +244,12 @@ const EXECUTEURS = {
     // Aucun jour : la règle reste visible (portefeuille de référence) mais ne
     // s'applique plus (day_of_week nul, sinon l'ancien jour unique reprendrait).
     const maj = { days_of_week: jours, day_of_week: jours.length ? jours[0] : null, is_active: op.is_active }
+    // Mode facultatif : un agent Atom en « périmètre » passe en quotas (retour : périmètre).
+    if (op.mode) maj.mode = op.mode
     ok(await sb.from('routing_templates').update(maj).eq('id', op.template_id), 'regle.jours')
-    if (!op.is_active) return `règle ${op.template_id} désactivée`
-    return jours.length ? `règle ${op.template_id} : jours ${jours.join(',')}` : `règle ${op.template_id} : aucun jour (couverte par les règles SSF)`
+    const mode = op.mode === 'quota' ? ', passée en quotas' : op.mode === 'perimetre' ? ', remise en périmètre' : ''
+    if (!op.is_active) return `règle ${op.template_id} désactivée${mode}`
+    return jours.length ? `règle ${op.template_id} : jours ${jours.join(',')}${mode}` : `règle ${op.template_id} : aucun jour (couverte par les règles SSF)${mode}`
   },
 
   async 'profil.perimetre'(sb, op) {

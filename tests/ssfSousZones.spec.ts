@@ -95,6 +95,65 @@ describe('dérivation des sous-zones SSF', () => {
   })
 })
 
+describe('agents Atom encore en mode périmètre', () => {
+  const M2 = '22222222-2222-2222-2222-222222222222'
+  const M3 = '33333333-3333-3333-3333-333333333333'
+  const perimetre = (id: string, user: string, extra: any = {}) => ({ id, user_id: user, label: 'Portefeuille périmètre — ADJAME', mode: 'perimetre', ssf_id: null, days_of_week: [1, 2, 3, 4, 5, 6], is_active: true, distributeur: null, ...extra })
+  const base = donnees()
+  const d = {
+    ...base,
+    profils: [
+      ...base.profils,
+      { id: M2, email: 'sans-ssf@x.ci', nom: 'Merch sans SSF', role: 'merchandiser', employeur: 'atom', is_active: true, territoires_assignes: ['KOUMASSI'], quartiers_assignes: [] },
+      { id: M3, email: 'inactive@x.ci', nom: 'Merch règle inactive', role: 'merchandiser', employeur: 'atom', is_active: true, territoires_assignes: ['ABOBO 1'], quartiers_assignes: [] },
+    ],
+    regles: [
+      perimetre('aaaaaaaa-0000-0000-0000-000000000009', M),
+      perimetre('bbbbbbbb-0000-0000-0000-000000000001', M2, { label: 'Portefeuille périmètre — KOUMASSI' }),
+      perimetre('cccccccc-0000-0000-0000-000000000001', M3, { is_active: false }),
+    ],
+  }
+  const res = deriverSsf(d, { debut: '2026-10-07', moisJours: '2026-09', pregenererJours: 7 })
+  const opsDe = (template: string) => res.operations.filter((o: any) => o.template_id === template)
+
+  it('avec des SSF : la règle périmètre garde les jours non couverts et passe en quotas', () => {
+    const [op] = opsDe('aaaaaaaa-0000-0000-0000-000000000009')
+    expect(op).toMatchObject({ type: 'regle.jours', days_of_week: [5, 6], is_active: true, mode: 'quota' })
+    expect(res.plannings[0].regles.length).toBe(2)
+    // Le portefeuille périmètre alimente les règles SSF (dans la sous-zone).
+    expect(res.plannings[0].regles.find((x: any) => x.ssf.id === 1).pdv_ids).toContain('L7')
+  })
+
+  it('sans SSF : la règle périmètre passe en quotas, mêmes jours, tournées recalculées', () => {
+    const [op] = opsDe('bbbbbbbb-0000-0000-0000-000000000001')
+    expect(op).toMatchObject({ type: 'regle.jours', days_of_week: [1, 2, 3, 4, 5, 6], is_active: true, mode: 'quota' })
+    expect(res.operations.some((o: any) => o.type === 'regles_ssf.remplacer' && o.user_id === M2)).toBe(false)
+    expect(res.operations.some((o: any) => o.type === 'tournees.recalculer' && o.user_id === M2)).toBe(true)
+  })
+
+  it('une règle inactive n\'est pas touchée', () => {
+    expect(opsDe('cccccccc-0000-0000-0000-000000000001')).toEqual([])
+    expect(res.operations.some((o: any) => o.user_id === M3)).toBe(false)
+  })
+
+  it('retour arrière : mode périmètre et jours d\'origine ; opérations valides', () => {
+    const retour = res.retour.filter((o: any) => o.type === 'regle.jours')
+    expect(retour.map((o: any) => [o.template_id, o.mode, o.days_of_week])).toEqual([
+      ['aaaaaaaa-0000-0000-0000-000000000009', 'perimetre', [1, 2, 3, 4, 5, 6]],
+      ['bbbbbbbb-0000-0000-0000-000000000001', 'perimetre', [1, 2, 3, 4, 5, 6]],
+    ])
+    for (const op of [...res.operations, ...res.retour]) expect(() => validerOperation(op)).not.toThrow()
+    expect(() => validerOperation({ type: 'regle.jours', template_id: 'aaaaaaaa-0000-0000-0000-000000000009', days_of_week: [1], is_active: true, mode: 'tout' })).toThrow()
+    expect(res.resume.reglesPasseesEnQuotas).toBe(2)
+    expect(res.rapport).toContain('passée en quotas')
+  })
+
+  it('une règle déjà en quotas sans SSF ne produit aucune opération', () => {
+    const r = deriverSsf({ ...d, regles: [{ ...d.regles[1], mode: 'quota' }] }, { debut: '2026-10-07', moisJours: '2026-09' })
+    expect(r.operations.filter((o: any) => o.template_id === 'bbbbbbbb-0000-0000-0000-000000000001')).toEqual([])
+  })
+})
+
 describe('Excel du client', () => {
   it('remplace la dérivation pour les SSF et merchandisers cités', () => {
     const res = deriverSsf(donnees(), {
