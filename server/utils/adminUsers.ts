@@ -14,6 +14,8 @@ export interface CreateUserInput {
   telephone: string | null
   zone_assignee: string | null
   commercial_id: string | null
+  /** friesland (défaut) ou atom : logique de tournée (migration 20261006100000). */
+  employeur?: 'friesland' | 'atom'
   territoires_assignes: string[]
   quartiers_assignes: string[]
   region: string | null
@@ -54,6 +56,7 @@ export async function createUserWithProfile(service: any, input: CreateUserInput
       telephone: input.telephone,
       zone_assignee: input.zone_assignee,
       commercial_id: input.commercial_id,
+      employeur: input.employeur === 'atom' ? 'atom' : 'friesland',
       territoires_assignes: input.territoires_assignes,
       quartiers_assignes: input.quartiers_assignes,
       region: input.region,

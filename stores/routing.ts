@@ -3,7 +3,7 @@ import { defineStore, skipHydrate } from 'pinia'
 import { isPrivilegedProfile } from '~/utils/roles'
 import { markRaw } from 'vue'
 import { fetchAllRows } from '~/utils/fetchAll'
-import type { Routing, RoutingPDV, RoutingObjectives, RoutingTemplate, RoutingTemplatePDV, RoutingTemplateException, Profile } from '~/types'
+import type { Routing, RoutingPDV, RoutingObjectives, RoutingTemplate, RoutingTemplatePDV, RoutingTemplateException, Profile, RoutingTemplateMode } from '~/types'
 
 export const useRoutingStore = defineStore('routing', () => {
   const supabase = skipHydrate(markRaw(useSupabaseClient()))
@@ -745,6 +745,8 @@ export const useRoutingStore = defineStore('routing', () => {
       distributeur?: string
       dateDebut?: string
       dateFin?: string
+      /** quota = Atom : N PDV par canal et par jour, chaque PDV une fois par mois. */
+      mode?: RoutingTemplateMode
     } = {}
   ) {
     if (!daysOfWeek.length) throw new Error('Sélectionnez au moins un jour de la semaine')
@@ -761,6 +763,7 @@ export const useRoutingStore = defineStore('routing', () => {
         distributeur: options.distributeur || null,
         date_debut: options.dateDebut || null,
         date_fin: options.dateFin || null,
+        mode: options.mode || 'perimetre',
         is_active: true,
         created_by: createdBy,
       })
@@ -783,6 +786,7 @@ export const useRoutingStore = defineStore('routing', () => {
       distributeur?: string | null
       date_debut?: string | null
       date_fin?: string | null
+      mode?: RoutingTemplateMode
     }
   ) {
     const payload: any = { ...updates }

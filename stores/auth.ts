@@ -1,7 +1,7 @@
 // stores/auth.ts
 import { defineStore, skipHydrate } from 'pinia'
 import { markRaw } from 'vue'
-import type { Profile, UserRole } from '~/types'
+import type { Profile, UserRole, Employeur } from '~/types'
 
 export const useAuthStore = defineStore('auth', () => {
   const supabase = skipHydrate(markRaw(useSupabaseClient()))
@@ -118,6 +118,7 @@ export const useAuthStore = defineStore('auth', () => {
     telephone?: string | null
     zone_assignee?: string | null
     commercial_id?: string | null
+    employeur?: Employeur
     territoires_assignes?: string[]
     quartiers_assignes?: string[]
     region?: string | null

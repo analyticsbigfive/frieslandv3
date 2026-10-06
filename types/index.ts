@@ -4,6 +4,9 @@
 
 // ---- Enums & Constantes ----
 export type UserRole = 'admin' | 'superviseur' | 'merchandiser' | 'commercial'
+export type Employeur = 'friesland' | 'atom'
+/** perimetre = tout le portefeuille chaque jour ; quota = N PDV par canal et par jour (Atom). */
+export type RoutingTemplateMode = 'perimetre' | 'quota'
 // Deux axes distincts : SyncStatus = transport device -> serveur ;
 // VisitStatus = cycle de vie métier (validation). Une visite peut être
 // status='soumis' et sync_status='pending'. Le brouillon reste local.
@@ -29,6 +32,12 @@ export interface Profile {
   quartiers_assignes?: string[]
   region?: string
   avatar_url?: string
+  /**
+   * friesland = salarié Friesland (tournée = tout le périmètre, 6j/7) ;
+   * atom = merchandiser Atom BTL (tournée par quotas journaliers par canal,
+   * chaque PDV une fois par mois civil — programme Bonnet Rouge).
+   */
+  employeur?: Employeur
   is_active: boolean
   created_at: string
   updated_at: string
@@ -178,6 +187,8 @@ export interface RoutingTemplate {
   date_debut?: string | null
   /** NULL = la règle court indéfiniment (cas nominal). */
   date_fin?: string | null
+  /** perimetre (défaut) ou quota (Atom : grille routing_quota_canal, un PDV par mois). */
+  mode?: RoutingTemplateMode
   label?: string
   notes?: string
   is_active: boolean
