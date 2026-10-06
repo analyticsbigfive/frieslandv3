@@ -7,7 +7,7 @@
  *   - pour chaque merchandiser Atom actif, une règle de tournée « SSF — <nom> »
  *     par SSF principal, sur les jours où ce SSF domine ses visites, avec les
  *     PDV de son portefeuille situés dans la sous-zone ;
- *   - la règle « Portefeuille DMS » garde les jours non couverts ;
+ *   - la règle de portefeuille (DMS ou périmètre) garde les jours non couverts, et passe en quotas si elle était en périmètre ;
  *   - le périmètre du profil est élargi aux zones et quartiers des sous-zones.
  * L'Excel « SSF ↔ zones » du client (--fichier) remplace la dérivation pour les
  * SSF et merchandisers qu'il cite.
