@@ -351,3 +351,88 @@ export function lireCsv(texte) {
   const entete = lireLigneCsv(lignes[0])
   return lignes.slice(1).map(l => { const v = lireLigneCsv(l); return Object.fromEntries(entete.map((k, i) => [k, v[i] ?? ''])) })
 }
+
+// ---------- Alias des fichiers d'import (table alias_import) ----------
+
+/** Texte d'un fichier ramené à la forme des motifs d'alias : majuscules, sans accents ni ponctuation. */
+export const motifAlias = (texte) => norm(texte).replace(/[^A-Z0-9& ]/g, ' ').replace(/\s+/g, ' ').trim()
+
+/**
+ * Cible d'un alias (e-mail, nom de distributeur, nom de SSF) pour un texte de
+ * fichier, ou null. Modes : exact (aussi quel que soit l'ordre des mots),
+ * commence (par le motif), contient (le motif).
+ */
+export function resoudreAlias(texte, aliases, type) {
+  const k = motifAlias(texte)
+  if (!k) return null
+  const cle = cleNom(texte)
+  const siens = (aliases || []).filter(a => a.type === type)
+  return siens.find(a => a.mode === 'exact' && (a.motif === k || cleNom(a.motif) === cle))?.cible
+    || siens.find(a => a.mode === 'commence' && k.startsWith(a.motif))?.cible
+    || siens.find(a => a.mode === 'contient' && k.includes(a.motif))?.cible
+    || null
+}
+
+// Alias repris de la migration 20261007110000, utilisés tant qu'elle n'est pas
+// appliquée (lecture de alias_import impossible).
+export const ALIAS_PAR_DEFAUT = [
+  ['merchandiser', 'DEHO WILFRIED', 'exact', 'yopougonmerchtwo@gmail.com'],
+  ['merchandiser', 'DEHEO WILFRIED', 'exact', 'yopougonmerchtwo@gmail.com'],
+  ['merchandiser', 'DIABATE', 'exact', 'cocodymerchtwo@gmail.com'],
+  ['merchandiser', 'BERNADIN GUIHI', 'exact', 'cocodymerchtwo@gmail.com'],
+  ['merchandiser', 'GUIHI BERNADIN', 'exact', 'cocodymerchtwo@gmail.com'],
+  ['merchandiser', 'KOUADIO ATTOFE ANICET', 'exact', 'koumassimerchone@gmail.com'],
+  ['merchandiser', 'KOUADIO ATTOFE GUY', 'exact', 'koumassimerchone@gmail.com'],
+  ['merchandiser', 'MOUSTAPHA N DIAYE', 'exact', 'portbouetone@gmail.com'],
+  ['merchandiser', 'SEREGONE CHADRAC', 'exact', 'abobomerchone@gmail.com'],
+  ['merchandiser', 'ZOGBOLOU KEVIN', 'exact', 'yopougonone@gmail.com'],
+  ['merchandiser', 'YAO VENANCE', 'exact', 'abobomerchtwo@gmail.com'],
+  ['merchandiser', 'ABBE FREDERIC', 'exact', 'attecoubeone@gmail.com'],
+  ['merchandiser', 'KOUAME HELLARION', 'exact', 'cocodyone@gmail.com'],
+  ['merchandiser', 'AKEDAN JEAN YVES', 'exact', 'marcorytreichone@gmail.com'],
+  ['merchandiser', 'METCH DIANE', 'exact', 'metch.diane@friesland-terrain.ci'],
+  ['merchandiser', 'HIEN FILIPE', 'exact', 'hien.filipe@friesland-terrain.ci'],
+  ['merchandiser', 'VITAL YOBOUET', 'exact', 'vital.yobouet@friesland-terrain.ci'],
+  ['distributeur', 'BOUSSOURA', 'commence', 'BOUSSOURA SARL'],
+  ['distributeur', 'SODICO', 'commence', 'SODICOM-CI'],
+  ['distributeur', 'SODICI', 'commence', 'SODICOM-CI'],
+  ['distributeur', 'NIARE', 'contient', 'ETABLISSEMENT NIARE & FRERES'],
+  ['distributeur', 'NDA', 'exact', 'NOUVEAUX DISTRIBUTEURS ASSOCIES'],
+  ['distributeur', 'NOUVEAUX DISTRIBUTEURS', 'contient', 'NOUVEAUX DISTRIBUTEURS ASSOCIES'],
+  ['distributeur', 'SIDECOM', 'commence', 'SIDECOM'],
+  ['distributeur', 'PLAISIR', 'commence', 'PLAISIR BACHUSS'],
+  ['distributeur', 'DYNAMI', 'commence', 'DYNAMIS'],
+  ['distributeur', 'DINAMY', 'commence', 'DYNAMIS'],
+  ['distributeur', 'PRODISMA', 'commence', 'PRODISMA'],
+  ['distributeur', 'SDTP', 'commence', 'SDTP'],
+  ['distributeur', 'SDHPA', 'commence', 'SDHPA'],
+  ['distributeur', 'HIDJABE', 'contient', 'ETS HIDJABE'],
+  ['distributeur', 'PLAISIR BACCHUS', 'exact', 'PLAISIR BACHUSS'],
+  ['distributeur', 'TAHIROU AMADOU', 'exact', 'TAHIROU'],
+  ['distributeur', 'DYNAMYS', 'exact', 'DYNAMIS'],
+].map(([type, motif, mode, cible]) => ({ type, motif, mode, cible }))
+
+/** Alias de la base, sinon ceux par défaut (migration pas encore appliquée). */
+export async function chargerAlias(sb, toutes = toutesLesLignes) {
+  try {
+    const lignes = await toutes(() => sb.from('alias_import').select('type,motif,mode,cible').order('id'))
+    return lignes.length ? lignes : ALIAS_PAR_DEFAUT
+  }
+  catch {
+    return ALIAS_PAR_DEFAUT
+  }
+}
+
+/** Identifiant court de PDV (8 caractères), absent de `pris`. */
+export function nouvelIdPdv(pris) {
+  for (;;) {
+    const id = globalThis.crypto.randomUUID().slice(0, 8)
+    if (!pris.has(id)) { pris.add(id); return id }
+  }
+}
+
+/** Découpe une liste en paquets de `taille`. */
+export const paquets = (xs, taille) => Array.from({ length: Math.ceil(xs.length / taille) }, (_, i) => xs.slice(i * taille, (i + 1) * taille))
+
+export const jourIsoLocal = (d = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
