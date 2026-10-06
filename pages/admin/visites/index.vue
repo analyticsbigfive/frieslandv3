@@ -55,10 +55,7 @@
               <th>Distributeur</th>
               <th class="text-center">Niveau</th>
               <th class="text-center">Score</th>
-              <th class="text-center">EVAP</th>
-              <th class="text-center">IMP</th>
-              <th class="text-center">SCM</th>
-              <th class="text-center">UHT</th>
+              <th v-for="category in tableProductCategories" :key="category.key" class="text-center">{{ category.label }}</th>
               <th class="text-center">GPS</th>
               <th class="text-center">Photos</th>
               <th class="text-center">Actions</th>
@@ -100,11 +97,11 @@
                 <span v-else class="text-xs text-slate-400">Non conforme</span>
               </td>
               <td class="text-center font-semibold tabular-nums">{{ ratio(scoreFor(visite)?.scoreGlobal) }}</td>
-              <td v-for="category in tableProductCategories" :key="category" class="text-center">
+              <td v-for="category in tableProductCategories" :key="category.key" class="text-center">
                 <UIcon
-                  :name="productPresent(visite, category) ? 'i-heroicons-check-circle-solid' : 'i-heroicons-minus-circle-solid'"
+                  :name="productPresent(visite, category.key) ? 'i-heroicons-check-circle-solid' : 'i-heroicons-minus-circle-solid'"
                   class="h-5 w-5"
-                  :class="productPresent(visite, category) ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600'"
+                  :class="productPresent(visite, category.key) ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600'""
                 />
               </td>
               <td class="text-center">
@@ -208,6 +205,7 @@ import type { Visite } from '~/types'
 import type { PerfectStoreResultB } from '~/utils/perfectStore'
 import { plageDePeriode } from '~/utils/periode'
 import { photosAffichables } from '~/utils/visitePhotos'
+import { catalogueProduits, categoriesProduitsActives, getCategoryDef } from '~/utils/products'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
@@ -250,7 +248,8 @@ const showZoomedPhoto = computed({
   set: value => { if (!value) zoomedPhoto.value = null },
 })
 
-const tableProductCategories = ['evap', 'imp', 'scm', 'uht']
+// Une colonne par catégorie active du catalogue (Paramètres › Produits du formulaire).
+const tableProductCategories = computed(() => categoriesProduitsActives().map(c => ({ key: c.key, label: c.label })))
 
 const commercialOptions = computed(() => [
   { value: '', label: 'Tous' },

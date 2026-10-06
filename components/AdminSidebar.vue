@@ -102,6 +102,7 @@ import {
   SlidersHorizontal,
   Trophy,
   GraduationCap,
+  Target,
 } from 'lucide-vue-next'
 
 defineProps<{ collapsed: boolean; mobileOpen?: boolean }>()
@@ -123,6 +124,8 @@ type AdminNavItem = {
 function isActive(path: string, activePaths: string[] = []): boolean {
   const targetPath = path.split('?')[0]
   if (targetPath === '/admin') return route.path === '/admin'
+  // Routing & Planning ne s'allume pas sur sa sous-page Programme Atom.
+  if (targetPath === '/admin/routing' && route.path.startsWith('/admin/routing/programme-atom')) return false
   return route.path.startsWith(targetPath) || activePaths.some(activePath => route.path.startsWith(activePath))
 }
 
@@ -134,6 +137,7 @@ const navSections: Array<{ key: string; title: string; items: AdminNavItem[] }> 
       { label: 'Perfect Store', to: '/admin', icon: Trophy },
       { label: 'Activité', to: '/admin/activite', icon: LayoutDashboard },
       { label: 'Routing & Planning', to: '/admin/routing', icon: Route, privilegie: true },
+      { label: 'Programme Atom', to: '/admin/routing/programme-atom', icon: Target },
       { label: 'Carte', to: '/admin/map', icon: Map },
       { label: 'Suivi commerciaux', to: '/admin/trajets', icon: Navigation },
     ],

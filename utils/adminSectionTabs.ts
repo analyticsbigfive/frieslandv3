@@ -56,12 +56,7 @@ export const adminSectionTabs: Record<AdminSection, AdminSectionTab[]> = {
   produits: [
     { label: 'Récapitulatif', to: '/admin/produits/recap', icon: 'i-heroicons-clipboard-document-list' },
     { label: 'Inventaire SKU', to: '/admin/produits/inventaire', icon: 'i-heroicons-cube' },
-    { label: 'EVAP', to: '/admin/produits/evap', icon: 'i-heroicons-squares-2x2' },
-    { label: 'IMP', to: '/admin/produits/imp', icon: 'i-heroicons-squares-2x2' },
-    { label: 'SCM', to: '/admin/produits/scm', icon: 'i-heroicons-squares-2x2' },
-    { label: 'UHT', to: '/admin/produits/uht', icon: 'i-heroicons-squares-2x2' },
-    { label: 'Yaourt', to: '/admin/produits/yaourt', icon: 'i-heroicons-squares-2x2' },
-    { label: 'Céréales', to: '/admin/produits/cereales', icon: 'i-heroicons-squares-2x2' },
+    // + un onglet par catégorie active du catalogue (components/AdminSectionTabs.vue).
   ],
   actions: [
     { label: 'Synthèse', to: '/admin/actions', icon: 'i-heroicons-bolt' },
@@ -70,7 +65,7 @@ export const adminSectionTabs: Record<AdminSection, AdminSectionTab[]> = {
   ],
   parametres: [
     { label: 'Standards Perfect Store', to: '/admin/perfect-store/standards', icon: 'i-heroicons-adjustments-horizontal' },
-    { label: 'Seuils de stock', to: '/admin/produits/seuils', icon: 'i-heroicons-adjustments-horizontal' },
+    { label: 'Produits du formulaire', to: '/admin/produits/seuils', icon: 'i-heroicons-adjustments-horizontal' },
     { label: 'Référentiels', to: '/admin/referentiels', icon: 'i-heroicons-circle-stack' },
     { label: 'Utilisateurs', to: '/admin/users', icon: 'i-heroicons-users' },
     { label: 'Équipes', to: '/admin/users/equipes', icon: 'i-heroicons-user-group' },

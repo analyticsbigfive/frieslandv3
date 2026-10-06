@@ -3,12 +3,15 @@
  *
  * Usage :
  *   node scripts/generer-guides-pdf.mjs
- *       -> les 3 guides génériques : docs/guides/GUIDE-{ADMIN,COMMERCIAL,MERCHANDISER}.pdf
+ *       -> les 4 guides génériques : docs/guides/GUIDE-{ADMIN,COMMERCIAL,MERCHANDISER,MERCHANDISER-ATOM}.pdf
  *   node scripts/generer-guides-pdf.mjs --utilisateurs
  *       -> en plus, un guide personnalisé par commercial et merchandiseur actif
  *          (nom, e-mail, territoires, équipe / commercial responsable) dans
  *          docs/guides/utilisateurs/<role>/ — dossier NON versionné (données
  *          personnelles). Lit SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY dans .env.
+ *          Un merchandiseur Atom (profiles.employeur = 'atom') reçoit le guide
+ *          Atom, avec sa page « Ma semaine » (SSF, téléphone, quartiers de
+ *          chaque jour, RPC ssf_semaine).
  *
  *   node scripts/generer-guides-pdf.mjs --utilisateurs --avec-mots-de-passe
  *       -> imprime en plus le mot de passe par défaut (SEED_DEFAULT_PASSWORD)
@@ -59,7 +62,16 @@ const ROLES = {
     libelleRole: 'Merchandiseur · visites PDV',
     intro: 'Ce guide accompagne les merchandiseurs dans l’application mobile : tournée du jour, visites des points de vente, relevés produits, visibilité et actions à réaliser.',
   },
+  merchandiser_atom: {
+    fichier: 'GUIDE-MERCHANDISER-ATOM',
+    source: 'merchandiser-atom',
+    titre: 'Guide du merchandiseur Atom',
+    libelleRole: 'Merchandiseur Atom · tournées avec les SSF',
+    intro: 'Ce guide accompagne les merchandiseurs du programme Atom : planning de la semaine avec les SSF et leurs quartiers, tournée du jour par canal, visites des points de vente, travail hors ligne et objectifs du mois.',
+  },
 }
+
+const JOURS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
 
 const echapper = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;' }[c]))
 const slug = s => String(s || 'sans-nom').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
@@ -131,9 +143,34 @@ function ficheUtilisateur(u) {
     </div>`
 }
 
+// Planning SSF de la semaine (merchandiser Atom), sur une page à part.
+function pageSemaine(u) {
+  if (!u?.semaine) return ''
+  const lignes = [1, 2, 3, 4, 5, 6].map((jour) => {
+    const duJour = u.semaine.filter(l => l.jour_semaine === jour)
+    if (!duJour.length) return `<tr><td>${JOURS[jour]}</td><td colspan="4" class="muet">Pas de SSF prévu : portefeuille habituel</td></tr>`
+    return duJour.map((l, i) => `<tr>
+      <td>${i ? '' : JOURS[jour]}</td>
+      <td><strong>${echapper(l.ssf_nom)}</strong>${l.distributeur ? `<br><span class="muet">${echapper(l.distributeur)}</span>` : ''}</td>
+      <td>${echapper(l.ssf_telephone || '—')}</td>
+      <td>${echapper(l.zone || '—')}</td>
+      <td>${echapper(abreger((l.quartiers || []).filter(Boolean), 10) || '—')}</td>
+    </tr>`).join('')
+  }).join('')
+  return `
+    <section class="semaine">
+      <h2>Ma semaine avec mes SSF</h2>
+      <p>Planning au ${dateFr}. Il peut changer : l’application (<span class="ui">Plus</span> → <span class="ui">Ma semaine (SSF)</span>) fait foi.</p>
+      <table>
+        <thead><tr><th>Jour</th><th>SSF</th><th>Téléphone</th><th>Zone</th><th>Quartiers</th></tr></thead>
+        <tbody>${lignes}</tbody>
+      </table>
+    </section>`
+}
+
 async function assembler(role, { css, utilisateur = null }) {
   const meta = ROLES[role]
-  const brut = await readFile(join(SOURCE, `${role}.html`), 'utf8')
+  const brut = await readFile(join(SOURCE, `${meta.source || role}.html`), 'utf8')
   const { html, titres } = numeroterChapitres(brut)
   const logo = pathToFileURL(join(RACINE, 'assets/logo.png')).href
   const sommaire = `
@@ -168,7 +205,7 @@ async function assembler(role, { css, utilisateur = null }) {
       </div>
     </div>
   </div>
-  <main>${html}</main>
+  <main>${pageSemaine(utilisateur)}${html}</main>
 </body>
 </html>`
 }
@@ -267,7 +304,7 @@ async function chargerUtilisateurs({ avecMotsDePasse }) {
   })
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, nom, email, role, telephone, zone_assignee, territoires_assignes, quartiers_assignes, commercial_id, is_active')
+    .select('id, nom, email, role, employeur, telephone, zone_assignee, territoires_assignes, quartiers_assignes, commercial_id, is_active')
     .in('role', ['commercial', 'merchandiser'])
   if (error) throw error
 
@@ -288,6 +325,13 @@ async function chargerUtilisateurs({ avecMotsDePasse }) {
       if (compte?.user_metadata?.must_change_password === true) u.motDePasse = defaut
       else if (compte?.last_sign_in_at) u.motDePassePersonnel = true
     }
+  }
+
+  // Merchandisers Atom : planning SSF de la semaine (migration 20261007100000).
+  for (const u of actifs.filter(m => m.role === 'merchandiser' && m.employeur === 'atom')) {
+    const { data: semaine, error: e } = await supabase.rpc('ssf_semaine', { p_user_id: u.id })
+    if (e) console.warn(`   planning SSF indisponible pour ${u.nom || u.email} : ${e.message}`)
+    else u.semaine = semaine || []
   }
 
   const parId = new Map(data.map(u => [u.id, u]))
@@ -332,9 +376,10 @@ try {
       let nom = slug(u.nom || u.email.split('@')[0])
       if (vus.has(`${u.role}/${nom}`)) nom = `${nom}-${slug(u.email.split('@')[0])}`
       vus.add(`${u.role}/${nom}`)
+      const role = u.role === 'merchandiser' && u.employeur === 'atom' ? 'merchandiser_atom' : u.role
       const html = join(travail, `${u.id}.html`)
-      await writeFile(html, await assembler(u.role, { css, utilisateur: u }))
-      await imprimer(chrome, html, join(dossier, `${nom}.pdf`), `${ROLES[u.role].titre} — ${u.nom || u.email}`)
+      await writeFile(html, await assembler(role, { css, utilisateur: u }))
+      await imprimer(chrome, html, join(dossier, `${nom}.pdf`), `${ROLES[role].titre} — ${u.nom || u.email}`)
       console.log(`  ✅ ${u.role === 'commercial' ? 'commerciaux' : 'merchandiseurs'}/${nom}.pdf${u.motDePasse ? ' (mot de passe)' : ''}`)
     }
   }

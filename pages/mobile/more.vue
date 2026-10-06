@@ -47,6 +47,10 @@ const roleItems = computed(() => {
       { label: 'Calendrier des tournées', description: 'Tournées passées et à venir, PDV de chaque jour', to: '/mobile/tournees', icon: 'i-heroicons-calendar' },
       { label: 'Objectifs du mois', description: 'PDV à visiter par canal, semaine et mois', to: '/mobile/objectifs', icon: 'i-heroicons-flag' },
     )
+    // Merchandisers Atom : SSF et quartiers de chaque jour (planning de la semaine).
+    if (authStore.profile?.employeur === 'atom') {
+      items.push({ label: 'Ma semaine (SSF)', description: 'Avec quel SSF et dans quels quartiers, chaque jour', to: '/mobile/semaine', icon: 'i-heroicons-user-group' })
+    }
   }
   // Le commercial a le coaching en onglet du bas : pas de doublon ici.
   if (authStore.isSuperviseur) {

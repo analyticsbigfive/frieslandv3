@@ -771,12 +771,16 @@ export const useRoutingStore = defineStore('routing', () => {
       dateFin?: string
       /** quota = Atom : N PDV par canal et par jour, chaque PDV une fois par mois. */
       mode?: RoutingTemplateMode
+      /** SSF de la règle : sa sous-zone borne les PDV (merchandisers Atom). */
+      ssfId?: number | null
     } = {}
   ) {
     if (!daysOfWeek.length) throw new Error('Sélectionnez au moins un jour de la semaine')
 
     const { data, error } = await (supabase.from('routing_templates') as any)
       .insert({
+        // Colonne ssf_id (migration 20261007100000) écrite seulement si un SSF est choisi.
+        ...(options.ssfId ? { ssf_id: options.ssfId } : {}),
         user_id: userId,
         days_of_week: daysOfWeek,
         // Renseigné pour rester lisible par tout code n'ayant pas encore migré.
@@ -811,6 +815,7 @@ export const useRoutingStore = defineStore('routing', () => {
       date_debut?: string | null
       date_fin?: string | null
       mode?: RoutingTemplateMode
+      ssf_id?: number | null
     }
   ) {
     const payload: any = { ...updates }
@@ -913,16 +918,41 @@ export const useRoutingStore = defineStore('routing', () => {
    * Abobo une semaine et Adjamé la suivante — un contrôle contre le profil figé
    * rejetterait le second cas. On valide donc contre le territoire de la règle.
    * Règle sans territoire = pas de contrainte (l'admin assume).
+   * Règle liée à un SSF : le PDV doit être dans sa sous-zone (ssf_quartier) ;
+   * un PDV sans quartier est accepté s'il est dans une zone de la sous-zone.
    */
   async function assertScopedPDVForRegle(templateId: string, pdvIds: string[]) {
     const ids = [...new Set(pdvIds.filter(Boolean))]
     if (!ids.length) return
 
-    const { data: tpl, error: tplErr } = await (supabase.from('routing_templates') as any)
-      .select('territoire')
+    let { data: tpl, error: tplErr } = await (supabase.from('routing_templates') as any)
+      .select('territoire, ssf_id')
       .eq('id', templateId)
       .single()
+    if (tplErr) {
+      // Base sans ssf_id (migration 20261007100000 non appliquée).
+      ;({ data: tpl, error: tplErr } = await (supabase.from('routing_templates') as any)
+        .select('territoire').eq('id', templateId).single())
+    }
     if (tplErr) throw tplErr
+
+    if (tpl?.ssf_id) {
+      const { data: sousZone, error: szErr } = await (supabase.from('ssf_quartier') as any)
+        .select('zone, quartier').eq('ssf_id', tpl.ssf_id)
+      if (szErr) throw szErr
+      if ((sousZone || []).length) {
+        const cles = new Set((sousZone || []).map((q: any) => `${q.zone}|${q.quartier}`))
+        const zones = new Set((sousZone || []).map((q: any) => q.zone))
+        const { data: pdvs, error: pdvErr } = await (supabase.from('pdv') as any)
+          .select('pdv_id, nom_pdv, zone, quartier').in('pdv_id', ids)
+        if (pdvErr) throw pdvErr
+        const hors = (pdvs || []).filter((p: any) => p.quartier ? !cles.has(`${p.zone}|${p.quartier}`) : !zones.has(p.zone))
+        if (hors.length) {
+          throw new Error(`${hors.length} PDV hors de la sous-zone du SSF de la règle : ${hors.slice(0, 3).map((p: any) => `${p.nom_pdv} (${p.zone} › ${p.quartier || 'sans quartier'})`).join(', ')}${hors.length > 3 ? '…' : ''}. Ajoutez le quartier dans Référentiels › SSF ↔ Quartiers si besoin.`)
+        }
+        return
+      }
+    }
     if (!tpl?.territoire) return
 
     const { data: pdvs, error: pdvErr } = await (supabase.from('pdv') as any)

@@ -6,8 +6,7 @@ export function useRouting() {
   const { validateGeofence, grabPosition } = useGeofencing()
   const toast = useToast()
   const supabase = useSupabaseClient()
-  const config = useRuntimeConfig()
-  const precisionMaxPdv = Number(config.public.gpsPdvPrecisionMax) || 30
+  const { parametres } = useParametresApp()
 
   const isValidating = ref(false)
   const validationError = ref<string | null>(null)
@@ -27,6 +26,7 @@ export function useRouting() {
       return false
     }
     const precision = Math.round(position.accuracy)
+    const precisionMaxPdv = parametres.value.gps_precision_pdv_max_m
     if (precision > precisionMaxPdv) {
       toast.add({
         title: 'Position du PDV non enregistrée',
@@ -79,7 +79,7 @@ export function useRouting() {
     validationError.value = null
 
     try {
-      const radius = routingPdv.pdv.rayon_geofence || 200
+      const radius = routingPdv.pdv.rayon_geofence || parametres.value.geofence_rayon_m
       const result = await validateGeofence(
         routingPdv.pdv.geolocation_lat,
         routingPdv.pdv.geolocation_lng,

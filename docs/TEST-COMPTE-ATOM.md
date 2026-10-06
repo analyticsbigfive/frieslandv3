@@ -59,6 +59,8 @@ node scripts/compte-test-atom.mjs --nettoyer --apply
 Visites, tournées, positions GPS et règle du compte de test sont supprimées,
 puis le compte est désactivé. Les vrais agents ne sont pas touchés.
 
+Bilan du premier passage (6 octobre 2026, APK 1.0.10) : `docs/TEST-COMPTE-ATOM-2026-10-06.md`.
+
 ## 4. APK de test (téléphone branché à l'ordinateur)
 
 Utiliser l'**APK 1.0.11** : badge du canal dans la tournée, écrans « Mes

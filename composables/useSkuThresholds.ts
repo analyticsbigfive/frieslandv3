@@ -44,16 +44,25 @@ export function useSkuThresholds() {
     const v = thresholds.value[keyOf(category, sku)]
     if (typeof v === 'number') return v
     // Repli: seuil par défaut du catalogue
-    const def = getSkus(category).find(s => s.key === sku)
+    const def = getSkus(category, { inclureInactifs: true }).find(s => s.key === sku)
     return def?.seuilBasDefaut ?? 3
   }
 
+  // Seul le seuil change : le libellé est géré dans Produits du formulaire et
+  // ne doit pas être écrasé par celui du catalogue embarqué.
   async function updateSeuil(category: string, sku: string, seuil: number) {
-    const label = getSkus(category).find(s => s.key === sku)?.label || sku
-    const { error } = await supabase
-      .from('sku_thresholds')
-      .upsert({ category, sku, label, seuil_bas: seuil, updated_at: new Date().toISOString() }, { onConflict: 'category,sku' })
+    const table = supabase.from('sku_thresholds') as any
+    const { data, error } = await table
+      .update({ seuil_bas: seuil, updated_at: new Date().toISOString() })
+      .eq('category', category).eq('sku', sku)
+      .select('sku')
     if (error) throw error
+    if (!data?.length) {
+      const label = getSkus(category, { inclureInactifs: true }).find(s => s.key === sku)?.label || sku
+      const { error: e2 } = await (supabase.from('sku_thresholds') as any)
+        .insert({ category, sku, label, seuil_bas: seuil })
+      if (e2) throw e2
+    }
     thresholds.value = { ...thresholds.value, [keyOf(category, sku)]: seuil }
   }
 

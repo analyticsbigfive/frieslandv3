@@ -221,7 +221,7 @@
 <script setup lang="ts">
 import type { ActionCommerciale } from '~/types'
 import { completudeReleve } from '~/utils/visiteCompletude'
-import { getSkus, skuQuantity } from '~/utils/products'
+import { catalogueProduits, getSkus, skuQuantity } from '~/utils/products'
 
 definePageMeta({
   middleware: ['auth'],
@@ -242,8 +242,10 @@ const pdvName = ref('')
 // Catégories actives (lot 6) : une catégorie fermée dans l'admin n'est plus
 // affichée, même si la visite historique la porte.
 const { actives: categoriesReleveActives, charger: chargerCategoriesReleve } = useCategoriesReleve()
+// Toutes les catégories du catalogue, retirées comprises : une ancienne visite
+// garde ses relevés lisibles (seules les catégories renseignées s'affichent).
 const productCategories = computed(() =>
-  categoriesReleveActives.value.map(c => ({ key: c.code, label: c.libelle.toUpperCase() })),
+  catalogueProduits().map(c => ({ key: c.key, label: c.label.toUpperCase() })),
 )
 
 // Ne réclamer que les catégories encore actives : sinon une visite récente ne
@@ -264,7 +266,7 @@ const produitsReleves = computed(() => {
   return productCategories.value
     .map((cat) => {
       const bloc = produits[cat.key]
-      const skus = getSkus(cat.key)
+      const skus = getSkus(cat.key, { inclureInactifs: true })
         .map(s => ({ key: s.key, label: s.label, quantite: skuQuantity(bloc, s.key) }))
         .filter((s): s is { key: string; label: string; quantite: number } => s.quantite !== null)
       return {

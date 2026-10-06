@@ -384,6 +384,9 @@
                   <UBadge v-if="tpl.mode === 'quota'" color="violet" variant="soft" size="sm" title="N PDV par canal et par jour, chaque PDV une fois par mois (Atom)">
                     Quotas
                   </UBadge>
+                  <UBadge v-if="tpl.ssf_id" color="teal" variant="soft" size="sm" :title="quartiersSsfTexte(tpl.ssf_id)">
+                    SSF · {{ nomSsf(tpl.ssf_id) }}
+                  </UBadge>
                   <UBadge :color="tpl.is_active ? 'green' : 'gray'" variant="soft" size="sm">
                     {{ tpl.is_active ? 'Actif' : 'Inactif' }}
                   </UBadge>
@@ -727,8 +730,10 @@
     <!-- ==================== CREATE TEMPLATE MODAL ==================== -->
     <AdminFormModal
       v-model="showTemplateCreateModal"
-      title="Nouvelle règle récurrente"
-      description="« Ce merchandiser visite ces PDV chaque lundi et chaque jeudi. » La règle se répète d'elle-même, mois suivant compris."
+      :title="regleEditionId ? 'Modifier la règle' : 'Nouvelle règle récurrente'"
+      :description="regleEditionId
+        ? 'Les tournées déjà générées ne changent pas ; Référentiels › Maintenance › « Recalculer les tournées à venir » applique tout de suite la règle modifiée.'
+        : '« Ce merchandiser visite ces PDV chaque lundi et chaque jeudi. » La règle se répète d’elle-même, mois suivant compris.'"
       icon="i-heroicons-arrow-path-rounded-square"
       width="sm:max-w-2xl"
       body-class="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2"
@@ -741,6 +746,7 @@
             placeholder="Sélectionner un utilisateur"
             option-attribute="label"
             value-attribute="value"
+            :disabled="!!regleEditionId"
             searchable
             searchable-placeholder="Rechercher..."
             size="md"
@@ -786,6 +792,21 @@
           <UInput v-model="newTemplate.distributeur" placeholder="Ex. Distributeur A" size="md" class="w-full" />
         </UFormGroup>
 
+        <!-- SSF (vendeur du distributeur) : sa sous-zone borne les PDV de la
+             règle les jours choisis (merchandisers Atom). -->
+        <UFormGroup v-if="sousZonesSsf.length" label="SSF (avec qui)" :help="aideSsf" size="md" class="sm:col-span-2">
+          <USelectMenu
+            v-model="ssfChoisi"
+            :options="ssfOptions"
+            option-attribute="label"
+            value-attribute="value"
+            searchable
+            searchable-placeholder="Rechercher un SSF..."
+            size="md"
+            class="w-full"
+          />
+        </UFormGroup>
+
         <UFormGroup
           label="Logique de tournée"
           help="Quotas : la tournée du jour pioche dans le portefeuille selon la grille Référentiels › Quotas Atom ; un PDV déjà planifié ou visité dans le mois n'est pas repris."
@@ -822,7 +843,7 @@
             :loading="creating"
             @click="handleCreateTemplate"
           >
-            Créer la règle
+            {{ regleEditionId ? 'Enregistrer' : 'Créer la règle' }}
           </UButton>
       </template>
     </AdminFormModal>
@@ -1424,7 +1445,92 @@ const newTemplate = reactive({
   dateFin: '',
   // perimetre = tout le portefeuille chaque jour ; quota = Atom (grille Référentiels › Quotas Atom).
   mode: 'perimetre' as RoutingTemplateMode,
+  // SSF (vendeur du distributeur) de la règle : sa sous-zone borne les PDV.
+  ssfId: null as number | null,
 })
+
+// ---- SSF et sous-zones (règles Atom) ----
+interface SousZoneSsf { ssf_id: number, nom: string, distributeur: string | null, zone: string | null, quartiers: string[], actif: boolean }
+const sousZonesSsf = ref<SousZoneSsf[]>([])
+const quartiersParSsf = ref(new Map<number, { cles: Set<string>, zones: Set<string> }>())
+async function chargerSousZonesSsf() {
+  // Base sans la migration 20261007100000 : pas de SSF, le champ est masqué.
+  const [vue, lignes] = await Promise.all([
+    (supabase.from('v_ssf_sous_zone' as any) as any).select('ssf_id, nom, distributeur, zone, quartiers, actif').order('nom'),
+    fetchAllRows<any>((from, to) => (supabase.from('ssf_quartier' as any) as any).select('ssf_id, zone, quartier').order('id').range(from, to)).catch(() => []),
+  ])
+  sousZonesSsf.value = vue.error ? [] : (vue.data || [])
+  const m = new Map<number, { cles: Set<string>, zones: Set<string> }>()
+  for (const q of lignes as any[]) {
+    if (!m.has(q.ssf_id)) m.set(q.ssf_id, { cles: new Set(), zones: new Set() })
+    m.get(q.ssf_id)!.cles.add(`${q.zone}|${q.quartier}`)
+    m.get(q.ssf_id)!.zones.add(q.zone)
+  }
+  quartiersParSsf.value = m
+}
+const ssfParId = computed(() => new Map(sousZonesSsf.value.map(s => [s.ssf_id, s])))
+const nomSsf = (id: number) => ssfParId.value.get(id)?.nom || `SSF ${id}`
+const quartiersSsfTexte = (id: number) => {
+  const s = ssfParId.value.get(id)
+  return s?.quartiers?.length ? `Sous-zone ${s.zone || ''} : ${s.quartiers.join(', ')}` : 'Sous-zone non définie (Référentiels › SSF ↔ Quartiers)'
+}
+const ssfOptions = computed(() => [
+  { value: 0, label: 'Aucun (règle sans SSF)' },
+  ...sousZonesSsf.value.filter(s => s.actif !== false).map(s => ({
+    value: s.ssf_id,
+    label: `${s.nom}${s.zone ? ` · ${s.zone}` : ''}${s.distributeur ? ` · ${s.distributeur}` : ''}`,
+  })),
+])
+// USelectMenu ne prend pas null : « aucun SSF » = 0 dans le sélecteur.
+const ssfChoisi = computed<number>({
+  get: () => newTemplate.ssfId ?? 0,
+  set: (v) => { newTemplate.ssfId = v || null },
+})
+const aideSsf = computed(() => (newTemplate.ssfId
+  ? `${quartiersSsfTexte(newTemplate.ssfId)}. Les PDV de ces quartiers complètent la tournée du jour ; aucun PDV hors sous-zone ne peut être ajouté.`
+  : 'Vendeur du distributeur qui accompagne le merchandiser les jours de cette règle : sa sous-zone borne les PDV (merchandisers Atom).'))
+
+// ---- Modification d'une règle (même formulaire que la création) ----
+const regleEditionId = ref<string | null>(null)
+let remplissageRegle = false
+watch(() => newTemplate.ssfId, (id) => {
+  if (!id || remplissageRegle) return
+  const s = ssfParId.value.get(id)
+  if (!s) return
+  if (s.zone) newTemplate.territoire = s.zone
+  if (s.distributeur) newTemplate.distributeur = s.distributeur
+  if (!newTemplate.label || newTemplate.label.startsWith('SSF — ')) newTemplate.label = `SSF — ${s.nom}`
+  newTemplate.mode = 'quota'
+})
+async function ouvrirEditionRegle(tpl: RoutingTemplate) {
+  remplissageRegle = true
+  regleEditionId.value = tpl.id
+  Object.assign(newTemplate, {
+    userId: tpl.user_id,
+    daysOfWeek: joursDeRegle(tpl),
+    label: tpl.label || '',
+    notes: tpl.notes || '',
+    territoire: tpl.territoire || '',
+    distributeur: tpl.distributeur || '',
+    dateDebut: tpl.date_debut || '',
+    dateFin: tpl.date_fin || '',
+    mode: tpl.mode || 'perimetre',
+    ssfId: tpl.ssf_id ?? null,
+  })
+  showTemplateCreateModal.value = true
+  await nextTick()
+  remplissageRegle = false
+}
+function reinitialiserFormulaireRegle() {
+  remplissageRegle = true
+  regleEditionId.value = null
+  Object.assign(newTemplate, {
+    userId: '', daysOfWeek: [], label: '', notes: '', territoire: '', distributeur: '',
+    dateDebut: toIsoJour(new Date()), dateFin: '', mode: 'perimetre', ssfId: null,
+  })
+  void nextTick(() => { remplissageRegle = false })
+}
+watch(showTemplateCreateModal, (ouvert) => { if (!ouvert && regleEditionId.value) reinitialiserFormulaireRegle() })
 const modeOptions = [
   { value: 'perimetre', label: 'Périmètre — tout le portefeuille chaque jour (Friesland)' },
   { value: 'quota', label: 'Quotas — N PDV par canal et par jour, chaque PDV une fois par mois (Atom)' },
@@ -2172,6 +2278,11 @@ function routingActions(routing: Routing) {
 function templateActions(tpl: RoutingTemplate) {
   return [[
     {
+      label: 'Modifier',
+      icon: 'i-heroicons-pencil-square',
+      click: () => ouvrirEditionRegle(tpl),
+    },
+    {
       label: tpl.is_active ? 'Désactiver' : 'Activer',
       icon: tpl.is_active ? 'i-heroicons-pause' : 'i-heroicons-play',
       click: async () => {
@@ -2215,6 +2326,15 @@ function templatePDVObjectifActions(tpl: RoutingTemplate, tp: RoutingTemplatePDV
 // la liste complète (25 000+ PDV) figerait l'écran à l'ouverture du menu.
 function availableTemplatePdvOptions(tpl: RoutingTemplate) {
   const usedIds = new Set((tpl.routing_template_pdv || []).map(p => p.pdv_id))
+  // Règle liée à un SSF : seuls les PDV de sa sous-zone (un PDV sans quartier
+  // est proposé s'il est dans une zone de la sous-zone).
+  const sousZone = tpl.ssf_id ? quartiersParSsf.value.get(tpl.ssf_id) : null
+  if (sousZone?.cles.size) {
+    return pdvList.value
+      .filter(p => !usedIds.has(p.pdv_id))
+      .filter(p => (p.quartier ? sousZone.cles.has(`${p.zone}|${p.quartier}`) : sousZone.zones.has(p.zone || '')))
+      .map(p => ({ value: p.pdv_id, label: `${p.nom_pdv} (${p.zone || ''}${p.quartier ? ` › ${p.quartier}` : ''})` }))
+  }
   const titulaire = tpl.territoire ? null : users.value.find(u => u.id === tpl.user_id)
   return pdvList.value
     .filter(p => !usedIds.has(p.pdv_id))
@@ -2381,6 +2501,25 @@ async function handleCreateTemplate() {
   if (!newTemplate.userId || !newTemplate.daysOfWeek.length) return
   creating.value = true
   try {
+    if (regleEditionId.value) {
+      await routingStore.updateTemplate(regleEditionId.value, {
+        label: newTemplate.label,
+        notes: newTemplate.notes,
+        days_of_week: [...newTemplate.daysOfWeek] as any,
+        territoire: newTemplate.territoire || null,
+        distributeur: newTemplate.distributeur || null,
+        date_debut: newTemplate.dateDebut || null,
+        date_fin: newTemplate.dateFin || null,
+        mode: newTemplate.mode,
+        // Colonne ssf_id écrite seulement quand les SSF sont disponibles (migration appliquée).
+        ...(sousZonesSsf.value.length ? { ssf_id: newTemplate.ssfId } : {}),
+      })
+      toast.add({ title: 'Règle modifiée', description: 'Les tournées déjà générées ne changent pas (Maintenance › Recalculer les tournées à venir).', color: 'green' })
+      showTemplateCreateModal.value = false
+      reinitialiserFormulaireRegle()
+      loadTemplates()
+      return
+    }
     await routingStore.createTemplate(
       newTemplate.userId,
       [...newTemplate.daysOfWeek],
@@ -2393,6 +2532,7 @@ async function handleCreateTemplate() {
         dateDebut: newTemplate.dateDebut,
         dateFin: newTemplate.dateFin,
         mode: newTemplate.mode,
+        ssfId: newTemplate.ssfId,
       },
     )
     toast.add({
@@ -2409,6 +2549,7 @@ async function handleCreateTemplate() {
     newTemplate.distributeur = ''
     newTemplate.dateFin = ''
     newTemplate.mode = 'perimetre'
+    newTemplate.ssfId = null
     loadTemplates()
   } catch (err: any) {
     toast.add({ title: 'Erreur', description: err.message, color: 'red' })
@@ -2453,6 +2594,7 @@ onMounted(async () => {
   // qu'aux sélecteurs des popups.
   loadRoutings()
   loadTemplates()
+  void chargerSousZonesSsf()
 
   const { fetchUsers: fetchCachedUsers } = useUsersCache()
   const [cachedUsers, pdvResult] = await Promise.all([
