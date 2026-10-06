@@ -220,7 +220,13 @@ const { typePdvLabel, fetchTypePdvLabels } = useTypePdvLabels()
 
 const visites = computed(() => visitesStore.visites)
 const total = computed(() => visitesStore.total)
-const loading = computed(() => visitesStore.loading)
+// Le drapeau du store vaut false avant le premier fetch : sans
+// premierChargement, l'état vide s'affichait pendant le chargement initial.
+const premierChargement = ref(true)
+const loading = computed(() => visitesStore.loading || premierChargement.value)
+watch(() => visitesStore.loading, (enCours, avant) => {
+  if (avant && !enCours) premierChargement.value = false
+})
 const filters = visitesStore.filters
 
 // Période : source de vérité de l'UI, recopiée dans les filtres du store (qui

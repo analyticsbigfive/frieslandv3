@@ -84,9 +84,7 @@
 
       <!-- Tournées regroupées par personne : une carte dépliable par merchandiser -->
       <div class="space-y-4">
-        <div v-if="loading" class="text-center py-12">
-          <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-fc-red mx-auto" />
-        </div>
+        <ChargementContenu v-if="loading" libelle="Chargement des tournées…" />
 
         <div v-else-if="routings.length === 0" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-12 text-center">
           <UIcon name="i-heroicons-map" class="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -227,9 +225,7 @@
         </div>
       </div>
 
-      <div v-if="templateLoading" class="text-center py-12">
-        <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-fc-red mx-auto" />
-      </div>
+      <ChargementContenu v-if="templateLoading || !reglesChargees" libelle="Chargement des règles récurrentes…" />
 
       <div v-else-if="groupedTemplates.length === 0" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-12 text-center">
         <UIcon name="i-heroicons-calendar" class="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -1321,7 +1317,9 @@ const tabs = [
 const activeTab = ref('routings')
 
 // ---- Shared state ----
-const loading = ref(false)
+// true d'emblée : sans ça, « Aucun routing trouvé » s'affichait le temps du
+// premier chargement.
+const loading = ref(true)
 const creating = ref(false)
 const users = ref<any[]>([])
 const pdvList = ref<any[]>([])
@@ -2197,17 +2195,32 @@ async function loadRoutings() {
   loading.value = true
   // Les compteurs par jour des cartes Règles se rechargent avec les tournées.
   tourneesParJour.value = new Map()
-  routings.value = await routingStore.fetchRoutings({
-    dateFrom: filters.dateFrom || undefined,
-    dateTo: filters.dateTo || undefined,
-    userId: filters.userId || undefined,
-    status: filters.status || undefined,
-  })
-  loading.value = false
+  try {
+    routings.value = await routingStore.fetchRoutings({
+      dateFrom: filters.dateFrom || undefined,
+      dateTo: filters.dateTo || undefined,
+      userId: filters.userId || undefined,
+      status: filters.status || undefined,
+    })
+  }
+  catch (err: any) {
+    toast.add({ title: 'Erreur de chargement des tournées', description: err.message, color: 'red' })
+  }
+  finally {
+    loading.value = false
+  }
 }
 
+// Faux tant que le premier chargement des règles n'est pas fini : l'état
+// « Aucune règle récurrente » ne doit pas s'afficher avant.
+const reglesChargees = ref(false)
 async function loadTemplates() {
-  await routingStore.fetchTemplates(templateFilterUser.value || undefined)
+  try {
+    await routingStore.fetchTemplates(templateFilterUser.value || undefined)
+  }
+  finally {
+    reglesChargees.value = true
+  }
 }
 
 // ---- Create / Edit routing ----
@@ -2370,6 +2383,11 @@ async function handleGenerate() {
 
 // ---- Init ----
 onMounted(async () => {
+  // Tournées et règles n'attendent pas les ~25 000 PDV : ceux-ci ne servent
+  // qu'aux sélecteurs des popups.
+  loadRoutings()
+  loadTemplates()
+
   const { fetchUsers: fetchCachedUsers } = useUsersCache()
   const [cachedUsers, pdvResult] = await Promise.all([
     fetchCachedUsers(),
@@ -2383,8 +2401,5 @@ onMounted(async () => {
   ])
   users.value = cachedUsers.filter(u => u.is_active !== false)
   pdvList.value = pdvResult
-
-  loadRoutings()
-  loadTemplates()
 })
 </script>

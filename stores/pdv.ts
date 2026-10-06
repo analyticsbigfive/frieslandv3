@@ -212,7 +212,12 @@ export const usePDVStore = defineStore('pdv', () => {
     })
   }
 
-  async function fetchScopedPDV(profile?: Profile | null, force = false): Promise<PDV[]> {
+  async function fetchScopedPDV(
+    profile?: Profile | null,
+    force = false,
+    // Nombre de PDV déjà reçus, pour afficher la progression d'un long chargement.
+    onProgres?: (nbLignes: number) => void,
+  ): Promise<PDV[]> {
     const cacheKey = getScopeKey(profile)
     const cached = scopedCache.value[cacheKey]
 
@@ -223,7 +228,7 @@ export const usePDVStore = defineStore('pdv', () => {
     try {
       // Paginé : un périmètre dépasse 1 000 PDV (Man, et les merchandisers
       // du fichier DMS) ; une requête seule s'arrêtait là, sans erreur.
-      const scopedData = await fetchAllRows<PDV>((from, to) => buildScopedQuery(profile).range(from, to) as any)
+      const scopedData = await fetchAllRows<PDV>((from, to) => buildScopedQuery(profile).range(from, to) as any, onProgres)
       scopedCache.value[cacheKey] = {
         data: scopedData,
         timestamp: Date.now(),

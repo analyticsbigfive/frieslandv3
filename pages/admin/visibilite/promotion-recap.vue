@@ -13,6 +13,9 @@
       @filter="dashboard.fetchVisites()"
     />
 
+    <ChargementContenu v-if="dashboard.loading.value" libelle="Chargement des visites…" />
+    <template v-else>
+
     <!-- KPI -->
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
       <div class="admin-metric-tile">
@@ -129,10 +132,7 @@
         />
       </div>
     </section>
-
-    <div v-if="dashboard.loading.value" class="flex items-center justify-center py-12">
-      <UIcon name="i-heroicons-arrow-path" class="h-8 w-8 animate-spin text-fc-red" />
-    </div>
+    </template>
   </div>
 </template>
 
