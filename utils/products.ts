@@ -1,22 +1,38 @@
 // utils/products.ts
-// Catalogue central des SKU produits Friesland — source de vérité unique.
-// Remplace les listes dupliquées dans new.vue / [category].vue / useCsvExport.
+// Catalogue des SKU produits Friesland.
+//
+// Depuis la 1.0.12, le catalogue vient de la base (Référentiels › Produits du
+// formulaire : tables categorie_releve et sku_thresholds), chargé par
+// composables/useCatalogueReleve.ts et gardé hors ligne. PRODUCT_CATALOG
+// ci-dessous n'est plus que le repli (premier lancement sans réseau) : les
+// clés (catégorie, SKU) sont celles de visites.data.produits et ne changent
+// jamais — ne pas les « corriger » (imp.br_400g = boîte de 2500 g).
+import { shallowRef } from 'vue'
 import type { ProductStatus } from '~/types'
 
-export type ProductCategoryKey = 'evap' | 'imp' | 'scm' | 'uht' | 'yaourt' | 'cereales'
+// Les six catégories d'origine, plus toute catégorie créée dans l'admin.
+export type ProductCategoryKey = 'evap' | 'imp' | 'scm' | 'uht' | 'yaourt' | 'cereales' | (string & {})
 
 export interface SkuDef {
   key: string
   label: string
   /** Seuil "stock bas" par défaut (modifiable par SKU en base via sku_thresholds). */
   seuilBasDefaut: number
+  /** Faux : retiré du formulaire, gardé pour lire l'historique. */
+  actif?: boolean
 }
 
 export interface ProductCategoryDef {
   key: ProductCategoryKey
   label: string
   color: string
+  /** SKU actifs, dans l'ordre du formulaire. */
   skus: SkuDef[]
+  /** Saisie des facings en Modern Trade. */
+  facings?: boolean
+  /** Faux : catégorie retirée du formulaire (historique conservé). */
+  actif?: boolean
+  ordre?: number
 }
 
 const DEFAULT_SEUIL_BAS = 3
@@ -33,16 +49,16 @@ export const PRODUCT_CATALOG: ProductCategoryDef[] = [
     ],
   },
   {
-    // Libellés alignés sur reference_produit.nom (référentiel) — clés JSONB inchangées.
+    // Libellés = ceux du formulaire 1.0.10 (repris par la migration 20261007130000).
     key: 'imp', label: 'IMP', color: '#10B981', skus: [
       { key: 'br_400g', label: 'BR tin 2500g', seuilBasDefaut: DEFAULT_SEUIL_BAS },
       { key: 'br_20g', label: 'BR 15g', seuilBasDefaut: DEFAULT_SEUIL_BAS },
       { key: 'brb_25g', label: 'BRB 16g', seuilBasDefaut: DEFAULT_SEUIL_BAS }, // TODO confirmer client (pas de référence IMP BRB)
-      { key: 'br_375g', label: 'BR Pouch 360g', seuilBasDefaut: DEFAULT_SEUIL_BAS },
-      { key: 'br_900g', label: 'BR tin 400g', seuilBasDefaut: DEFAULT_SEUIL_BAS },
+      { key: 'br_375g', label: 'BR 360g', seuilBasDefaut: DEFAULT_SEUIL_BAS },
+      { key: 'br_900g', label: 'BR 400g Tin', seuilBasDefaut: DEFAULT_SEUIL_BAS },
       { key: 'brb_400g', label: 'BRB 360g', seuilBasDefaut: DEFAULT_SEUIL_BAS }, // TODO confirmer client (pas de référence IMP BRB)
-      { key: 'br_2_5kg', label: 'BR tin 900g', seuilBasDefaut: DEFAULT_SEUIL_BAS },
-      { key: 'brd_15g', label: 'BR Délice 15g', seuilBasDefaut: DEFAULT_SEUIL_BAS },
+      { key: 'br_2_5kg', label: 'BR 900g Tin', seuilBasDefaut: DEFAULT_SEUIL_BAS },
+      { key: 'brd_15g', label: 'BRD 15g', seuilBasDefaut: DEFAULT_SEUIL_BAS },
       { key: 'brd_350g', label: 'BR Délice Pouch 350g', seuilBasDefaut: DEFAULT_SEUIL_BAS },
     ],
   },
@@ -56,16 +72,16 @@ export const PRODUCT_CATALOG: ProductCategoryDef[] = [
   {
     key: 'uht', label: 'UHT', color: '#8B5CF6', skus: [
       { key: 'demi_ecreme', label: 'BR 516ml', seuilBasDefaut: DEFAULT_SEUIL_BAS },
-      { key: 'elopack_500ml', label: 'Elopack 500ml', seuilBasDefaut: DEFAULT_SEUIL_BAS },
+      { key: 'elopack_500ml', label: 'Elopack 500 ml', seuilBasDefaut: DEFAULT_SEUIL_BAS },
       { key: 'brique_1l', label: 'Brique 1L', seuilBasDefaut: DEFAULT_SEUIL_BAS },
     ],
   },
   {
     key: 'yaourt', label: 'YAOURT', color: '#EC4899', skus: [
-      { key: 'br_yogoo_fraise_mini_90ml', label: 'Yogoo Fraise Mini 90ml', seuilBasDefaut: DEFAULT_SEUIL_BAS },
-      { key: 'br_yogoo_fraise_maxi_318ml', label: 'Yogoo Fraise Maxi 318ml', seuilBasDefaut: DEFAULT_SEUIL_BAS },
-      { key: 'br_yogoo_nature_mini_90ml', label: 'Yogoo Nature Mini 90ml', seuilBasDefaut: DEFAULT_SEUIL_BAS },
-      { key: 'br_yogoo_nature_maxi_318ml', label: 'Yogoo Nature Maxi 318ml', seuilBasDefaut: DEFAULT_SEUIL_BAS },
+      { key: 'br_yogoo_fraise_mini_90ml', label: 'BR Yogoo fraise mini 90 ml', seuilBasDefaut: DEFAULT_SEUIL_BAS },
+      { key: 'br_yogoo_fraise_maxi_318ml', label: 'BR Yogoo fraise maxi 318 ml', seuilBasDefaut: DEFAULT_SEUIL_BAS },
+      { key: 'br_yogoo_nature_mini_90ml', label: 'BR Yogoo nature mini 90 ml', seuilBasDefaut: DEFAULT_SEUIL_BAS },
+      { key: 'br_yogoo_nature_maxi_318ml', label: 'BR Yogoo nature maxi 318 ml', seuilBasDefaut: DEFAULT_SEUIL_BAS },
     ],
   },
   {
@@ -79,16 +95,46 @@ export const PRODUCT_CATALOG: ProductCategoryDef[] = [
 
 export const PRODUCT_CATEGORY_KEYS = PRODUCT_CATALOG.map(c => c.key)
 
-export function getCategoryDef(key: string): ProductCategoryDef | undefined {
-  return PRODUCT_CATALOG.find(c => c.key === key)
+// ---- Catalogue courant (base, sinon repli) ----------------------------------
+// Réactif : un calcul ou un template qui lit getSkus() se met à jour quand le
+// catalogue de la base arrive.
+const catalogueCourant = shallowRef<ProductCategoryDef[]>(PRODUCT_CATALOG.map((c, i) => ({
+  ...c, facings: ['evap', 'imp', 'scm'].includes(c.key), actif: !['yaourt', 'cereales'].includes(c.key), ordre: i + 1,
+})))
+// Tous les SKU par catégorie, désactivés compris (lecture de l'historique).
+const skusTous = shallowRef<Record<string, SkuDef[]>>({})
+
+/** Remplace le catalogue courant (composables/useCatalogueReleve.ts). */
+export function definirCatalogue(categories: ProductCategoryDef[], tous: Record<string, SkuDef[]> = {}) {
+  catalogueCourant.value = categories
+  skusTous.value = tous
 }
 
-export function getSkus(categoryKey: string): SkuDef[] {
+/** Toutes les catégories connues (actives et retirées), dans l'ordre. */
+export function catalogueProduits(): ProductCategoryDef[] {
+  return catalogueCourant.value
+}
+
+/** Catégories du formulaire, dans l'ordre de l'admin. */
+export function categoriesProduitsActives(): ProductCategoryDef[] {
+  return catalogueCourant.value.filter(c => c.actif !== false)
+    .sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0) || a.label.localeCompare(b.label, 'fr'))
+}
+
+export function getCategoryDef(key: string): ProductCategoryDef | undefined {
+  return catalogueCourant.value.find(c => c.key === key) || PRODUCT_CATALOG.find(c => c.key === key)
+}
+
+/** SKU actifs d'une catégorie ; `inclureInactifs` pour relire les anciennes visites. */
+export function getSkus(categoryKey: string, { inclureInactifs = false }: { inclureInactifs?: boolean } = {}): SkuDef[] {
+  if (inclureInactifs && skusTous.value[categoryKey]?.length) return skusTous.value[categoryKey]
   return getCategoryDef(categoryKey)?.skus || []
 }
 
 export function getSkuLabel(categoryKey: string, skuKey: string): string {
-  return getSkus(categoryKey).find(s => s.key === skuKey)?.label || skuKey
+  return getSkus(categoryKey, { inclureInactifs: true }).find(s => s.key === skuKey)?.label
+    || PRODUCT_CATALOG.find(c => c.key === categoryKey)?.skus.find(s => s.key === skuKey)?.label
+    || skuKey
 }
 
 // Statuts hérités considérés comme "produit présent" (anciennes visites).
@@ -127,16 +173,16 @@ export function skuStockLevel(catData: any, skuKey: string, seuilBas: number): S
   return 'ok'
 }
 
-/** Catégorie "présente" = au moins un SKU disponible. */
+/** Catégorie "présente" = au moins un SKU disponible (SKU retirés compris). */
 export function categoryPresent(catData: any, categoryKey: string): boolean {
   if (!catData) return false
-  return getSkus(categoryKey).some(s => skuIsAvailable(catData, s.key))
+  return getSkus(categoryKey, { inclureInactifs: true }).some(s => skuIsAvailable(catData, s.key))
 }
 
 /** Quantité totale (SKU à quantité connue) d'une catégorie. */
 export function categoryTotalQuantity(catData: any, categoryKey: string): number {
   if (!catData) return 0
-  return getSkus(categoryKey).reduce((sum, s) => {
+  return getSkus(categoryKey, { inclureInactifs: true }).reduce((sum, s) => {
     const q = skuQuantity(catData, s.key)
     return sum + (q ?? 0)
   }, 0)
@@ -196,7 +242,7 @@ export function computeSkuInventory(
   const snapshot = [...latest.values()]
 
   const rows: SkuInventoryRow[] = []
-  for (const cat of PRODUCT_CATALOG) {
+  for (const cat of categoriesProduitsActives()) {
     for (const sku of cat.skus) {
       const seuil = getSeuil(cat.key, sku.key)
       let nbPdv = 0, nbDispo = 0, nbOos = 0, nbLow = 0, qtyTotale = 0

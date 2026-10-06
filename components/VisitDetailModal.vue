@@ -204,6 +204,7 @@ import type { Visite } from '~/types'
 import { tradeTypeForCanal, type PerfectStoreResultB } from '~/utils/perfectStore'
 import { visibilityElementObserved, visibilitySegmentForPdv, FALLBACK_VISIBILITY_ELEMENTS } from '~/utils/visibilityStandards'
 import { photosAffichables } from '~/utils/visitePhotos'
+import { catalogueProduits, categoriesProduitsActives, getCategoryDef } from '~/utils/products'
 import { visibiliteConcurrencePresente } from '~/utils/concurrence'
 
 const props = withDefaults(defineProps<{
@@ -234,6 +235,13 @@ const { skus: skusConcurrents, marquesVisibilite, charger: chargerMarques } = us
 onMounted(() => { void fetchTypePdvLabels(); void chargerMarques() })
 
 const productLabels: Record<string, string> = { evap: 'Lait évaporé (EVAP)', imp: 'Lait en poudre (IMP)', scm: 'Lait concentré sucré (SCM)' }
+// Catégories notées au Perfect Store (correspondance_reference), dans l'ordre
+// du catalogue ; une catégorie ajoutée dans l'admin et notée apparaît aussi.
+const categoriesNotees = computed(() => {
+  const notees = new Set((refs.value?.correspondance || []).map(c => c.categorie_jsonb))
+  const ordre = catalogueProduits().map(c => c.key)
+  return [...notees].sort((a, b) => (ordre.indexOf(a) + 1 || 99) - (ordre.indexOf(b) + 1 || 99))
+})
 
 const dispoSegmentGrade = computed(() => {
   const sousCategorie = props.visite?.pdv?.sous_categorie_pdv || ''
@@ -246,9 +254,9 @@ const productDetail = computed(() => {
   const segment = dispoSegmentGrade.value?.segment
   const grade = dispoSegmentGrade.value?.grade
   const produits: any = props.visite?.data?.produits || {}
-  return (['evap', 'imp', 'scm'] as const).map(cat => ({
+  return categoriesNotees.value.map(cat => ({
     key: cat,
-    label: productLabels[cat],
+    label: productLabels[cat] || getCategoryDef(cat)?.label || cat,
     items: refs.value!.correspondance
       .filter(c => c.categorie_jsonb === cat)
       .map((c) => {

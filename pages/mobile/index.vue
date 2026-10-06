@@ -176,14 +176,14 @@
           <!-- Product indicators -->
           <div class="flex gap-1.5 mt-3">
             <span
-              v-for="cat in ['evap', 'imp', 'scm', 'uht']"
-              :key="cat"
+              v-for="cat in categoriesBadges"
+              :key="cat.key"
               class="text-[10px] px-2 py-0.5 rounded-full font-medium"
-              :class="visite.data?.produits?.[cat]?.present
+              :class="visite.data?.produits?.[cat.key]?.present
                 ? 'bg-emerald-50 text-emerald-700'
                 : 'bg-gray-100 text-gray-400'"
             >
-              {{ cat.toUpperCase() }}
+              {{ cat.label.toUpperCase() }}
             </span>
           </div>
         </button>
@@ -217,6 +217,7 @@
 </template>
 
 <script setup lang="ts">
+import { categoriesProduitsActives } from '~/utils/products'
 import type { Visite } from '~/types'
 
 definePageMeta({
@@ -241,6 +242,9 @@ const showTourneeDetails = ref(false)
 const isOfflineData = ref(false)
 
 // Pull-to-refresh state
+// Pastilles des catégories actives du catalogue (Produits du formulaire).
+const categoriesBadges = computed(() => categoriesProduitsActives())
+
 const pullDistance = ref(0)
 const pulling = ref(false)
 const startY = ref(0)

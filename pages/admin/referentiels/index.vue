@@ -195,6 +195,7 @@
 
 <script setup lang="ts">
 import { fetchAllRows } from '~/utils/fetchAll'
+import { catalogueProduits, getSkus, getSkuLabel } from '~/utils/products'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
@@ -214,7 +215,6 @@ const NIVEAUX = ['flagship', 'vip', 'core', 'basic']
 const PILIERS = ['visibilite', 'promotion']
 const EMPLACEMENTS = ['exterieure', 'interieure', 'promotion']
 const ROLES = ['phare', 'soutien', 'croissance', 'nouveaute', 'a_retirer']
-const JSONB_CATS = ['evap', 'imp', 'scm']
 
 // -- Data store ------------------------------------------------------------
 const store = reactive<Record<string, any[]>>({})
@@ -657,7 +657,7 @@ const defs: Def[] = [
   {
     id: 'parametre_app', section: 'app', label: 'Paramètres terrain', table: 'parametre_app',
     select: 'cle, portee, valeur, libelle, description, unite, min, max, ordre', order: q => q.order('ordre').order('portee'),
-    aide: 'Lus par l’application à son lancement et à chaque retour au premier plan (version 1.0.11 et suivantes). Une valeur « Atom » ou « Friesland » prime sur « Tous » pour ces utilisateurs.',
+    aide: 'Lus par l’application à son lancement et à chaque retour au premier plan (version 1.0.12 et suivantes). Une valeur « Atom » ou « Friesland » prime sur « Tous » pour ces utilisateurs.',
     columns: [
       { label: 'Paramètre', cell: r => r.libelle },
       { label: 'Portée', cell: r => libellePortee(r.portee), kind: 'badge', color: r => (r.portee === 'tous' ? 'gray' : r.portee === 'atom' ? 'purple' : 'blue') },
@@ -911,22 +911,33 @@ const defs: Def[] = [
     select: 'reference_produit_id, categorie_jsonb, sku_key',
     columns: [
       { label: 'Référence', cell: r => refNameOf(r.reference_produit_id) },
-      { label: 'Catégorie JSONB', cell: r => r.categorie_jsonb, align: 'c', kind: 'badge' },
+      { label: 'Catégorie', cell: r => r.categorie_jsonb, align: 'c', kind: 'badge' },
+      { label: 'Produit du formulaire', cell: r => getSkuLabel(r.categorie_jsonb, r.sku_key) },
       { label: 'Clé SKU', cell: r => r.sku_key, kind: 'mono' },
     ],
     fields: [
-      { key: 'reference_produit_id', label: 'Référence', type: 'select', opts: referenceOpts, required: true, lockEdit: true },
-      { key: 'categorie_jsonb', label: 'Catégorie JSONB', type: 'select', opts: () => JSONB_CATS, required: true },
-      { key: 'sku_key', label: 'Clé SKU (JSONB)', type: 'text', required: true, hint: 'ex. br_gold' },
+      { key: 'reference_produit_id', label: 'Référence', type: 'select', opts: referenceOpts, required: true },
+      { key: 'categorie_jsonb', label: 'Catégorie', type: 'select', opts: () => catalogueProduits().map(c => ({ value: c.key, label: `${c.label} (${c.key})` })), required: true },
+      {
+        key: 'sku_key', label: 'Produit du formulaire', type: 'select', required: true,
+        opts: () => getSkus(form.value?.categorie_jsonb || '', { inclureInactifs: true })
+          .map(s => ({ value: s.key, label: `${s.label} (${s.key})${s.actif === false ? ' — retiré' : ''}` })),
+        hint: 'Produits gérés dans Paramètres › Produits du formulaire.',
+      },
     ],
     blank: () => ({ reference_produit_id: null, categorie_jsonb: 'evap', sku_key: '' }),
-    fill: r => ({ ...r }),
-    rowKey: r => String(r.reference_produit_id), search: r => `${refNameOf(r.reference_produit_id)} ${r.sku_key}`.toLowerCase(),
+    // Clé réelle de la table : (catégorie, SKU). Gardée pour modifier la bonne ligne.
+    fill: r => ({ ...r, cle_categorie: r.categorie_jsonb, cle_sku: r.sku_key }),
+    rowKey: r => `${r.categorie_jsonb}:${r.sku_key}`,
+    search: r => `${refNameOf(r.reference_produit_id)} ${r.categorie_jsonb} ${r.sku_key} ${getSkuLabel(r.categorie_jsonb, r.sku_key)}`.toLowerCase(),
     valid: f => !!f.reference_produit_id && !!f.categorie_jsonb && !!f.sku_key,
     save: (f, e) => e
-      ? supabase.from('correspondance_reference').update({ categorie_jsonb: f.categorie_jsonb, sku_key: f.sku_key }).eq('reference_produit_id', f.reference_produit_id)
+      ? supabase.from('correspondance_reference')
+        .update({ reference_produit_id: f.reference_produit_id, categorie_jsonb: f.categorie_jsonb, sku_key: f.sku_key })
+        .eq('categorie_jsonb', f.cle_categorie).eq('sku_key', f.cle_sku)
       : supabase.from('correspondance_reference').insert({ reference_produit_id: f.reference_produit_id, categorie_jsonb: f.categorie_jsonb, sku_key: f.sku_key }),
-    del: r => supabase.from('correspondance_reference').delete().eq('reference_produit_id', r.reference_produit_id),
+    del: r => supabase.from('correspondance_reference').delete().eq('categorie_jsonb', r.categorie_jsonb).eq('sku_key', r.sku_key),
+    aide: 'Un produit du formulaire compte au Perfect Store quand il est relié à une référence. Après un ajout ou une modification, « Recalculer » (Perfect Store) renote aussi les visites passées.',
   },
   {
     id: 'marque_concurrente', section: 'produit', label: 'Marques concurrentes', table: 'marque_concurrente',
@@ -1004,30 +1015,33 @@ const defs: Def[] = [
   },
   {
     id: 'categorie_releve', section: 'produit', label: 'Catégories du relevé', table: 'categorie_releve',
-    select: 'code, libelle, actif, ordre', order: q => q.order('ordre'),
+    select: 'code, libelle, actif, ordre, facings', order: q => q.order('ordre'),
     columns: [
       { label: 'Code', cell: r => r.code, kind: 'mono' },
       { label: 'Catégorie', cell: r => r.libelle },
       { label: 'Ordre', cell: r => r.ordre, align: 'c', kind: 'num' },
+      { label: 'Facings (MT)', cell: r => r.facings, align: 'c', kind: 'bool' },
       { label: 'Active', cell: r => r.actif, align: 'c', kind: 'bool' },
     ],
     fields: [
-      { key: 'code', label: 'Code', type: 'text', required: true, lockEdit: true },
+      { key: 'code', label: 'Code', type: 'text', required: true, lockEdit: true, hint: 'Minuscules, chiffres et _ (ex. beurre). Figé après création : c’est la clé des visites.' },
       { key: 'libelle', label: 'Libellé', type: 'text', required: true },
       { key: 'ordre', label: 'Ordre', type: 'num', min: 0 },
+      { key: 'facings', label: 'Facings en Modern Trade', type: 'bool', hint: 'Cochée : le formulaire demande aussi le nombre de faces en rayon dans les PDV Modern Trade.' },
       { key: 'actif', label: 'Active', type: 'bool', hint: 'Décochée : la catégorie disparaît du formulaire mobile et des onglets admin. Les visites déjà saisies sont conservées.' },
     ],
-    blank: () => ({ code: '', libelle: '', ordre: 0, actif: true }),
+    blank: () => ({ code: '', libelle: '', ordre: 0, facings: false, actif: true }),
     fill: r => ({ ...r }),
     rowKey: r => r.code, search: r => `${r.code} ${r.libelle}`.toLowerCase(),
-    valid: f => !!f.code && !!f.libelle,
-    // Le code est structurel dans visites.data.produits.<code> : pas de création
-    // libre ni de suppression, seulement activation et ordre.
+    valid: f => /^[a-z][a-z0-9_]{1,30}$/.test(String(f.code || '')) && !!f.libelle,
+    // Le code est structurel dans visites.data.produits.<code> : figé après
+    // création, pas de suppression (on désactive).
     save: (f, e) => e
-      ? supabase.from('categorie_releve').update({ libelle: f.libelle, ordre: f.ordre ?? 0, actif: !!f.actif }).eq('code', f.code)
-      : supabase.from('categorie_releve').insert({ code: f.code, libelle: f.libelle, ordre: f.ordre ?? 0, actif: f.actif !== false }),
+      ? supabase.from('categorie_releve').update({ libelle: f.libelle, ordre: f.ordre ?? 0, facings: !!f.facings, actif: !!f.actif }).eq('code', f.code)
+      : supabase.from('categorie_releve').insert({ code: f.code, libelle: f.libelle, ordre: f.ordre ?? 0, facings: !!f.facings, actif: f.actif !== false }),
     del: async () => ({ error: new Error('Suppression désactivée : désactivez la catégorie.') }),
     noDelete: true,
+    aide: 'Une nouvelle catégorie apparaît dans le formulaire (web et app 1.0.12) dès qu’elle a des produits : ajoutez-les dans Paramètres › Produits du formulaire. Elle est saisie et exportée, mais ne compte au Perfect Store qu’après une correspondance SKU.',
   },
   // ===== DISTRIBUTION : SSF et sous-zones =====
   {
@@ -1342,6 +1356,7 @@ const search = ref('')
 const showModal = ref(false)
 const editing = ref(false)
 const saving = ref(false)
+const { charger: chargerCatalogue } = useCatalogueReleve()
 const form = ref<any>({})
 
 const sectionEntrees = computed<(Def | Vue)[]>(() => [...defs, ...vues].filter(d => d.section === section.value))
@@ -1414,6 +1429,7 @@ async function save() {
     toast.add({ title: 'Enregistré', color: 'green' })
     showModal.value = false
     await reload(activeDef.value)
+    if (activeDef.value.id === 'categorie_releve') void chargerCatalogue(true)
   }
   catch (err: any) {
     toast.add({ title: 'Erreur', description: err.message, color: 'red' })

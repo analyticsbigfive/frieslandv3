@@ -190,6 +190,8 @@
 </template>
 
 <script setup lang="ts">
+import { getSkus, getCategoryDef } from '~/utils/products'
+
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const route = useRoute()
@@ -214,7 +216,7 @@ const { estActive, charger: chargerCategoriesReleve } = useCategoriesReleve()
 watchEffect(() => {
   if (!estActive(cat.value)) navigateTo('/admin/produits/recap', { replace: true })
 })
-const title = computed(() => cat.value.toUpperCase())
+const title = computed(() => getCategoryDef(cat.value)?.label || cat.value.toUpperCase())
 
 // Tab management
 const tabs = [
@@ -224,47 +226,10 @@ const tabs = [
 ]
 const activeTab = ref((route.query.tab as string) || 'dispo')
 
-const productDefs: Record<string, { key: string; name: string }[]> = {
-  evap: [
-    { key: 'br_gold', name: 'BR Gold' },
-    { key: 'br_160g', name: 'BR 150g' },
-    { key: 'brb_160g', name: 'BRB 150g' },
-    { key: 'br_400g', name: 'BR 380g' },
-    { key: 'brb_400g', name: 'BRB 380g' },
-    { key: 'pearl_400g', name: 'Pearl 380g' },
-  ],
-  imp: [
-    { key: 'br_400g', name: 'BR 2' },
-    { key: 'br_20g', name: 'BR 15g' },
-    { key: 'brb_25g', name: 'BRB 16g' },
-    { key: 'br_375g', name: 'BR 360g' },
-    { key: 'br_900g', name: 'BR 400g Tin' },
-    { key: 'brb_400g', name: 'BRB 360g' },
-    { key: 'br_2_5kg', name: 'BR 900g Tin' },
-    { key: 'brd_15g', name: 'BRD 15g' },
-  ],
-  scm: [
-    { key: 'pearl_1kg', name: 'Pearl 1Kg' },
-    { key: 'br_1kg', name: 'BR 1Kg' },
-  ],
-  uht: [
-    { key: 'demi_ecreme', name: 'BR 516ml' },
-    { key: 'elopack_500ml', name: 'Elopack 500ml' },
-    { key: 'brique_1l', name: 'Brique 1L' },
-  ],
-  yaourt: [
-    { key: 'br_yogoo_fraise_mini_90ml', name: 'Yogoo Fraise Mini 90ml' },
-    { key: 'br_yogoo_fraise_maxi_318ml', name: 'Yogoo Fraise Maxi 318ml' },
-    { key: 'br_yogoo_nature_mini_90ml', name: 'Yogoo Nature Mini 90ml' },
-    { key: 'br_yogoo_nature_maxi_318ml', name: 'Yogoo Nature Maxi 318ml' },
-  ],
-  cereales: [
-    { key: 'brcv', name: 'Céréales BRCV' },
-    { key: 'brcc', name: 'Céréales BRCC' },
-  ],
-}
-
-const prods = computed(() => productDefs[cat.value] || [])
+// SKU du catalogue (Paramètres › Produits du formulaire), retirés compris :
+// les anciennes visites restent lisibles.
+const prods = computed(() => getSkus(cat.value, { inclureInactifs: true })
+  .map(s => ({ key: s.key, name: s.actif === false ? `${s.label} (retiré)` : s.label })))
 
 // --- DISPONIBILITÉS ---
 const catPresentCount = computed(() =>

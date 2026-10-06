@@ -28,6 +28,7 @@ import {
   type AdminSection,
   type AdminSectionTab,
 } from '~/utils/adminSectionTabs'
+import { categoriesProduitsActives } from '~/utils/products'
 
 const props = defineProps<{ section?: AdminSection }>()
 const route = useRoute()
@@ -36,16 +37,20 @@ const detectedSection = computed(() => detectAdminSection(route.path))
 
 const currentSection = computed(() => props.section ?? detectedSection.value)
 const sectionLabel = computed(() => currentSection.value ? adminSectionLabels[currentSection.value] : '')
-// Les onglets produits (/admin/produits/<code>) suivent le paramètre
-// categorie_releve (lot 6) : une catégorie désactivée n'a plus d'onglet.
-const { filtrer: filtrerCategoriesReleve, charger: chargerCategoriesReleve } = useCategoriesReleve()
-onMounted(() => { void chargerCategoriesReleve() })
+// Les onglets produits (/admin/produits/<code>) suivent le catalogue
+// (Paramètres › Produits du formulaire) : une catégorie active par onglet,
+// dans l'ordre de l'admin ; une catégorie retirée n'a plus d'onglet.
+const { charger: chargerCatalogue } = useCatalogueReleve()
+onMounted(() => { void chargerCatalogue() })
 
 const tabs = computed<AdminSectionTab[]>(() => {
   if (!currentSection.value) return []
   const liste = adminSectionTabs[currentSection.value]
   if (currentSection.value !== 'produits') return liste
-  return filtrerCategoriesReleve(liste, t => t.to.replace('/admin/produits/', ''))
+  return [
+    ...liste,
+    ...categoriesProduitsActives().map(c => ({ label: c.label, to: `/admin/produits/${c.key}`, icon: 'i-heroicons-squares-2x2' })),
+  ]
 })
 
 function isActive(tab: AdminSectionTab) {

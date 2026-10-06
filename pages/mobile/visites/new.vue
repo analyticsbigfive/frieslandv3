@@ -140,16 +140,18 @@
         </div>
       </template>
 
-      <!-- STEP: EVAP -->
-      <template #evap>
+      <!-- STEPS : une étape par catégorie de produits du catalogue (admin :
+           Référentiels › Produits du formulaire). Clés de visites.data
+           inchangées : produits.<catégorie>.quantites.<sku>. -->
+      <template v-for="cat in categoriesProduits" :key="cat.key" #[cat.key]>
         <div class="space-y-4">
           <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
-              <span class="text-lg font-bold text-fc-red">E</span>
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center" :class="presentationCategorie(cat).fond">
+              <span class="text-lg font-bold" :class="presentationCategorie(cat).texte">{{ presentationCategorie(cat).initiale }}</span>
             </div>
             <div>
-              <h3 class="text-base font-bold text-gray-900 dark:text-gray-100">EVAP — Évaporé</h3>
-              <p class="text-xs text-gray-400">Disponibilité et prix des produits évaporés</p>
+              <h3 class="text-base font-bold text-gray-900 dark:text-gray-100">{{ presentationCategorie(cat).titre }}</h3>
+              <p class="text-xs text-gray-400">{{ presentationCategorie(cat).sousTitre }}</p>
             </div>
           </div>
 
@@ -157,197 +159,21 @@
             <div class="pb-3 mb-1 border-b border-gray-100 dark:border-gray-700">
               <div class="flex items-center justify-between gap-3">
                 <label class="text-sm font-medium text-gray-600 dark:text-gray-300">Prix respectés ?</label>
-                <div class="w-36 shrink-0"><ToggleYesNo v-model="form.produits.evap.prix_respectes" /></div>
+                <div class="w-36 shrink-0"><ToggleYesNo v-model="blocProduit(cat.key).prix_respectes" /></div>
               </div>
             </div>
             <h4 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">Quantités par produit</h4>
             <p class="text-xs text-gray-400 mb-2">Quantité en rayon. 0 = rupture. La présence est déduite des quantités.</p>
             <SkuQuantityInput
-              v-for="prod in evapProducts"
+              v-for="prod in cat.skus"
               :key="prod.key"
               :label="prod.label"
-              :seuil="getSeuil('evap', prod.key)"
-              :model-value="form.produits.evap.quantites?.[prod.key]"
-              :show-facings="isMT"
-              :facings="form.produits.evap.facings?.[prod.key]"
-              @update:model-value="setQty('evap', prod.key, $event)"
-              @update:facings="setFacings('evap', prod.key, $event)"
-            />
-          </div>
-        </div>
-      </template>
-
-      <!-- STEP: IMP -->
-      <template #imp>
-        <div class="space-y-4">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center">
-              <span class="text-lg font-bold text-orange-600">I</span>
-            </div>
-            <div>
-              <h3 class="text-base font-bold text-gray-900 dark:text-gray-100">IMP — Importé</h3>
-              <p class="text-xs text-gray-400">Disponibilité et prix des produits importés</p>
-            </div>
-          </div>
-
-          <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-1 shadow-sm">
-            <div class="pb-3 mb-1 border-b border-gray-100 dark:border-gray-700">
-              <div class="flex items-center justify-between gap-3">
-                <label class="text-sm font-medium text-gray-600 dark:text-gray-300">Prix respectés ?</label>
-                <div class="w-36 shrink-0"><ToggleYesNo v-model="form.produits.imp.prix_respectes" /></div>
-              </div>
-            </div>
-            <h4 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">Quantités par produit</h4>
-            <p class="text-xs text-gray-400 mb-2">Quantité en rayon. 0 = rupture. La présence est déduite des quantités.</p>
-            <SkuQuantityInput
-              v-for="prod in impProducts"
-              :key="prod.key"
-              :label="prod.label"
-              :seuil="getSeuil('imp', prod.key)"
-              :model-value="form.produits.imp.quantites?.[prod.key]"
-              :show-facings="isMT"
-              :facings="form.produits.imp.facings?.[prod.key]"
-              @update:model-value="setQty('imp', prod.key, $event)"
-              @update:facings="setFacings('imp', prod.key, $event)"
-            />
-          </div>
-        </div>
-      </template>
-
-      <!-- STEP: SCM -->
-      <template #scm>
-        <div class="space-y-4">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
-              <span class="text-lg font-bold text-emerald-600">S</span>
-            </div>
-            <div>
-              <h3 class="text-base font-bold text-gray-900 dark:text-gray-100">SCM — Sweetened Condensed</h3>
-              <p class="text-xs text-gray-400">Disponibilité et prix SCM</p>
-            </div>
-          </div>
-
-          <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-1 shadow-sm">
-            <div class="pb-3 mb-1 border-b border-gray-100 dark:border-gray-700">
-              <div class="flex items-center justify-between gap-3">
-                <label class="text-sm font-medium text-gray-600 dark:text-gray-300">Prix respectés ?</label>
-                <div class="w-36 shrink-0"><ToggleYesNo v-model="form.produits.scm.prix_respectes" /></div>
-              </div>
-            </div>
-            <h4 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">Quantités par produit</h4>
-            <p class="text-xs text-gray-400 mb-2">Quantité en rayon. 0 = rupture. La présence est déduite des quantités.</p>
-            <SkuQuantityInput
-              v-for="prod in scmProducts"
-              :key="prod.key"
-              :label="prod.label"
-              :seuil="getSeuil('scm', prod.key)"
-              :model-value="form.produits.scm.quantites?.[prod.key]"
-              :show-facings="isMT"
-              :facings="form.produits.scm.facings?.[prod.key]"
-              @update:model-value="setQty('scm', prod.key, $event)"
-              @update:facings="setFacings('scm', prod.key, $event)"
-            />
-          </div>
-        </div>
-      </template>
-
-      <!-- STEP: UHT -->
-      <template #uht>
-        <div class="space-y-4">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 rounded-xl bg-sky-50 flex items-center justify-center">
-              <span class="text-lg font-bold text-sky-600">U</span>
-            </div>
-            <div>
-              <h3 class="text-base font-bold text-gray-900 dark:text-gray-100">UHT</h3>
-              <p class="text-xs text-gray-400">Disponibilité et prix UHT</p>
-            </div>
-          </div>
-
-          <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-1 shadow-sm">
-            <div class="pb-3 mb-1 border-b border-gray-100 dark:border-gray-700">
-              <div class="flex items-center justify-between gap-3">
-                <label class="text-sm font-medium text-gray-600 dark:text-gray-300">Prix respectés ?</label>
-                <div class="w-36 shrink-0"><ToggleYesNo v-model="form.produits.uht.prix_respectes" /></div>
-              </div>
-            </div>
-            <h4 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">Quantités par produit</h4>
-            <p class="text-xs text-gray-400 mb-2">Quantité en rayon. 0 = rupture. La présence est déduite des quantités.</p>
-            <SkuQuantityInput
-              v-for="prod in uhtProducts"
-              :key="prod.key"
-              :label="prod.label"
-              :seuil="getSeuil('uht', prod.key)"
-              :model-value="form.produits.uht.quantites?.[prod.key]"
-              @update:model-value="setQty('uht', prod.key, $event)"
-            />
-          </div>
-        </div>
-      </template>
-
-      <!-- STEP: YAOURT -->
-      <template #yaourt>
-        <div class="space-y-4">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 rounded-xl bg-pink-50 flex items-center justify-center">
-              <span class="text-lg font-bold text-pink-600">Y</span>
-            </div>
-            <div>
-              <h3 class="text-base font-bold text-gray-900 dark:text-gray-100">YAOURT</h3>
-              <p class="text-xs text-gray-400">Disponibilité et prix yaourts</p>
-            </div>
-          </div>
-
-          <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-1 shadow-sm">
-            <div class="pb-3 mb-1 border-b border-gray-100 dark:border-gray-700">
-              <div class="flex items-center justify-between gap-3">
-                <label class="text-sm font-medium text-gray-600 dark:text-gray-300">Prix respectés ?</label>
-                <div class="w-36 shrink-0"><ToggleYesNo v-model="form.produits.yaourt.prix_respectes" /></div>
-              </div>
-            </div>
-            <h4 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">Quantités par produit</h4>
-            <p class="text-xs text-gray-400 mb-2">Quantité en rayon. 0 = rupture. La présence est déduite des quantités.</p>
-            <SkuQuantityInput
-              v-for="prod in yaourtProducts"
-              :key="prod.key"
-              :label="prod.label"
-              :seuil="getSeuil('yaourt', prod.key)"
-              :model-value="form.produits.yaourt.quantites?.[prod.key]"
-              @update:model-value="setQty('yaourt', prod.key, $event)"
-            />
-          </div>
-        </div>
-      </template>
-
-      <!-- STEP: CEREALES -->
-      <template #cereales>
-        <div class="space-y-4">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center">
-              <span class="text-lg font-bold text-cyan-600">C</span>
-            </div>
-            <div>
-              <h3 class="text-base font-bold text-gray-900 dark:text-gray-100">CÉRÉALES</h3>
-              <p class="text-xs text-gray-400">Quantités et prix céréales</p>
-            </div>
-          </div>
-
-          <div class="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-1 shadow-sm">
-            <div class="pb-3 mb-1 border-b border-gray-100 dark:border-gray-700">
-              <div class="flex items-center justify-between gap-3">
-                <label class="text-sm font-medium text-gray-600 dark:text-gray-300">Prix respectés ?</label>
-                <div class="w-36 shrink-0"><ToggleYesNo v-model="form.produits.cereales.prix_respectes" /></div>
-              </div>
-            </div>
-            <h4 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">Quantités par produit</h4>
-            <p class="text-xs text-gray-400 mb-2">Quantité en rayon. 0 = rupture. La présence est déduite des quantités.</p>
-            <SkuQuantityInput
-              v-for="prod in cerealesProducts"
-              :key="prod.key"
-              :label="prod.label"
-              :seuil="getSeuil('cereales', prod.key)"
-              :model-value="form.produits.cereales.quantites?.[prod.key]"
-              @update:model-value="setQty('cereales', prod.key, $event)"
+              :seuil="getSeuil(cat.key, prod.key)"
+              :model-value="blocProduit(cat.key).quantites?.[prod.key]"
+              :show-facings="isMT && !!cat.facings"
+              :facings="blocProduit(cat.key).facings?.[prod.key]"
+              @update:model-value="setQty(cat.key, prod.key, $event)"
+              @update:facings="setFacings(cat.key, prod.key, $event)"
             />
           </div>
         </div>
@@ -664,7 +490,7 @@
         </div>
         <dl class="grid grid-cols-2 gap-2 text-sm">
           <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800"><dt class="text-gray-500">PDV</dt><dd class="mt-1 font-semibold text-gray-900 dark:text-gray-100">{{ selectedPDV?.nom_pdv || 'Non sélectionné' }}</dd></div>
-          <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800"><dt class="text-gray-500">Produits renseignés</dt><dd class="mt-1 font-semibold text-gray-900 dark:text-gray-100">{{ reviewSummary.productCategories }} / 6 catégories</dd></div>
+          <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800"><dt class="text-gray-500">Produits renseignés</dt><dd class="mt-1 font-semibold text-gray-900 dark:text-gray-100">{{ reviewSummary.productCategories }} / {{ categoriesProduits.length }} catégories</dd></div>
           <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800"><dt class="text-gray-500">SKU avec quantité</dt><dd class="mt-1 font-semibold text-gray-900 dark:text-gray-100">{{ reviewSummary.skus }}</dd></div>
           <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800"><dt class="text-gray-500">Photos</dt><dd class="mt-1 font-semibold text-gray-900 dark:text-gray-100">{{ form.images.length }}</dd></div>
         </dl>
@@ -679,15 +505,12 @@
 
 <script setup lang="ts">
 import { getDefaultVisiteData } from '~/types'
-import type { PDV, VisiteData, VisiteProduits, VisiteConcurrence, VisiteActions } from '~/types'
-import { getSkus, quantityToLegacyStatus, categoryPresent } from '~/utils/products'
+import type { PDV, VisiteData, VisiteConcurrence, VisiteActions } from '~/types'
+import { getSkus, quantityToLegacyStatus, categoryPresent, categoriesProduitsActives, type ProductCategoryDef } from '~/utils/products'
 import { statutMarqueDerive } from '~/utils/concurrence'
 import { CATEGORIES_RELEVE, categorieRenseignee } from '~/utils/visiteCompletude'
 import { describeSupabaseError, estErreurReseau } from '~/utils/supabaseErrors'
 import type { WizardStep } from '~/components/FormWizard.vue'
-
-// Helper types: exclude 'present', 'prix_respectes' & 'quantites' so indexed access yields ProductStatus only
-type ProductKey<T> = Exclude<keyof T, 'present' | 'prix_respectes' | 'quantites'>
 
 definePageMeta({
   middleware: ['auth', 'terrain-write'],
@@ -741,29 +564,50 @@ const saveProgress = ref(0)
 // Les étapes produit sont filtrées par le paramètre categorie_releve (lot 6) :
 // une catégorie désactivée dans l'admin (yaourt, céréales) disparaît du
 // parcours, y compris hors ligne grâce au repli du composable.
-const ALL_WIZARD_STEPS = [
+// Catégories de produits du catalogue (base, cache hors ligne, sinon repli) :
+// actives, dans l'ordre fixé dans l'admin.
+const { charger: chargerCatalogue } = useCatalogueReleve()
+const categoriesProduits = computed<ProductCategoryDef[]>(() => categoriesProduitsActives())
+const ALL_WIZARD_STEPS = computed(() => [
   { key: 'general', label: 'Général', phase: 'Général' },
-  { key: 'evap', label: 'EVAP', phase: 'Produits' },
-  { key: 'imp', label: 'IMP', phase: 'Produits' },
-  { key: 'scm', label: 'SCM', phase: 'Produits' },
-  { key: 'uht', label: 'UHT', phase: 'Produits' },
-  { key: 'yaourt', label: 'Yaourt', phase: 'Produits' },
-  { key: 'cereales', label: 'Céréales', phase: 'Produits' },
+  ...categoriesProduits.value.map(c => ({ key: c.key, label: c.label, phase: 'Produits' })),
   { key: 'concurrence', label: 'Concurrence', phase: 'Visibilité & concurrence' },
   { key: 'visibilite', label: 'Visibilité', phase: 'Visibilité & concurrence' },
   { key: 'actions', label: 'Actions', phase: 'Actions & photos' },
   { key: 'photos', label: 'Photos', phase: 'Actions & photos' },
-]
+])
 const { filtrer: filtrerCategoriesReleve, charger: chargerCategoriesReleve } = useCategoriesReleve()
+
+// Présentation des catégories d'origine ; une catégorie créée dans l'admin
+// prend son libellé et une présentation neutre.
+const PRESENTATION_CATEGORIES: Record<string, { titre: string, sousTitre: string, fond: string, texte: string }> = {
+  evap: { titre: 'EVAP — Évaporé', sousTitre: 'Disponibilité et prix des produits évaporés', fond: 'bg-red-50', texte: 'text-fc-red' },
+  imp: { titre: 'IMP — Importé', sousTitre: 'Disponibilité et prix des produits importés', fond: 'bg-orange-50', texte: 'text-orange-600' },
+  scm: { titre: 'SCM — Sweetened Condensed', sousTitre: 'Disponibilité et prix SCM', fond: 'bg-emerald-50', texte: 'text-emerald-600' },
+  uht: { titre: 'UHT', sousTitre: 'Disponibilité et prix UHT', fond: 'bg-sky-50', texte: 'text-sky-600' },
+  yaourt: { titre: 'YAOURT', sousTitre: 'Disponibilité et prix yaourts', fond: 'bg-pink-50', texte: 'text-pink-600' },
+  cereales: { titre: 'CÉRÉALES', sousTitre: 'Quantités et prix céréales', fond: 'bg-cyan-50', texte: 'text-cyan-600' },
+}
+function presentationCategorie(cat: ProductCategoryDef) {
+  const p = PRESENTATION_CATEGORIES[cat.key]
+  return {
+    titre: p?.titre || cat.label,
+    sousTitre: p?.sousTitre || `Disponibilité et prix — ${cat.label}`,
+    fond: p?.fond || 'bg-gray-100',
+    texte: p?.texte || 'text-gray-600',
+    initiale: (cat.label || cat.key).charAt(0).toUpperCase(),
+  }
+}
 
 // Les étapes produit sont OBLIGATOIRES. Constat en base le 7 sept. 2026 : 17
 // visites sur 6 098 depuis avril portaient une quantité, parce que ces étapes
 // se traversaient sans rien saisir — et le score Perfect Store, la
 // disponibilité et l'analyse des gaps se calculent uniquement à partir d'elles.
 // Une quantité à 0 vaut réponse (« rupture ») : il suffit d'avoir touché un SKU.
+const clesCategoriesProduits = computed(() => new Set(categoriesProduits.value.map(c => c.key)))
 const wizardSteps = computed<WizardStep[]>(() =>
-  filtrerCategoriesReleve(ALL_WIZARD_STEPS, s => s.key).map(s =>
-    (CATEGORIES_RELEVE as readonly string[]).includes(s.key)
+  filtrerCategoriesReleve(ALL_WIZARD_STEPS.value, s => s.key).map(s =>
+    clesCategoriesProduits.value.has(s.key) || (CATEGORIES_RELEVE as readonly string[]).includes(s.key)
       ? { ...s, validate: () => categorieRenseignee((form.produits as any)[s.key]) }
       : s,
   ),
@@ -858,6 +702,7 @@ function saveDraft() {
   try {
     localStorage.setItem(draftKey.value, JSON.stringify({
       currentTab: currentTab.value,
+      etape: wizardSteps.value[currentTab.value]?.key || null,
       pdv_id: form.pdv_id,
       date_visite: form.date_visite,
       produits: form.produits,
@@ -891,7 +736,10 @@ function restoreDraft() {
     if (draft.visibilite) form.visibilite = draft.visibilite
     if (draft.actions) form.actions = draft.actions
     if (typeof draft.commentaires === 'string') form.commentaires = draft.commentaires
-    if (Number.isInteger(draft.currentTab)) currentTab.value = Math.max(0, Math.min(wizardSteps.value.length - 1, draft.currentTab))
+    assurerBlocsProduits()
+    const indexEtape = draft.etape ? wizardSteps.value.findIndex(s => s.key === draft.etape) : -1
+    if (indexEtape >= 0) currentTab.value = indexEtape
+    else if (Number.isInteger(draft.currentTab)) currentTab.value = Math.max(0, Math.min(wizardSteps.value.length - 1, draft.currentTab))
     draftSavedAt.value = draft.savedAt ? new Date(draft.savedAt) : new Date()
     toast.add({ title: 'Brouillon repris', description: 'Votre saisie précédente a été restaurée.', color: 'green', timeout: 3500 })
   }
@@ -1020,54 +868,28 @@ const canCreatePDV = computed(() => authStore.profile?.role === 'merchandiser')
 
 const userEmail = computed(() => user.value?.email || '')
 
-// Product definitions
-const evapProducts: { key: ProductKey<VisiteProduits['evap']>; label: string }[] = [
-  { key: 'br_gold', label: 'BR Gold' },
-  { key: 'br_160g', label: 'BR 150g' },
-  { key: 'brb_160g', label: 'BRB 150g' },
-  { key: 'br_400g', label: 'BR 380g' },
-  { key: 'brb_400g', label: 'BRB 380g' },
-  { key: 'pearl_400g', label: 'Pearl 380g' },
-]
-
-const impProducts: { key: ProductKey<VisiteProduits['imp']>; label: string }[] = [
-  { key: 'br_400g', label: 'BR tin 2500g' },
-  { key: 'br_20g', label: 'BR 15g' },
-  { key: 'brb_25g', label: 'BRB 16g' },
-  { key: 'br_375g', label: 'BR 360g' },
-  { key: 'br_900g', label: 'BR 400g Tin' },
-  { key: 'brb_400g', label: 'BRB 360g' },
-  { key: 'br_2_5kg', label: 'BR 900g Tin' },
-  { key: 'brd_15g', label: 'BRD 15g' },
-  { key: 'brd_350g', label: 'BR Délice Pouch 350g' },
-]
-
-const scmProducts: { key: ProductKey<VisiteProduits['scm']>; label: string }[] = [
-  { key: 'pearl_1kg', label: 'Pearl 1Kg' },
-  { key: 'br_1kg', label: 'BR 1Kg' },
-]
-
-const uhtProducts: { key: ProductKey<VisiteProduits['uht']>; label: string }[] = [
-  { key: 'demi_ecreme', label: 'BR 516ml' },
-  { key: 'elopack_500ml', label: 'Elopack 500 ml' },
-  { key: 'brique_1l', label: 'Brique 1L' },
-]
-
-const yaourtProducts: { key: ProductKey<VisiteProduits['yaourt']>; label: string }[] = [
-  { key: 'br_yogoo_fraise_mini_90ml', label: 'BR Yogoo fraise mini 90 ml' },
-  { key: 'br_yogoo_fraise_maxi_318ml', label: 'BR Yogoo fraise maxi 318 ml' },
-  { key: 'br_yogoo_nature_mini_90ml', label: 'BR Yogoo nature mini 90 ml' },
-  { key: 'br_yogoo_nature_maxi_318ml', label: 'BR Yogoo nature maxi 318 ml' },
-]
-
-const cerealesProducts = getSkus('cereales').map(s => ({ key: s.key, label: s.label }))
+// Bloc d'une catégorie dans le formulaire, créé au besoin (catégorie ajoutée
+// dans l'admin, brouillon ou visite reprise d'une ancienne version) : mêmes
+// champs que getDefaultVisiteData, statut hérité « En rupture » par SKU.
+function blocProduit(cat: string): any {
+  const produits = form.produits as Record<string, any>
+  if (!produits[cat] || typeof produits[cat] !== 'object') produits[cat] = { present: false, prix_respectes: false, quantites: {} }
+  const bloc = produits[cat]
+  if (!bloc.quantites) bloc.quantites = {}
+  for (const sku of getSkus(cat)) if (!(sku.key in bloc)) bloc[sku.key] = 'En rupture'
+  return bloc
+}
+function assurerBlocsProduits() {
+  for (const cat of categoriesProduits.value) blocProduit(cat.key)
+}
+watch(categoriesProduits, assurerBlocsProduits)
 
 // Seuils stock bas par SKU (couleur des steppers)
 const { fetchThresholds, getSeuil } = useSkuThresholds()
 
 // Saisie quantité par SKU → écrit dans form.produits[cat].quantites[sku] (réactif)
-function setQty(cat: keyof VisiteProduits, sku: string, value: number) {
-  const catData = form.produits[cat] as any
+function setQty(cat: string, sku: string, value: number) {
+  const catData = blocProduit(cat)
   if (!catData.quantites) catData.quantites = {}
   catData.quantites[sku] = Math.max(0, Math.round(value || 0))
 }
@@ -1075,8 +897,8 @@ function setQty(cat: keyof VisiteProduits, sku: string, value: number) {
 // Modern Trade : le PDV est-il en canal MT ? (facings requis en MT uniquement)
 const isMT = computed(() => isModernTrade(selectedPDV.value?.canal))
 // Saisie facings par SKU (MT) → form.produits[cat].facings[sku]
-function setFacings(cat: keyof VisiteProduits, sku: string, value: number) {
-  const catData = form.produits[cat] as any
+function setFacings(cat: string, sku: string, value: number) {
+  const catData = blocProduit(cat)
   if (!catData.facings) catData.facings = {}
   catData.facings[sku] = Math.max(0, Math.round(value || 0))
 }
@@ -1111,6 +933,7 @@ const visibilitySegmentLabels: Record<string, string> = {
   pushcart: 'Pushcart',
   porridge: 'Porridge',
   kiosque_aboki: 'Kiosque / Aboki',
+  mt: 'Modern Trade (supermarché)',
 }
 const visibilitySegmentLabel = computed(() => visibilitySegmentLabels[visibilitySegment.value || ''] || '—')
 const exteriorVisibilityElements = computed(() => forPdv(selectedPDV.value?.sous_categorie_pdv, 'exterieure'))
@@ -1121,26 +944,25 @@ const visibilitySections = computed(() => [
   { key: 'interieure', label: 'Visibilité intérieure', icon: 'i-heroicons-view-columns', items: interiorVisibilityElements.value },
 ].filter(section => section.items.length > 0))
 
-const ALL_PRODUCT_CATEGORY_KEYS: (keyof VisiteProduits)[] = ['evap', 'imp', 'scm', 'uht', 'yaourt', 'cereales']
-const productCategoryKeys = computed(() => filtrerCategoriesReleve(ALL_PRODUCT_CATEGORY_KEYS, k => k))
-const productCategoryLabels: Record<string, string> = { evap: 'EVAP', imp: 'IMP', scm: 'SCM', uht: 'UHT', yaourt: 'Yaourt', cereales: 'Céréales' }
+const productCategoryKeys = computed(() => categoriesProduits.value.map(c => c.key))
+const productCategoryLabels = computed<Record<string, string>>(() => Object.fromEntries(categoriesProduits.value.map(c => [c.key, c.label])))
 // L'étape courante est une catégorie produit ? (l'ordre des étapes dépend des catégories actives)
-const quickCategory = computed<keyof VisiteProduits | null>(() => {
-  const key = wizardSteps.value[currentTab.value]?.key as keyof VisiteProduits | undefined
+const quickCategory = computed<string | null>(() => {
+  const key = wizardSteps.value[currentTab.value]?.key
   return key && productCategoryKeys.value.includes(key) ? key : null
 })
-const quickCategoryLabel = computed(() => quickCategory.value ? productCategoryLabels[quickCategory.value] : '')
+const quickCategoryLabel = computed(() => quickCategory.value ? productCategoryLabels.value[quickCategory.value] || quickCategory.value : '')
 
-function categoryHasQuantities(category: keyof VisiteProduits) {
-  const quantities = (form.produits[category] as any)?.quantites || {}
+function categoryHasQuantities(category: string) {
+  const quantities = (form.produits as Record<string, any>)[category]?.quantites || {}
   return Object.values(quantities).some(value => Number(value) > 0)
 }
 
-function setCategoryPreset(category: keyof VisiteProduits | null, preset: 'zero' | 'threshold') {
+function setCategoryPreset(category: string | null, preset: 'zero' | 'threshold') {
   if (!category) return
   for (const product of getSkus(category)) setQty(category, product.key, preset === 'zero' ? 0 : Math.max(1, getSeuil(category, product.key) || 1))
-  if (preset === 'threshold') (form.produits[category] as any).prix_respectes = true
-  toast.add({ title: `${productCategoryLabels[category]} mis à jour`, description: preset === 'zero' ? 'Toutes les quantités sont à 0.' : 'Les quantités ont été positionnées aux seuils.', color: 'green', timeout: 2200 })
+  if (preset === 'threshold') blocProduit(category).prix_respectes = true
+  toast.add({ title: `${productCategoryLabels.value[category] || category} mis à jour`, description: preset === 'zero' ? 'Toutes les quantités sont à 0.' : 'Les quantités ont été positionnées aux seuils.', color: 'green', timeout: 2200 })
 }
 
 const stepStates = computed<Record<string, 'empty' | 'partial' | 'complete' | 'warning'>>(() => {
@@ -1218,7 +1040,7 @@ async function loadPreviousVisit(pdvId: string) {
 function applyPreviousVisit() {
   const data = previousVisit.value?.data
   if (!data) return
-  if (data.produits) form.produits = JSON.parse(JSON.stringify(data.produits))
+  if (data.produits) { form.produits = JSON.parse(JSON.stringify(data.produits)); assurerBlocsProduits() }
   if (data.concurrence) { form.concurrence = JSON.parse(JSON.stringify(data.concurrence)); initialiserDefautsConcurrence() }
   if (data.visibilite) form.visibilite = JSON.parse(JSON.stringify(data.visibilite))
   if (data.actions) form.actions = JSON.parse(JSON.stringify(data.actions))
@@ -1462,11 +1284,15 @@ async function submitVisite(
   }
 
   // Dériver présence + statut hérité par SKU depuis les quantités saisies (compat dashboards/export)
-  for (const cat of Object.keys(visiteData.produits) as (keyof VisiteProduits)[]) {
+  for (const cat of Object.keys(visiteData.produits)) {
     const catData: any = (visiteData.produits as any)[cat]
+    if (!catData || typeof catData !== 'object') continue
     const q = catData.quantites || {}
-    for (const sku of getSkus(cat)) {
-      if (sku.key in catData) catData[sku.key] = quantityToLegacyStatus(q[sku.key] || 0)
+    // Statut hérité pour chaque SKU du formulaire (export, pages produits,
+    // statistiques) ; un SKU retiré n'est écrit que s'il figurait déjà dans le
+    // bloc (valeurs par défaut). Présence déduite des quantités.
+    for (const sku of getSkus(cat, { inclureInactifs: true })) {
+      if (sku.actif !== false || sku.key in catData) catData[sku.key] = quantityToLegacyStatus(q[sku.key] || 0)
     }
     catData.present = categoryPresent(catData, cat)
   }
@@ -1553,6 +1379,7 @@ onMounted(async () => {
   void fetchTypePdvLabels()
   void chargerMarquesConcurrence()
   void chargerCategoriesReleve()
+  void chargerCatalogue().then(assurerBlocsProduits)
   await chargerListePdv()
   restoreDraft()
 
