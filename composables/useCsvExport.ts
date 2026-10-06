@@ -1,6 +1,7 @@
 // composables/useCsvExport.ts
 import ExcelJS from 'exceljs'
 import type { Visite, PDV } from '~/types'
+import { parseCsvTexte } from '~/utils/routingImport'
 
 export function useCsvExport() {
 
@@ -182,49 +183,11 @@ export function useCsvExport() {
   }
 
   /**
-   * Parse CSV file to array of objects
+   * CSV → objets. Séparateur détecté (virgule, ou point-virgule d'un Excel
+   * français), guillemets et retours à la ligne dans un champ gérés.
    */
   function parseCsv(text: string): Record<string, string>[] {
-    const lines = text.split('\n').filter(l => l.trim())
-    if (lines.length < 2) return []
-
-    const headers = parseCsvLine(lines[0])
-    return lines.slice(1).map(line => {
-      const values = parseCsvLine(line)
-      const obj: Record<string, string> = {}
-      headers.forEach((h, i) => {
-        obj[h.trim()] = (values[i] || '').trim()
-      })
-      return obj
-    })
-  }
-
-  function parseCsvLine(line: string): string[] {
-    const result: string[] = []
-    let current = ''
-    let inQuotes = false
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i]
-      if (char === '"') {
-        if (inQuotes && line[i + 1] === '"') {
-          current += '"'
-          i++
-        }
-        else {
-          inQuotes = !inQuotes
-        }
-      }
-      else if (char === ',' && !inQuotes) {
-        result.push(current)
-        current = ''
-      }
-      else {
-        current += char
-      }
-    }
-    result.push(current)
-    return result
+    return parseCsvTexte(text)
   }
 
   function downloadFile(data: any, filename: string, type: string) {

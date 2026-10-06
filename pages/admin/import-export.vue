@@ -19,7 +19,6 @@
                 { label: 'Points de vente (PDV)', value: 'pdv' },
                 { label: 'Visites', value: 'visites' },
                 { label: 'Zones & Secteurs', value: 'zones' },
-                { label: 'Routing Data', value: 'routing' },
               ]"
               option-attribute="label"
               value-attribute="value"
@@ -78,14 +77,16 @@
             Exporter les PDV
           </UButton>
 
+          <!-- Les tournées s'exportent depuis Routing & Planning, au format du
+               modèle d'import (fichier réimportable). L'ancien export lisait
+               la table historique routing_data, absente du schéma actuel. -->
           <UButton
             block
             variant="outline"
-            icon="i-heroicons-arrow-down-tray"
-            :loading="exporting === 'routing'"
-            @click="handleExport('routing')"
+            icon="i-heroicons-arrow-top-right-on-square"
+            to="/admin/routing"
           >
-            Exporter le routing
+            Exporter les tournées
           </UButton>
         </div>
 
@@ -164,29 +165,6 @@ async function handleExport(type: string) {
     else if (type === 'pdv') {
       const allPDV = await pdvStore.fetchAllPDV()
       await exportPDVToExcel(allPDV)
-      toast.add({ title: 'Export terminé', color: 'green' })
-    }
-    else if (type === 'routing') {
-      const { data } = await supabase
-        .from('routing_data')
-        .select('*')
-
-      // Simple CSV export for routing
-      if (data && data.length > 0) {
-        const headers = Object.keys(data[0])
-        const csv = [
-          headers.join(','),
-          ...data.map((r: any) => headers.map(h => `"${r[h] || ''}"`).join(',')),
-        ].join('\n')
-
-        const blob = new Blob([csv], { type: 'text/csv' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = 'routing_data.csv'
-        a.click()
-        URL.revokeObjectURL(url)
-      }
       toast.add({ title: 'Export terminé', color: 'green' })
     }
   }

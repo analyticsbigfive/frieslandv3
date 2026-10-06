@@ -73,13 +73,16 @@
           <UButton v-if="authStore.isAdmin" variant="outline" icon="i-heroicons-arrow-up-tray" @click="showImportModal = true">
             Importer
           </UButton>
+          <UButton variant="outline" icon="i-heroicons-document-arrow-down" :loading="exportEnCours" :disabled="!routings.length" @click="handleExportTournees">
+            Exporter
+          </UButton>
           <UButton icon="i-heroicons-plus" class="bg-fc-red hover:bg-fc-red/90" @click="openCreateRouting">
             Nouveau routing
           </UButton>
         </div>
       </div>
 
-      <!-- Routing list -->
+      <!-- Tournées regroupées par personne : une carte dépliable par merchandiser -->
       <div class="space-y-4">
         <div v-if="loading" class="text-center py-12">
           <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-fc-red mx-auto" />
@@ -91,95 +94,102 @@
           <p class="text-gray-400 text-sm mt-1">Créez un routing ou générez depuis un template permanent</p>
         </div>
 
-        <!-- Routing cards -->
-        <div
-          v-for="routing in routings"
-          :key="routing.id"
-          class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden"
-        >
-          <div class="px-5 py-4 flex items-center justify-between border-b border-gray-100 dark:border-gray-700">
-            <div class="flex items-center gap-4">
-              <div class="w-10 h-10 rounded-full bg-fc-red/10 flex items-center justify-center">
-                <UIcon name="i-heroicons-map" class="w-5 h-5 text-fc-red" />
+        <template v-else>
+          <p class="text-xs text-gray-400">
+            {{ tourneesParPersonne.length }} personne(s) · {{ routings.length }} tournée(s). Cliquez sur une carte pour voir ses tournées.
+          </p>
+
+          <div
+            v-for="p in tourneesParPersonne"
+            :key="p.id"
+            class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden"
+          >
+            <!-- En-tête personne -->
+            <div
+              class="flex flex-wrap items-center gap-4 px-5 py-4 cursor-pointer select-none hover:bg-gray-50/70 dark:hover:bg-gray-700/40 transition-colors"
+              role="button"
+              :aria-expanded="personneTourneesOuverte(p.id)"
+              @click="basculer(personnesTourneesOuvertes, p.id)"
+            >
+              <div class="w-11 h-11 shrink-0 rounded-full bg-fc-red/10 text-fc-red flex items-center justify-center text-sm font-bold">
+                {{ initiales(p.user) }}
               </div>
-              <div>
-                <h3 class="font-bold text-gray-900 dark:text-gray-100">{{ routing.user?.nom || routing.user?.email }}</h3>
-                <p class="text-xs text-gray-400">
-                  {{ formatDate(routing.date_routing) }}
-                  <span v-if="routing.creator"> — par {{ routing.creator.nom }}</span>
+              <div class="flex-1 min-w-[12rem]">
+                <h3 class="text-lg font-bold leading-tight text-gray-900 dark:text-gray-100">{{ nomPersonne(p.user) }}</h3>
+                <p class="text-xs text-gray-400 truncate">
+                  {{ profileTerritories(p.user).join(', ') || 'Aucun territoire assigné' }}
                 </p>
               </div>
-            </div>
-            <div class="flex items-center gap-3">
-              <UBadge :color="statusColor(routing.status)" variant="soft" size="sm">
-                {{ statusLabel(routing.status) }}
-              </UBadge>
-              <span class="text-sm font-medium text-gray-600">
-                {{ routing.nb_faits ?? completedPdvCount(routing) }}/{{ routing.nb_pdv ?? routing.routing_pdv?.length ?? 0 }} PDV
-              </span>
-              <UDropdown :items="routingActions(routing)" :popper="{ placement: 'bottom-end' }">
-                <UButton variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" />
-              </UDropdown>
-            </div>
-          </div>
 
-          <div v-if="expandedRoutings.has(routing.id)" class="px-5 py-3">
-            <div class="space-y-2">
+              <!-- Portefeuille DMS -->
+              <div v-if="p.dms" class="min-w-[14rem] rounded-lg border border-fc-red/20 bg-fc-red/5 px-3 py-2 dark:border-fc-red/30 dark:bg-fc-red/10">
+                <p class="text-[10px] font-semibold uppercase tracking-wide text-fc-red">Portefeuille DMS</p>
+                <p class="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{{ libelleDms(p.dms) }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                  {{ p.dms.nb_pdv ?? 0 }} PDV · {{ libelleJours(p.dms) }}
+                  <span v-if="nbSansGpsRegle(p.dms)" class="font-semibold text-red-600 dark:text-red-400"> · {{ nbSansGpsRegle(p.dms) }} sans GPS</span>
+                </p>
+              </div>
+              <div v-else class="min-w-[14rem] rounded-lg border border-dashed border-gray-200 px-3 py-2 text-xs text-gray-400 dark:border-gray-600">
+                <p class="text-[10px] font-semibold uppercase tracking-wide">Portefeuille DMS</p>
+                <p>Aucun portefeuille DMS</p>
+              </div>
+
+              <div class="text-right text-sm">
+                <p class="font-semibold text-gray-900 dark:text-gray-100">{{ p.routings.length }} tournée(s)</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ p.nbFaits }}/{{ p.nbPdv }} PDV faits</p>
+              </div>
+
+              <UButton size="xs" variant="soft" icon="i-heroicons-plus" @click.stop="openCreateRoutingPour(p.id)">
+                Nouveau routing
+              </UButton>
+              <UIcon
+                :name="personneTourneesOuverte(p.id) ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
+                class="w-5 h-5 text-gray-400"
+              />
+            </div>
+
+            <!-- Tournées de la personne -->
+            <div v-if="personneTourneesOuverte(p.id)" class="border-t border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 px-5 py-4 space-y-3">
               <div
-                v-for="(rp, idx) in sortedPDVs(routing)"
-                :key="rp.id"
-                class="flex items-center gap-3 py-2 px-3 rounded-lg"
-                :class="rp.status === 'completed' ? 'bg-emerald-50' : rp.status === 'skipped' ? 'bg-gray-50 dark:bg-gray-700/50' : rp.status === 'in_progress' ? 'bg-amber-50' : 'bg-white dark:bg-gray-800'"
+                v-for="routing in p.routings"
+                :key="routing.id"
+                class="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 overflow-hidden"
               >
-                <div
-                  class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
-                  :class="rp.status === 'completed' ? 'bg-emerald-500 text-white' : rp.status === 'skipped' ? 'bg-gray-400 text-white' : rp.status === 'in_progress' ? 'bg-amber-500 text-white' : 'bg-gray-200 text-gray-600'"
-                >
-                  {{ idx + 1 }}
-                </div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ rp.pdv?.nom_pdv || rp.pdv_id }}</p>
-                  <p class="text-xs text-gray-400">
-                    {{ rp.pdv?.zone || '' }} {{ rp.pdv?.quartier ? `— ${rp.pdv.quartier}` : '' }}
-                    <span v-if="rp.pdv && !pdvAGps(rp.pdv)" class="ml-1 rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300">Sans GPS</span>
-                  </p>
-                </div>
-                <div class="flex items-center gap-2">
-                  <template v-for="(val, key) in rp.objectifs" :key="key">
-                    <UBadge v-if="val" variant="soft" size="xs" color="blue">
-                      {{ objectifLabel(key as string) }}
+                <div class="px-4 py-3 flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-fc-red/10 flex items-center justify-center">
+                      <UIcon name="i-heroicons-calendar-days" class="w-4 h-4 text-fc-red" />
+                    </div>
+                    <div>
+                      <h4 class="font-semibold text-gray-900 dark:text-gray-100 capitalize">{{ formatDate(routing.date_routing) }}</h4>
+                      <p v-if="routing.creator" class="text-xs text-gray-400">par {{ routing.creator.nom }}</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <UBadge :color="statusColor(routing.status)" variant="soft" size="sm">
+                      {{ statusLabel(routing.status) }}
                     </UBadge>
-                  </template>
-                  <UIcon
-                    v-if="rp.geofence_validated"
-                    name="i-heroicons-map-pin-solid"
-                    class="w-4 h-4 text-emerald-500"
-                    title="GPS validé"
-                  />
-                  <UBadge :color="pdvStatusColor(rp.status)" variant="soft" size="xs">
-                    {{ pdvStatusLabel(rp.status) }}
-                  </UBadge>
+                    <span class="text-sm font-medium text-gray-600 dark:text-gray-300">
+                      {{ routing.nb_faits ?? completedPdvCount(routing) }}/{{ routing.nb_pdv ?? routing.routing_pdv?.length ?? 0 }} PDV
+                    </span>
+                    <UDropdown :items="routingActions(routing)" :popper="{ placement: 'bottom-end' }">
+                      <UButton variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" />
+                    </UDropdown>
+                  </div>
                 </div>
+
+                <p v-if="routing.notes" class="px-4 pb-2 text-xs text-gray-400">Note : {{ routing.notes }}</p>
+                <button
+                  class="w-full py-2 text-xs text-gray-500 hover:text-fc-red hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-t border-gray-100 dark:border-gray-700"
+                  @click="ouvrirTournee(routing, p.user)"
+                >
+                  Voir les PDV du jour et leur statut
+                </button>
               </div>
             </div>
-            <div v-if="chargementEtapes.has(routing.id)" class="py-2 text-center text-xs text-gray-400">Chargement…</div>
-            <div v-else-if="(routing.routing_pdv?.length || 0) < (routing.nb_pdv ?? 0)" class="pt-2 text-center">
-              <UButton size="xs" variant="soft" color="gray" @click="chargerEtapes(routing)">
-                Afficher la suite ({{ (routing.nb_pdv ?? 0) - (routing.routing_pdv?.length || 0) }} PDV restants)
-              </UButton>
-            </div>
-            <div v-if="routing.notes" class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-              <p class="text-xs text-gray-400">Note : {{ routing.notes }}</p>
-            </div>
           </div>
-
-          <button
-            class="w-full py-2 text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            @click="toggleExpand(routing.id)"
-          >
-            {{ expandedRoutings.has(routing.id) ? '▲ Masquer les détails' : '▼ Voir les PDV assignés' }}
-          </button>
-        </div>
+        </template>
       </div>
     </template>
 
@@ -217,7 +227,6 @@
         </div>
       </div>
 
-      <!-- Templates grid by day of week -->
       <div v-if="templateLoading" class="text-center py-12">
         <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-fc-red mx-auto" />
       </div>
@@ -230,188 +239,174 @@
         </p>
       </div>
 
+      <!-- Règles regroupées par personne : une carte dépliable par merchandiser -->
       <div v-else class="space-y-4">
+        <p class="text-xs text-gray-400">
+          {{ reglesParPersonne.length }} personne(s) · {{ groupedTemplates.length }} règle(s). Cliquez sur une carte pour voir et modifier ses règles.
+        </p>
+
         <div
-          v-for="tpl in groupedTemplates"
-          :key="tpl.id"
+          v-for="p in reglesParPersonne"
+          :key="p.id"
           class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden"
         >
-          <!-- Template header -->
-          <div class="px-5 py-4 flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-700">
-            <div class="flex items-center gap-4">
-              <div class="flex gap-1">
-                <span
-                  v-for="j in joursDeRegle(tpl)"
-                  :key="j"
-                  class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold"
-                  :class="dayColors[j]"
-                >
-                  {{ dayShort[j] }}
-                </span>
-              </div>
-              <div>
-                <h3 class="font-bold text-gray-900 dark:text-gray-100">
-                  {{ libelleJours(tpl) }}
-                  <span v-if="tpl.label" class="font-normal text-gray-500 dark:text-gray-400"> — {{ tpl.label }}</span>
-                </h3>
-                <p class="text-xs text-gray-400">
-                  {{ tpl.user?.nom || tpl.user?.email }}
-                  · {{ tpl.nb_pdv ?? tpl.routing_template_pdv?.length ?? 0 }} PDV
-                  <span v-if="nbSansGpsRegle(tpl)" class="font-semibold text-red-600 dark:text-red-400">dont {{ nbSansGpsRegle(tpl) }} sans GPS</span>
-                  <template v-if="tpl.territoire"> · {{ tpl.territoire }}</template>
-                  <template v-if="tpl.distributeur"> · {{ tpl.distributeur }}</template>
-                </p>
-                <p class="text-xs text-gray-400">
-                  <template v-if="tpl.date_fin">Du {{ tpl.date_debut || '—' }} au {{ tpl.date_fin }}</template>
-                  <template v-else>À partir du {{ tpl.date_debut || '—' }} · sans date de fin</template>
-                </p>
-              </div>
+          <!-- En-tête personne -->
+          <div
+            class="flex flex-wrap items-center gap-4 px-5 py-4 cursor-pointer select-none hover:bg-gray-50/70 dark:hover:bg-gray-700/40 transition-colors"
+            role="button"
+            :aria-expanded="personneReglesOuverte(p.id)"
+            @click="basculer(personnesOuvertes, p.id)"
+          >
+            <div class="w-11 h-11 shrink-0 rounded-full bg-fc-red/10 text-fc-red flex items-center justify-center text-sm font-bold">
+              {{ initiales(p.user) }}
             </div>
-            <div class="flex items-center gap-2">
-              <UBadge v-if="tpl.mode === 'quota'" color="violet" variant="soft" size="sm" title="N PDV par canal et par jour, chaque PDV une fois par mois (Atom)">
-                Quotas
-              </UBadge>
-              <UBadge :color="tpl.is_active ? 'green' : 'gray'" variant="soft" size="sm">
-                {{ tpl.is_active ? 'Actif' : 'Inactif' }}
-              </UBadge>
-              <UButton size="xs" variant="outline" icon="i-heroicons-no-symbol" @click="openExceptionModal(tpl)">
-                Décocher une semaine
-              </UButton>
-              <UDropdown :items="templateActions(tpl)" :popper="{ placement: 'bottom-end' }">
-                <UButton variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" />
-              </UDropdown>
+            <div class="flex-1 min-w-[12rem]">
+              <h3 class="text-lg font-bold leading-tight text-gray-900 dark:text-gray-100">{{ nomPersonne(p.user) }}</h3>
+              <p class="text-xs text-gray-400 truncate">
+                {{ profileTerritories(p.user).join(', ') || 'Aucun territoire assigné' }}
+              </p>
             </div>
+
+            <!-- Portefeuille DMS -->
+            <div v-if="p.dms" class="min-w-[14rem] rounded-lg border border-fc-red/20 bg-fc-red/5 px-3 py-2 dark:border-fc-red/30 dark:bg-fc-red/10">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-fc-red">Portefeuille DMS</p>
+              <p class="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{{ libelleDms(p.dms) }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                {{ p.dms.nb_pdv ?? 0 }} PDV · {{ libelleJours(p.dms) }}
+                <span v-if="nbSansGpsRegle(p.dms)" class="font-semibold text-red-600 dark:text-red-400"> · {{ nbSansGpsRegle(p.dms) }} sans GPS</span>
+              </p>
+            </div>
+            <div v-else class="min-w-[14rem] rounded-lg border border-dashed border-gray-200 px-3 py-2 text-xs text-gray-400 dark:border-gray-600">
+              <p class="text-[10px] font-semibold uppercase tracking-wide">Portefeuille DMS</p>
+              <p>Aucun portefeuille DMS</p>
+            </div>
+
+            <div class="text-right text-sm">
+              <p class="font-semibold text-gray-900 dark:text-gray-100">{{ p.regles.length }} règle(s)</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                {{ p.nbPdv }} PDV
+                <span v-if="p.nbSansGps" class="font-semibold text-red-600 dark:text-red-400">· {{ p.nbSansGps }} sans GPS</span>
+              </p>
+            </div>
+            <UIcon
+              :name="personneReglesOuverte(p.id) ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
+              class="w-5 h-5 text-gray-400"
+            />
           </div>
 
-          <!-- Prochaines dates couvertes + exceptions en vigueur -->
-          <div class="flex flex-wrap items-start gap-x-6 gap-y-2 border-b border-gray-100 px-5 py-3 dark:border-gray-700">
-            <div class="min-w-0">
-              <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Prochaines tournées</p>
-              <div class="mt-1 flex flex-wrap gap-1.5">
-                <span
-                  v-for="d in prochainesOccurrences(tpl).slice(0, 8)"
-                  :key="d"
-                  class="rounded-md bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300"
-                >
-                  {{ d }}
-                </span>
-                <span v-if="!prochainesOccurrences(tpl).length" class="text-xs text-gray-400">
-                  Aucune sur les 4 prochaines semaines.
-                </span>
+          <!-- Règles de la personne -->
+          <div v-if="personneReglesOuverte(p.id)" class="border-t border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 px-5 py-4 space-y-4">
+            <div
+              v-for="tpl in p.regles"
+              :key="tpl.id"
+              class="bg-white dark:bg-gray-800 rounded-lg border overflow-hidden"
+              :class="estRegleDms(tpl) ? 'border-fc-red/30' : 'border-gray-100 dark:border-gray-700'"
+            >
+              <!-- En-tête règle -->
+              <div class="px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-700">
+                <div class="flex items-center gap-3">
+                  <div class="flex gap-1">
+                    <span
+                      v-for="j in joursDeRegle(tpl)"
+                      :key="j"
+                      class="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold"
+                      :class="dayColors[j]"
+                    >
+                      {{ dayShort[j] }}
+                    </span>
+                  </div>
+                  <div>
+                    <h4 class="font-semibold text-gray-900 dark:text-gray-100">
+                      <span v-if="tpl.label">{{ tpl.label }}</span>
+                      <span v-else>{{ libelleJours(tpl) }}</span>
+                      <span v-if="tpl.label" class="font-normal text-gray-500 dark:text-gray-400"> — {{ libelleJours(tpl) }}</span>
+                    </h4>
+                    <p class="text-xs text-gray-400">
+                      {{ tpl.nb_pdv ?? tpl.routing_template_pdv?.length ?? 0 }} PDV
+                      <span v-if="nbSansGpsRegle(tpl)" class="font-semibold text-red-600 dark:text-red-400">dont {{ nbSansGpsRegle(tpl) }} sans GPS</span>
+                      <template v-if="tpl.territoire"> · {{ tpl.territoire }}</template>
+                      <template v-if="tpl.distributeur"> · {{ tpl.distributeur }}</template>
+                      ·
+                      <template v-if="tpl.date_fin">du {{ tpl.date_debut || '—' }} au {{ tpl.date_fin }}</template>
+                      <template v-else>à partir du {{ tpl.date_debut || '—' }}, sans date de fin</template>
+                    </p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <UBadge v-if="estRegleDms(tpl)" color="red" variant="soft" size="sm">Portefeuille DMS</UBadge>
+                  <UBadge v-if="tpl.mode === 'quota'" color="violet" variant="soft" size="sm" title="N PDV par canal et par jour, chaque PDV une fois par mois (Atom)">
+                    Quotas
+                  </UBadge>
+                  <UBadge :color="tpl.is_active ? 'green' : 'gray'" variant="soft" size="sm">
+                    {{ tpl.is_active ? 'Actif' : 'Inactif' }}
+                  </UBadge>
+                  <UButton size="xs" variant="outline" icon="i-heroicons-no-symbol" @click="openExceptionModal(tpl)">
+                    Décocher une semaine
+                  </UButton>
+                  <UDropdown :items="templateActions(tpl)" :popper="{ placement: 'bottom-end' }">
+                    <UButton variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" />
+                  </UDropdown>
+                </div>
               </div>
-            </div>
 
-            <div v-if="tpl.routing_template_exception?.length" class="min-w-0">
-              <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Exceptions</p>
-              <div class="mt-1 flex flex-wrap gap-1.5">
-                <button
-                  v-for="e in tpl.routing_template_exception"
-                  :key="e.id"
-                  type="button"
-                  class="inline-flex items-center gap-1.5 rounded-md bg-amber-50 px-2 py-0.5 text-xs text-amber-700 hover:bg-amber-100 dark:bg-amber-950/30 dark:text-amber-300"
-                  title="Retirer cette exception"
-                  @click="handleRemoveException(e.id)"
-                >
-                  {{ exceptionLabel(e, tpl) }}
-                  <UIcon name="i-heroicons-x-mark" class="h-3 w-3" />
-                </button>
+              <!-- Jours couverts, semaine par semaine : un clic montre les PDV du jour -->
+              <div class="border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+                <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  PDV visités par jour
+                  <span class="font-normal normal-case">· cliquez sur un jour pour voir sa liste</span>
+                </p>
+                <div v-if="semainesDeRegle(tpl).length" class="mt-2 space-y-1.5">
+                  <div v-for="sem in semainesDeRegle(tpl)" :key="sem.lundi" class="flex flex-wrap items-center gap-1.5">
+                    <span class="w-20 shrink-0 text-[11px] text-gray-400">{{ sem.libelle }}</span>
+                    <button
+                      v-for="d in sem.jours"
+                      :key="d"
+                      type="button"
+                      class="flex min-w-[5.5rem] flex-col items-start rounded-lg border px-2 py-1 text-left text-xs transition hover:border-fc-red"
+                      :class="classeJour(p.id, d)"
+                      :title="`Voir les PDV du ${jourLong(d)}`"
+                      @click="ouvrirJour(p.id, p.user, d, tpl)"
+                    >
+                      <span class="font-semibold">{{ jourCourt(d) }}</span>
+                      <span class="text-[11px]">{{ etatJour(p.id, d) }}</span>
+                    </button>
+                  </div>
+                </div>
+                <p v-else class="mt-1 text-xs text-gray-400">Aucun jour couvert sur les 4 semaines à venir.</p>
               </div>
-            </div>
-          </div>
 
-          <!-- Template PDV list (always visible) -->
-          <div class="px-5 py-3">
-            <div class="space-y-2">
-              <div
-                v-for="(tp, idx) in sortedTemplatePDVs(tpl)"
-                :key="tp.id"
-                class="flex items-center gap-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 group"
-              >
-                <!-- Reorder arrows -->
-                <div class="flex flex-col gap-0.5">
+              <div v-if="tpl.routing_template_exception?.length" class="border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+                <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Exceptions</p>
+                <div class="mt-1 flex flex-wrap gap-1.5">
                   <button
-                    class="text-gray-400 hover:text-gray-600 disabled:opacity-30"
-                    :disabled="idx === 0"
-                    @click="moveTemplatePDV(tpl, idx, -1)"
+                    v-for="e in tpl.routing_template_exception"
+                    :key="e.id"
+                    type="button"
+                    class="inline-flex items-center gap-1.5 rounded-md bg-amber-50 px-2 py-0.5 text-xs text-amber-700 hover:bg-amber-100 dark:bg-amber-950/30 dark:text-amber-300"
+                    title="Retirer cette exception"
+                    @click="handleRemoveException(e.id)"
                   >
-                    <UIcon name="i-heroicons-chevron-up" class="w-3 h-3" />
-                  </button>
-                  <button
-                    class="text-gray-400 hover:text-gray-600 disabled:opacity-30"
-                    :disabled="idx === (tpl.routing_template_pdv?.length || 1) - 1"
-                    @click="moveTemplatePDV(tpl, idx, 1)"
-                  >
-                    <UIcon name="i-heroicons-chevron-down" class="w-3 h-3" />
+                    {{ exceptionLabel(e, tpl) }}
+                    <UIcon name="i-heroicons-x-mark" class="h-3 w-3" />
                   </button>
                 </div>
-
-                <span class="w-6 h-6 rounded-full bg-fc-red text-white text-xs flex items-center justify-center font-bold">
-                  {{ idx + 1 }}
-                </span>
-
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ tp.pdv?.nom_pdv || tp.pdv_id }}</p>
-                  <p class="text-xs text-gray-400">
-                    {{ tp.pdv?.zone || '' }} {{ tp.pdv?.quartier ? `— ${tp.pdv.quartier}` : '' }}
-                    <span v-if="tp.pdv && !pdvAGps(tp.pdv)" class="ml-1 rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300">Sans GPS</span>
-                  </p>
-                </div>
-
-                <!-- Objectifs badges -->
-                <div class="flex items-center gap-1">
-                  <template v-for="(val, key) in tp.objectifs" :key="key">
-                    <UBadge v-if="val" variant="soft" size="xs" color="blue">
-                      {{ objectifLabel(key as string) }}
-                    </UBadge>
-                  </template>
-                </div>
-
-                <!-- Edit objectifs -->
-                <UDropdown :items="templatePDVObjectifActions(tpl, tp)" :popper="{ placement: 'bottom-end' }">
-                  <UButton variant="ghost" size="xs" icon="i-heroicons-cog-6-tooth" title="Modifier objectifs" />
-                </UDropdown>
-
-                <!-- Remove PDV -->
-                <button
-                  class="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                  @click="handleRemoveTemplatePDV(tpl, tp)"
-                >
-                  <UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
-                </button>
               </div>
-            </div>
 
-            <div v-if="(tpl.routing_template_pdv?.length || 0) < (tpl.nb_pdv ?? 0)" class="pt-2 text-center">
-              <UButton size="xs" variant="soft" color="gray" :loading="chargementRegles.has(tpl.id)" @click="chargerSuiteRegle(tpl)">
-                Afficher la suite ({{ (tpl.nb_pdv ?? 0) - (tpl.routing_template_pdv?.length || 0) }} PDV restants)
-              </UButton>
-            </div>
-
-            <!-- Add PDV to template -->
-            <div class="flex gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-              <USelectMenu
-                v-model="templateAddPdvId[tpl.id]"
-                :options="availableTemplatePdvOptions(tpl)"
-                placeholder="Ajouter un PDV..."
-                searchable
-                searchable-placeholder="Rechercher un PDV..."
-                option-attribute="label"
-                value-attribute="value"
-                size="sm"
-                class="flex-1"
-              />
-              <UButton
-                size="sm"
-                icon="i-heroicons-plus"
-                :disabled="!templateAddPdvId[tpl.id]"
-                @click="handleAddTemplatePDV(tpl)"
-              >
-                Ajouter
-              </UButton>
-            </div>
-
-            <div v-if="tpl.notes" class="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-              <p class="text-xs text-gray-400">📝 {{ tpl.notes }}</p>
+              <!-- Affectation des PDV : en popups -->
+              <div class="flex flex-wrap items-center gap-2 px-4 py-3">
+                <UButton
+                  size="sm"
+                  icon="i-heroicons-plus"
+                  class="bg-fc-red text-white hover:bg-fc-red/90"
+                  @click="regleAjoutId = tpl.id"
+                >
+                  Ajouter des PDV
+                </UButton>
+                <UButton size="sm" variant="outline" icon="i-heroicons-list-bullet" @click="ouvrirGestionPdv(tpl)">
+                  Gérer les {{ tpl.nb_pdv ?? tpl.routing_template_pdv?.length ?? 0 }} PDV du portefeuille
+                </UButton>
+                <p v-if="tpl.notes" class="ml-auto text-xs text-gray-400">📝 {{ tpl.notes }}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -884,6 +879,243 @@
       </template>
     </AdminFormModal>
 
+    <!-- ==================== AJOUT DE PDV À UNE RÈGLE ==================== -->
+    <AdminFormModal
+      :model-value="!!regleAjout"
+      :title="`Ajouter des PDV — ${nomPersonne(regleAjout?.user)}`"
+      :description="regleAjout ? `Règle « ${regleAjout.label || libelleJours(regleAjout)} » · ${regleAjout.nb_pdv ?? 0} PDV. Seuls les PDV du périmètre sont proposés ; la popup reste ouverte pour enchaîner les ajouts.` : ''"
+      icon="i-heroicons-plus"
+      width="sm:max-w-xl"
+      body-class="space-y-4"
+      @update:model-value="(v: boolean) => { if (!v) regleAjoutId = null }"
+    >
+      <div v-if="regleAjout" class="flex gap-2">
+        <USelectMenu
+          v-model="templateAddPdvId[regleAjout.id]"
+          :options="availableTemplatePdvOptions(regleAjout)"
+          placeholder="Rechercher un PDV du périmètre..."
+          searchable
+          searchable-placeholder="Nom ou zone..."
+          option-attribute="label"
+          value-attribute="value"
+          size="md"
+          class="flex-1"
+        />
+        <UButton
+          icon="i-heroicons-plus"
+          class="bg-fc-red text-white hover:bg-fc-red/90 disabled:bg-fc-red/40"
+          :disabled="!templateAddPdvId[regleAjout.id]"
+          @click="handleAddTemplatePDV(regleAjout)"
+        >
+          Ajouter
+        </UButton>
+      </div>
+      <template #footer>
+        <UButton color="gray" variant="ghost" @click="regleAjoutId = null">Fermer</UButton>
+      </template>
+    </AdminFormModal>
+
+    <!-- ==================== GESTION DES PDV D'UNE RÈGLE ==================== -->
+    <AdminFormModal
+      :model-value="!!regleGestion"
+      :title="`PDV du portefeuille — ${nomPersonne(regleGestion?.user)}`"
+      :description="regleGestion ? `Règle « ${regleGestion.label || libelleJours(regleGestion)} » · ${regleGestion.nb_pdv ?? 0} PDV${nbSansGpsRegle(regleGestion) ? `, dont ${nbSansGpsRegle(regleGestion)} sans GPS` : ''}. Ordre, objectifs et retrait de chaque PDV.` : ''"
+      icon="i-heroicons-list-bullet"
+      width="sm:max-w-4xl"
+      body-class="space-y-4"
+      @update:model-value="(v: boolean) => { if (!v) regleGestionId = null }"
+    >
+      <template v-if="regleGestion">
+        <div class="rounded-lg bg-fc-red/5 p-3 dark:bg-fc-red/10">
+          <p class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-fc-red">Ajouter un PDV</p>
+          <div class="flex gap-2">
+            <USelectMenu
+              v-model="templateAddPdvId[regleGestion.id]"
+              :options="availableTemplatePdvOptions(regleGestion)"
+              placeholder="Rechercher un PDV du périmètre..."
+              searchable
+              searchable-placeholder="Nom ou zone..."
+              option-attribute="label"
+              value-attribute="value"
+              size="sm"
+              class="flex-1"
+            />
+            <UButton
+              size="sm"
+              icon="i-heroicons-plus"
+              class="bg-fc-red text-white hover:bg-fc-red/90 disabled:bg-fc-red/40"
+              :disabled="!templateAddPdvId[regleGestion.id]"
+              @click="handleAddTemplatePDV(regleGestion)"
+            >
+              Ajouter
+            </UButton>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <UInput v-model="rechercheGestion" icon="i-heroicons-magnifying-glass" placeholder="Filtrer par nom, code, zone ou quartier" size="sm" class="flex-1 min-w-[14rem]" />
+          <span class="text-xs text-gray-400">
+            {{ pdvGestionFiltres.length }} affiché(s) sur {{ regleGestion.routing_template_pdv?.length || 0 }} chargé(s) / {{ regleGestion.nb_pdv ?? 0 }}
+          </span>
+        </div>
+        <p v-if="rechercheGestion" class="text-xs text-gray-400">Le filtre porte sur les PDV chargés ; videz-le pour réordonner.</p>
+
+        <div class="space-y-2">
+          <div
+            v-for="{ tp, idx } in pdvGestionFiltres"
+            :key="tp.id"
+            class="flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-700/50"
+          >
+            <div class="flex flex-col gap-0.5">
+              <button
+                class="text-gray-400 hover:text-gray-600 disabled:opacity-30"
+                :disabled="idx === 0 || !!rechercheGestion"
+                title="Monter"
+                @click="moveTemplatePDV(regleGestion, idx, -1)"
+              >
+                <UIcon name="i-heroicons-chevron-up" class="w-3 h-3" />
+              </button>
+              <button
+                class="text-gray-400 hover:text-gray-600 disabled:opacity-30"
+                :disabled="idx === (regleGestion.routing_template_pdv?.length || 1) - 1 || !!rechercheGestion"
+                title="Descendre"
+                @click="moveTemplatePDV(regleGestion, idx, 1)"
+              >
+                <UIcon name="i-heroicons-chevron-down" class="w-3 h-3" />
+              </button>
+            </div>
+            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-fc-red text-xs font-bold text-white">{{ idx + 1 }}</span>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{{ tp.pdv?.nom_pdv || tp.pdv_id }}</p>
+              <p class="text-xs text-gray-400">
+                {{ tp.pdv?.zone || '' }} {{ tp.pdv?.quartier ? `— ${tp.pdv.quartier}` : '' }}
+                <span v-if="tp.pdv && !pdvAGps(tp.pdv)" class="ml-1 rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300">Sans GPS</span>
+              </p>
+            </div>
+            <div class="hidden items-center gap-1 sm:flex">
+              <template v-for="(val, key) in tp.objectifs" :key="key">
+                <UBadge v-if="val" variant="soft" size="xs" color="blue">{{ objectifLabel(key as string) }}</UBadge>
+              </template>
+            </div>
+            <UDropdown :items="templatePDVObjectifActions(regleGestion, tp)" :popper="{ placement: 'bottom-end' }">
+              <UButton variant="ghost" size="xs" icon="i-heroicons-cog-6-tooth" title="Modifier les objectifs" />
+            </UDropdown>
+            <UButton variant="ghost" color="red" size="xs" icon="i-heroicons-x-mark" title="Retirer de la règle" @click="handleRemoveTemplatePDV(regleGestion, tp)" />
+          </div>
+          <p v-if="!pdvGestionFiltres.length" class="py-6 text-center text-sm text-gray-400">Aucun PDV ne correspond.</p>
+        </div>
+
+        <div v-if="(regleGestion.routing_template_pdv?.length || 0) < (regleGestion.nb_pdv ?? 0)" class="text-center">
+          <UButton size="xs" variant="soft" color="gray" :loading="chargementRegles.has(regleGestion.id)" @click="chargerSuiteRegle(regleGestion)">
+            Afficher la suite ({{ (regleGestion.nb_pdv ?? 0) - (regleGestion.routing_template_pdv?.length || 0) }} PDV restants)
+          </UButton>
+        </div>
+      </template>
+      <template #footer>
+        <UButton color="gray" variant="ghost" @click="regleGestionId = null">Fermer</UButton>
+      </template>
+    </AdminFormModal>
+
+    <!-- ==================== TOURNÉE DU JOUR ==================== -->
+    <AdminFormModal
+      :model-value="jourModal.ouvert"
+      :title="`${jourLong(jourModal.date || aujourdhui)} — ${nomPersonne(jourModal.user)}`"
+      :description="jourModal.routing
+        ? `Tournée ${statusLabel(jourModal.routing.status).toLowerCase()} · ${jourModal.routing.nb_pdv ?? jourModal.etapes.length} PDV. Une seule tournée par jour réunit toutes les règles de la personne.`
+        : 'Cette journée n\'est pas encore générée.'"
+      icon="i-heroicons-calendar-days"
+      width="sm:max-w-3xl"
+      body-class="space-y-4"
+      @update:model-value="(v: boolean) => { if (!v) jourModal.ouvert = false }"
+    >
+      <template v-if="jourModal.routing">
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200">
+            <strong>{{ nbFaitsJour }}</strong> / {{ jourModal.etapes.length }} PDV faits
+          </div>
+          <div class="ml-auto flex gap-1">
+            <UButton
+              v-for="f in [{ v: 'tous', l: 'Tous' }, { v: 'afaire', l: 'À faire' }, { v: 'faits', l: 'Faits' }]"
+              :key="f.v"
+              size="xs"
+              :variant="jourModal.filtre === f.v ? 'solid' : 'ghost'"
+              :color="jourModal.filtre === f.v ? 'red' : 'gray'"
+              @click="jourModal.filtre = f.v as any"
+            >
+              {{ f.l }}
+            </UButton>
+          </div>
+        </div>
+
+        <div v-if="jourModal.chargement" class="py-8 text-center">
+          <UIcon name="i-heroicons-arrow-path" class="mx-auto h-6 w-6 animate-spin text-fc-red" />
+        </div>
+        <div v-else class="space-y-2">
+          <div
+            v-for="rp in etapesJourFiltrees"
+            :key="rp.id"
+            class="flex items-center gap-3 rounded-lg px-3 py-2"
+            :class="rp.status === 'completed' ? 'bg-emerald-50 dark:bg-emerald-500/10' : rp.status === 'skipped' ? 'bg-gray-50 dark:bg-gray-700/50' : rp.status === 'in_progress' ? 'bg-amber-50 dark:bg-amber-500/10' : 'bg-gray-50/60 dark:bg-gray-800'"
+          >
+            <div
+              class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+              :class="rp.status === 'completed' ? 'bg-emerald-500 text-white' : rp.status === 'skipped' ? 'bg-gray-400 text-white' : rp.status === 'in_progress' ? 'bg-amber-500 text-white' : 'bg-gray-200 text-gray-600'"
+            >
+              {{ rp.position_order }}
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{{ rp.pdv?.nom_pdv || rp.pdv_id }}</p>
+              <p class="text-xs text-gray-400">
+                {{ rp.pdv?.zone || '' }} {{ rp.pdv?.quartier ? `— ${rp.pdv.quartier}` : '' }}
+                <span v-if="rp.pdv && !pdvAGps(rp.pdv)" class="ml-1 rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300">Sans GPS</span>
+              </p>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <template v-for="(val, key) in rp.objectifs" :key="key">
+                <UBadge v-if="val" variant="soft" size="xs" color="blue" class="hidden sm:inline-flex">{{ objectifLabel(key as string) }}</UBadge>
+              </template>
+              <UIcon v-if="rp.geofence_validated" name="i-heroicons-map-pin-solid" class="h-4 w-4 text-emerald-500" title="GPS validé" />
+              <UBadge :color="pdvStatusColor(rp.status)" variant="soft" size="xs">{{ pdvStatusLabel(rp.status) }}</UBadge>
+            </div>
+          </div>
+          <p v-if="!etapesJourFiltrees.length" class="py-6 text-center text-sm text-gray-400">Aucun PDV pour ce filtre.</p>
+        </div>
+        <p v-if="jourModal.routing.notes" class="text-xs text-gray-400">Note : {{ jourModal.routing.notes }}</p>
+      </template>
+
+      <div v-else class="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+        <p v-if="jourModal.date < aujourdhui">Aucune tournée n'a été planifiée ce jour-là.</p>
+        <template v-else>
+          <p v-if="jourModal.regle?.mode === 'quota'">
+            Règle en mode <strong>Quotas</strong> : la liste du jour est tirée au moment de la génération, selon la grille
+            Référentiels › Quotas Atom (N PDV par canal), parmi les PDV du portefeuille pas encore planifiés ni visités dans le mois.
+          </p>
+          <p v-else-if="jourModal.regle">
+            Règle en mode <strong>Périmètre</strong> : tout le portefeuille ({{ jourModal.regle.nb_pdv ?? 0 }} PDV) sera visité ce jour-là, hors exceptions.
+          </p>
+          <p class="text-xs text-gray-400">
+            Les tournées se génèrent automatiquement chaque nuit pour les 7 jours suivants. Vous pouvez générer celle-ci dès maintenant pour voir sa liste.
+          </p>
+        </template>
+      </div>
+
+      <template #footer>
+        <UButton color="gray" variant="ghost" @click="jourModal.ouvert = false">Fermer</UButton>
+        <UButton v-if="jourModal.routing" variant="outline" icon="i-heroicons-pencil-square" @click="modifierTourneeDuJour">
+          Modifier cette tournée
+        </UButton>
+        <UButton
+          v-else-if="jourModal.date >= aujourdhui"
+          icon="i-heroicons-sparkles"
+          class="bg-fc-red text-white hover:bg-fc-red/90"
+          :loading="jourModal.generation"
+          @click="genererJour"
+        >
+          Générer cette journée
+        </UButton>
+      </template>
+    </AdminFormModal>
+
     <!-- ==================== IMPORT ROUTINGS MODAL ==================== -->
     <UModal v-model="showImportModal" :ui="{ width: 'max-w-xl' }">
       <div class="p-6 space-y-4">
@@ -945,7 +1177,7 @@
             <span class="text-emerald-600 font-medium">{{ importSummary.created }} créé(s)</span>
             <span class="text-blue-600 font-medium">{{ importSummary.updated }} mis à jour</span>
             <span class="text-gray-500 dark:text-gray-400">{{ importSummary.pdvCount }} point(s) de vente</span>
-            <span v-if="importSummary.errors.length" class="text-red-600 font-medium">{{ importSummary.errors.length }} ligne(s) refusée(s)</span>
+            <span v-if="importSummary.errors.length" class="text-red-600 font-medium">{{ importSummary.errors.length }} message(s)</span>
           </div>
           <div v-if="importSummary.errors.length" class="max-h-40 overflow-y-auto space-y-1 border-t border-gray-200 dark:border-gray-600 pt-2">
             <p v-for="(e, i) in importSummary.errors" :key="i" class="text-xs text-red-600">⚠ {{ e }}</p>
@@ -964,7 +1196,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Routing, RoutingPDV, RoutingObjectives, RoutingTemplate, RoutingTemplatePDV, RoutingTemplateException, RoutingTemplateMode } from '~/types'
+import type { Profile, Routing, RoutingPDV, RoutingObjectives, RoutingTemplate, RoutingTemplatePDV, RoutingTemplateException, RoutingTemplateMode } from '~/types'
 import { toIsoJour, debutDeSemaine } from '~/utils/periode'
 import { fetchAllRows } from '~/utils/fetchAll'
 import { JOURS_SEMAINE, joursDeRegle, libelleJours, datesDeRegle } from '~/utils/routingRecurrence'
@@ -991,7 +1223,7 @@ const authStore = useAuthStore()
 const routingStore = useRoutingStore()
 const toast = useToast()
 const { parseCsv } = useCsvExport()
-const { downloadRoutingExcelTemplate, readRoutingFile } = useRoutingExcel()
+const { downloadRoutingExcelTemplate, readRoutingFile, exporterTournees } = useRoutingExcel()
 
 // ---- Import CSV routings ----
 const showImportModal = ref(false)
@@ -1024,6 +1256,40 @@ function closeImportModal() {
   showImportModal.value = false
   importFile.value = null
   importSummary.value = null
+  importMode.value = 'fusion'
+}
+
+// ---- Export des tournées affichées (format du modèle, réimportable) ----
+const exportEnCours = ref(false)
+async function handleExportTournees() {
+  if (!routings.value.length) return
+  exportEnCours.value = true
+  try {
+    const lot: { tournee: Routing; etapes: RoutingPDV[] }[] = []
+    for (let i = 0; i < routings.value.length; i += 5) {
+      const tranche = routings.value.slice(i, i + 5)
+      const etapes = await Promise.all(tranche.map(r => routingStore.toutesEtapesRouting(r.id)))
+      tranche.forEach((r, j) => lot.push({ tournee: r, etapes: etapes[j]! }))
+    }
+    lot.sort((a, b) => a.tournee.date_routing.localeCompare(b.tournee.date_routing)
+      || nomPersonne(a.tournee.user).localeCompare(nomPersonne(b.tournee.user), 'fr'))
+    const du = filters.dateFrom || lot[0]?.tournee.date_routing || aujourdhui
+    const au = filters.dateTo || lot[lot.length - 1]?.tournee.date_routing || aujourdhui
+    await exporterTournees(lot as any, `tournees-${du}-au-${au}.xlsx`)
+    toast.add({
+      title: 'Export terminé',
+      description: routings.value.length >= 200
+        ? 'Limité aux 200 tournées les plus récentes : réduisez la période ou filtrez par utilisateur pour tout exporter.'
+        : `${lot.length} tournée(s), ${lot.reduce((n, t) => n + t.etapes.length, 0)} PDV.`,
+      color: routings.value.length >= 200 ? 'amber' : 'green',
+    })
+  }
+  catch (err: any) {
+    toast.add({ title: 'Erreur d\'export', description: err.message, color: 'red' })
+  }
+  finally {
+    exportEnCours.value = false
+  }
 }
 
 async function handleImportRoutings() {
@@ -1067,7 +1333,6 @@ const showDuplicateModal = ref(false)
 const duplicateDate = ref('')
 const duplicateUserId = ref('')
 const duplicateRoutingId = ref('')
-const expandedRoutings = ref(new Set<string>())
 const selectedPdvToAdd = ref('')
 
 const filters = reactive({
@@ -1179,13 +1444,6 @@ async function handleRemoveException(exceptionId: string) {
 }
 
 // Prochaines occurrences d'une règle sur 4 semaines, exceptions déduites.
-function prochainesOccurrences(tpl: RoutingTemplate): string[] {
-  const debut = new Date()
-  const fin = new Date()
-  fin.setDate(fin.getDate() + 28)
-  return datesDeRegle(tpl, toIsoJour(debut), toIsoJour(fin), tpl.routing_template_exception || [])
-}
-
 function exceptionLabel(e: RoutingTemplateException, tpl: RoutingTemplate): string {
   const cible = e.pdv_id
     ? (tpl.routing_template_pdv?.find(p => p.pdv_id === e.pdv_id)?.pdv?.nom_pdv || e.pdv_id)
@@ -1427,6 +1685,114 @@ const groupedTemplates = computed(() => {
   return [...(routingStore.templates || [])].sort((a, b) => rang(a) - rang(b))
 })
 
+// ---- Regroupement par personne (cartes dépliables) ----
+// Une carte par merchandiser dans chaque onglet : nom en exergue, portefeuille
+// DMS (règle « Portefeuille DMS — <distributeur> » posée par
+// scripts/affecter-merch-dms.mjs) et zone de saisie, sans dérouler les
+// centaines de PDV de chaque règle.
+const PREFIXE_REGLE_DMS = 'Portefeuille DMS'
+const personnesOuvertes = ref(new Set<string>())
+const personnesTourneesOuvertes = ref(new Set<string>())
+
+function basculer(ensemble: Set<string>, id: string) {
+  if (ensemble.has(id)) ensemble.delete(id)
+  else ensemble.add(id)
+}
+
+function estRegleDms(t: RoutingTemplate) {
+  return (t.label || '').startsWith(PREFIXE_REGLE_DMS)
+}
+
+function libelleDms(t: RoutingTemplate) {
+  const suffixe = (t.label || '').slice(PREFIXE_REGLE_DMS.length).replace(/^\s*[—–-]\s*/, '').trim()
+  return t.distributeur || suffixe || 'Distributeur non précisé'
+}
+
+function nomPersonne(u?: Profile | null) {
+  return u?.nom || u?.email || 'Sans utilisateur'
+}
+
+function initiales(u?: Profile | null) {
+  const mots = nomPersonne(u).split(/[\s@._-]+/).filter(Boolean)
+  return mots.slice(0, 2).map(m => m[0]!.toUpperCase()).join('') || '?'
+}
+
+interface PersonneRegles {
+  id: string
+  user: Profile | null
+  regles: RoutingTemplate[]
+  dms?: RoutingTemplate
+  nbPdv: number
+  nbSansGps: number
+}
+
+const reglesParPersonne = computed<PersonneRegles[]>(() => {
+  const parId = new Map<string, PersonneRegles>()
+  for (const tpl of groupedTemplates.value) {
+    const id = tpl.user_id || 'sans-utilisateur'
+    let p = parId.get(id)
+    if (!p) {
+      p = { id, user: tpl.user || users.value.find(u => u.id === id) || null, regles: [], nbPdv: 0, nbSansGps: 0 }
+      parId.set(id, p)
+    }
+    p.regles.push(tpl)
+    if (!p.dms && estRegleDms(tpl)) p.dms = tpl
+    p.nbPdv += tpl.nb_pdv ?? tpl.routing_template_pdv?.length ?? 0
+    p.nbSansGps += nbSansGpsRegle(tpl)
+  }
+  // Portefeuille DMS en tête, le reste dans l'ordre de groupedTemplates (tri stable).
+  for (const p of parId.values()) p.regles.sort((a, b) => Number(estRegleDms(b)) - Number(estRegleDms(a)))
+  return [...parId.values()].sort((a, b) => nomPersonne(a.user).localeCompare(nomPersonne(b.user), 'fr'))
+})
+
+interface PersonneTournees {
+  id: string
+  user: Profile | null
+  routings: Routing[]
+  dms?: RoutingTemplate
+  nbPdv: number
+  nbFaits: number
+}
+
+const tourneesParPersonne = computed<PersonneTournees[]>(() => {
+  const parId = new Map<string, PersonneTournees>()
+  for (const r of routings.value) {
+    const id = r.user_id || r.user?.id || 'sans-utilisateur'
+    let p = parId.get(id)
+    if (!p) {
+      p = {
+        id,
+        user: r.user || users.value.find(u => u.id === id) || null,
+        routings: [],
+        dms: reglesParPersonne.value.find(x => x.id === id)?.dms,
+        nbPdv: 0,
+        nbFaits: 0,
+      }
+      parId.set(id, p)
+    }
+    p.routings.push(r)
+    p.nbPdv += r.nb_pdv ?? r.routing_pdv?.length ?? 0
+    p.nbFaits += r.nb_faits ?? completedPdvCount(r)
+  }
+  for (const p of parId.values()) p.routings.sort((a, b) => a.date_routing.localeCompare(b.date_routing))
+  return [...parId.values()].sort((a, b) => nomPersonne(a.user).localeCompare(nomPersonne(b.user), 'fr'))
+})
+
+// Une seule personne affichée (filtre utilisateur) : sa carte est ouverte d'office.
+function personneReglesOuverte(id: string) {
+  return personnesOuvertes.value.has(id) || reglesParPersonne.value.length === 1
+}
+function personneTourneesOuverte(id: string) {
+  return personnesTourneesOuvertes.value.has(id) || tourneesParPersonne.value.length === 1
+}
+watch(templateFilterUser, (id) => { if (id) personnesOuvertes.value.add(id) })
+watch(() => filters.userId, (id) => { if (id) personnesTourneesOuvertes.value.add(id) })
+
+function openCreateRoutingPour(userId: string) {
+  openCreateRouting()
+  newRouting.userId = userId
+}
+
 // ---- Helper functions ----
 function formatDate(d: string) {
   return new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', {
@@ -1463,10 +1829,6 @@ function completedPdvCount(routing: Routing) {
   return routing.routing_pdv?.filter(rp => rp.status === 'completed').length || 0
 }
 
-function sortedPDVs(routing: Routing): RoutingPDV[] {
-  return [...(routing.routing_pdv || [])].sort((a, b) => a.position_order - b.position_order)
-}
-
 function sortedTemplatePDVs(tpl: RoutingTemplate): RoutingTemplatePDV[] {
   return [...(tpl.routing_template_pdv || [])].sort((a, b) => a.position_order - b.position_order)
 }
@@ -1496,34 +1858,194 @@ async function chargerSuiteRegle(tpl: RoutingTemplate) {
   }
 }
 
-// Étapes d'une tournée : chargées à l'ouverture, par pages (fetchRoutings ne
-// ramène que les compteurs).
-const chargementEtapes = ref(new Set<string>())
-async function chargerEtapes(routing: Routing) {
-  if (chargementEtapes.value.has(routing.id)) return
-  chargementEtapes.value.add(routing.id)
+// ---- PDV visités par jour ----
+// La liste d'un jour n'existe qu'une fois la journée générée (routings +
+// routing_pdv, une tournée par merchandiser et par jour) : en mode Quotas, la
+// base tire N PDV par canal au moment de la génération (cron J → J+7,
+// « Pré-générer 7 jours »). Aucun aperçu calculé : sur un jour lointain, il
+// serait faux tant que les jours intermédiaires ne sont pas générés.
+const NB_JOURS_VUE = 28
+const aujourdhui = toIsoJour(new Date())
+const lundiVue = toIsoJour(debutDeSemaine(new Date()))
+const finVue = (() => {
+  const d = debutDeSemaine(new Date())
+  d.setDate(d.getDate() + NB_JOURS_VUE - 1)
+  return toIsoJour(d)
+})()
+
+// userId → (date → tournée) sur la fenêtre affichée.
+const tourneesParJour = ref(new Map<string, Map<string, Routing>>())
+const chargementJours = ref(new Set<string>())
+
+async function chargerJoursPersonne(userId: string) {
+  if (chargementJours.value.has(userId)) return
+  chargementJours.value.add(userId)
   try {
-    const deja = routing.routing_pdv || []
-    const page = await routingStore.chargerEtapesRouting(routing.id, deja.length)
-    routing.routing_pdv = [...deja, ...page]
+    const liste = await routingStore.fetchRoutings({ userId, dateFrom: lundiVue, dateTo: finVue })
+    tourneesParJour.value.set(userId, new Map(liste.map(r => [r.date_routing, r])))
   }
   catch (err: any) {
     toast.add({ title: 'Erreur', description: err.message, color: 'red' })
   }
   finally {
-    chargementEtapes.value.delete(routing.id)
+    chargementJours.value.delete(userId)
   }
 }
 
-function toggleExpand(id: string) {
-  if (expandedRoutings.value.has(id)) {
-    expandedRoutings.value.delete(id)
-    return
+// Charge les jours de chaque personne dès que sa carte est ouverte.
+watchEffect(() => {
+  for (const p of reglesParPersonne.value) {
+    if (personneReglesOuverte(p.id) && !tourneesParJour.value.has(p.id) && !chargementJours.value.has(p.id)) {
+      void chargerJoursPersonne(p.id)
+    }
   }
-  expandedRoutings.value.add(id)
-  const routing = routings.value.find(r => r.id === id)
-  if (routing && !routing.routing_pdv) void chargerEtapes(routing)
+})
+
+function semainesDeRegle(tpl: RoutingTemplate) {
+  const jours = datesDeRegle(tpl, lundiVue, finVue, tpl.routing_template_exception || [])
+  const parLundi = new Map<string, string[]>()
+  for (const d of jours) {
+    const lundi = toIsoJour(debutDeSemaine(new Date(`${d}T00:00:00`)))
+    if (!parLundi.has(lundi)) parLundi.set(lundi, [])
+    parLundi.get(lundi)!.push(d)
+  }
+  return [...parLundi.entries()].map(([lundi, js]) => ({
+    lundi,
+    jours: js,
+    libelle: lundi === lundiVue ? 'Cette semaine' : `Sem. ${jourCourt(lundi).split(' ')[1]}`,
+  }))
 }
+
+function jourCourt(d: string) {
+  const date = new Date(`${d}T00:00:00`)
+  const j = date.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '')
+  return `${j.charAt(0).toUpperCase()}${j.slice(1)} ${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
+function jourLong(d: string) {
+  return new Date(`${d}T00:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+}
+
+function etatJour(userId: string, d: string) {
+  const parJour = tourneesParJour.value.get(userId)
+  if (!parJour) return '…'
+  const r = parJour.get(d)
+  if (!r) return d < aujourdhui ? 'aucune tournée' : 'à générer'
+  const nb = r.nb_pdv ?? 0
+  return d <= aujourdhui ? `${r.nb_faits ?? 0}/${nb} faits` : `${nb} PDV`
+}
+
+function classeJour(userId: string, d: string) {
+  const r = tourneesParJour.value.get(userId)?.get(d)
+  const base = d === aujourdhui ? 'ring-2 ring-fc-red/40 ' : ''
+  if (!r) return `${base}border-dashed border-gray-200 text-gray-400 dark:border-gray-600`
+  if (d < aujourdhui && (r.nb_faits ?? 0) < (r.nb_pdv ?? 0)) {
+    return `${base}border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200`
+  }
+  return `${base}border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200`
+}
+
+// Popup « Tournée du jour »
+const jourModal = reactive({
+  ouvert: false,
+  date: '',
+  userId: '',
+  user: null as Profile | null,
+  regle: null as RoutingTemplate | null,
+  routing: null as Routing | null,
+  etapes: [] as RoutingPDV[],
+  chargement: false,
+  generation: false,
+  filtre: 'tous' as 'tous' | 'afaire' | 'faits',
+})
+
+const etapesJourFiltrees = computed(() => {
+  const triees = [...jourModal.etapes].sort((a, b) => a.position_order - b.position_order)
+  if (jourModal.filtre === 'faits') return triees.filter(e => e.status === 'completed')
+  if (jourModal.filtre === 'afaire') return triees.filter(e => e.status === 'pending' || e.status === 'in_progress')
+  return triees
+})
+const nbFaitsJour = computed(() => jourModal.etapes.filter(e => e.status === 'completed').length)
+
+async function chargerEtapesJour() {
+  if (!jourModal.routing) { jourModal.etapes = []; return }
+  jourModal.chargement = true
+  try {
+    jourModal.etapes = await routingStore.toutesEtapesRouting(jourModal.routing.id)
+  }
+  catch (err: any) {
+    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+  }
+  finally {
+    jourModal.chargement = false
+  }
+}
+
+function ouvrirJour(userId: string, user: Profile | null, date: string, regle: RoutingTemplate | null = null) {
+  Object.assign(jourModal, {
+    ouvert: true, date, userId, user, regle, filtre: 'tous', etapes: [],
+    routing: tourneesParJour.value.get(userId)?.get(date) || null,
+  })
+  void chargerEtapesJour()
+}
+
+function ouvrirTournee(routing: Routing, user: Profile | null) {
+  Object.assign(jourModal, {
+    ouvert: true, date: routing.date_routing, userId: routing.user_id, user: user || routing.user || null,
+    regle: null, filtre: 'tous', etapes: [], routing,
+  })
+  void chargerEtapesJour()
+}
+
+async function genererJour() {
+  jourModal.generation = true
+  try {
+    await routingStore.materialiserPeriode(jourModal.userId, jourModal.date, jourModal.date)
+    tourneesParJour.value.delete(jourModal.userId)
+    await chargerJoursPersonne(jourModal.userId)
+    jourModal.routing = tourneesParJour.value.get(jourModal.userId)?.get(jourModal.date) || null
+    if (jourModal.routing) await chargerEtapesJour()
+    else toast.add({ title: 'Aucune tournée générée', description: 'Aucun PDV à visiter ce jour : quotas déjà couverts dans le mois, ou exceptions.', color: 'amber' })
+    loadRoutings()
+  }
+  catch (err: any) {
+    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+  }
+  finally {
+    jourModal.generation = false
+  }
+}
+
+function modifierTourneeDuJour() {
+  if (!jourModal.routing) return
+  const r = jourModal.routing
+  jourModal.ouvert = false
+  void openEditRouting(r)
+}
+
+// ---- Popups d'affectation des PDV d'une règle ----
+// Par identifiant : loadTemplates remplace les objets règle après chaque ajout.
+const regleAjoutId = ref<string | null>(null)
+const regleGestionId = ref<string | null>(null)
+const rechercheGestion = ref('')
+const regleAjout = computed(() => groupedTemplates.value.find(t => t.id === regleAjoutId.value) || null)
+const regleGestion = computed(() => groupedTemplates.value.find(t => t.id === regleGestionId.value) || null)
+
+function ouvrirGestionPdv(tpl: RoutingTemplate) {
+  rechercheGestion.value = ''
+  regleGestionId.value = tpl.id
+}
+
+// Index d'origine conservé : les flèches d'ordre travaillent sur la liste complète.
+const pdvGestionFiltres = computed(() => {
+  const tpl = regleGestion.value
+  if (!tpl) return []
+  const q = rechercheGestion.value.trim().toLowerCase()
+  return sortedTemplatePDVs(tpl)
+    .map((tp, idx) => ({ tp, idx }))
+    .filter(({ tp }) => !q || [tp.pdv?.nom_pdv, tp.pdv_id, tp.pdv?.zone, tp.pdv?.quartier]
+      .some(v => String(v || '').toLowerCase().includes(q)))
+})
 
 function getPDVName(pdvId: string) {
   return pdvList.value.find(p => p.pdv_id === pdvId)?.nom_pdv || pdvId
@@ -1673,6 +2195,8 @@ async function moveTemplatePDV(tpl: RoutingTemplate, idx: number, dir: number) {
 // ---- Load functions ----
 async function loadRoutings() {
   loading.value = true
+  // Les compteurs par jour des cartes Règles se rechargent avec les tournées.
+  tourneesParJour.value = new Map()
   routings.value = await routingStore.fetchRoutings({
     dateFrom: filters.dateFrom || undefined,
     dateTo: filters.dateTo || undefined,
