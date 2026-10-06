@@ -74,29 +74,29 @@ const liste = (xs, max = 8) => (xs.length > max ? `${xs.slice(0, max).join(', ')
 // ---------------------------------------------------------------------------
 // Chargement
 // ---------------------------------------------------------------------------
-export async function chargerDonneesSsf(sb, { onEtape } = {}) {
+export async function chargerDonneesSsf(sb, { onEtape, toutes = toutesLesLignes } = {}) {
   const etape = (m) => onEtape?.(m)
   etape('Visites avec SSF')
-  const visites = await toutesLesLignes(() => sb.from('visites')
+  const visites = await toutes(() => sb.from('visites')
     .select('user_id,pdv_id,ssf_id,date_visite').not('ssf_id', 'is', null).order('id'))
   etape('PDV')
-  const pdvs = await toutesLesLignes(() => sb.from('pdv')
+  const pdvs = await toutes(() => sb.from('pdv')
     .select('pdv_id,nom_pdv,zone,quartier,sous_categorie_pdv,geolocation_lat,geolocation_lng,is_active').order('pdv_id'))
   etape('Référentiels')
   const [profils, ssfs, distributeurs, quotas] = await Promise.all([
-    toutesLesLignes(() => sb.from('profiles')
+    toutes(() => sb.from('profiles')
       .select('id,email,nom,role,employeur,is_active,zone_assignee,territoires_assignes,quartiers_assignes')
       .eq('employeur', 'atom').order('id')),
-    toutesLesLignes(() => sb.from('ssf').select('id,nom,nom_brut,telephone,distributeur_id,actif,a_confirmer').order('id')),
-    toutesLesLignes(() => sb.from('distributeur').select('id,nom').order('id')),
-    toutesLesLignes(() => sb.from('routing_quota_canal').select('canal,jour_semaine,quota').order('canal')),
+    toutes(() => sb.from('ssf').select('id,nom,nom_brut,telephone,distributeur_id,actif,a_confirmer').order('id')),
+    toutes(() => sb.from('distributeur').select('id,nom').order('id')),
+    toutes(() => sb.from('routing_quota_canal').select('canal,jour_semaine,quota').order('canal')),
   ])
   // Avant la migration 20261007100000 (simulation seulement) : pas de table
   // ssf_quartier ni de colonne routing_templates.ssf_id.
   let migrationAppliquee = true
   let ssfQuartiers = []
   try {
-    ssfQuartiers = await toutesLesLignes(() => sb.from('ssf_quartier').select('ssf_id,zone,quartier,source,a_confirmer').order('id'))
+    ssfQuartiers = await toutes(() => sb.from('ssf_quartier').select('ssf_id,zone,quartier,source,a_confirmer').order('id'))
   }
   catch { migrationAppliquee = false }
   etape('Règles de tournée')
@@ -104,14 +104,14 @@ export async function chargerDonneesSsf(sb, { onEtape } = {}) {
   const colonnes = 'id,user_id,label,mode,days_of_week,day_of_week,is_active,territoire,distributeur,date_debut,date_fin,notes,created_at'
   const regles = []
   for (let i = 0; i < ids.length; i += 100) {
-    regles.push(...await toutesLesLignes(() => sb.from('routing_templates')
+    regles.push(...await toutes(() => sb.from('routing_templates')
       .select(migrationAppliquee ? `${colonnes},ssf_id` : colonnes)
       .in('user_id', ids.slice(i, i + 100)).order('id')))
   }
   const reglesPdv = []
   const idsRegles = regles.map(r => r.id)
   for (let i = 0; i < idsRegles.length; i += 50) {
-    reglesPdv.push(...await toutesLesLignes(() => sb.from('routing_template_pdv')
+    reglesPdv.push(...await toutes(() => sb.from('routing_template_pdv')
       .select('template_id,pdv_id,position_order').in('template_id', idsRegles.slice(i, i + 50)).order('id')))
   }
   return { visites, pdvs, profils, ssfs, distributeurs, ssfQuartiers, quotas, regles, reglesPdv, migrationAppliquee }
