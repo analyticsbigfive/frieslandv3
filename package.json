@@ -39,6 +39,7 @@
     "chart.js": "^4.4.7",
     "exceljs": "^4.4.0",
     "idb-keyval": "^6.2.2",
+    "jszip": "^3.10.1",
     "leaflet": "^1.9.4",
     "lucide-vue-next": "^0.469.0",
     "nuxt": "^3.15.0",

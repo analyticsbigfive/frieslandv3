@@ -1,4 +1,17 @@
 <template>
+  <!-- Nouvelle version publiée, pas encore obligatoire : bandeau discret. -->
+  <div
+    v-if="!etat.requise && etat.disponible && etat.url && !masque"
+    class="fixed inset-x-3 bottom-24 z-[60] flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-lg dark:border-emerald-800 dark:bg-emerald-950/80"
+    role="status"
+  >
+    <UIcon name="i-heroicons-arrow-down-tray" class="h-6 w-6 shrink-0 text-emerald-600" />
+    <p class="flex-1 text-sm text-emerald-900 dark:text-emerald-100">
+      Nouvelle version {{ etat.versionDispo || '' }} disponible.
+    </p>
+    <UButton size="xs" color="emerald" @click="telecharger">Installer</UButton>
+    <UButton size="xs" color="gray" variant="ghost" icon="i-heroicons-x-mark" aria-label="Plus tard" @click="masque = true" />
+  </div>
   <div
     v-if="etat.requise"
     class="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-white px-6 text-center dark:bg-gray-900"
@@ -40,6 +53,9 @@ import type { EtatMiseAJour } from '~/plugins/version-app.client'
 const etat = useState<EtatMiseAJour>('mise-a-jour-app', () => ({
   requise: false, url: null, message: null, versionMin: null, versionInstallee: null,
 }))
+
+// « Plus tard » : masqué jusqu'au prochain lancement de l'app.
+const masque = useState('mise-a-jour-disponible-masquee', () => false)
 
 // _system : ouvre le navigateur du téléphone, qui propose l'installation de l'APK.
 function telecharger() {

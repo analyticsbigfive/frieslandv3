@@ -9,9 +9,15 @@ import { App } from '@capacitor/app'
 // Au passage, la version ouverte est déclarée dans version_installee : l'admin
 // voit qui a mis à jour avant de relever la version minimale.
 //
+// Version publiée plus récente mais pas encore obligatoire (version_code_dispo,
+// renseignée par Référentiels › Publier une version) : bandeau discret
+// « nouvelle version disponible » (components/MiseAJourObligatoire.vue).
+//
 // Hors ligne ou table absente : on ne bloque jamais.
 export interface EtatMiseAJour {
   requise: boolean
+  disponible?: boolean
+  versionDispo?: string | null
   url: string | null
   message: string | null
   versionMin: string | null
@@ -37,13 +43,22 @@ export default defineNuxtPlugin(() => {
     try {
       const { code, nom } = await infoApp()
       if (!Number.isFinite(code)) return
-      const { data, error } = await (supabase.from('version_app') as any)
-        .select('version_code_min, version_nom_min, url_telechargement, message')
+      const colonnes = 'version_code_min, version_nom_min, url_telechargement, message'
+      let { data, error } = await (supabase.from('version_app') as any)
+        .select(`${colonnes}, version_code_dispo, version_nom_dispo`)
         .eq('plateforme', plateforme)
         .maybeSingle()
+      if (error) {
+        // Base sans la version disponible (migration 20261007120000 non appliquée).
+        ({ data, error } = await (supabase.from('version_app') as any)
+          .select(colonnes).eq('plateforme', plateforme).maybeSingle())
+      }
       if (error || !data) return
+      const requise = code < data.version_code_min
       etat.value = {
-        requise: code < data.version_code_min,
+        requise,
+        disponible: !requise && Number.isFinite(data.version_code_dispo) && code < data.version_code_dispo,
+        versionDispo: data.version_nom_dispo || null,
         url: data.url_telechargement,
         message: data.message,
         versionMin: data.version_nom_min,

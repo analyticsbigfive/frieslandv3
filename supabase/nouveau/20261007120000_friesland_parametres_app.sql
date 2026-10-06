@@ -17,6 +17,7 @@
 --
 -- Idempotent. Ne change rien pour l'app 1.0.10 (elle ne lit pas la table) sauf
 -- geolocaliser_pdv, qui lit sa précision ici (même valeur : 30 m).
+-- Ajoute aussi à version_app la dernière version publiée (version_code_dispo).
 -- ============================================================================
 begin;
 
@@ -245,5 +246,16 @@ create view public.v_programme_atom with (security_invoker = true) as
 select * from public.programme_atom(current_date);
 
 grant select on public.v_programme_atom to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Version de l'app : dernière version publiée (Référentiels › Publier une
+-- version). L'app 1.0.11+ propose la mise à jour sans bloquer tant que la
+-- version minimale (version_code_min) n'est pas relevée.
+-- ---------------------------------------------------------------------------
+alter table public.version_app add column if not exists version_code_dispo integer;
+alter table public.version_app add column if not exists version_nom_dispo text;
+
+comment on column public.version_app.version_code_dispo is
+  'versionCode de la dernière version publiée (APK direct). Au-dessus de la version installée, l''app propose la mise à jour sans bloquer.';
 
 commit;
