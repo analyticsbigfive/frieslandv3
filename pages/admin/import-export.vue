@@ -8,7 +8,7 @@
       <!-- Import CSV -->
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 space-y-4">
         <h2 class="font-bold text-lg text-gray-900 dark:text-gray-100">Importer des données</h2>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Importez vos données depuis un fichier CSV compatible Google Sheets</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Points de vente depuis un fichier CSV (format de l’export PDV). Les exports DMS et Atom passent par « Imports terrain » ci-dessous.</p>
 
         <div class="space-y-3">
           <div>
@@ -17,8 +17,6 @@
               v-model="importType"
               :options="[
                 { label: 'Points de vente (PDV)', value: 'pdv' },
-                { label: 'Visites', value: 'visites' },
-                { label: 'Zones & Secteurs', value: 'zones' },
               ]"
               option-attribute="label"
               value-attribute="value"
@@ -30,7 +28,7 @@
             <input
               ref="fileInput"
               type="file"
-              accept=".csv,.xlsx"
+              accept=".csv"
               class="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-fc-blue-50 file:text-fc-blue hover:file:bg-fc-blue-100"
               @change="handleFileSelect"
             />
@@ -96,15 +94,22 @@
         </div>
       </div>
     </div>
+
+    <!-- Imports DMS, Atom et SSF : écritures par la route serveur, réservées à l'admin. -->
+    <AdminImportsTerrain v-if="authStore.isAdmin" />
+    <p v-else class="text-sm text-gray-500 dark:text-gray-400">Les imports terrain (DMS, Atom, sous-zones SSF) sont réservés aux administrateurs.</p>
   </div>
 </template>
 
 <script setup lang="ts">
+import { fetchAllRows } from '~/utils/fetchAll'
+
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const supabase = useSupabaseClient()
 const { exportVisitesToExcel, exportPDVToExcel, parseCsv } = useCsvExport()
 const pdvStore = usePDVStore()
+const authStore = useAuthStore()
 const toast = useToast()
 
 const importType = ref('pdv')
@@ -136,7 +141,7 @@ async function handleImport() {
       importResult.value = { success: true, message: `${result} PDV importés avec succès` }
     }
     else {
-      importResult.value = { success: false, message: `Import ${importType.value} non encore implémenté` }
+      importResult.value = { success: false, message: 'Type d’import inconnu' }
     }
   }
   catch (err: any) {
@@ -152,14 +157,16 @@ async function handleExport(type: string) {
 
   try {
     if (type === 'visites') {
-      const { data } = await supabase
-        .from('visites')
+      // Paginé : sans range(), PostgREST s'arrête à 1 000 visites, sans erreur.
+      const data = await fetchAllRows<any>((from, to) => (supabase.from('visites') as any)
         .select('*')
         .gte('date_visite', exportFrom.value + 'T00:00:00')
         .lte('date_visite', exportTo.value + 'T23:59:59')
         .order('date_visite', { ascending: false })
+        .order('id')
+        .range(from, to))
 
-      await exportVisitesToExcel(data || [])
+      await exportVisitesToExcel(data)
       toast.add({ title: 'Export terminé', color: 'green' })
     }
     else if (type === 'pdv') {

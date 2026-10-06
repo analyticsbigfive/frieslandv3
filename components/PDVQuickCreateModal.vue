@@ -167,7 +167,7 @@ const authStore = useAuthStore()
 const pdvStore = usePDVStore()
 const user = useSupabaseUser()
 const toast = useToast()
-const config = useRuntimeConfig()
+const { parametres } = useParametresApp()
 const { isOnline, addToQueue } = useOfflineSync()
 const { currentPosition, requestPosition } = useUserGeolocation()
 
@@ -363,7 +363,7 @@ function buildPayload() {
     distributor_name: form.distributor_name || null,
     geolocation_lat: form.geolocation_lat,
     geolocation_lng: form.geolocation_lng,
-    rayon_geofence: Number(config.public.geofenceRadius) || 200,
+    rayon_geofence: parametres.value.geofence_rayon_m,
     adressage: form.adressage.trim() || null,
     image_url: null,
     date_creation: new Date().toISOString().slice(0, 10),

@@ -21,7 +21,9 @@
       <li>Les utilisateurs ne peuvent modifier ni leurs territoires, ni leurs quartiers, ni leur commercial, ni leur e-mail : tout passe par l’admin.</li>
     </ul>
   </div>
-  <p>La visibilité des sections par rôle se règle dans <span class="ui">Paramètres</span> → <span class="ui">Permissions</span> (chapitre 11).</p>
+  <h3>Friesland ou Atom</h3>
+  <p>Chaque compte terrain porte un <strong>employeur</strong> (fiche utilisateur). Les merchandiseurs <strong>Friesland</strong> suivent des tournées par périmètre. Les merchandiseurs <strong>Atom</strong> suivent des tournées <strong>par quotas</strong>, avec un <strong>SSF</strong> (vendeur du distributeur) chaque jour, dans la sous-zone de ce SSF : voir le chapitre « Merchandisers Atom ».</p>
+  <p>La visibilité des sections par rôle se règle dans <span class="ui">Paramètres</span> → <span class="ui">Permissions</span> (chapitre « Équipes et permissions »).</p>
 </section>
 
 <section class="chapitre">
@@ -36,7 +38,7 @@
   <table>
     <thead><tr><th>Groupe</th><th>Entrées</th></tr></thead>
     <tbody>
-      <tr><td>Principal</td><td><span class="ui">Perfect Store</span>, <span class="ui">Activité</span>, <span class="ui">Routing &amp; Planning</span>, <span class="ui">Carte</span>, <span class="ui">Suivi commerciaux</span></td></tr>
+      <tr><td>Principal</td><td><span class="ui">Perfect Store</span>, <span class="ui">Activité</span>, <span class="ui">Routing &amp; Planning</span>, <span class="ui">Programme Atom</span>, <span class="ui">Carte</span>, <span class="ui">Suivi commerciaux</span></td></tr>
       <tr><td>PDV</td><td><span class="ui">Points de vente</span></td></tr>
       <tr><td>Visites</td><td><span class="ui">Visites</span>, <span class="ui">Field coaching</span></td></tr>
       <tr><td>Analyses</td><td><span class="ui">Visibilité extérieure</span>, <span class="ui">Concurrence</span>, <span class="ui">Produits</span></td></tr>
@@ -82,7 +84,7 @@
       <tr><td>BASIC</td><td>≥ 60 %</td><td>100 %</td><td>100 %</td></tr>
     </tbody>
   </table>
-  <p>Ces seuils se modifient dans <span class="ui">Standards Perfect Store</span> → <span class="ui">Niveaux</span> (chapitre 12).</p>
+  <p>Ces seuils se modifient dans <span class="ui">Standards Perfect Store</span> → <span class="ui">Niveaux</span> (chapitre « Standards, produits et référentiels »).</p>
 </section>
 
 <section class="chapitre">
@@ -111,9 +113,55 @@
     <li><span class="ui">Créer le routing</span>. Le menu d’une tournée permet de la <span class="ui">Modifier</span>, la <span class="ui">Dupliquer</span> (autre date / autre utilisateur) ou la <span class="ui">Supprimer</span>.</li>
   </ol>
   <h3>Règles récurrentes</h3>
-  <p><span class="ui">Nouvelle règle</span> : merchandiseur, jours de la semaine, territoire, distributeur, période de validité (sans fin possible) et liste ordonnée de PDV. Les tournées sont générées automatiquement ; <span class="ui">Pré-générer 7 jours</span> et <span class="ui">Générer sur une période</span> les créent à l’avance. <span class="ui">Décocher une semaine</span> enregistre une exception (congé, PDV fermé) avec un motif.</p>
+  <p><span class="ui">Nouvelle règle</span> : merchandiseur, jours de la semaine, territoire, distributeur, période de validité (sans fin possible), <strong>mode</strong> et liste ordonnée de PDV. Les tournées sont générées automatiquement chaque nuit ; <span class="ui">Pré-générer 7 jours</span> et <span class="ui">Générer sur une période</span> les créent à l’avance. <span class="ui">Décocher une semaine</span> enregistre une exception (congé, PDV fermé) avec un motif.</p>
+  <ul>
+    <li><strong>Mode périmètre</strong> (Friesland) : la tournée reprend tous les PDV de la règle.</li>
+    <li><strong>Mode quota</strong> (Atom) : la tournée prend chaque jour un nombre de PDV par canal (grille <span class="ui">Quotas Atom</span>), chaque PDV une fois par mois.</li>
+  </ul>
+  <p>Le menu d’une règle propose <span class="ui">Modifier</span> : libellé, jours, dates, mode, SSF, territoire et distributeur se changent sans recréer la règle. Les tournées déjà générées ne changent pas : relancez <span class="ui">Recalculer les tournées à venir</span> (chapitre « L’application mobile depuis l’admin »).</p>
   <h3>Import CSV de tournées</h3>
   <p>Une ligne = un PDV. Colonnes : <code>email, date, pdv_id, ordre, releve_stock, encaissement, photos, merchandising, prospection, notes, statut</code>. Une tournée existante (même utilisateur, même date) est mise à jour : <span class="ui">Fusionner</span> conserve les PDV absents du fichier, <span class="ui">Remplacer</span> aligne exactement la tournée sur le fichier. Téléchargez le modèle avec <span class="ui">Modèle CSV</span>.</p>
+</section>
+
+<section class="chapitre">
+  <h2>Merchandisers Atom : quotas, SSF et sous-zones</h2>
+  <p>Les merchandiseurs Atom visitent chaque PDV de leur portefeuille <strong>une fois par mois</strong>. Chaque jour, un <strong>SSF</strong> (vendeur du distributeur) les accompagne ; ils restent alors dans sa <strong>sous-zone</strong>, c’est-à-dire ses quartiers. Tout se règle dans l’admin :</p>
+  <table>
+    <thead><tr><th>Je veux…</th><th>Où</th></tr></thead>
+    <tbody>
+      <tr><td>Créer ou corriger un SSF (nom, téléphone, distributeur)</td><td><span class="ui">Référentiels</span> → <span class="ui">Distribution</span> → <span class="ui">SSF (vendeurs)</span></td></tr>
+      <tr><td>Définir les quartiers d’un SSF (sa sous-zone)</td><td><span class="ui">Référentiels</span> → <span class="ui">Distribution</span> → <span class="ui">SSF ↔ Quartiers</span></td></tr>
+      <tr><td>Dire quel jour un merchandiseur travaille avec quel SSF</td><td><span class="ui">Routing &amp; Planning</span> → <span class="ui">Règles récurrentes</span> : une règle par SSF, avec ses jours</td></tr>
+      <tr><td>Changer le nombre de PDV par canal et par jour</td><td><span class="ui">Référentiels</span> → <span class="ui">Application mobile</span> → <span class="ui">Quotas Atom</span></td></tr>
+      <tr><td>Rattacher une sous-catégorie de PDV à un canal</td><td><span class="ui">Référentiels</span> → <span class="ui">Application mobile</span> → <span class="ui">Canal Atom</span></td></tr>
+      <tr><td>Suivre la couverture du mois</td><td><span class="ui">Programme Atom</span> (barre latérale)</td></tr>
+      <tr><td>Charger le fichier « SSF ↔ zones » du client</td><td><span class="ui">Import / Export</span> → <span class="ui">Imports terrain</span> → <span class="ui">Sous-zones SSF et planning Atom</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Le planning d’un merchandiseur</h3>
+  <ol class="etapes">
+    <li><span class="ui">Nouvelle règle</span> (ou <span class="ui">Modifier</span>) : choisissez le merchandiseur, puis le <span class="ui">SSF (avec qui)</span>. Le libellé, le territoire, le distributeur et le mode quota se remplissent.</li>
+    <li>Cochez les <strong>jours</strong> où il travaille avec ce SSF. Un jour ne doit appartenir qu’à un seul SSF.</li>
+    <li>Les PDV proposés sont ceux de la sous-zone ; un PDV hors des quartiers du SSF est refusé.</li>
+    <li>La règle affiche le badge <span class="ui">SSF · nom</span>. La règle « Portefeuille DMS » du merchandiseur couvre les jours restants.</li>
+  </ol>
+  <p>Chaque jour, la tournée prend d’abord les PDV de la règle, puis ceux de la sous-zone, selon la grille et sans repasser par un PDV déjà visité dans le mois. Un PDV créé sur le terrain dans la sous-zone devient éligible sans autre action.</p>
+
+  <h3>La grille des quotas et l’objectif du mois</h3>
+  <p><span class="ui">Quotas Atom</span> présente la grille <strong>5 canaux × 6 jours</strong> (lancement : 20 PDV du lundi au jeudi, 15 le vendredi, 10 le samedi). Après un changement, <span class="ui">Appliquer aux tournées à venir</span> recalcule les tournées non commencées. L’<strong>objectif mensuel</strong> de chaque merchandiseur en découle : la grille, additionnée sur ses jours de tournée du mois (420 sur quatre semaines pleines, 465 en octobre 2026).</p>
+  <p><span class="ui">Programme Atom</span> affiche, par merchandiseur et pour le mois choisi : portefeuille, PDV éligibles, planifiés, visités, en Perfect Store, objectif et reste à visiter.</p>
+
+  <h3>Côté téléphone (application 1.0.12)</h3>
+  <ul>
+    <li><span class="ui">Plus</span> → <span class="ui">Ma semaine (SSF)</span> : SSF, téléphone et quartiers de chaque jour, consultables hors ligne.</li>
+    <li>Le formulaire de visite propose le <span class="ui">SSF (avec qui)</span> du jour ; le merchandiseur peut le changer ou saisir un autre nom. Un bandeau orange signale un PDV hors de la sous-zone, sans bloquer.</li>
+    <li>Le SSF de chaque visite s’affiche dans le détail de la visite (admin).</li>
+  </ul>
+  <div class="encadre encadre--attention">
+    <span class="encadre__titre">Les SSF « à confirmer »</span>
+    <p>Les SSF et sous-zones déduits des visites de septembre portent la mention <strong>à confirmer</strong>. Le fichier « SSF ↔ zones » du client les remplace : chargez-le dans <span class="ui">Imports terrain</span>, vérifiez la simulation, puis appliquez.</p>
+  </div>
 </section>
 
 <section class="chapitre">
@@ -122,7 +170,7 @@
   <h3>Liste et fiche</h3>
   <ul>
     <li>Recherche par nom, code ou adressage ; filtres <span class="ui">Territoire</span> (dont <span class="ui">— Sans territoire —</span>) et <span class="ui">Sous-région</span>.</li>
-    <li><span class="ui">Nouveau PDV</span> / <span class="ui">Modifier</span> : identité (nom, catégorie, <strong>sous-catégorie = type de PDV, qui pilote le scoring</strong>), zone commerciale (division, sous-région, territoire, code area, quartier, distributeur), objectif Perfect Store, adressage et coordonnées GPS.</li>
+    <li><span class="ui">Nouveau PDV</span> / <span class="ui">Modifier</span> : identité (nom, catégorie, <strong>sous-catégorie = type de PDV, qui pilote le scoring</strong>), zone commerciale (division, sous-région, territoire, code area, quartier, distributeur), <strong>code DMS</strong>, objectif Perfect Store, adressage, coordonnées GPS et <strong>rayon de geofence</strong> propre au PDV (vide = rayon des paramètres terrain).</li>
     <li><span class="ui">Export</span> produit un fichier Excel ; <span class="ui">Import CSV</span> met à jour ou crée les PDV par <code>PDV ID</code>.</li>
   </ul>
   <div class="encadre encadre--attention">
@@ -155,7 +203,7 @@
   <h3>Concurrence</h3>
   <p><span class="ui">Évolution</span> : concurrence détectée, concurrents en activité, <strong>concurrents signalés</strong> par les merchandiseurs (noms regroupés malgré les variantes d’écriture), présence par SKU concurrent. <span class="ui">Récapitulatif</span> et <span class="ui">Visibilité</span> : visibilité extérieure / intérieure par marque.</p>
   <h3>Produits</h3>
-  <p><span class="ui">Récapitulatif</span> par famille, <span class="ui">Inventaire SKU</span> (photographie des stocks à la dernière visite de chaque PDV : ruptures, stock bas, disponibilité), puis un onglet par catégorie (Disponibilités, Prix, Récapitulatif). Les onglets <span class="ui">Yaourt</span> et <span class="ui">Céréales</span> n’apparaissent que si ces catégories sont activées.</p>
+  <p><span class="ui">Récapitulatif</span> par famille, <span class="ui">Inventaire SKU</span> (photographie des stocks à la dernière visite de chaque PDV : ruptures, stock bas, disponibilité), puis un onglet par catégorie <strong>active</strong> du catalogue (Disponibilités, Prix, Récapitulatif). Les produits retirés du formulaire restent affichés, marqués « (retiré) », pour l’historique.</p>
 </section>
 
 <section class="chapitre">
@@ -229,7 +277,7 @@
 </section>
 
 <section class="chapitre">
-  <h2>Standards, seuils et référentiels</h2>
+  <h2>Standards, produits et référentiels</h2>
   <h3>Standards Perfect Store</h3>
   <table>
     <thead><tr><th>Onglet</th><th>Ce qu’on y règle</th></tr></thead>
@@ -245,30 +293,81 @@
     <span class="encadre__titre">Après toute modification</span>
     <p>Cliquez sur <span class="ui">Recalculer toutes les visites</span> (traitement par lots avec compteur). Sans recalcul, les scores affichés reflètent les anciens standards.</p>
   </div>
-  <h3>Seuils de stock</h3>
-  <p>Seuil « stock bas » par SKU, utilisé pour les pastilles de l’application mobile (hors score). Enregistrement immédiat.</p>
+  <h3>Produits du formulaire</h3>
+  <p><span class="ui">Paramètres</span> → <span class="ui">Produits du formulaire</span> : les produits relevés dans la visite, par catégorie. Pour chaque produit : <strong>libellé affiché</strong>, <strong>ordre</strong>, <strong>seuil « stock bas »</strong> (pastilles du téléphone, hors score) et <strong>présence dans le formulaire</strong>. Chaque changement est enregistré immédiatement ; les téléphones (1.0.12 et suivantes) le reçoivent à l’ouverture de l’application.</p>
+  <ul>
+    <li><strong>Ajouter un produit</strong> : saisissez son libellé et son seuil en bas de la catégorie. Sa clé est générée et <strong>figée</strong> : elle range les quantités dans les visites.</li>
+    <li><strong>Retirer un produit</strong> : décochez « Dans le formulaire ». Il n’est jamais supprimé : ses relevés passés restent dans les tableaux et l’export.</li>
+    <li>Un produit noté au Perfect Store ne peut pas être retiré tant que sa <span class="ui">Correspondance SKU</span> existe.</li>
+    <li>Un nouveau produit ne compte au Perfect Store qu’après une <span class="ui">Correspondance SKU</span> (Référentiels → Produits), suivie de <span class="ui">Recalculer</span>.</li>
+    <li>Une <strong>catégorie</strong> (EVAP, IMP…) s’ajoute, se renomme ou se retire dans <span class="ui">Référentiels</span> → <span class="ui">Catégories du relevé</span>, avec l’option <strong>facings en Modern Trade</strong>.</li>
+  </ul>
   <h3>Référentiels</h3>
   <table>
     <thead><tr><th>Rubrique</th><th>Référentiels</th></tr></thead>
     <tbody>
       <tr><td>Géographie</td><td>Régions, sous-régions, territoires, zones / areas, quartiers, <strong>alias de territoire</strong>.</td></tr>
-      <tr><td>Distribution</td><td>Distributeurs (option couverture nationale), liens distributeur ↔ territoires et ↔ areas.</td></tr>
-      <tr><td>Points de vente</td><td>Catégories, types, <strong>fréquence de visite</strong> (7 jours par défaut : au-delà, le PDV est « en retard »), <strong>fenêtre de suivi</strong>, segments.</td></tr>
-      <tr><td>Produits</td><td>Catégories, références, correspondance SKU, marques et <strong>SKU concurrents</strong>, <strong>catégories du relevé</strong> (désactiver une catégorie la retire du formulaire mobile).</td></tr>
+      <tr><td>Distribution</td><td>Distributeurs (option couverture nationale, <strong>renommage</strong> reporté sur les PDV et les règles), liens distributeur ↔ territoires et ↔ areas, <strong>SSF (vendeurs)</strong>, <strong>SSF ↔ Quartiers</strong>, <strong>alias d’import</strong> (noms des fichiers DMS et Atom → merchandiseur, distributeur ou SSF).</td></tr>
+      <tr><td>Points de vente</td><td>Catégories et types (avec leur <strong>libellé français</strong>), <strong>fréquence de visite</strong> (7 jours par défaut : au-delà, le PDV est « en retard »), <strong>fenêtre de suivi</strong>, segments.</td></tr>
+      <tr><td>Produits</td><td>Catégories, références, <strong>correspondance SKU</strong> (produit du formulaire ↔ référence Perfect Store), marques et <strong>SKU concurrents</strong>, <strong>catégories du relevé</strong>.</td></tr>
       <tr><td>Perfect Store</td><td>Niveaux, poids SKU, seuils de disponibilité GT et MT (facings), assortiment, éléments et standards de visibilité.</td></tr>
+      <tr><td>Application mobile</td><td><strong>Paramètres terrain</strong>, <strong>Quotas Atom</strong>, <strong>Canal Atom</strong>, types d’action commerciale, engins de vente, version minimale, versions installées, <strong>Publier une version</strong>, <strong>Maintenance</strong>.</td></tr>
     </tbody>
   </table>
+</section>
+
+<section class="chapitre">
+  <h2>L’application mobile depuis l’admin</h2>
+  <h3>Paramètres terrain</h3>
+  <p><span class="ui">Référentiels</span> → <span class="ui">Application mobile</span> → <span class="ui">Paramètres terrain</span>. Les téléphones (1.0.12 et suivantes) relisent ces valeurs à chaque ouverture, et les gardent hors ligne. Une valeur peut être commune ou propre aux merchandiseurs Friesland ou Atom.</p>
+  <table>
+    <thead><tr><th>Paramètre</th><th>Valeur de départ</th><th>Effet</th></tr></thead>
+    <tbody>
+      <tr><td>Rayon de geofence par défaut</td><td>300 m</td><td>Distance maximale pour démarrer et valider une visite (un PDV peut avoir son propre rayon).</td></tr>
+      <tr><td>Précision GPS exigée</td><td>10 m</td><td>Au-delà, la position est jugée trop imprécise ; la visite reste enregistrable mais « GPS non validé ».</td></tr>
+      <tr><td>Précision pour géolocaliser un PDV</td><td>30 m</td><td>Pour enregistrer depuis le terrain la position d’un PDV qui n’en a pas.</td></tr>
+      <tr><td>Précision des points de trajet</td><td>50 m</td><td>Les points de tournée moins précis sont ignorés.</td></tr>
+      <tr><td>Suivi de tournée</td><td>120 s, 15 m, envoi toutes les 300 s, 200 points</td><td>Finesse du trajet contre autonomie de la batterie ; appliqué au prochain démarrage de tournée.</td></tr>
+      <tr><td>Objectif de visites par jour</td><td>10 ; vide pour Atom</td><td>Affiché sur l’accueil. Vide : le nombre de PDV de la tournée du jour (Atom).</td></tr>
+    </tbody>
+  </table>
+  <p>Les valeurs hors des bornes affichées sont refusées.</p>
+
+  <h3>Publier une version</h3>
+  <ol class="etapes">
+    <li><span class="ui">Publier une version</span> → choisissez le fichier APK signé produit par l’équipe technique. L’écran lit sa version et refuse un fichier plus ancien que la version en service.</li>
+    <li>Laissez <span class="ui">Rendre cette version obligatoire</span> décoché : les téléphones proposent la mise à jour par un bandeau, sans bloquer.</li>
+    <li>Une fois la version <strong>en ligne sur le Play Store</strong>, publiez à nouveau en cochant <span class="ui">Rendre cette version obligatoire</span> : les anciennes versions sont alors bloquées sur l’écran de mise à jour.</li>
+  </ol>
+  <p><span class="ui">Versions installées</span> montre la version de chaque téléphone. La procédure complète (Play Store compris) est dans <code>docs/play-store/PUBLIER-MISE-A-JOUR.md</code>.</p>
+
+  <h3>Maintenance</h3>
+  <ul>
+    <li><span class="ui">Recalculer les tournées à venir</span> (Atom, Friesland ou tous) : refait les tournées futures qui n’ont pas commencé, après un changement de règle, de quotas ou de sous-zone. La tournée du jour n’est jamais modifiée.</li>
+    <li><span class="ui">Générer les tournées manquantes (7 jours)</span>.</li>
+    <li><span class="ui">Rafraîchir les statistiques maintenant</span> : les tableaux de bord sont à jour moins d’une minute plus tard.</li>
+    <li><span class="ui">Tâches planifiées</span> : état, dernier passage et horaire des tâches de nuit (génération des tournées, statistiques).</li>
+  </ul>
 </section>
 
 <section class="chapitre">
   <h2>Import / Export et guides de formation</h2>
   <h3>Import / Export</h3>
   <ul>
-    <li>Import : seul le type <span class="ui">Points de vente (PDV)</span> est opérationnel, en <strong>CSV</strong> (mêmes colonnes que l’import de la liste PDV).</li>
-    <li>Export : visites (Excel, sur une plage de dates), PDV (Excel).</li>
+    <li>Import des <span class="ui">Points de vente (PDV)</span> en <strong>CSV</strong> (mêmes colonnes que l’import de la liste PDV).</li>
+    <li>Export : visites (Excel, <strong>toutes</strong> les visites de la plage de dates, avec la quantité de chaque produit), PDV (Excel).</li>
   </ul>
+  <h3>Imports terrain (admin)</h3>
+  <p>Quatre traitements, sans passer par l’équipe technique : <span class="ui">Clients DMS → points de vente</span>, <span class="ui">Affectation des merchandisers (DMS)</span>, <span class="ui">Visites Atom (export Bonnet Rouge)</span>, <span class="ui">Sous-zones SSF et planning Atom</span>.</p>
+  <ol class="etapes">
+    <li>Choisissez le fichier Excel, puis <span class="ui">Simuler</span> : rien n’est écrit. Le résumé, le rapport et le fichier CSV des écarts s’affichent et se téléchargent.</li>
+    <li>Relisez le rapport (lignes écartées, noms inconnus). Un nom mal reconnu se corrige dans <span class="ui">Alias d’import</span>, puis on simule à nouveau.</li>
+    <li><span class="ui">Appliquer</span> écrit par lots, avec une barre de progression. Relancer le même fichier ne crée pas de doublons.</li>
+    <li>L’historique garde chaque lot. <span class="ui">Annuler le lot</span> défait ses écritures.</li>
+  </ol>
+  <p>Après un import important : <span class="ui">Maintenance</span> → <span class="ui">Rafraîchir les statistiques maintenant</span>, et pour les tournées <span class="ui">Recalculer les tournées à venir</span>.</p>
   <h3>Remettre les guides aux utilisateurs</h3>
-  <p>Trois guides génériques sont fournis : administrateur, commercial, merchandiseur. Un guide <strong>personnalisé</strong> par commercial et par merchandiseur (fiche de connexion avec nom, identifiant, territoires, équipe ou commercial responsable) se génère depuis un poste disposant du fichier <code>.env</code> du projet :</p>
+  <p>Quatre guides génériques sont fournis : administrateur, commercial, merchandiseur, <strong>merchandiseur Atom</strong>. Un guide <strong>personnalisé</strong> par commercial et par merchandiseur (fiche de connexion avec nom, identifiant, territoires, équipe ou commercial responsable ; pour un merchandiseur Atom, sa page <strong>« Ma semaine »</strong> avec ses SSF, leurs téléphones et leurs quartiers) se génère depuis un poste disposant du fichier <code>.env</code> du projet :</p>
   <p><code>node scripts/generer-guides-pdf.mjs --utilisateurs</code></p>
   <p>Les PDF sont créés dans <code>docs/guides/utilisateurs/</code> (non versionné). Par défaut, la ligne « Mot de passe provisoire » est laissée vide, à compléter à la main.</p>
   <p>Avec l’option <code>--avec-mots-de-passe</code>, le <strong>mot de passe par défaut</strong> des comptes initiaux est imprimé, uniquement pour les comptes qui ne l’ont pas encore remplacé. Il est <strong>présumé</strong> : un compte réinitialisé depuis l’admin a un autre mot de passe. Si la connexion échoue, réinitialisez le compte. Les comptes ayant déjà choisi leur mot de passe affichent « Personnel ».</p>
@@ -285,5 +384,25 @@
       <li><span class="ui">Réinitialiser le mot de passe</span> pour imposer un mot de passe personnel à la première connexion ; noter le mot de passe provisoire sur sa fiche.</li>
       <li>Remettre son guide personnalisé et vérifier sa première connexion (localisation et notifications autorisées).</li>
     </ol>
+  </div>
+</section>
+
+<section class="chapitre">
+  <h2>Ce qui reste du ressort de l’équipe technique</h2>
+  <p>Toutes les données de l’application se gèrent dans l’admin. Restent dans le code, parce qu’ils changent la structure de l’application et non ses données :</p>
+  <ul>
+    <li>la liste des <strong>rôles</strong> et des <strong>sections</strong> du menu (la matrice <span class="ui">Permissions</span>, elle, se règle dans l’admin) ;</li>
+    <li>les <strong>objectifs</strong> d’une étape de tournée (Stock, Encaissement, Photos, Merchandising, Prospection) ;</li>
+    <li>les <strong>questions du field coaching</strong> et les textes des <strong>notifications</strong> ;</li>
+    <li>les <strong>migrations</strong> de la base, appliquées dans l’éditeur SQL de Supabase, et la construction de l’application Android (APK et AAB pour le Play Store).</li>
+  </ul>
+  <div class="aide">
+    <h3>Dépannage rapide</h3>
+    <ul>
+      <li>Une tournée Atom sort de la sous-zone : vérifiez les quartiers du SSF (<span class="ui">SSF ↔ Quartiers</span>), le SSF de la règle, puis <span class="ui">Recalculer les tournées à venir</span>.</li>
+      <li>Un jour sans tournée : aucune règle ne couvre ce jour, ou la règle est suspendue.</li>
+      <li>Un produit absent du formulaire : il est retiré, ou sa catégorie l’est (<span class="ui">Produits du formulaire</span>, <span class="ui">Catégories du relevé</span>).</li>
+      <li>Les scores n’ont pas bougé après un changement de standard ou de correspondance : <span class="ui">Recalculer</span>.</li>
+    </ul>
   </div>
 </section>

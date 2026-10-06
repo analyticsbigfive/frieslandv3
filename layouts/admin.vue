@@ -184,6 +184,7 @@ const pageTitle = computed(() => {
   const titles: Record<string, string> = {
     '/admin': 'Dashboard',
     '/admin/routing': 'Routing & Planning',
+    '/admin/routing/programme-atom': 'Programme Atom',
     '/admin/visites': 'Visites',
     '/admin/pdv': 'Points de Vente',
     '/admin/users': 'Utilisateurs',
@@ -192,7 +193,7 @@ const pageTitle = computed(() => {
     '/admin/perfect-store': 'Perfect Store',
     '/admin/perfect-store/standards': 'Standards Perfect Store',
     '/admin/produits/inventaire': 'Inventaire SKU',
-    '/admin/produits/seuils': 'Seuils de stock',
+    '/admin/produits/seuils': 'Produits du formulaire',
     '/admin/produits': 'Produits',
     '/admin/import-export': 'Import / Export',
     '/admin/map': 'Carte',

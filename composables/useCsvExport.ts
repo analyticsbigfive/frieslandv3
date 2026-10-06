@@ -2,6 +2,7 @@
 import ExcelJS from 'exceljs'
 import type { Visite, PDV } from '~/types'
 import { parseCsvTexte } from '~/utils/routingImport'
+import { catalogueProduits, getSkus, skuQuantity } from '~/utils/products'
 
 export function useCsvExport() {
 
@@ -12,6 +13,33 @@ export function useCsvExport() {
     const wb = new ExcelJS.Workbook()
     const ws = wb.addWorksheet('Visites')
 
+    // Colonnes produits depuis le catalogue (Paramètres › Produits du
+    // formulaire), produits retirés compris pour l'historique : par catégorie,
+    // présence, statut et quantité de chaque SKU, prix respectés.
+    const categories = catalogueProduits()
+    const colonnesProduits: Partial<ExcelJS.Column>[] = categories.flatMap(cat => [
+      { header: `${cat.label} Présent?`, key: `${cat.key}__present`, width: 15 },
+      ...getSkus(cat.key, { inclureInactifs: true }).flatMap(sku => [
+        { header: `${cat.label} : ${sku.label}`, key: `${cat.key}__${sku.key}`, width: 25 },
+        { header: `${cat.label} : ${sku.label} (qté)`, key: `${cat.key}__${sku.key}__qte`, width: 14 },
+      ]),
+      { header: `${cat.label} : Prix respectés?`, key: `${cat.key}__prix`, width: 20 },
+    ])
+    function valeursProduits(d: any): Record<string, string | number> {
+      const ligne: Record<string, string | number> = {}
+      for (const cat of categories) {
+        const bloc = d?.produits?.[cat.key]
+        ligne[`${cat.key}__present`] = bloc?.present ? 'TRUE' : 'FALSE'
+        for (const sku of getSkus(cat.key, { inclureInactifs: true })) {
+          ligne[`${cat.key}__${sku.key}`] = bloc?.[sku.key] || ''
+          const q = skuQuantity(bloc, sku.key)
+          ligne[`${cat.key}__${sku.key}__qte`] = q ?? ''
+        }
+        ligne[`${cat.key}__prix`] = bloc?.prix_respectes ? 'TRUE' : 'FALSE'
+      }
+      return ligne
+    }
+
     // Headers matching original Google Sheets format
     ws.columns = [
       { header: 'Visite ID', key: 'visite_id', width: 15 },
@@ -19,21 +47,7 @@ export function useCsvExport() {
       { header: 'Date', key: 'date_visite', width: 20 },
       { header: 'Commercial', key: 'commercial', width: 25 },
       { header: 'Email', key: 'email', width: 30 },
-      { header: 'EVAP Présent?', key: 'evap_present', width: 15 },
-      { header: 'EVAP : BR Gold', key: 'evap_br_gold', width: 25 },
-      { header: 'EVAP : BR 160g', key: 'evap_br_160g', width: 25 },
-      { header: 'EVAP : BRB 160g', key: 'evap_brb_160g', width: 25 },
-      { header: 'EVAP : BR 400g', key: 'evap_br_400g', width: 25 },
-      { header: 'EVAP : BRB 400g', key: 'evap_brb_400g', width: 25 },
-      { header: 'EVAP : Pearl 400g', key: 'evap_pearl_400g', width: 25 },
-      { header: 'EVAP : Prix respectés?', key: 'evap_prix', width: 20 },
-      { header: 'IMP Présent?', key: 'imp_present', width: 15 },
-      { header: 'IMP : Prix respectés?', key: 'imp_prix', width: 20 },
-      { header: 'SCM Présent?', key: 'scm_present', width: 15 },
-      { header: 'SCM : Prix respectés?', key: 'scm_prix', width: 20 },
-      { header: 'UHT Présent?', key: 'uht_present', width: 15 },
-      { header: 'UHT prix respectés?', key: 'uht_prix', width: 20 },
-      { header: 'YAOURT Présent?', key: 'yaourt_present', width: 15 },
+      ...colonnesProduits,
       { header: 'Présence de concurrents', key: 'concurrence', width: 22 },
       { header: 'Présence de visibilité extérieure', key: 'visib_ext', width: 30 },
       { header: 'Présence de visibilité intérieure', key: 'visib_int', width: 30 },
@@ -61,21 +75,7 @@ export function useCsvExport() {
         date_visite: v.date_visite,
         commercial: v.commercial,
         email: v.email,
-        evap_present: d?.produits?.evap?.present ? 'TRUE' : 'FALSE',
-        evap_br_gold: d?.produits?.evap?.br_gold || '',
-        evap_br_160g: d?.produits?.evap?.br_160g || '',
-        evap_brb_160g: d?.produits?.evap?.brb_160g || '',
-        evap_br_400g: d?.produits?.evap?.br_400g || '',
-        evap_brb_400g: d?.produits?.evap?.brb_400g || '',
-        evap_pearl_400g: d?.produits?.evap?.pearl_400g || '',
-        evap_prix: d?.produits?.evap?.prix_respectes ? 'TRUE' : 'FALSE',
-        imp_present: d?.produits?.imp?.present ? 'TRUE' : 'FALSE',
-        imp_prix: d?.produits?.imp?.prix_respectes ? 'TRUE' : 'FALSE',
-        scm_present: d?.produits?.scm?.present ? 'TRUE' : 'FALSE',
-        scm_prix: d?.produits?.scm?.prix_respectes ? 'TRUE' : 'FALSE',
-        uht_present: d?.produits?.uht?.present ? 'TRUE' : 'FALSE',
-        uht_prix: d?.produits?.uht?.prix_respectes ? 'TRUE' : 'FALSE',
-        yaourt_present: d?.produits?.yaourt?.present ? 'TRUE' : 'FALSE',
+        ...valeursProduits(d),
         concurrence: d?.concurrence?.presence_concurrents ? 'TRUE' : 'FALSE',
         visib_ext: d?.visibilite?.exterieure?.presence_visibilite ? 'TRUE' : 'FALSE',
         visib_int: d?.visibilite?.interieure?.presence_visibilite ? 'TRUE' : 'FALSE',

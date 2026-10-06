@@ -85,7 +85,7 @@
   <h2>Mon routing du jour</h2>
   <p>L’onglet <span class="ui">Routing</span> affiche les PDV que votre superviseur a planifiés pour aujourd’hui, avec la progression <span class="ui">Progression X/Y</span>. Chaque PDV porte ses objectifs (<span class="ui">Stock</span>, <span class="ui">Encaissement</span>, <span class="ui">Photos</span>, <span class="ui">Merchandising</span>, <span class="ui">Prospection</span>).</p>
   <ol class="etapes">
-    <li>Arrivé au magasin, appuyez sur <span class="ui">Démarrer</span>. L’application vérifie que vous êtes <strong>à moins de 200 m</strong> du PDV ; sinon la fenêtre <span class="ui">Hors zone</span> indique la distance : rapprochez-vous.</li>
+    <li>Arrivé au magasin, appuyez sur <span class="ui">Démarrer</span>. L’application vérifie que vous êtes <strong>près du PDV</strong> (300 m aujourd’hui, distance réglée par l’administrateur) ; sinon la fenêtre <span class="ui">Hors zone</span> indique la distance : rapprochez-vous.</li>
     <li>Appuyez sur <span class="ui">Remplir la visite</span> : la saisie s’ouvre avec le PDV déjà choisi.</li>
     <li>Une fois la visite enregistrée, le PDV passe à <span class="ui">Fait</span>.</li>
   </ol>
@@ -215,8 +215,8 @@
 
   <h3>Le contrôle de proximité (GPS)</h3>
   <div class="encadre encadre--regle">
-    <span class="encadre__titre">Règle des 200 mètres</span>
-    <p>Une visite est <strong>« GPS validé »</strong> seulement si vous êtes à <strong>moins de 200 m</strong> du PDV, avec une position précise (10 m ou mieux). Au-delà, la fenêtre <span class="ui">Hors zone</span> vous l’indique : <span class="ui">Soumettre quand même</span> enregistre la visite mais en <strong>« GPS non validé »</strong>, ce que voit votre superviseur.</p>
+    <span class="encadre__titre">Règle de proximité</span>
+    <p>Une visite est <strong>« GPS validé »</strong> seulement si vous êtes <strong>près du PDV</strong> (300 m aujourd’hui, réglé par l’administrateur), avec une position précise (10 m ou mieux). Si la précision est insuffisante au moment d’enregistrer, la visite est enregistrée en « GPS non validé » et un message orange vous le signale. Au-delà, la fenêtre <span class="ui">Hors zone</span> vous l’indique : <span class="ui">Soumettre quand même</span> enregistre la visite mais en <strong>« GPS non validé »</strong>, ce que voit votre superviseur.</p>
   </div>
   <ul>
     <li><strong>Enregistrez la visite dans le magasin</strong>, pas après être reparti.</li>
@@ -238,7 +238,7 @@
     <span class="encadre__titre">Ne jamais se déconnecter avec des envois en attente</span>
     <p>La déconnexion <strong>efface</strong> tout ce qui n’est pas encore envoyé. Si l’application affiche « N visite(s) non synchronisée(s) seront perdues », répondez non, retrouvez du réseau et attendez que la pastille affiche <span class="ui">En ligne</span>.</p>
   </div>
-  <p>Si, après une visite lancée depuis le Routing sans réseau, un message <span class="ui">Erreur</span> apparaît : la visite est bien gardée sur le téléphone. Appuyez sur <span class="ui">Réessayer</span> une fois le réseau revenu, puis vérifiez que le PDV est passé à <span class="ui">Fait</span> dans le Routing.</p>
+  <p>Une visite lancée depuis le Routing sans réseau s’enregistre normalement : le PDV passe à <span class="ui">Fait</span> dès que le réseau revient. Il n’y a plus de message « Erreur » (application 1.0.11 et suivantes).</p>
 </section>
 
 <section class="chapitre">

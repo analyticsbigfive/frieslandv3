@@ -97,21 +97,15 @@
 </template>
 
 <script setup lang="ts">
+import { categoriesProduitsActives } from '~/utils/products'
+
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const dashboard = useDashboardDirection()
 
-// Catégories filtrées par le paramètre categorie_releve (lot 6).
-const ALL_PRODUCT_CATEGORIES = [
-  { key: 'evap', label: 'EVAP', color: '#3B82F6' },
-  { key: 'imp', label: 'IMP', color: '#10B981' },
-  { key: 'scm', label: 'SCM', color: '#F59E0B' },
-  { key: 'uht', label: 'UHT', color: '#8B5CF6' },
-  { key: 'yaourt', label: 'YAOURT', color: '#EC4899' },
-  { key: 'cereales', label: 'CÉRÉALES', color: '#06B6D4' },
-]
-const { filtrer: filtrerCategoriesReleve, charger: chargerCategoriesReleve } = useCategoriesReleve()
-const productCategories = computed(() => filtrerCategoriesReleve(ALL_PRODUCT_CATEGORIES, c => c.key))
+// Catégories actives du catalogue (Paramètres › Produits du formulaire).
+const { charger: chargerCatalogue } = useCatalogueReleve()
+const productCategories = computed(() => categoriesProduitsActives().map(c => ({ key: c.key, label: c.label, color: c.color })))
 
 function catPresent(key: string) {
   return dashboard.countWhere(v => v.data?.produits?.[key]?.present)
@@ -132,6 +126,6 @@ function prixNon(key: string) {
 }
 
 onMounted(() => {
-  Promise.all([dashboard.fetchVisites(), chargerCategoriesReleve()])
+  Promise.all([dashboard.fetchVisites(), chargerCatalogue()])
 })
 </script>

@@ -176,14 +176,14 @@
           <!-- Product indicators -->
           <div class="flex gap-1.5 mt-3">
             <span
-              v-for="cat in ['evap', 'imp', 'scm', 'uht']"
-              :key="cat"
+              v-for="cat in categoriesBadges"
+              :key="cat.key"
               class="text-[10px] px-2 py-0.5 rounded-full font-medium"
-              :class="visite.data?.produits?.[cat]?.present
+              :class="visite.data?.produits?.[cat.key]?.present
                 ? 'bg-emerald-50 text-emerald-700'
                 : 'bg-gray-100 text-gray-400'"
             >
-              {{ cat.toUpperCase() }}
+              {{ cat.label.toUpperCase() }}
             </span>
           </div>
         </button>
@@ -217,6 +217,7 @@
 </template>
 
 <script setup lang="ts">
+import { categoriesProduitsActives } from '~/utils/products'
 import type { Visite } from '~/types'
 
 definePageMeta({
@@ -241,24 +242,29 @@ const showTourneeDetails = ref(false)
 const isOfflineData = ref(false)
 
 // Pull-to-refresh state
+// Pastilles des catégories actives du catalogue (Produits du formulaire).
+const categoriesBadges = computed(() => categoriesProduitsActives())
+
 const pullDistance = ref(0)
 const pulling = ref(false)
 const startY = ref(0)
 
-// Objectif du jour : pour un agent Atom (tournée par quotas), le nombre de PDV
-// de sa tournée du jour (20 en semaine), chargée par TourneeCard ; sinon 10.
-// Pas pour Friesland : en mode périmètre la tournée contient tout le
-// portefeuille (des centaines de PDV), objectif irréaliste.
+// Objectif du jour (Paramètres terrain, 10 par défaut). Vide (Atom par
+// défaut) : le nombre de PDV de la tournée du jour d'un agent Atom (20 en
+// semaine), chargée par TourneeCard, sinon 10. Jamais la tournée d'un agent
+// Friesland : en mode périmètre elle contient tout le portefeuille (des
+// centaines de PDV), objectif irréaliste.
+const { parametres } = useParametresApp()
 const routingStore = useRoutingStore()
-const dailyTarget = computed(() =>
-  authStore.profile?.employeur === 'atom' && routingStore.totalCount ? routingStore.totalCount : 10)
+const dailyTarget = computed(() => parametres.value.objectif_visites_jour
+  ?? (authStore.profile?.employeur === 'atom' && routingStore.totalCount ? routingStore.totalCount : 10))
 
 const todayCount = computed(() => {
   const today = new Date().toISOString().slice(0, 10)
   return visites.value.filter(v => v.date_visite?.startsWith(today)).length
 })
 
-const progressPercent = computed(() => (todayCount.value / dailyTarget.value) * 100)
+const progressPercent = computed(() => (todayCount.value / Math.max(dailyTarget.value, 1)) * 100)
 
 const activeFilterCount = computed(() => Number(Boolean(dateFilter.value)))
 

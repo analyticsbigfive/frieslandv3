@@ -4,9 +4,11 @@ import type { GeoPositionLike } from '~/composables/useGeoProvider'
 import { haversine } from '~/utils/trajets'
 
 export function useGeofencing() {
-  const config = useRuntimeConfig()
-  const maxRadius = config.public.geofenceRadius as number || 200 // TODO confirmer client (valeur réunion : 200 m)
-  const minAccuracy = config.public.gpsMinAccuracy as number || 10
+  // Paramètres terrain (admin) : lus à chaque appel, une modification
+  // s'applique sans relancer l'app.
+  const { parametres } = useParametresApp()
+  const rayonDefaut = () => parametres.value.geofence_rayon_m
+  const precisionMin = () => parametres.value.gps_precision_min_m
 
   const geo = useGeoProvider()
 
@@ -49,12 +51,15 @@ export function useGeofencing() {
       const userLng = position.coords.longitude
       const accuracy = position.coords.accuracy
 
-      if (minAccuracy > 0 && accuracy > minAccuracy) {
-        throw new Error(`Précision GPS insuffisante (${Math.round(accuracy)} m). Attendez une meilleure précision.`)
+      if (precisionMin() > 0 && accuracy > precisionMin()) {
+        const e: any = new Error(`Précision GPS insuffisante (${Math.round(accuracy)} m, ${precisionMin()} m demandés). Sortez à découvert ou attendez quelques secondes, puis réessayez.`)
+        e.precisionInsuffisante = true
+        e.precision = Math.round(accuracy)
+        throw e
       }
 
       const distance = haversineDistance(userLat, userLng, pdvLat, pdvLng)
-      const effectiveRadius = radius || maxRadius
+      const effectiveRadius = radius || rayonDefaut()
 
       const result: GeofenceResult = {
         isWithinRange: distance <= effectiveRadius,
@@ -68,6 +73,12 @@ export function useGeofencing() {
       return result
     }
     catch (err: any) {
+      // Précision insuffisante : message gardé tel quel (l'agent voit la
+      // précision obtenue au lieu d'un « Erreur de géolocalisation » muet).
+      if (err?.precisionInsuffisante) {
+        error.value = err.message
+        throw err
+      }
       let message = 'Erreur de géolocalisation'
       if (err.code === 1) message = 'Accès à la géolocalisation refusé. Veuillez activer le GPS.'
       else if (err.code === 2) message = 'Position indisponible. Vérifiez votre GPS.'
@@ -102,7 +113,7 @@ export function useGeofencing() {
         )
 
         const result: GeofenceResult = {
-          isWithinRange: distance <= maxRadius,
+          isWithinRange: distance <= rayonDefaut(),
           distance: Math.round(distance),
           accuracy: Math.round(position.coords.accuracy),
           userPosition: { lat: position.coords.latitude, lng: position.coords.longitude },
@@ -146,7 +157,7 @@ export function useGeofencing() {
   async function grabPosition() {
     try {
       const position = await getCurrentPosition()
-      if (minAccuracy > 0 && position.coords.accuracy > minAccuracy) {
+      if (precisionMin() > 0 && position.coords.accuracy > precisionMin()) {
         error.value = `Précision GPS insuffisante (${Math.round(position.coords.accuracy)} m).`
       }
       return {
@@ -168,7 +179,7 @@ export function useGeofencing() {
     isChecking,
     lastResult,
     error,
-    maxRadius,
+    get maxRadius() { return rayonDefaut() },
     validateGeofence,
     startWatching,
     stopWatching,

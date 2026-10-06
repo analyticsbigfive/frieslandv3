@@ -2,6 +2,8 @@
 // Types TypeScript - Friesland Bonnet Rouge
 // ============================================================
 
+import { catalogueProduits, getSkus } from '../utils/products'
+
 // ---- Enums & Constantes ----
 export type UserRole = 'admin' | 'superviseur' | 'merchandiser' | 'commercial'
 export type Employeur = 'friesland' | 'atom'
@@ -139,6 +141,8 @@ export interface Routing {
   id: string
   user_id: string
   date_routing: string
+  /** Règle qui a produit la tournée (matérialisation). */
+  template_id?: string | null
   created_by?: string
   notes?: string
   status: RoutingStatus
@@ -189,6 +193,8 @@ export interface RoutingTemplate {
   date_fin?: string | null
   /** perimetre (défaut) ou quota (Atom : grille routing_quota_canal, un PDV par mois). */
   mode?: RoutingTemplateMode
+  /** SSF qui accompagne le merchandiser les jours de la règle (sous-zone : ssf_quartier). */
+  ssf_id?: number | null
   label?: string
   notes?: string
   is_active: boolean
@@ -224,7 +230,23 @@ export interface RoutingTemplateException {
 // Quantité saisie par SKU (nouveau format). Clé = clé SKU du catalogue.
 export type SkuQuantites = Record<string, number>
 
+/**
+ * Bloc d'une catégorie de produits : présence et prix, quantités et facings
+ * par SKU, et statut hérité par SKU (« Présent » / « En rupture », dérivé des
+ * quantités à l'envoi). Les SKU viennent du catalogue (Paramètres › Produits
+ * du formulaire) : leurs clés sont figées.
+ */
+export interface BlocProduits {
+  present: boolean
+  prix_respectes: boolean
+  quantites?: SkuQuantites
+  facings?: SkuQuantites
+  [sku: string]: ProductStatus | boolean | SkuQuantites | undefined
+}
+
 export interface VisiteProduits {
+  /** Catégorie créée dans l'admin (Produits du formulaire). */
+  [categorie: string]: BlocProduits
   evap: {
     present: boolean
     br_gold: ProductStatus
@@ -418,6 +440,12 @@ export interface VisiteData {
   actions: VisiteActions
   // Texte libre du merchandiseur (lot 3.4, 1.0.4) : « propriétaire absent »…
   commentaires?: string
+  /**
+   * Visite enregistrée sans validation GPS (1.0.12) : `motif = 'precision'`
+   * quand la précision obtenue dépassait la précision exigée (Paramètres
+   * terrain) ; la visite n'est pas bloquée, l'admin le voit.
+   */
+  gps?: { motif: 'precision', precision_m?: number | null, precision_exigee_m?: number | null }
 }
 
 // ---- Field coaching (lot 4, 1.0.4) ----
@@ -508,6 +536,10 @@ export interface Visite {
   synced_at?: string
   created_at: string
   updated_at: string
+  /** SSF (vendeur du distributeur) présent pendant la visite : merchandisers Atom. */
+  ssf_id?: number | null
+  /** Nom du SSF saisi quand il n'est pas dans la liste (ou tel qu'importé). */
+  ssf_brut?: string | null
   // Joined
   pdv?: PDV
   profile?: Profile
@@ -651,15 +683,23 @@ export interface GeofenceResult {
 
 // ---- Default form values ----
 export function getDefaultVisiteData(): VisiteData {
+  const produits: VisiteProduits = {
+    evap: { present: false, br_gold: 'En rupture', br_160g: 'En rupture', brb_160g: 'En rupture', br_400g: 'En rupture', brb_400g: 'En rupture', pearl_400g: 'En rupture', prix_respectes: false, quantites: {} },
+    imp: { present: false, br_400g: 'En rupture', br_900g: 'En rupture', br_2_5kg: 'En rupture', br_375g: 'En rupture', brb_400g: 'En rupture', br_20g: 'En rupture', brb_25g: 'En rupture', brd_15g: 'En rupture', brd_350g: 'En rupture', prix_respectes: false, quantites: {} },
+    scm: { present: false, br_1kg: 'En rupture', pearl_1kg: 'En rupture', prix_respectes: false, quantites: {} },
+    uht: { present: false, demi_ecreme: 'En rupture', elopack_500ml: 'En rupture', brique_1l: 'En rupture', prix_respectes: false, quantites: {} },
+    cereales: { present: false, brcv: 'En rupture', brcc: 'En rupture', prix_respectes: false, quantites: {} },
+    yaourt: { present: false, br_yogoo_fraise_mini_90ml: 'En rupture', br_yogoo_fraise_maxi_318ml: 'En rupture', br_yogoo_nature_mini_90ml: 'En rupture', br_yogoo_nature_maxi_318ml: 'En rupture', prix_respectes: false, quantites: {} },
+  }
+  // Catégories et SKU ajoutés dans l'admin : même forme de bloc.
+  const parCategorie = produits as Record<string, BlocProduits>
+  for (const cat of catalogueProduits()) {
+    const code = String(cat.key)
+    const bloc = parCategorie[code] ?? (parCategorie[code] = { present: false, prix_respectes: false, quantites: {} })
+    for (const sku of getSkus(code)) if (!(sku.key in bloc)) bloc[sku.key] = 'En rupture'
+  }
   return {
-    produits: {
-      evap: { present: false, br_gold: 'En rupture', br_160g: 'En rupture', brb_160g: 'En rupture', br_400g: 'En rupture', brb_400g: 'En rupture', pearl_400g: 'En rupture', prix_respectes: false, quantites: {} },
-      imp: { present: false, br_400g: 'En rupture', br_900g: 'En rupture', br_2_5kg: 'En rupture', br_375g: 'En rupture', brb_400g: 'En rupture', br_20g: 'En rupture', brb_25g: 'En rupture', brd_15g: 'En rupture', brd_350g: 'En rupture', prix_respectes: false, quantites: {} },
-      scm: { present: false, br_1kg: 'En rupture', pearl_1kg: 'En rupture', prix_respectes: false, quantites: {} },
-      uht: { present: false, demi_ecreme: 'En rupture', elopack_500ml: 'En rupture', brique_1l: 'En rupture', prix_respectes: false, quantites: {} },
-      cereales: { present: false, brcv: 'En rupture', brcc: 'En rupture', prix_respectes: false, quantites: {} },
-      yaourt: { present: false, br_yogoo_fraise_mini_90ml: 'En rupture', br_yogoo_fraise_maxi_318ml: 'En rupture', br_yogoo_nature_mini_90ml: 'En rupture', br_yogoo_nature_maxi_318ml: 'En rupture', prix_respectes: false, quantites: {} },
-    },
+    produits,
     concurrence: {
       presence_concurrents: false,
       evap: { present: false, en_activite: false, action_concurrence: '', cowmilk: 'En rupture', nido_150g: 'En rupture', autre: 'En rupture' },

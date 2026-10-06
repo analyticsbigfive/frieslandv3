@@ -85,16 +85,16 @@
 
 <script setup lang="ts">
 import { Building2, XCircle, AlertTriangle, CheckCircle } from 'lucide-vue-next'
-import { PRODUCT_CATALOG, computeSkuInventory, type SkuInventoryRow } from '~/utils/products'
+import { categoriesProduitsActives, computeSkuInventory, type SkuInventoryRow } from '~/utils/products'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const dashboard = useDashboardDirection()
 const { fetchThresholds, getSeuil } = useSkuThresholds()
 
-// Catalogue restreint aux catégories actives (lot 6).
-const { filtrer: filtrerCategoriesReleve, charger: chargerCategoriesReleve } = useCategoriesReleve()
-const catalog = computed(() => filtrerCategoriesReleve(PRODUCT_CATALOG, c => c.key))
+// Catégories et SKU actifs du catalogue (Paramètres › Produits du formulaire).
+const { charger: chargerCatalogue } = useCatalogueReleve()
+const catalog = computed(() => categoriesProduitsActives())
 
 const inventory = computed<SkuInventoryRow[]>(() =>
   computeSkuInventory(dashboard.visites.value as any, getSeuil)
@@ -126,7 +126,7 @@ const dispoMoyenne = computed(() => {
 })
 
 onMounted(() => {
-  chargerCategoriesReleve()
+  void chargerCatalogue()
   fetchThresholds()
   dashboard.fetchVisites()
 })
