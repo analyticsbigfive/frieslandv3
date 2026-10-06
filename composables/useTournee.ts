@@ -53,7 +53,6 @@ const trackingError = ref<string | null>(null)
 
 let watcherId: string | null = null
 let flushTimer: ReturnType<typeof setInterval> | null = null
-const PRECISION_MAX_M = 50
 let pollTimer: ReturnType<typeof setInterval> | null = null
 let lastCapturedAt = 0
 let lastLat: number | null = null
@@ -68,17 +67,20 @@ function withBuffer(task: () => Promise<void>): Promise<void> {
 }
 
 export function useTournee() {
-  const config = useRuntimeConfig()
   const user = useSupabaseUser()
   const { addToQueue } = useOfflineSync()
   const geo = useGeoProvider()
   const { ensureDisclosure } = useLocationDisclosure()
   const { hasGps, ensureProbed: probeLocationHardware } = useLocationHardware()
 
-  const minIntervalMs = Number(config.public.trackingIntervalMs) || 30_000
-  const distanceM = Number(config.public.trackingDistanceM) || 15
-  const flushMs = Number(config.public.trackingFlushMs) || 5 * 60_000
-  const batchMax = Number(config.public.trackingBatchMax) || 200
+  // Paramètres terrain (admin) : relus à chaque utilisation ; les minuteries
+  // prennent les nouvelles valeurs au prochain démarrage de tournée.
+  const { parametres } = useParametresApp()
+  const minIntervalMs = () => parametres.value.tracking_intervalle_s * 1000
+  const distanceM = () => parametres.value.tracking_distance_m
+  const flushMs = () => parametres.value.tracking_envoi_s * 1000
+  const batchMax = () => parametres.value.tracking_lot_max
+  const precisionMaxM = () => parametres.value.gps_precision_tournee_max_m
 
   const isNative = import.meta.client && Capacitor.isNativePlatform()
 
@@ -102,10 +104,10 @@ export function useTournee() {
         return
       }
 
-      for (let start = 0; start < buffer.length; start += batchMax) {
+      for (let start = 0; start < buffer.length; start += batchMax()) {
         addToQueue({
           type: 'positions_batch',
-          data: buffer.slice(start, start + batchMax),
+          data: buffer.slice(start, start + batchMax()),
         })
       }
 
@@ -125,7 +127,7 @@ export function useTournee() {
 
     // Un point imprécis (> 50 m) dessinerait un déplacement fictif : ignoré,
     // sauf capture forcée (point de départ).
-    if (!force && accuracy != null && accuracy > PRECISION_MAX_M) {
+    if (!force && accuracy != null && accuracy > precisionMaxM()) {
       return
     }
 
@@ -133,13 +135,13 @@ export function useTournee() {
     const step = lastLat === null ? Infinity : haversine(lastLat, lastLng!, lat, lng)
     // Le pas doit dépasser à la fois le filtre distance et la précision du
     // point, sinon c'est du bruit de capteur.
-    const movedEnough = step >= Math.max(distanceM, accuracy ?? 0)
-    if (!force && (!movedEnough || now - lastCapturedAt < minIntervalMs)) {
+    const movedEnough = step >= Math.max(distanceM(), accuracy ?? 0)
+    if (!force && (!movedEnough || now - lastCapturedAt < minIntervalMs())) {
       return
     }
 
     // Cumule la distance parcourue (ignore le tout premier point et le bruit).
-    if (lastLat !== null && Number.isFinite(step) && step >= Math.max(distanceM, accuracy ?? 0)) {
+    if (lastLat !== null && Number.isFinite(step) && step >= Math.max(distanceM(), accuracy ?? 0)) {
       totalDistanceM.value += step
     }
 
@@ -205,7 +207,7 @@ export function useTournee() {
         backgroundMessage: 'Suivi GPS de votre tournée actif',
         requestPermissions: true,
         stale: false,
-        distanceFilter: distanceM,
+        distanceFilter: distanceM(),
       },
       (location, error) => {
         if (error) {
@@ -226,13 +228,13 @@ export function useTournee() {
 
     flushTimer = setInterval(() => {
       void flushBuffer()
-    }, flushMs)
+    }, flushMs())
 
     // Échantillonnage GPS fusionné régulier, indépendant du provider du
     // plugin background (fiable en avant-plan et service au premier plan).
     pollTimer = setInterval(() => {
       void pollOnce()
-    }, minIntervalMs)
+    }, minIntervalMs())
 
     isTracking.value = true
 

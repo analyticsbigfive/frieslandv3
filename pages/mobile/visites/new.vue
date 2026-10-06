@@ -707,9 +707,8 @@ const { uploadImages, compressImage } = useImageUpload()
 const toast = useToast()
 const router = useRouter()
 const route = useRoute()
-const config = useRuntimeConfig()
-
-const geofenceRadius = config.public.geofenceRadius as number || 200
+const { parametres } = useParametresApp()
+const geofenceRadius = computed(() => parametres.value.geofence_rayon_m)
 
 // Routing context (pre-selected PDV from routing page)
 const routingPdvId = computed(() => route.query.routing_pdv_id as string || '')
