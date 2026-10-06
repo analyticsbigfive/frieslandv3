@@ -10,7 +10,9 @@
 -- objectif_mensuel = somme, sur les jours du mois où au moins une règle
 -- mode = 'quota' de l'agent s'applique (routing_regles_du_jour : active, jour
 -- de semaine, dates de début / fin, pas suspendue en entier), du quota de la
--- grille pour ce jour de semaine. Un agent Atom sans règle quota a 0.
+-- grille pour ce jour de semaine. Un agent Atom sans règle quota (pas encore
+-- configuré) garde l'objectif du programme : la grille sur tous les jours du
+-- mois (465 en octobre 2026), plutôt qu'un 0 trompeur.
 --
 -- Mêmes colonnes qu'avant (types alignés : integer). Idempotent.
 -- ============================================================================
@@ -54,6 +56,12 @@ objectifs as (
   join routing_quota_canal q on q.jour_semaine = extract(dow from j.jour)::int
   group by j.user_id
 ),
+grille_mois as (
+  select sum(q.quota)::int as objectif_mensuel
+  from mois m
+  cross join lateral generate_series(m.debut, m.fin, interval '1 day') as g(jour)
+  join routing_quota_canal q on q.jour_semaine = extract(dow from g.jour)::int
+),
 planifies as (
   select rt.user_id, count(distinct rp.pdv_id) as nb_planifies
   from routings rt
@@ -82,10 +90,11 @@ select
   coalesce(pl.nb_planifies, 0)    as nb_planifies,
   coalesce(vi.nb_visites, 0)      as nb_visites,
   coalesce(vi.nb_perfect_store, 0) as nb_perfect_store,
-  coalesce(o.objectif_mensuel, 0) as objectif_mensuel,
-  greatest(coalesce(o.objectif_mensuel, 0) - coalesce(vi.nb_visites, 0), 0)::int as reste_a_visiter
+  coalesce(o.objectif_mensuel, gm.objectif_mensuel, 0) as objectif_mensuel,
+  greatest(coalesce(o.objectif_mensuel, gm.objectif_mensuel, 0) - coalesce(vi.nb_visites, 0), 0)::int as reste_a_visiter
 from profiles p
 cross join mois m
+cross join grille_mois gm
 left join portefeuille pf on pf.user_id = p.id
 left join objectifs o on o.user_id = p.id
 left join planifies pl on pl.user_id = p.id
