@@ -4,8 +4,8 @@
     <section class="admin-surface space-y-3 p-5">
       <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Tournées</h2>
       <p class="text-sm text-gray-500 dark:text-gray-400">
-        Les tournées sont générées chaque nuit pour les 7 jours suivants, à partir des règles (Routing › Règles), des quotas Atom
-        et des sous-zones SSF. Après un changement, on peut les recalculer tout de suite : seules les tournées à venir qui
+        Les tournées sont générées chaque nuit pour les 7 jours suivants, à partir des règles (Routing › Règles), des quotas
+        et des binômes SSF ↔ merchandiser. Après un changement, on peut les recalculer tout de suite : seules les tournées à venir qui
         n’ont pas commencé sont refaites, celle du jour n’est jamais modifiée.
       </p>
       <div class="flex flex-wrap items-end gap-3">
@@ -92,11 +92,10 @@
 const supabase = useSupabaseClient()
 const toast = useToast()
 
-const EMPLOYEURS = [
-  { value: 'atom', label: 'Atom' },
-  { value: 'friesland', label: 'Friesland' },
-  { value: 'tous', label: 'Tous' },
-]
+// Agences (Référentiels › Agences), puis « Tous ».
+const { options: optionsAgences, charger: chargerAgences } = useAgences()
+const EMPLOYEURS = computed(() => [...optionsAgences.value, { value: 'tous', label: 'Tous' }])
+void chargerAgences()
 const LIBELLES: Record<string, string> = {
   pregenerer_tournees: 'Génération des tournées (7 jours)',
   refresh_stats_dashboard: 'Statistiques des tableaux de bord',

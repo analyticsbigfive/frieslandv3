@@ -11,6 +11,12 @@
     >
       <template #identification>
         <div class="space-y-4">
+          <!-- Commercial Modern Trade : son coaching suit un merchandiser, avec la
+               grille des standards MT (Référentiels › Grille coaching MT). -->
+          <p v-if="estCommercialMt" class="rounded-xl bg-violet-50 px-4 py-3 text-xs text-violet-900 dark:bg-violet-950/40 dark:text-violet-200" role="status">
+            Coaching Modern Trade (suivi d'un merchandiser) : il sera proposé ici dès que la grille des standards d'exécution MT sera chargée.
+            Ce formulaire évalue un vendeur de distributeur (General Trade).
+          </p>
           <div class="space-y-4 rounded-xl bg-white p-4 shadow-sm dark:bg-gray-800">
             <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100">I_1 · Superviseur</h3>
             <UFormGroup label="Superviseur" help="Compte connecté par défaut">
@@ -19,13 +25,20 @@
             <UFormGroup label="Date">
               <UInput v-model="form.date_coaching" type="datetime-local" size="lg" />
             </UFormGroup>
+            <UFormGroup v-if="objectifs.length" label="Objectif du coaching">
+              <USelectMenu v-model="form.objectif_code" :options="optionsObjectif" value-attribute="value" option-attribute="label" placeholder="Choisir…" size="lg" />
+            </UFormGroup>
           </div>
           <div class="space-y-4 rounded-xl bg-white p-4 shadow-sm dark:bg-gray-800">
             <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100">I_2 · Vendeur</h3>
             <UFormGroup label="Distributeur auquel le vendeur est lié" required>
               <USelectMenu v-model="form.distributeur_nom" :options="distributeurs.map(d => d.nom)" searchable placeholder="Choisir…" size="lg" />
             </UFormGroup>
-            <UFormGroup label="Nom & prénom du vendeur" required>
+            <!-- Le vendeur coaché est un SSF du distributeur (référentiel), sinon saisi. -->
+            <UFormGroup v-if="ssfDuDistributeur.length" label="Vendeur (SSF du distributeur)" required>
+              <USelectMenu v-model="ssfChoisi" :options="optionsSsf" value-attribute="value" option-attribute="label" searchable placeholder="Choisir le vendeur…" size="lg" />
+            </UFormGroup>
+            <UFormGroup v-if="!form.ssf_id" :label="ssfDuDistributeur.length ? 'Nom & prénom (vendeur absent de la liste)' : 'Nom & prénom du vendeur'" required>
               <UInput v-model="form.vendeur_nom" size="lg" placeholder="Ex. KONE MOUSSA" list="vendeurs-connus" />
               <datalist id="vendeurs-connus"><option v-for="v in vendeursConnus" :key="v" :value="v" /></datalist>
             </UFormGroup>
@@ -49,7 +62,13 @@
           <div class="space-y-4 rounded-xl bg-white p-4 shadow-sm dark:bg-gray-800">
             <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100">I_3 · Point de vente</h3>
             <UFormGroup label="PDV" required>
-              <PDVSelector v-model="form.pdv_id" :pdv-list="pdvList" :loading="pdvLoading" :progression="pdvRecus" />
+              <UCheckbox
+                v-if="pdvDuVendeur.size"
+                v-model="seulementPdvVendeur"
+                class="mb-2"
+                :label="`Seulement les PDV de ${form.vendeur_nom || 'ce vendeur'} (${pdvAffiches.length})`"
+              />
+              <PDVSelector v-model="form.pdv_id" :pdv-list="pdvAffiches" :loading="pdvLoading" :progression="pdvRecus" />
               <ChargementContenu
                 v-if="pdvLoading"
                 variante="barre"
@@ -149,6 +168,7 @@
 // brouillon local, file hors ligne, overlay), 13 questions Kobo.
 import type { WizardStep } from '~/components/FormWizard.vue'
 import { ROUTE_JOURS, TYPES_PDV_KOBO, erreursIdentification, evaluationComplete, motifRequis, questionsDuBloc, reponsesVides } from '~/utils/fieldCoaching'
+import { fetchAllRows } from '~/utils/fetchAll'
 
 definePageMeta({ middleware: ['auth', 'coaching-write'], layout: false })
 
@@ -175,6 +195,8 @@ const form = reactive({
   date_coaching: new Date().toISOString().slice(0, 16),
   distributeur_nom: '',
   vendeur_nom: '',
+  ssf_id: null as number | null,
+  objectif_code: '' as string,
   engin_code: '',
   pdv_id: '',
   route_jour: '',
@@ -204,6 +226,46 @@ watch(() => form.distributeur_nom, async (d) => {
   const { data } = await supabase.from('field_coaching').select('vendeur_nom').eq('distributeur_nom', d).not('vendeur_nom', 'is', null).limit(200)
   vendeursConnus.value = [...new Set(((data || []) as any[]).map(r => String(r.vendeur_nom).trim()).filter(Boolean))].sort()
 })
+// SSF du distributeur choisi (référentiel, gardé hors ligne) : le vendeur coaché.
+const { listeSsf, chargerListe: chargerListeSsf } = useSsfTerrain()
+const ssfDuDistributeur = computed(() => listeSsf.value.filter(s => s.distributeur && s.distributeur === form.distributeur_nom))
+const optionsSsf = computed(() => [
+  ...ssfDuDistributeur.value.map(s => ({ value: String(s.id), label: s.nom })),
+  { value: 'autre', label: 'Autre vendeur (saisir le nom)' },
+])
+const ssfChoisi = computed<string>({
+  get: () => (form.ssf_id ? String(form.ssf_id) : (form.vendeur_nom ? 'autre' : '')),
+  set: (v) => {
+    if (!v || v === 'autre') { form.ssf_id = null; if (v === 'autre') form.vendeur_nom = ''; return }
+    const s = listeSsf.value.find(x => String(x.id) === v)
+    form.ssf_id = s ? s.id : null
+    form.vendeur_nom = s?.nom || ''
+  },
+})
+watch(() => form.distributeur_nom, () => {
+  if (form.ssf_id && !ssfDuDistributeur.value.some(s => s.id === form.ssf_id)) { form.ssf_id = null; form.vendeur_nom = '' }
+})
+// PDV du vendeur : son routing DMS (ssf_pdv, migration 20261008140000).
+const pdvDuVendeur = ref(new Set<string>())
+const seulementPdvVendeur = ref(true)
+watch(() => form.ssf_id, async (id) => {
+  pdvDuVendeur.value = new Set()
+  if (!id || !isOnline.value) return
+  try {
+    const lignes = await fetchAllRows<{ pdv_id: string }>((from, to) => (supabase.from('ssf_pdv') as any).select('pdv_id').eq('ssf_id', id).order('pdv_id').range(from, to))
+    pdvDuVendeur.value = new Set(lignes.map(l => l.pdv_id))
+  }
+  catch { /* routing SSF pas encore importé */ }
+})
+const pdvAffiches = computed(() => (seulementPdvVendeur.value && pdvDuVendeur.value.size
+  ? pdvList.value.filter(p => pdvDuVendeur.value.has(p.pdv_id))
+  : pdvList.value))
+// Objectifs de coaching (Référentiels › Objectifs de coaching) ; vide = champ masqué.
+const objectifs = ref<{ code: string, libelle: string, type_coaching: string | null }[]>([])
+const optionsObjectif = computed(() => objectifs.value
+  .filter(o => !o.type_coaching || o.type_coaching === 'gt')
+  .map(o => ({ value: o.code, label: o.libelle })))
+const estCommercialMt = computed(() => authStore.profile?.direction === 'mt')
 const sousTypesPdv = computed(() => TYPES_PDV_KOBO.find(f => f.famille === form.type_pdv)?.sousTypes || [])
 function choisirFamillePdv(famille: string) {
   form.type_pdv = famille
@@ -280,6 +342,9 @@ async function handleSave() {
     distributeur_id: distributeurs.value.find(d => d.nom === form.distributeur_nom)?.id ?? null,
     distributeur_nom: form.distributeur_nom,
     vendeur_nom: form.vendeur_nom.trim(),
+    // Colonnes de la migration 20261008160000 : envoyées seulement si renseignées.
+    ...(form.ssf_id ? { ssf_id: form.ssf_id } : {}),
+    ...(form.objectif_code ? { objectif_code: form.objectif_code } : {}),
     engin_code: form.engin_code,
     pdv_id: form.pdv_id,
     route_jour: form.route_jour || null,
@@ -330,6 +395,9 @@ onMounted(async () => {
   form.superviseur_id = user.value?.id || ''
   restoreDraft()
   void chargerReferentiels()
+  void chargerListeSsf()
+  void (supabase.from('coaching_objectif') as any).select('code, libelle, type_coaching').eq('actif', true).order('ordre')
+    .then(({ data }: any) => { objectifs.value = data || [] })
   const { data } = await supabase.from('profiles').select('id, nom').in('role', ['superviseur', 'admin']).eq('is_active', true).order('nom')
   superviseurs.value = (data || []) as any
   if (user.value?.id && !superviseurs.value.some(s => s.id === user.value!.id)) {

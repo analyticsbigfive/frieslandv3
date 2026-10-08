@@ -36,7 +36,7 @@
     <ChargementContenu v-if="loading && !lignes.length" variante="lignes" libelle="Chargement des versions…" />
 
     <template v-else>
-      <!-- Synthèse -->
+      <!-- Synthèse (sur la direction, l'employeur et le rôle choisis) -->
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard title="Adoption" :value="`${synthese.taux} %`" :subtitle="`${synthese.a_jour} / ${synthese.total} comptes à jour`" format="none" :icon="Smartphone" color="green" />
         <StatsCard title="À jour" :value="synthese.a_jour" :icon="CheckCircle2" color="blue" />
@@ -54,6 +54,7 @@
       <div class="flex flex-wrap items-center gap-2">
         <UInput v-model="recherche" icon="i-heroicons-magnifying-glass" size="sm" placeholder="Nom ou email…" aria-label="Rechercher un compte" class="w-56" />
         <USelect v-model="filtreStatut" :options="optionsStatut" size="sm" aria-label="Filtrer par statut" />
+        <USelect v-model="filtreDirection" :options="optionsDirection" size="sm" aria-label="Filtrer par direction" />
         <USelect v-model="filtreEmployeur" :options="optionsEmployeur" size="sm" aria-label="Filtrer par employeur" />
         <USelect v-model="filtreRole" :options="optionsRole" size="sm" aria-label="Filtrer par rôle" />
         <span class="text-xs text-gray-400">{{ lignesFiltrees.length }} compte(s)</span>
@@ -67,6 +68,7 @@
               <th class="th-l">Compte</th>
               <th class="th-l">Rôle</th>
               <th class="th-l">Employeur</th>
+              <th class="th-l">Direction</th>
               <th class="th-l">Statut</th>
               <th class="th-l">Version</th>
               <th class="th-l cursor-pointer select-none" @click="tri = 'ouverture'">Dernière ouverture {{ tri === 'ouverture' ? '↓' : '' }}</th>
@@ -80,7 +82,8 @@
                 <p v-if="l.nom" class="text-xs text-gray-400">{{ l.email }}</p>
               </td>
               <td class="px-4 py-2.5 text-sm"><UBadge variant="soft" color="gray" size="xs">{{ l.role }}</UBadge></td>
-              <td class="px-4 py-2.5 text-sm capitalize text-gray-600 dark:text-gray-300">{{ l.employeur || '—' }}</td>
+              <td class="px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300">{{ nomAgence(l.employeur) }}</td>
+              <td class="px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300">{{ libelleDirection(l.direction, true) }}</td>
               <td class="px-4 py-2.5 text-sm">
                 <UBadge variant="soft" :color="couleurStatut[l.statut]" size="xs">{{ libelleCourt[l.statut] }}</UBadge>
               </td>
@@ -93,10 +96,46 @@
               </td>
             </tr>
             <tr v-if="!lignesFiltrees.length">
-              <td colspan="7" class="px-4 py-8 text-center text-sm text-gray-400">Aucun compte pour ces filtres.</td>
+              <td colspan="8" class="px-4 py-8 text-center text-sm text-gray-400">Aucun compte pour ces filtres.</td>
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Inventaire des licences par direction et par rôle -->
+      <div class="admin-surface p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Comptes par direction et par rôle</h2>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              {{ inventaire.total }} compte(s) actif(s), comptes de test exclus ({{ inventaire.tests }}).
+              Direction : celle du compte (Paramètres › Utilisateurs), sinon déduite de ses territoires.
+            </p>
+          </div>
+          <UButton size="sm" variant="soft" color="gray" icon="i-heroicons-arrow-down-tray" @click="exporterInventaire">Exporter les comptes</UButton>
+        </div>
+        <div class="mt-3 overflow-x-auto">
+          <table class="admin-table">
+            <thead class="bg-gray-50 dark:bg-gray-700/50">
+              <tr>
+                <th class="th-l">Direction</th>
+                <th v-for="r in ROLES_INVENTAIRE" :key="r" class="th-l text-right">{{ r }}</th>
+                <th class="th-l text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+              <tr v-for="l in inventaire.lignes" :key="l.direction || 'aucune'">
+                <td class="px-4 py-2 text-sm font-medium">{{ l.direction ? libelleDirection(l.direction) : 'Non renseignée' }}</td>
+                <td v-for="r in ROLES_INVENTAIRE" :key="r" class="px-4 py-2 text-right text-sm tabular-nums">{{ l.parRole[r] || 0 }}</td>
+                <td class="px-4 py-2 text-right text-sm font-semibold tabular-nums">{{ l.total }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p v-if="inventaire.doubles.length" class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+          Personnes avec plusieurs comptes (comptées une fois par compte) :
+          {{ inventaire.doubles.map(cs => `${cs[0].nom} (${cs.map(c => c.role).join(' + ')})`).join(' ; ') }}.
+        </p>
       </div>
     </template>
   </div>
@@ -111,7 +150,8 @@
 // au superviseur.
 import { CheckCircle2, HelpCircle, Lock, Smartphone } from 'lucide-vue-next'
 import { fetchAllRows } from '~/utils/fetchAll'
-import { LIBELLES_STATUT, ROLES_APP_MOBILE, joursDepuis, statutVersion, syntheseAdoption, type StatutVersion } from '~/utils/adoptionApp'
+import { LIBELLES_STATUT, ROLES_APP_MOBILE, estCompteTest, inventaireComptes, joursDepuis, statutVersion, syntheseAdoption, type StatutVersion } from '~/utils/adoptionApp'
+import { DIRECTIONS, libelleDirection } from '~/utils/agences'
 import { describeSupabaseError } from '~/utils/supabaseErrors'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
@@ -125,6 +165,7 @@ interface Ligne {
   email: string | null
   role: string
   employeur: string | null
+  direction: string | null
   version_code: number | null
   version_nom: string | null
   vu_le: string | null
@@ -140,6 +181,12 @@ const erreur = ref('')
 const recherche = ref('')
 const filtreStatut = ref('tous')
 const filtreEmployeur = ref('tous')
+const filtreDirection = ref('tous')
+// Inventaire : tous les comptes actifs (admin compris), pas seulement ceux de l'app.
+const ROLES_INVENTAIRE = ['merchandiser', 'commercial', 'superviseur', 'admin'] as const
+const comptes = ref<{ nom: string | null, email: string | null, role: string, direction: string | null, employeur: string | null }[]>([])
+const { options: optionsAgences, nom: nomAgence, charger: chargerAgences } = useAgences()
+const { exportToCsv } = useCsvExport()
 const filtreRole = ref('tous')
 const tri = ref<'visite' | 'ouverture'>('visite')
 
@@ -149,22 +196,42 @@ const optionsStatut = [
   { label: 'Tous les statuts', value: 'tous' },
   ...(Object.keys(LIBELLES_STATUT) as StatutVersion[]).map(s => ({ label: LIBELLES_STATUT[s], value: s })),
 ]
-const optionsEmployeur = [
-  { label: 'Tous les employeurs', value: 'tous' },
-  { label: 'Friesland', value: 'friesland' },
-  { label: 'Atom', value: 'atom' },
+const optionsEmployeur = computed(() => [{ label: 'Tous les employeurs', value: 'tous' }, ...optionsAgences.value])
+const optionsDirection = [
+  { label: 'Toutes les directions', value: 'tous' },
+  ...DIRECTIONS.map(d => ({ label: d.label, value: d.value })),
+  { label: 'Direction non renseignée', value: 'aucune' },
 ]
 const optionsRole = [{ label: 'Tous les rôles', value: 'tous' }, ...ROLES_APP_MOBILE.map(r => ({ label: r, value: r }))]
 
-const synthese = computed(() => syntheseAdoption(lignes.value))
+// Périmètre choisi (direction, employeur, rôle) : la synthèse le suit, pour
+// répondre à « à Abidjan, qui a installé et qui n'a pas encore installé ».
+const lignesPerimetre = computed(() => lignes.value
+  .filter(l => filtreDirection.value === 'tous' || (filtreDirection.value === 'aucune' ? !l.direction : l.direction === filtreDirection.value))
+  .filter(l => filtreEmployeur.value === 'tous' || l.employeur === filtreEmployeur.value)
+  .filter(l => filtreRole.value === 'tous' || l.role === filtreRole.value))
+const synthese = computed(() => syntheseAdoption(lignesPerimetre.value))
+const inventaire = computed(() => inventaireComptes(comptes.value, ROLES_INVENTAIRE))
+
+function exporterInventaire() {
+  const statutDe = new Map(lignes.value.map(l => [l.email, l]))
+  exportToCsv(comptes.value.map(c => ({
+    nom: c.nom || '',
+    email: c.email || '',
+    role: c.role,
+    agence: nomAgence(c.employeur),
+    direction: c.direction ? libelleDirection(c.direction, true) : '',
+    compte_test: estCompteTest(c.email) ? 'oui' : '',
+    version_app: statutDe.get(c.email)?.version_nom || '',
+    statut_app: statutDe.get(c.email) ? libelleCourt[statutDe.get(c.email)!.statut] : '',
+  })), `comptes-par-direction-${new Date().toISOString().slice(0, 10)}.csv`)
+}
 
 const lignesFiltrees = computed(() => {
   const q = recherche.value.trim().toLowerCase()
   const cle = tri.value === 'visite' ? 'derniere_visite' : 'vu_le'
-  return lignes.value
+  return lignesPerimetre.value
     .filter(l => filtreStatut.value === 'tous' || l.statut === filtreStatut.value)
-    .filter(l => filtreEmployeur.value === 'tous' || l.employeur === filtreEmployeur.value)
-    .filter(l => filtreRole.value === 'tous' || l.role === filtreRole.value)
     .filter(l => !q || `${l.nom || ''} ${l.email || ''}`.toLowerCase().includes(q))
     // Plus récent d'abord, sans date en dernier.
     .sort((a, b) => (b[cle] || '').localeCompare(a[cle] || ''))
@@ -193,8 +260,12 @@ async function charger() {
     const [va, profils, installees, visites] = await Promise.all([
       (supabase.from('version_app') as any)
         .select('version_code_min, version_nom_min, url_telechargement').eq('plateforme', 'android').maybeSingle(),
+      // direction : migration 20261008110000 (repli sans la colonne).
       (supabase.from('profiles') as any)
-        .select('id, nom, email, role, employeur, is_active').in('role', ROLES_APP_MOBILE as string[]).order('nom'),
+        .select('id, nom, email, role, employeur, direction, territoires_assignes, is_active').order('nom')
+        .then(async (r: any) => (r.error && /direction/i.test(r.error.message || '')
+          ? (supabase.from('profiles') as any).select('id, nom, email, role, employeur, territoires_assignes, is_active').order('nom')
+          : r)),
       (supabase.from('version_installee') as any)
         .select('user_id, version_code, version_nom, vu_le').eq('plateforme', 'android'),
       // Visites récentes : seulement l'auteur et la date, pour la dernière par compte.
@@ -210,8 +281,10 @@ async function charger() {
     for (const v of visites) if (v.user_id && !derniereVisite.has(v.user_id)) derniereVisite.set(v.user_id, v.date_visite)
 
     const min = versionApp.value?.version_code_min ?? null
-    lignes.value = (profils.data || [])
-      .filter((p: any) => p.is_active !== false)
+    const actifs = (profils.data || []).filter((p: any) => p.is_active !== false)
+    comptes.value = actifs.map((p: any) => ({ nom: p.nom, email: p.email, role: p.role, direction: p.direction ?? null, employeur: p.employeur ?? null }))
+    lignes.value = actifs
+      .filter((p: any) => ROLES_APP_MOBILE.includes(p.role))
       .map((p: any): Ligne => {
         const v = parUser.get(p.id)
         return {
@@ -220,6 +293,7 @@ async function charger() {
           email: p.email,
           role: p.role,
           employeur: p.employeur ?? null,
+          direction: p.direction ?? null,
           version_code: v?.version_code ?? null,
           version_nom: v?.version_nom ?? null,
           vu_le: v?.vu_le ?? null,
@@ -236,5 +310,5 @@ async function charger() {
   }
 }
 
-onMounted(charger)
+onMounted(() => { void chargerAgences(); void charger() })
 </script>

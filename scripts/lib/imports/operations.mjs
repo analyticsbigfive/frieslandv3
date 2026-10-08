@@ -81,6 +81,28 @@ const VALIDATEURS = {
       exiger(estListeTextes(r.pdv_ids, 20000, 64), 'règle SSF : pdv_ids invalides')
     }
   },
+  'binomes.remplacer'(op) {
+    exiger(UUID.test(op.user_id || ''), 'binomes.remplacer : user_id invalide')
+    exiger(texteOuNul(op.source, 200), 'binomes.remplacer : source invalide')
+    exiger(Array.isArray(op.lignes) && op.lignes.length <= 50, 'binomes.remplacer : lignes (≤ 50) requises')
+    for (const l of op.lignes) {
+      exiger(refSsf(l.ssf), 'binôme : ssf { id | nom } requis')
+      exiger(Number.isInteger(l.jour_semaine) && l.jour_semaine >= 0 && l.jour_semaine <= 6, 'binôme : jour_semaine 0-6 requis')
+      exiger(texteOuNul(l.zone, 200) && texteOuNul(l.source, 200), 'binôme : zone / source invalides')
+      exiger(estListeTextes(l.quartiers || [], 500, 200), 'binôme : quartiers invalides')
+    }
+  },
+  'ssf.commercial'(op) {
+    exiger(refSsf(op.ssf), 'ssf.commercial : ssf { id | nom } requis')
+    exiger(op.commercial_id === null || UUID.test(op.commercial_id || ''), 'ssf.commercial : commercial_id invalide')
+  },
+  'ssf_pdv.remplacer'(op) {
+    exiger(refSsf(op.ssf), 'ssf_pdv.remplacer : ssf { id | nom } requis')
+    exiger(estTexte(op.source, 200) && op.source.startsWith('dms-'), 'ssf_pdv.remplacer : source « dms-… » requise')
+    exiger(Number.isInteger(op.jour_semaine ?? 0) && (op.jour_semaine ?? 0) >= 0 && (op.jour_semaine ?? 0) <= 6, 'ssf_pdv.remplacer : jour_semaine 0-6')
+    exiger(Array.isArray(op.pdv_ids) && op.pdv_ids.length <= 20000 && op.pdv_ids.every(id => PDV_ID.test(id)), 'ssf_pdv.remplacer : pdv_ids invalides')
+    exiger(Array.isArray(op.remplace ?? ['dms-']) && (op.remplace ?? ['dms-']).every(s => ['dms-'].includes(s)), 'ssf_pdv.remplacer : remplace ⊂ [dms-]')
+  },
   'regle.jours'(op) {
     exiger(UUID.test(op.template_id || ''), 'regle.jours : template_id invalide')
     exiger(estJours(op.days_of_week), 'regle.jours : jours invalides')
@@ -239,6 +261,45 @@ const EXECUTEURS = {
     return `${op.regles.length} règle(s) SSF, ${nbPdv} PDV`
   },
 
+  async 'binomes.remplacer'(sb, op) {
+    // Upsert sur la clé (merchandiser, jour, SSF) : pas de doublon. Les
+    // binômes actifs du merchandiser absents de la liste sont désactivés
+    // (pas supprimés : l'historique reste lisible).
+    const lignes = []
+    for (const l of op.lignes) {
+      lignes.push({
+        merchandiser_id: op.user_id, ssf_id: await idSsf(sb, l.ssf), jour_semaine: l.jour_semaine,
+        zone: l.zone || null, quartiers: [...new Set(l.quartiers || [])], source: l.source || op.source || 'import', actif: true,
+      })
+    }
+    const garder = new Set(lignes.map(l => `${l.jour_semaine}|${l.ssf_id}`))
+    if (lignes.length) ok(await sb.from('binome_ssf_merch').upsert(lignes, { onConflict: 'merchandiser_id,jour_semaine,ssf_id' }), 'binômes (mise à jour)')
+    const { data: actifs, error } = await sb.from('binome_ssf_merch').select('id,jour_semaine,ssf_id').eq('merchandiser_id', op.user_id).eq('actif', true)
+    if (error) throw new Error(`binômes : ${error.message}`)
+    const aDesactiver = (actifs || []).filter(b => !garder.has(`${b.jour_semaine}|${b.ssf_id}`)).map(b => b.id)
+    if (aDesactiver.length) ok(await sb.from('binome_ssf_merch').update({ actif: false }).in('id', aDesactiver), 'binômes (désactivation)')
+    return `${lignes.length} binôme(s), ${aDesactiver.length} désactivé(s)`
+  },
+
+  async 'ssf.commercial'(sb, op) {
+    const ssfId = await idSsf(sb, op.ssf)
+    ok(await sb.from('ssf').update({ commercial_id: op.commercial_id }).eq('id', ssfId), 'ssf.commercial')
+    return `SSF ${op.ssf.nom || ssfId} : commercial ${op.commercial_id ? 'rattaché' : 'retiré'}`
+  },
+
+  async 'ssf_pdv.remplacer'(sb, op) {
+    const ssfId = await idSsf(sb, op.ssf)
+    const jour = op.jour_semaine ?? 0
+    for (const prefixe of (op.remplace ?? ['dms-'])) {
+      ok(await sb.from('ssf_pdv').delete().eq('ssf_id', ssfId).eq('jour_semaine', jour).like('source', `${prefixe}%`), 'routing SSF (suppression)')
+    }
+    const lignes = [...new Set(op.pdv_ids)].map(pdv_id => ({ ssf_id: ssfId, pdv_id, jour_semaine: jour, source: op.source }))
+    for (let i = 0; i < lignes.length; i += 500) {
+      ok(await sb.from('ssf_pdv').upsert(lignes.slice(i, i + 500), { onConflict: 'ssf_id,pdv_id,jour_semaine', ignoreDuplicates: true }), 'routing SSF (ajout)')
+    }
+    return `SSF ${op.ssf.nom || ssfId} : ${lignes.length} PDV`
+  },
+
   async 'regle.jours'(sb, op) {
     const jours = [...new Set(op.days_of_week)].sort((a, b) => a - b)
     // Aucun jour : la règle reste visible (portefeuille de référence) mais ne
@@ -363,7 +424,8 @@ export const OPERATIONS_PAR_IMPORT = {
   'dms-pdv': ['pdv.creer', 'pdv.maj', 'pdv.supprimer'],
   'merch-dms': ['profil.perimetre', 'regle_dms.remplacer', 'regle.jours', 'tournees.generer'],
   'routing-atom': ['pdv.creer', 'pdv.supprimer', 'visites.importer', 'visites.supprimer'],
-  'ssf-sous-zones': ['ssf.creer', 'ssf_quartier.remplacer', 'regles_ssf.remplacer', 'regle.jours', 'profil.perimetre', 'tournees.recalculer'],
+  'ssf-sous-zones': ['ssf.creer', 'ssf_quartier.remplacer', 'regles_ssf.remplacer', 'regle.jours', 'profil.perimetre', 'tournees.recalculer', 'binomes.remplacer', 'ssf.commercial'],
+  'routing-ssf-dms': ['ssf.creer', 'ssf_pdv.remplacer'],
 }
 
 /**

@@ -41,7 +41,9 @@ export default defineEventHandler(async (event) => {
   const zoneAssignee = body?.zone_assignee ? String(body.zone_assignee) : (territoires[0] || null)
   const commercialId = body?.commercial_id ? String(body.commercial_id) : null
   const region = body?.region ? String(body.region) : null
-  const employeur = body?.employeur === 'atom' ? 'atom' : 'friesland'
+  // Code d'agence : validé contre la table agence (avant sa migration : friesland / atom).
+  const employeur = await employeurValide(service, body?.employeur)
+  const direction = ['south', 'north', 'mt'].includes(body?.direction) ? body.direction : null
 
   return await createUserWithProfile(service, {
     email,
@@ -52,6 +54,7 @@ export default defineEventHandler(async (event) => {
     zone_assignee: zoneAssignee,
     commercial_id: commercialId,
     employeur,
+    direction,
     territoires_assignes: territoires,
     quartiers_assignes: quartiers,
     region,

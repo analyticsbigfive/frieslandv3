@@ -195,6 +195,7 @@
 
 <script setup lang="ts">
 import { fetchAllRows } from '~/utils/fetchAll'
+import { AGENCES_DEFAUT, DIRECTIONS, libelleDirection } from '~/utils/agences'
 import { catalogueProduits, getSkus, getSkuLabel } from '~/utils/products'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
@@ -319,12 +320,24 @@ const MODES_ALIAS = [
   { value: 'commence', label: 'Commence par' },
   { value: 'contient', label: 'Contient' },
 ]
-const PORTEES = [
+// Portée d'un paramètre : tous, ou les comptes d'une agence (table agence).
+const PORTEES = () => [
   { value: 'tous', label: 'Tous les utilisateurs' },
-  { value: 'friesland', label: 'Friesland uniquement' },
-  { value: 'atom', label: 'Atom uniquement' },
+  ...(store.agence?.length ? store.agence : AGENCES_DEFAUT).map((a: any) => ({ value: a.code, label: `${a.nom} uniquement` })),
 ]
-const libellePortee = (p: string) => PORTEES.find(x => x.value === p)?.label || p
+const libellePortee = (p: string) => PORTEES().find(x => x.value === p)?.label || p
+// Comptes (merchandisers des binômes, commerciaux des SSF).
+const utilisateurs = ref<any[]>([])
+const nomUtilisateur = (id: string | null) => (id ? utilisateurs.value.find(u => u.id === id)?.nom || '—' : '—')
+const merchandiserOpts = () => utilisateurs.value.filter(u => u.role === 'merchandiser' && u.is_active !== false)
+  .map(u => ({ value: u.id, label: `${u.nom} · ${u.email}` }))
+const commercialOpts = () => utilisateurs.value.filter(u => ['commercial', 'admin'].includes(u.role) && u.is_active !== false)
+  .map(u => ({ value: u.id, label: `${u.nom}${u.role === 'admin' ? ' (admin)' : ''}` }))
+const JOURS_OPTS = [1, 2, 3, 4, 5, 6, 0].map(j => ({ value: j, label: JOURS_SEMAINE[j] }))
+const DIRECTION_OPTS = [{ value: '', label: 'Toutes' }, ...DIRECTIONS.map(d => ({ value: d.value, label: d.label }))]
+const libelleGrille = (g: string) => (g === 'mt' ? 'Modern Trade' : 'General Trade')
+const ORIGINES_BINOME = (source?: string) => (source?.startsWith('client-') ? { label: 'Fichier agence', color: 'green' }
+  : source === 'regle-existante' ? { label: 'Règle existante', color: 'amber' } : { label: 'Saisie admin', color: 'blue' })
 const valeurParametre = (r: any) => (r.valeur == null ? 'Non défini' : `${r.valeur} ${r.unite || ''}`.trim())
 const bornesParametre = (r: any) => (r.min == null && r.max == null ? '—' : `${r.min ?? '…'} → ${r.max ?? '…'} ${r.unite || ''}`.trim())
 
@@ -657,17 +670,17 @@ const defs: Def[] = [
   {
     id: 'parametre_app', section: 'app', label: 'Paramètres terrain', table: 'parametre_app',
     select: 'cle, portee, valeur, libelle, description, unite, min, max, ordre', order: q => q.order('ordre').order('portee'),
-    aide: 'Lus par l’application à son lancement et à chaque retour au premier plan (version 1.0.12 et suivantes). Une valeur « Atom » ou « Friesland » prime sur « Tous » pour ces utilisateurs.',
+    aide: 'Lus par l’application à son lancement et à chaque retour au premier plan (version 1.0.12 et suivantes). Une valeur propre à une agence (Atom BTL, FrieslandCampina…) prime sur « Tous » pour ses utilisateurs.',
     columns: [
       { label: 'Paramètre', cell: r => r.libelle },
-      { label: 'Portée', cell: r => libellePortee(r.portee), kind: 'badge', color: r => (r.portee === 'tous' ? 'gray' : r.portee === 'atom' ? 'purple' : 'blue') },
+      { label: 'Portée', cell: r => libellePortee(r.portee), kind: 'badge', color: r => (r.portee === 'tous' ? 'gray' : r.portee === 'friesland' ? 'blue' : 'purple') },
       { label: 'Valeur', cell: r => valeurParametre(r), align: 'c', kind: 'num' },
       { label: 'Bornes', cell: r => bornesParametre(r), align: 'c', muted: true },
       { label: 'Effet', cell: r => r.description, muted: true },
     ],
     fields: [
       { key: 'cle', label: 'Paramètre', type: 'select', opts: () => [...(maps.parametreTous?.values() || [])].map((r: any) => ({ value: r.cle, label: r.libelle })), required: true, lockEdit: true },
-      { key: 'portee', label: 'Portée', type: 'select', opts: () => PORTEES, required: true, lockEdit: true },
+      { key: 'portee', label: 'Portée', type: 'select', opts: PORTEES, required: true, lockEdit: true },
       { key: 'valeur', label: 'Valeur', type: 'num', hint: 'Vide = non défini (pour l’objectif de visites : taille de la tournée du jour).' },
     ],
     blank: () => ({ cle: null, portee: 'atom', valeur: null }),
@@ -696,16 +709,16 @@ const defs: Def[] = [
       : await table('parametre_app').delete().eq('cle', r.cle).eq('portee', r.portee)),
   },
   {
-    id: 'canal_atom_sous_categorie', section: 'app', label: 'Canal Atom', table: 'canal_atom_sous_categorie',
+    id: 'canal_atom_sous_categorie', section: 'app', label: 'Canal des quotas', table: 'canal_atom_sous_categorie',
     select: 'sous_categorie, canal', order: q => q.order('sous_categorie'),
-    aide: 'Canal de la grille de quotas Atom pour chaque sous-catégorie de PDV. « Hors quota » : jamais proposé dans les tournées Atom. Une sous-catégorie absente suit la règle par défaut (Boutique, Superette, Kiosque…).',
+    aide: 'Canal de la grille de quotas (merchandisers des agences) pour chaque sous-catégorie de PDV. « Hors quota » : jamais proposé dans les tournées par quotas. Une sous-catégorie absente suit la règle par défaut (Boutique, Superette, Kiosque…).',
     columns: [
       { label: 'Sous-catégorie PDV', cell: r => r.sous_categorie },
-      { label: 'Canal Atom', cell: r => r.canal || 'Hors quota', kind: 'badge', color: r => (r.canal ? 'purple' : 'gray') },
+      { label: 'Canal des quotas', cell: r => r.canal || 'Hors quota', kind: 'badge', color: r => (r.canal ? 'purple' : 'gray') },
     ],
     fields: [
       { key: 'sous_categorie', label: 'Sous-catégorie PDV', type: 'text', required: true, lockEdit: true, hint: 'Texte exact de la sous-catégorie des PDV.' },
-      { key: 'canal', label: 'Canal Atom', type: 'select', opts: () => [...CANAUX_ATOM.map(c => ({ value: c, label: c })), { value: 'hors', label: 'Hors quota' }], required: true },
+      { key: 'canal', label: 'Canal des quotas', type: 'select', opts: () => [...CANAUX_ATOM.map(c => ({ value: c, label: c })), { value: 'hors', label: 'Hors quota' }], required: true },
     ],
     blank: () => ({ sous_categorie: '', canal: 'Boutique' }),
     fill: r => ({ ...r, canal: r.canal || 'hors' }),
@@ -768,6 +781,70 @@ const defs: Def[] = [
       ? table('engin_vente').update({ libelle: f.libelle, ordre: f.ordre ?? 100, actif: f.actif !== false }).eq('code', f.code)
       : table('engin_vente').insert({ code: codeDepuisLibelle(f.libelle), libelle: f.libelle, ordre: f.ordre ?? 100, actif: f.actif !== false }),
     del: async () => ({ error: new Error('Suppression désactivée : désactivez l’engin.') }),
+  },
+  {
+    id: 'coaching_objectif', section: 'app', label: 'Objectifs de coaching', table: 'coaching_objectif',
+    select: 'code, libelle, description, type_coaching, ordre, actif', order: q => q.order('ordre').order('libelle'),
+    noDelete: true,
+    aide: 'Objectifs proposés dans le formulaire de field coaching (valeurs fournies par le client). Tant que la liste est vide, le champ n’apparaît pas dans l’app.',
+    columns: [
+      { label: 'Objectif', cell: r => r.libelle },
+      { label: 'Code', cell: r => r.code, kind: 'mono', muted: true },
+      { label: 'Coaching', cell: r => (r.type_coaching ? libelleGrille(r.type_coaching) : 'GT et MT'), kind: 'badge', color: r => (r.type_coaching === 'mt' ? 'purple' : 'blue') },
+      { label: 'Actif', cell: r => r.actif, align: 'c', kind: 'bool' },
+    ],
+    fields: [
+      { key: 'libelle', label: 'Libellé', type: 'text', required: true },
+      { key: 'code', label: 'Code', type: 'text', lockEdit: true, hint: 'Vide : déduit du libellé.' },
+      { key: 'description', label: 'Description', type: 'text' },
+      { key: 'type_coaching', label: 'Coaching', type: 'select', opts: () => [{ value: '', label: 'GT et MT' }, { value: 'gt', label: 'General Trade (vendeurs)' }, { value: 'mt', label: 'Modern Trade (merchandisers)' }] },
+      { key: 'ordre', label: 'Ordre', type: 'num' },
+      { key: 'actif', label: 'Actif', type: 'bool' },
+    ],
+    blank: () => ({ libelle: '', code: '', description: '', type_coaching: '', ordre: 100, actif: true }),
+    fill: r => ({ ...r, type_coaching: r.type_coaching || '' }),
+    rowKey: r => r.code, search: r => `${r.libelle} ${r.code}`.toLowerCase(),
+    valid: f => !!String(f.libelle || '').trim(),
+    save: (f, e) => {
+      const rec = { libelle: String(f.libelle).trim(), description: f.description || null, type_coaching: f.type_coaching || null, ordre: Number(f.ordre) || 100, actif: f.actif !== false }
+      return e
+        ? table('coaching_objectif').update(rec).eq('code', f.code)
+        : table('coaching_objectif').insert({ ...rec, code: String(f.code || '').trim() || codeDepuisLibelle(f.libelle).slice(0, 60) })
+    },
+    del: async () => ({ error: new Error('Suppression désactivée : désactivez l’objectif (les coachings passés le gardent).') }),
+  },
+  {
+    id: 'coaching_critere', section: 'app', label: 'Grille coaching MT', table: 'coaching_critere',
+    select: 'id, grille, bloc, code, libelle, aide, ordre, actif', order: q => q.order('grille').order('bloc').order('ordre'),
+    aide: 'Standards d’exécution Modern Trade (part linéaire, visibilité…) évalués quand un commercial MT suit un merchandiser. À remplir avec la grille fournie par le client ; tant qu’elle est vide, le coaching MT n’est pas proposé. La grille General Trade (vendeurs) reste celle de l’application.',
+    columns: [
+      { label: 'Grille', cell: r => libelleGrille(r.grille), kind: 'badge', color: r => (r.grille === 'mt' ? 'purple' : 'blue') },
+      { label: 'Bloc', cell: r => r.bloc },
+      { label: 'Critère', cell: r => r.libelle },
+      { label: 'Code', cell: r => r.code, kind: 'mono', muted: true },
+      { label: 'Ordre', cell: r => r.ordre, align: 'c', kind: 'num' },
+      { label: 'Actif', cell: r => r.actif, align: 'c', kind: 'bool' },
+    ],
+    fields: [
+      { key: 'grille', label: 'Grille', type: 'select', opts: () => [{ value: 'mt', label: 'Modern Trade' }], required: true, lockEdit: true },
+      { key: 'bloc', label: 'Bloc', type: 'text', required: true, hint: 'Ex. Part linéaire, Visibilité, Promotion.' },
+      { key: 'libelle', label: 'Critère', type: 'text', required: true },
+      { key: 'code', label: 'Code', type: 'text', lockEdit: true, hint: 'Vide : déduit du libellé.' },
+      { key: 'aide', label: 'Aide', type: 'text' },
+      { key: 'ordre', label: 'Ordre', type: 'num' },
+      { key: 'actif', label: 'Actif', type: 'bool' },
+    ],
+    blank: () => ({ grille: 'mt', bloc: '', libelle: '', code: '', aide: '', ordre: 100, actif: true }),
+    fill: r => ({ ...r }),
+    rowKey: r => String(r.id), search: r => `${r.bloc} ${r.libelle} ${r.code}`.toLowerCase(),
+    valid: f => !!f.grille && !!String(f.bloc || '').trim() && !!String(f.libelle || '').trim(),
+    save: (f, e) => {
+      const rec = { bloc: String(f.bloc).trim(), libelle: String(f.libelle).trim(), aide: f.aide || null, ordre: Number(f.ordre) || 100, actif: f.actif !== false }
+      return e
+        ? table('coaching_critere').update(rec).eq('id', f.id)
+        : table('coaching_critere').insert({ ...rec, grille: f.grille, code: String(f.code || '').trim() || codeDepuisLibelle(f.libelle).slice(0, 60) })
+    },
+    del: r => table('coaching_critere').delete().eq('id', r.id),
   },
   {
     // Mise à jour obligatoire de l'app mobile (migration 20260930091000,
@@ -1043,15 +1120,46 @@ const defs: Def[] = [
     noDelete: true,
     aide: 'Une nouvelle catégorie apparaît dans le formulaire (web et app 1.0.12) dès qu’elle a des produits : ajoutez-les dans Paramètres › Produits du formulaire. Elle est saisie et exportée, mais ne compte au Perfect Store qu’après une correspondance SKU.',
   },
-  // ===== DISTRIBUTION : SSF et sous-zones =====
+  // ===== DISTRIBUTION : agences, SSF et binômes =====
+  {
+    id: 'agence', section: 'distrib', label: 'Agences', table: 'agence',
+    select: 'code, nom, direction, programme, actif, ordre', order: q => q.order('ordre').order('nom'),
+    noDelete: true,
+    aide: 'Employeur des merchandisers : FrieslandCampina (salariés) ou une agence (Atom BTL à Abidjan, agence de l’intérieur…). « Programme » : tournées par quotas et écran Programme merchandiser de sa direction. Le code ne change pas une fois créé (il est lu par l’app : « atom »).',
+    columns: [
+      { label: 'Agence', cell: r => r.nom },
+      { label: 'Code', cell: r => r.code, kind: 'mono', muted: true },
+      { label: 'Direction', cell: r => libelleDirection(r.direction), kind: 'badge', color: r => (r.direction === 'south' ? 'blue' : r.direction === 'north' ? 'amber' : r.direction === 'mt' ? 'purple' : 'gray') },
+      { label: 'Programme', cell: r => r.programme, align: 'c', kind: 'bool' },
+      { label: 'Active', cell: r => r.actif, align: 'c', kind: 'bool' },
+    ],
+    fields: [
+      { key: 'nom', label: 'Nom', type: 'text', required: true },
+      { key: 'code', label: 'Code', type: 'text', required: true, lockEdit: true, hint: 'Minuscules, chiffres et tirets (ex. agence-north). Non modifiable ensuite.' },
+      { key: 'direction', label: 'Direction', type: 'select', opts: () => DIRECTION_OPTS },
+      { key: 'programme', label: 'Programme merchandiser', type: 'bool', hint: 'Tournées par quotas (grille Quotas), SSF du jour et objectifs du mois pour ses merchandisers.' },
+      { key: 'actif', label: 'Active', type: 'bool' },
+      { key: 'ordre', label: 'Ordre', type: 'num' },
+    ],
+    blank: () => ({ nom: '', code: '', direction: '', programme: true, actif: true, ordre: 100 }),
+    fill: r => ({ ...r, direction: r.direction || '' }),
+    rowKey: r => r.code, search: r => `${r.nom} ${r.code} ${libelleDirection(r.direction)}`.toLowerCase(),
+    valid: f => !!String(f.nom || '').trim() && /^[a-z0-9-]{2,40}$/.test(String(f.code || '')),
+    save: (f, e) => {
+      const rec = { nom: String(f.nom).trim(), direction: f.direction || null, programme: !!f.programme, actif: f.actif !== false, ordre: Number(f.ordre) || 100 }
+      return e ? table('agence').update(rec).eq('code', f.code) : table('agence').insert({ ...rec, code: String(f.code).trim() })
+    },
+    del: async () => ({ error: new Error('Suppression désactivée : désactivez l’agence (ses merchandisers gardent leur rattachement).') }),
+  },
   {
     id: 'ssf', section: 'distrib', label: 'SSF (vendeurs)', table: 'ssf',
-    select: 'id, nom, nom_brut, telephone, distributeur_id, actif, a_confirmer, source, commentaire', order: q => q.order('nom'),
+    select: 'id, nom, nom_brut, telephone, distributeur_id, commercial_id, actif, a_confirmer, source, commentaire', order: q => q.order('nom'),
     noDelete: true,
-    aide: 'SSF : vendeur du distributeur qui accompagne le merchandiser. Sa sous-zone (onglet SSF ↔ Quartiers) borne les PDV des tournées des jours où il accompagne l’agent (Routing › Règles).',
+    aide: 'SSF : vendeur d’un distributeur (pas un salarié Friesland), suivi par un commercial comme les merchandisers de son équipe. Il ne dirige pas le merchandiser : ils forment un binôme certains jours (onglet Binômes) pour passer dans les mêmes PDV.',
     columns: [
       { label: 'SSF', cell: r => r.nom },
       { label: 'Distributeur', cell: r => (r.distributeur_id ? distributeurNameOf(r.distributeur_id) : '—'), muted: true },
+      { label: 'Commercial', cell: r => nomUtilisateur(r.commercial_id), muted: true },
       { label: 'Téléphone', cell: r => r.telephone, kind: 'mono' },
       { label: 'Quartiers', cell: r => ssfQuartierCountOf(r.id), align: 'c', kind: 'num' },
       { label: 'À confirmer', cell: r => r.a_confirmer, align: 'c', kind: 'bool' },
@@ -1060,13 +1168,14 @@ const defs: Def[] = [
     fields: [
       { key: 'nom', label: 'Nom', type: 'text', required: true },
       { key: 'distributeur_id', label: 'Distributeur', type: 'select', opts: distributeurIdOpts },
+      { key: 'commercial_id', label: 'Commercial', type: 'select', opts: commercialOpts, hint: 'Sales officer dont dépend le SSF (le même que celui des merchandisers de ses binômes).' },
       { key: 'telephone', label: 'Téléphone', type: 'text' },
       { key: 'nom_brut', label: 'Autres orthographes', type: 'text', hint: 'Variantes vues dans les fichiers, séparées par « | » (ex. Tra bi ta Arsène|TRA BI TA).' },
       { key: 'actif', label: 'Actif', type: 'bool', hint: 'Désactivé : n’est plus proposé dans l’app ni dans les règles. Les visites gardent leur SSF.' },
       { key: 'a_confirmer', label: 'Distributeur à confirmer', type: 'bool', hint: 'Rattachement déduit d’un export, à confirmer par le client.' },
       { key: 'commentaire', label: 'Commentaire', type: 'text' },
     ],
-    blank: () => ({ nom: '', distributeur_id: null, telephone: '', nom_brut: '', actif: true, a_confirmer: false, commentaire: '' }),
+    blank: () => ({ nom: '', distributeur_id: null, commercial_id: null, telephone: '', nom_brut: '', actif: true, a_confirmer: false, commentaire: '' }),
     fill: r => ({ ...r }),
     rowKey: r => String(r.id),
     search: r => `${r.nom} ${r.nom_brut || ''} ${r.distributeur_id ? distributeurNameOf(r.distributeur_id) : ''}`.toLowerCase(),
@@ -1075,6 +1184,7 @@ const defs: Def[] = [
       const rec = {
         nom: String(f.nom).trim(),
         distributeur_id: f.distributeur_id || null,
+        commercial_id: f.commercial_id || null,
         telephone: f.telephone || null,
         nom_brut: f.nom_brut || null,
         actif: f.actif !== false,
@@ -1091,7 +1201,7 @@ const defs: Def[] = [
   {
     id: 'ssf_quartier', section: 'distrib', label: 'SSF ↔ Quartiers', table: 'ssf_quartier',
     select: 'id, ssf_id, zone, quartier, source, a_confirmer', order: q => q.order('ssf_id').order('zone').order('quartier'),
-    aide: 'Sous-zone d’un SSF : ses quartiers. « Dérivée des visites » = proposée d’après les visites passées, à confirmer ; une ligne modifiée ici devient une saisie admin et n’est plus recalculée par les imports.',
+    aide: 'Quartiers couverts par un SSF (réunion de ceux de ses binômes). Ils bornent les PDV des tournées des jours de binôme. « Dérivée des visites » = proposée d’après les visites passées, à confirmer ; une ligne modifiée ici devient une saisie admin et n’est plus recalculée par les imports.',
     columns: [
       { label: 'SSF', cell: r => ssfNomOf(r.ssf_id) },
       { label: 'Zone', cell: r => r.zone, muted: true },
@@ -1116,6 +1226,45 @@ const defs: Def[] = [
         : table('ssf_quartier').insert(rec)
     },
     del: r => table('ssf_quartier').delete().eq('id', r.id),
+  },
+  {
+    id: 'binome_ssf_merch', section: 'distrib', label: 'Binômes SSF ↔ merch', table: 'binome_ssf_merch',
+    select: 'id, merchandiser_id, ssf_id, jour_semaine, zone, quartiers, date_debut, date_fin, source, actif',
+    order: q => q.order('merchandiser_id').order('jour_semaine'),
+    aide: 'Planning des binômes : tel jour, tel merchandiser travaille avec tel SSF dans tels quartiers, pour qu’ils passent dans les mêmes PDV. Aucun des deux ne dirige l’autre : ils dépendent du commercial. Alimenté par le fichier de l’agence (Import / Export › Imports terrain), modifiable ici. Après une modification, relancez Routing › Règles ou Maintenance › Recalculer les tournées.',
+    columns: [
+      { label: 'Merchandiser', cell: r => nomUtilisateur(r.merchandiser_id) },
+      { label: 'Jour', cell: r => JOURS_SEMAINE[r.jour_semaine] },
+      { label: 'SSF', cell: r => ssfNomOf(r.ssf_id) },
+      { label: 'Zone', cell: r => r.zone || '—', muted: true },
+      { label: 'Quartiers', cell: r => (r.quartiers || []).join(', ') || 'Tous ceux du SSF', muted: true },
+      { label: 'Origine', cell: r => ORIGINES_BINOME(r.source).label, kind: 'badge', color: r => ORIGINES_BINOME(r.source).color },
+      { label: 'Actif', cell: r => r.actif, align: 'c', kind: 'bool' },
+    ],
+    fields: [
+      { key: 'merchandiser_id', label: 'Merchandiser', type: 'select', opts: merchandiserOpts, required: true, lockEdit: true },
+      { key: 'jour_semaine', label: 'Jour', type: 'select', opts: () => JOURS_OPTS, required: true, lockEdit: true },
+      { key: 'ssf_id', label: 'SSF', type: 'select', opts: ssfOpts, required: true, lockEdit: true },
+      { key: 'zone', label: 'Zone', type: 'text', hint: 'Libellé exact du territoire des PDV (ex. ABOBO 1).' },
+      { key: 'quartiers', label: 'Quartiers', type: 'text', hint: 'Séparés par des virgules. Vide : tous les quartiers du SSF.' },
+      { key: 'actif', label: 'Actif', type: 'bool' },
+    ],
+    blank: () => ({ merchandiser_id: null, jour_semaine: 1, ssf_id: null, zone: '', quartiers: '', actif: true }),
+    fill: r => ({ ...r, quartiers: (r.quartiers || []).join(', ') }),
+    rowKey: r => r.id,
+    search: r => `${nomUtilisateur(r.merchandiser_id)} ${ssfNomOf(r.ssf_id)} ${JOURS_SEMAINE[r.jour_semaine]} ${r.zone || ''} ${(r.quartiers || []).join(' ')}`.toLowerCase(),
+    valid: f => !!f.merchandiser_id && !!f.ssf_id && f.jour_semaine != null,
+    save: (f, e) => {
+      const rec = {
+        zone: String(f.zone || '').trim() || null,
+        quartiers: String(f.quartiers || '').split(/[,;|\n]+/).map(q => q.trim()).filter(Boolean),
+        actif: f.actif !== false,
+      }
+      return e
+        ? table('binome_ssf_merch').update({ ...rec, source: 'admin' }).eq('id', f.id)
+        : table('binome_ssf_merch').upsert({ ...rec, merchandiser_id: f.merchandiser_id, jour_semaine: f.jour_semaine, ssf_id: f.ssf_id, source: 'admin' }, { onConflict: 'merchandiser_id,jour_semaine,ssf_id' })
+    },
+    del: r => table('binome_ssf_merch').delete().eq('id', r.id),
   },
   {
     id: 'alias_import', section: 'distrib', label: 'Alias d’import', table: 'alias_import',
@@ -1345,7 +1494,7 @@ const sections = [
 ]
 
 const vues: Vue[] = [
-  { id: 'quotas_atom', section: 'app', label: 'Quotas Atom', vue: true },
+  { id: 'quotas_atom', section: 'app', label: 'Quotas (programme merchandiser)', vue: true },
   { id: 'publier_version', section: 'app', label: 'Publier une version', vue: true },
   { id: 'maintenance', section: 'app', label: 'Maintenance', vue: true },
 ]
@@ -1493,7 +1642,11 @@ async function fetchAll() {
   }
 }
 
-onMounted(() => { void fetchAll(); void chargerQuartiersPdv() })
+onMounted(() => {
+  void fetchAll()
+  void chargerQuartiersPdv()
+  void useUsersCache().fetchUsers().then((u) => { utilisateurs.value = u || [] })
+})
 </script>
 
 <style scoped>

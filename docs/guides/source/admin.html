@@ -27,8 +27,10 @@
       <li>Les utilisateurs ne peuvent modifier ni leurs territoires, ni leurs quartiers, ni leur commercial, ni leur e-mail : tout passe par l’admin.</li>
     </ul>
   </div>
-  <h3>Friesland ou Atom</h3>
-  <p>Chaque compte terrain porte un <strong>employeur</strong> (fiche utilisateur). Les merchandiseurs <strong>Friesland</strong> suivent des tournées par périmètre. Les merchandiseurs <strong>Atom</strong> suivent des tournées <strong>par quotas</strong>, avec un <strong>SSF</strong> (vendeur du distributeur) chaque jour, dans la sous-zone de ce SSF : voir le chapitre « Merchandisers Atom ».</p>
+  <h3>Commercial, SSF et merchandiser</h3>
+  <p>Le <strong>commercial</strong> (sales officer, salarié FrieslandCampina) est responsable des PDV de son territoire. Il a deux leviers : la vente, assurée par les <strong>SSF</strong> (vendeurs des distributeurs, leur tournée vient du DMS), et l’exécution en magasin, assurée par les <strong>merchandiseurs</strong> des agences. Le SSF et le merchandiser dépendent tous deux du commercial : <strong>aucun ne donne d’ordres à l’autre</strong>. Leur seul lien est un <strong>binôme</strong> planifié (tel jour, dans tels quartiers), pour qu’ils passent dans les mêmes PDV.</p>
+  <h3>Agence et direction</h3>
+  <p>Chaque merchandiseur porte un <strong>employeur</strong> : une agence (<strong>Atom BTL</strong> à Abidjan, l’agence de l’intérieur) ou FrieslandCampina. Les agences « programme » suivent des tournées <strong>par quotas</strong> : voir le chapitre « Programme merchandiser ». Chaque compte porte aussi une <strong>direction</strong> : South (Abidjan), North (intérieur) ou Modern Trade. South et North se déduisent des territoires ; Modern Trade se choisit dans la fiche. Une personne peut avoir deux comptes (commercial MT et merchandiser) : ils ne sont pas fusionnés.</p>
   <p>La visibilité des sections par rôle se règle dans <span class="ui">Paramètres</span> → <span class="ui">Permissions</span> (chapitre « Équipes et permissions »).</p>
 </section>
 
@@ -44,7 +46,7 @@
   <table>
     <thead><tr><th>Groupe</th><th>Entrées</th></tr></thead>
     <tbody>
-      <tr><td>Principal</td><td><span class="ui">Perfect Store</span>, <span class="ui">Activité</span>, <span class="ui">Routing &amp; Planning</span>, <span class="ui">Programme Atom</span>, <span class="ui">Carte</span>, <span class="ui">Suivi commerciaux</span></td></tr>
+      <tr><td>Principal</td><td><span class="ui">Perfect Store</span>, <span class="ui">Activité</span>, <span class="ui">Routing &amp; Planning</span>, <span class="ui">Programme merchandiser South</span>, <span class="ui">Programme merchandiser North</span>, <span class="ui">Écarts SSF ↔ merch</span>, <span class="ui">Carte</span>, <span class="ui">Suivi commerciaux</span></td></tr>
       <tr><td>PDV</td><td><span class="ui">Points de vente</span></td></tr>
       <tr><td>Visites</td><td><span class="ui">Visites</span>, <span class="ui">Field coaching</span></td></tr>
       <tr><td>Analyses</td><td><span class="ui">Visibilité extérieure</span>, <span class="ui">Concurrence</span>, <span class="ui">Produits</span></td></tr>
@@ -116,7 +118,7 @@
   <ul>
     <li>Chaque case montre la tournée du jour : PDV faits sur prévus (vert si tout est fait, orange sinon), PDV prévus (bleu), ou « à générer » en pointillés quand une règle prévoit la tournée. Pour un merchandiseur Atom, le SSF du jour s’affiche dessous.</li>
     <li>Un clic sur une case ouvre la tournée du jour, avec ses PDV et les actions habituelles.</li>
-    <li>Les flèches changent de semaine ; <span class="ui">Tous</span>, <span class="ui">Atom</span>, <span class="ui">Friesland</span> et la recherche réduisent la liste. La dernière ligne totalise les PDV du jour.</li>
+    <li>Les flèches changent de semaine ; <span class="ui">Tous</span>, un bouton par agence (Atom BTL, FrieslandCampina…) et la recherche réduisent la liste. Sous le nombre de PDV : le SSF du binôme du jour. La dernière ligne totalise les PDV du jour.</li>
     <li><span class="ui">Par personne</span> revient aux cartes de chaque personne, avec sa liste de tournées et son calendrier du mois. Le choix est mémorisé.</li>
   </ul>
   <h3>Créer une tournée</h3>
@@ -129,8 +131,8 @@
   <h3>Règles récurrentes</h3>
   <p><span class="ui">Nouvelle règle</span> : merchandiseur, jours de la semaine, territoire, distributeur, période de validité (sans fin possible), <strong>mode</strong> et liste ordonnée de PDV. Les tournées sont générées automatiquement chaque nuit ; <span class="ui">Pré-générer 7 jours</span> et <span class="ui">Générer sur une période</span> les créent à l’avance. <span class="ui">Décocher une semaine</span> enregistre une exception (congé, PDV fermé) avec un motif.</p>
   <ul>
-    <li><strong>Mode périmètre</strong> (Friesland) : la tournée reprend tous les PDV de la règle.</li>
-    <li><strong>Mode quota</strong> (Atom) : la tournée prend chaque jour un nombre de PDV par canal (grille <span class="ui">Quotas Atom</span>), chaque PDV une fois par mois.</li>
+    <li><strong>Mode périmètre</strong> (FrieslandCampina) : la tournée reprend tous les PDV de la règle.</li>
+    <li><strong>Mode quota</strong> (agences) : la tournée prend chaque jour un nombre de PDV par canal (grille <span class="ui">Quotas</span>), chaque PDV une fois par mois.</li>
   </ul>
   <p>Le menu d’une règle propose <span class="ui">Modifier</span> : libellé, jours, dates, mode, SSF, territoire et distributeur se changent sans recréer la règle. Les tournées déjà générées ne changent pas : relancez <span class="ui">Recalculer les tournées à venir</span> (chapitre « L’application mobile depuis l’admin »).</p>
   <h3>Import CSV de tournées</h3>
@@ -138,43 +140,49 @@
 </section>
 
 <section class="chapitre">
-  <h2>Merchandisers Atom : quotas, SSF et sous-zones</h2>
-  <p>Les merchandiseurs Atom visitent chaque PDV de leur portefeuille <strong>une fois par mois</strong>. Chaque jour, un <strong>SSF</strong> (vendeur du distributeur) les accompagne ; ils restent alors dans sa <strong>sous-zone</strong>, c’est-à-dire ses quartiers. Tout se règle dans l’admin :</p>
+  <h2>Programme merchandiser : agences, binômes et quotas</h2>
+  <p>Les merchandiseurs des agences (Atom BTL à Abidjan, l’agence de l’intérieur) visitent chaque PDV de leur portefeuille <strong>une fois par mois</strong>. Certains jours, ils travaillent en <strong>binôme</strong> avec un <strong>SSF</strong> (vendeur du distributeur) : tous deux dépendent du commercial, aucun ne dirige l’autre, et ils passent dans les mêmes PDV. Ce planning vient de l’<strong>agence</strong> (fichier « SSF – merch – zone »). Tout se règle dans l’admin :</p>
   <table>
     <thead><tr><th>Je veux…</th><th>Où</th></tr></thead>
     <tbody>
-      <tr><td>Créer ou corriger un SSF (nom, téléphone, distributeur)</td><td><span class="ui">Référentiels</span> → <span class="ui">Distribution</span> → <span class="ui">SSF (vendeurs)</span></td></tr>
-      <tr><td>Définir les quartiers d’un SSF (sa sous-zone)</td><td><span class="ui">Référentiels</span> → <span class="ui">Distribution</span> → <span class="ui">SSF ↔ Quartiers</span></td></tr>
-      <tr><td>Dire quel jour un merchandiseur travaille avec quel SSF</td><td><span class="ui">Routing &amp; Planning</span> → <span class="ui">Règles récurrentes</span> : une règle par SSF, avec ses jours</td></tr>
-      <tr><td>Changer le nombre de PDV par canal et par jour</td><td><span class="ui">Référentiels</span> → <span class="ui">Application mobile</span> → <span class="ui">Quotas Atom</span></td></tr>
-      <tr><td>Rattacher une sous-catégorie de PDV à un canal</td><td><span class="ui">Référentiels</span> → <span class="ui">Application mobile</span> → <span class="ui">Canal Atom</span></td></tr>
-      <tr><td>Suivre la couverture du mois</td><td><span class="ui">Programme Atom</span> (barre latérale)</td></tr>
-      <tr><td>Charger le fichier « SSF ↔ zones » du client</td><td><span class="ui">Import / Export</span> → <span class="ui">Imports terrain</span> → <span class="ui">Sous-zones SSF et planning Atom</span></td></tr>
+      <tr><td>Créer ou renommer une agence, lui donner sa direction</td><td><span class="ui">Référentiels</span> → <span class="ui">Distribution</span> → <span class="ui">Agences</span></td></tr>
+      <tr><td>Rattacher un merchandiseur à son agence</td><td><span class="ui">Paramètres</span> → <span class="ui">Utilisateurs</span> → <span class="ui">Employeur (agence)</span></td></tr>
+      <tr><td>Créer ou corriger un SSF (nom, téléphone, distributeur, commercial)</td><td><span class="ui">Référentiels</span> → <span class="ui">Distribution</span> → <span class="ui">SSF (vendeurs)</span></td></tr>
+      <tr><td>Charger le fichier de l’agence (binômes)</td><td><span class="ui">Import / Export</span> → <span class="ui">Imports terrain</span> → <span class="ui">Binômes SSF ↔ merchandiser</span></td></tr>
+      <tr><td>Corriger un binôme à la main</td><td><span class="ui">Référentiels</span> → <span class="ui">Distribution</span> → <span class="ui">Binômes SSF ↔ merch</span></td></tr>
+      <tr><td>Charger le routing des SSF (DMS)</td><td><span class="ui">Imports terrain</span> → <span class="ui">Routing des SSF (export DMS)</span></td></tr>
+      <tr><td>Voir les PDV hors du routing du SSF</td><td><span class="ui">Écarts SSF ↔ merch</span> (barre latérale)</td></tr>
+      <tr><td>Changer le nombre de PDV par canal et par jour</td><td><span class="ui">Référentiels</span> → <span class="ui">Application mobile</span> → <span class="ui">Quotas</span></td></tr>
+      <tr><td>Rattacher une sous-catégorie de PDV à un canal</td><td><span class="ui">Référentiels</span> → <span class="ui">Application mobile</span> → <span class="ui">Canal des quotas</span></td></tr>
+      <tr><td>Suivre la couverture du mois</td><td><span class="ui">Programme merchandiser South</span> / <span class="ui">North</span> (barre latérale)</td></tr>
     </tbody>
   </table>
 
-  <h3>Le planning d’un merchandiseur</h3>
+  <h3>Le fichier de l’agence (binômes)</h3>
   <ol class="etapes">
-    <li><span class="ui">Nouvelle règle</span> (ou <span class="ui">Modifier</span>) : choisissez le merchandiseur, puis le <span class="ui">SSF (avec qui)</span>. Le libellé, le territoire, le distributeur et le mode quota se remplissent.</li>
-    <li>Cochez les <strong>jours</strong> où il travaille avec ce SSF. Un jour ne doit appartenir qu’à un seul SSF.</li>
-    <li>Les PDV proposés sont ceux de la sous-zone ; un PDV hors des quartiers du SSF est refusé.</li>
-    <li>La règle affiche le badge <span class="ui">SSF · nom</span>. La règle « Portefeuille DMS » du merchandiseur couvre les jours restants.</li>
+    <li>Fichier Excel ou CSV, une ligne par binôme : <strong>SSF</strong>, <strong>Merchandiser</strong> (nom ou e-mail), <strong>Jour(s)</strong> (« Lundi », « Lun, Mer », « Lundi à samedi »), <strong>Zone</strong> et/ou <strong>Quartier(s)</strong>, et si possible <strong>Distributeur</strong> et <strong>Téléphone</strong> du SSF.</li>
+    <li><span class="ui">Simuler</span> : le rapport liste les binômes par merchandiseur, les SSF à créer et les lignes rejetées (zone, quartier ou merchandiseur inconnus).</li>
+    <li><span class="ui">Appliquer</span> : les binômes sont mis à jour <strong>sans doublon</strong> (un binôme = merchandiseur × jour × SSF) ; ceux d’un merchandiseur cité qui ne sont plus dans le fichier sont désactivés. Les quartiers des SSF et les règles de tournée « SSF — » suivent. Un SSF sans commercial reçoit celui de ses merchandiseurs.</li>
+    <li>Les SSF et merchandiseurs absents du fichier ne changent pas.</li>
   </ol>
-  <p>Chaque jour, la tournée prend d’abord les PDV de la règle, puis ceux de la sous-zone, selon la grille et sans repasser par un PDV déjà visité dans le mois. Un PDV créé sur le terrain dans la sous-zone devient éligible sans autre action.</p>
+  <p>Chaque jour de binôme, la tournée prend d’abord les PDV de la règle, puis ceux des quartiers du SSF, selon la grille et sans repasser par un PDV déjà visité dans le mois. Un PDV créé sur le terrain dans ces quartiers devient éligible sans autre action. La règle « Portefeuille DMS » du merchandiseur couvre les jours sans binôme.</p>
+
+  <h3>Le contrôle d’écart</h3>
+  <p><span class="ui">Écarts SSF ↔ merch</span> compare, pour un jour, la tournée de chaque merchandiseur au routing DMS du SSF de son binôme : <strong>Aligné</strong>, <strong>Écart</strong> (avec la liste des PDV concernés et le SSF qui les suit dans le DMS), <strong>Routing SSF absent</strong> (importer le routing des SSF) ou <strong>Sans binôme</strong>. Filtres : direction, commercial, statut ; <span class="ui">Exporter</span> produit le CSV. Un commercial y voit son équipe.</p>
 
   <h3>La grille des quotas et l’objectif du mois</h3>
-  <p><span class="ui">Quotas Atom</span> présente la grille <strong>5 canaux × 6 jours</strong> (lancement : 20 PDV du lundi au jeudi, 15 le vendredi, 10 le samedi). Après un changement, <span class="ui">Appliquer aux tournées à venir</span> recalcule les tournées non commencées. L’<strong>objectif mensuel</strong> de chaque merchandiseur en découle : la grille, additionnée sur ses jours de tournée du mois (420 sur quatre semaines pleines, 465 en octobre 2026).</p>
-  <p><span class="ui">Programme Atom</span> affiche, par merchandiseur et pour le mois choisi : portefeuille, PDV éligibles, planifiés, visités, en Perfect Store, objectif et reste à visiter.</p>
+  <p><span class="ui">Quotas</span> présente la grille <strong>5 canaux × 6 jours</strong>, commune aux directions (lancement : 20 PDV du lundi au jeudi, 15 le vendredi, 10 le samedi). Après un changement, <span class="ui">Appliquer aux tournées à venir</span> recalcule les tournées non commencées des merchandiseurs d’agence. L’<strong>objectif mensuel</strong> de chaque merchandiseur en découle : la grille, additionnée sur ses jours de tournée du mois (420 sur quatre semaines pleines, 465 en octobre 2026).</p>
+  <p><span class="ui">Programme merchandiser South</span> (Abidjan, ex-« Programme Atom ») et <span class="ui">North</span> (intérieur) affichent, par merchandiseur et pour le mois choisi : portefeuille, PDV éligibles, planifiés, visités, en Perfect Store, objectif et reste à visiter. Le programme North se remplit dès que des merchandiseurs sont rattachés à une agence de direction North.</p>
 
   <h3>Côté téléphone (application 1.0.12)</h3>
   <ul>
-    <li><span class="ui">Plus</span> → <span class="ui">Ma semaine (SSF)</span> : SSF, téléphone et quartiers de chaque jour, consultables hors ligne.</li>
-    <li>Le formulaire de visite propose le <span class="ui">SSF (avec qui)</span> du jour ; le merchandiseur peut le changer ou saisir un autre nom. Un bandeau orange signale un PDV hors de la sous-zone, sans bloquer.</li>
+    <li><span class="ui">Plus</span> → <span class="ui">Ma semaine (SSF)</span> : le binôme de chaque jour (SSF, téléphone, quartiers), consultable hors ligne.</li>
+    <li>Le formulaire de visite propose le SSF du binôme du jour ; le merchandiseur peut le changer ou saisir un autre nom. Un bandeau orange signale un PDV hors des quartiers du binôme, sans bloquer.</li>
     <li>Le SSF de chaque visite s’affiche dans le détail de la visite (admin).</li>
   </ul>
   <div class="encadre encadre--attention">
-    <span class="encadre__titre">Les SSF « à confirmer »</span>
-    <p>Les SSF et sous-zones déduits des visites de septembre portent la mention <strong>à confirmer</strong>. Le fichier « SSF ↔ zones » du client les remplace : chargez-le dans <span class="ui">Imports terrain</span>, vérifiez la simulation, puis appliquez.</p>
+    <span class="encadre__titre">Binômes « Règle existante »</span>
+    <p>Les binômes repris des règles en place (déduites des visites de septembre) portent l’origine <strong>Règle existante</strong>. Le fichier de l’agence les remplace : chargez-le dans <span class="ui">Imports terrain</span>, vérifiez la simulation, puis appliquez.</p>
   </div>
 </section>
 
@@ -206,7 +214,7 @@
     <li><strong>Commerciaux</strong> : classement (visites, PDV distincts, visites par jour, dernière visite) et export CSV.</li>
   </ul>
   <h3>Field coaching</h3>
-  <p>Les coachings sont saisis sur le mobile par les commerciaux et superviseurs : évaluation du <strong>vendeur d’un distributeur</strong> en 13 questions Oui / Non / Non applicable (8 Perfect Visibility, 5 Effective Promotion). Le rapport se filtre par période, superviseur et zone ; indicateurs : nombre de coachings, PDV couverts, scores Perfect Visibility et Effective Promotion. <span class="ui">Export CSV</span> contient toutes les réponses ; <span class="ui">Imprimer</span> produit le rapport papier.</p>
+  <p>Les coachings sont saisis sur le mobile par les commerciaux et superviseurs : évaluation du <strong>vendeur d’un distributeur</strong> (le SSF, choisi dans la liste des SSF du distributeur ; la liste des PDV se limite alors à ses clients DMS) en 13 questions Oui / Non / Non applicable (8 Perfect Visibility, 5 Effective Promotion). Un <strong>objectif</strong> se choisit quand la liste <span class="ui">Référentiels</span> → <span class="ui">Application mobile</span> → <span class="ui">Objectifs de coaching</span> est remplie. Le coaching <strong>Modern Trade</strong> (un commercial MT suit un merchandiseur, avec les standards d’exécution MT) sera proposé dès que la <span class="ui">Grille coaching MT</span> sera chargée. Le rapport se filtre par période, superviseur, zone et type (GT / MT) ; indicateurs : nombre de coachings, PDV couverts, scores Perfect Visibility et Effective Promotion. <span class="ui">Export CSV</span> contient toutes les réponses ; <span class="ui">Imprimer</span> produit le rapport papier.</p>
   <p>Score = Oui ÷ (Oui + Non). Lecture : vert ≥ 70 %, orange ≥ 40 %, rouge en dessous.</p>
 </section>
 
@@ -237,7 +245,7 @@
 
   <h3>Créer un utilisateur</h3>
   <ol class="etapes">
-    <li><strong>Compte et accès</strong> : nom complet, e-mail (identifiant, non modifiable ensuite), mot de passe (8 caractères minimum), rôle, <strong>téléphone</strong> (indispensable pour WhatsApp) et, pour un merchandiseur, son <span class="ui">Commercial responsable</span>.</li>
+    <li><strong>Compte et accès</strong> : nom complet, e-mail (identifiant, non modifiable ensuite), mot de passe (8 caractères minimum), rôle, <strong>téléphone</strong> (indispensable pour WhatsApp), <strong>direction</strong> (vide = déduite des territoires ; Modern Trade à choisir) et, pour un merchandiseur, son <span class="ui">Commercial responsable</span> et son <span class="ui">Employeur (agence)</span>.</li>
     <li><strong>Périmètre terrain</strong> : cochez les <span class="ui">Territoires assignés</span> puis, si besoin, les <span class="ui">Quartiers assignés</span> (vide = tous les quartiers des territoires). Région et sous-région servent seulement à filtrer la liste.</li>
     <li><span class="ui">Créer l’utilisateur</span> : le compte est actif immédiatement, aucun e-mail n’est envoyé.</li>
   </ol>
@@ -321,11 +329,11 @@
     <thead><tr><th>Rubrique</th><th>Référentiels</th></tr></thead>
     <tbody>
       <tr><td>Géographie</td><td>Régions, sous-régions, territoires, zones / areas, quartiers, <strong>alias de territoire</strong>.</td></tr>
-      <tr><td>Distribution</td><td>Distributeurs (option couverture nationale, <strong>renommage</strong> reporté sur les PDV et les règles), liens distributeur ↔ territoires et ↔ areas, <strong>SSF (vendeurs)</strong>, <strong>SSF ↔ Quartiers</strong>, <strong>alias d’import</strong> (noms des fichiers DMS et Atom → merchandiseur, distributeur ou SSF).</td></tr>
+      <tr><td>Distribution</td><td>Distributeurs (option couverture nationale, <strong>renommage</strong> reporté sur les PDV et les règles), liens distributeur ↔ territoires et ↔ areas, <strong>Agences</strong>, <strong>SSF (vendeurs)</strong>, <strong>SSF ↔ Quartiers</strong>, <strong>Binômes SSF ↔ merch</strong>, <strong>alias d’import</strong> (noms des fichiers DMS et Atom → merchandiseur, distributeur ou SSF).</td></tr>
       <tr><td>Points de vente</td><td>Catégories et types (avec leur <strong>libellé français</strong>), <strong>fréquence de visite</strong> (7 jours par défaut : au-delà, le PDV est « en retard »), <strong>fenêtre de suivi</strong>, segments.</td></tr>
       <tr><td>Produits</td><td>Catégories, références, <strong>correspondance SKU</strong> (produit du formulaire ↔ référence Perfect Store), marques et <strong>SKU concurrents</strong>, <strong>catégories du relevé</strong>.</td></tr>
       <tr><td>Perfect Store</td><td>Niveaux, poids SKU, seuils de disponibilité GT et MT (facings), assortiment, éléments et standards de visibilité.</td></tr>
-      <tr><td>Application mobile</td><td><strong>Paramètres terrain</strong>, <strong>Quotas Atom</strong>, <strong>Canal Atom</strong>, types d’action commerciale, engins de vente, version minimale, versions installées, <strong>Publier une version</strong>, <strong>Maintenance</strong>.</td></tr>
+      <tr><td>Application mobile</td><td><strong>Paramètres terrain</strong>, <strong>Quotas</strong>, <strong>Canal des quotas</strong>, <strong>Objectifs de coaching</strong>, <strong>Grille coaching MT</strong>, types d’action commerciale, engins de vente, version minimale, versions installées, <strong>Publier une version</strong>, <strong>Maintenance</strong>.</td></tr>
     </tbody>
   </table>
 </section>
@@ -342,7 +350,7 @@
       <tr><td>Précision pour géolocaliser un PDV</td><td>30 m</td><td>Pour enregistrer depuis le terrain la position d’un PDV qui n’en a pas.</td></tr>
       <tr><td>Précision des points de trajet</td><td>50 m</td><td>Les points de tournée moins précis sont ignorés.</td></tr>
       <tr><td>Suivi de tournée</td><td>120 s, 15 m, envoi toutes les 300 s, 200 points</td><td>Finesse du trajet contre autonomie de la batterie ; appliqué au prochain démarrage de tournée.</td></tr>
-      <tr><td>Objectif de visites par jour</td><td>10 ; vide pour Atom</td><td>Affiché sur l’accueil. Vide : le nombre de PDV de la tournée du jour (Atom).</td></tr>
+      <tr><td>Objectif de visites par jour</td><td>10 ; vide pour Atom BTL</td><td>Affiché sur l’accueil. Vide : le nombre de PDV de la tournée du jour (agences). Une valeur peut être propre à une agence.</td></tr>
     </tbody>
   </table>
   <p>Les valeurs hors des bornes affichées sont refusées.</p>
@@ -353,11 +361,11 @@
     <li>Laissez <span class="ui">Rendre cette version obligatoire</span> décoché : les téléphones proposent la mise à jour par un bandeau, sans bloquer.</li>
     <li>Une fois la version <strong>en ligne sur le Play Store</strong>, publiez à nouveau en cochant <span class="ui">Rendre cette version obligatoire</span> : les anciennes versions sont alors bloquées sur l’écran de mise à jour.</li>
   </ol>
-  <p><span class="ui">Versions installées</span> montre la version de chaque téléphone. La procédure complète (Play Store compris) est dans <code>docs/play-store/PUBLIER-MISE-A-JOUR.md</code>.</p>
+  <p><span class="ui">Paramètres</span> → <span class="ui">Versions de l’app</span> montre qui a installé la version exigée, qui est bloqué et qui ne déclare rien. Le filtre <strong>direction</strong> (South, North, Modern Trade) répond à « à Abidjan, qui a installé et qui ne l’a pas encore fait » : la synthèse suit le filtre. L’encart <strong>Comptes par direction et par rôle</strong> fait l’inventaire des licences (comptes de test exclus, personnes à deux comptes signalées) ; <span class="ui">Exporter les comptes</span> produit le fichier. <span class="ui">Versions installées</span> (Référentiels) montre la version de chaque téléphone. La procédure complète (Play Store compris) est dans <code>docs/play-store/PUBLIER-MISE-A-JOUR.md</code>.</p>
 
   <h3>Maintenance</h3>
   <ul>
-    <li><span class="ui">Recalculer les tournées à venir</span> (Atom, Friesland ou tous) : refait les tournées futures qui n’ont pas commencé, après un changement de règle, de quotas ou de sous-zone. La tournée du jour n’est jamais modifiée.</li>
+    <li><span class="ui">Recalculer les tournées à venir</span> (une agence ou toutes) : refait les tournées futures qui n’ont pas commencé, après un changement de règle, de quotas ou de sous-zone. La tournée du jour n’est jamais modifiée.</li>
     <li><span class="ui">Générer les tournées manquantes (7 jours)</span>.</li>
     <li><span class="ui">Rafraîchir les statistiques maintenant</span> : les tableaux de bord sont à jour moins d’une minute plus tard.</li>
     <li><span class="ui">Tâches planifiées</span> : état, dernier passage et horaire des tâches de nuit (génération des tournées, statistiques).</li>
@@ -372,7 +380,7 @@
     <li>Export : visites (Excel, <strong>toutes</strong> les visites de la plage de dates, avec la quantité de chaque produit), PDV (Excel).</li>
   </ul>
   <h3>Imports terrain (admin)</h3>
-  <p>Quatre traitements, sans passer par l’équipe technique : <span class="ui">Clients DMS → points de vente</span>, <span class="ui">Affectation des merchandisers (DMS)</span>, <span class="ui">Visites Atom (export Bonnet Rouge)</span>, <span class="ui">Sous-zones SSF et planning Atom</span>.</p>
+  <p>Cinq traitements, sans passer par l’équipe technique : <span class="ui">Clients DMS → points de vente</span>, <span class="ui">Affectation des merchandisers (DMS)</span>, <span class="ui">Visites Atom (export Bonnet Rouge)</span>, <span class="ui">Binômes SSF ↔ merchandiser (fichier de l’agence)</span>, <span class="ui">Routing des SSF (export DMS)</span>.</p>
   <ol class="etapes">
     <li>Choisissez le fichier Excel, puis <span class="ui">Simuler</span> : rien n’est écrit. Le résumé, le rapport et le fichier CSV des écarts s’affichent et se téléchargent.</li>
     <li>Relisez le rapport (lignes écartées, noms inconnus). Un nom mal reconnu se corrige dans <span class="ui">Alias d’import</span>, puis on simule à nouveau.</li>
@@ -413,7 +421,7 @@
   <div class="aide">
     <h3>Dépannage rapide</h3>
     <ul>
-      <li>Une tournée Atom sort de la sous-zone : vérifiez les quartiers du SSF (<span class="ui">SSF ↔ Quartiers</span>), le SSF de la règle, puis <span class="ui">Recalculer les tournées à venir</span>.</li>
+      <li>Une tournée d’agence sort des quartiers du binôme : vérifiez le binôme (<span class="ui">Binômes SSF ↔ merch</span>), les quartiers du SSF (<span class="ui">SSF ↔ Quartiers</span>), puis <span class="ui">Recalculer les tournées à venir</span>.</li>
       <li>Un jour sans tournée : aucune règle ne couvre ce jour, ou la règle est suspendue.</li>
       <li>Un produit absent du formulaire : il est retiré, ou sa catégorie l’est (<span class="ui">Produits du formulaire</span>, <span class="ui">Catégories du relevé</span>).</li>
       <li>Les scores n’ont pas bougé après un changement de standard ou de correspondance : <span class="ui">Recalculer</span>.</li>

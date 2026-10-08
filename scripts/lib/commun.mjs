@@ -152,6 +152,7 @@ export function lireDmsClasseur(wb, { seuilDepot = 0, nomFichier = 'l\'export DM
     if (c) {
       // Même client suivi par plusieurs vendeurs / distributeurs
       c.distributeurs.push(v('distributeur')); c.distCodes.push(v('distCode')); c.vendeurs.push(vendeur)
+      c.vendeursDetail.push({ nom: v('vendeur'), code: v('vendeurCode'), distributeur: v('distributeur') })
       if (!c.zone) c.zone = v('zone')
       if (!c.merch) c.merch = v('merch')
       return
@@ -159,6 +160,8 @@ export function lireDmsClasseur(wb, { seuilDepot = 0, nomFichier = 'l\'export DM
     parCode.set(v('code'), {
       code: v('code'), nom: v('nom'), contact: v('contact'), region: v('region'),
       distributeurs: [v('distributeur')], distCodes: [v('distCode')], vendeurs: [vendeur],
+      // Vendeur (SSF) par ligne, pour le routing SSF : nom seul, code, distributeur.
+      vendeursDetail: [{ nom: v('vendeur'), code: v('vendeurCode'), distributeur: v('distributeur') }],
       rue: v('rue'), quartier: v('quartier'), district: v('district'), sousCanal: v('sousCanal'),
       lat: Number(v('lat')), lng: Number(v('lng')), zone: v('zone'), merch: v('merch'),
     })

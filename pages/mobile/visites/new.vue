@@ -132,20 +132,20 @@
             <UInput v-model="form.date_visite" type="datetime-local" size="lg" />
           </div>
 
-          <!-- SSF (merchandisers Atom) : vendeur du distributeur présent à la visite. -->
+          <!-- SSF (merchandisers d'agence) : vendeur du distributeur, binôme de la visite. -->
           <div v-if="estAtom">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SSF (avec qui)</label>
             <USelect v-model="ssfSelection" :options="optionsSsf" placeholder="Choisir le SSF" size="lg" />
             <UInput v-if="ssfSelection === 'autre'" v-model="form.ssf_brut" class="mt-2" size="lg" placeholder="Nom du SSF" maxlength="80" />
             <p v-if="ssfPrevu" class="mt-1 text-xs text-gray-400">
-              Prévu ce jour : {{ ssfPrevu.ssf_nom }}<template v-if="ssfPrevu.ssf_telephone"> · {{ ssfPrevu.ssf_telephone }}</template>
+              Binôme du jour : {{ ssfPrevu.ssf_nom }}<template v-if="ssfPrevu.ssf_telephone"> · {{ ssfPrevu.ssf_telephone }}</template>
             </p>
             <p
               v-if="horsSousZone"
               class="mt-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 px-3 py-2 text-xs text-amber-800 dark:text-amber-200"
               role="status"
             >
-              Ce PDV n'est pas dans la sous-zone de {{ nomSsfChoisi }} ({{ sousZoneChoisie }}). La visite peut être enregistrée : vérifiez le PDV ou le SSF.
+              Ce PDV n'est pas dans les quartiers de votre binôme avec {{ nomSsfChoisi }} ({{ sousZoneChoisie }}). La visite peut être enregistrée : vérifiez le PDV ou le SSF.
             </p>
           </div>
 
@@ -525,6 +525,7 @@ import { getDefaultVisiteData } from '~/types'
 import type { PDV, VisiteData, VisiteConcurrence, VisiteActions } from '~/types'
 import { getSkus, quantityToLegacyStatus, categoryPresent, categoriesProduitsActives, type ProductCategoryDef } from '~/utils/products'
 import { statutMarqueDerive } from '~/utils/concurrence'
+import { estMerchandiserProgramme } from '~/utils/agences'
 import { CATEGORIES_RELEVE, categorieRenseignee } from '~/utils/visiteCompletude'
 import { ssfDuJour, pdvDansSousZone, libelleSousZone } from '~/utils/ssfTerrain'
 import { describeSupabaseError, estErreurReseau } from '~/utils/supabaseErrors'
@@ -657,10 +658,10 @@ const form = reactive({
   ssf_brut: '',
 })
 
-// SSF (merchandisers Atom) : par défaut celui prévu ce jour-là (planning
+// SSF (merchandisers d'agence) : par défaut celui du binôme ce jour-là (planning
 // ssf_semaine, gardé hors ligne), modifiable ; « autre » pour un SSF absent de
-// la liste. Un PDV hors de la sous-zone du SSF choisi est signalé, sans bloquer.
-const estAtom = computed(() => authStore.profile?.employeur === 'atom')
+// la liste. Un PDV hors des quartiers du binôme est signalé, sans bloquer.
+const estAtom = computed(() => estMerchandiserProgramme(authStore.profile?.employeur))
 const { semaine: semaineSsf, listeSsf, quartiers: quartiersSsf, chargerSemaine: chargerSemaineSsf, chargerListe: chargerListeSsf } = useSsfTerrain()
 const ssfAutre = ref(false)
 const ssfSelection = computed<string>({

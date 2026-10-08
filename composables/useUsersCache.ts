@@ -73,9 +73,13 @@ export function useUsersCache() {
         const COLONNES_BASE = 'id, nom, email, role, zone_assignee, territoires_assignes, quartiers_assignes, region, telephone, is_active, created_at, updated_at'
         let { data, error } = await supabase
           .from('profiles')
-          .select(`${COLONNES_BASE}, commercial_id, employeur`)
+          .select(`${COLONNES_BASE}, commercial_id, employeur, direction`)
           .order('nom')
 
+        // direction : migration 20261008110000.
+        if (error && /direction/i.test(error.message || '')) {
+          ;({ data, error } = await supabase.from('profiles').select(`${COLONNES_BASE}, commercial_id, employeur`).order('nom'))
+        }
         if (error && /commercial_id/i.test(error.message || '')) {
           ;({ data, error } = await supabase.from('profiles').select(COLONNES_BASE).order('nom'))
         }

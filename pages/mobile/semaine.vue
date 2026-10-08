@@ -2,7 +2,7 @@
   <div class="mobile-page">
     <div class="p-4">
       <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Ma semaine</h2>
-      <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Avec quel SSF et dans quels quartiers, chaque jour.</p>
+      <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Votre binôme SSF et vos quartiers, chaque jour.</p>
 
       <!-- Chargement initial -->
       <div v-if="chargement && !chargee" class="mt-4 space-y-3">
@@ -19,7 +19,7 @@
         </p>
         <p class="mx-auto mt-1 max-w-[280px] text-sm text-gray-500 dark:text-gray-400">
           {{ chargee || isOnline
-            ? 'Votre tournée suit votre portefeuille. Le planning par SSF est préparé par votre superviseur.'
+            ? 'Votre tournée suit votre portefeuille. Les binômes avec les SSF sont planifiés par votre agence et votre commercial.'
             : 'Ouvrez cet écran une fois avec du réseau : il restera disponible sans connexion.' }}
         </p>
       </div>
@@ -42,7 +42,7 @@
             Pas de SSF prévu : tournée sur votre portefeuille.
           </p>
 
-          <div v-for="l in j.ssf" :key="l.template_id" class="mt-2">
+          <div v-for="l in j.ssf" :key="`${l.ssf_id}-${l.jour_semaine}`" class="mt-2">
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <p class="truncate text-sm font-semibold text-gray-800 dark:text-gray-100">{{ l.ssf_nom }}</p>

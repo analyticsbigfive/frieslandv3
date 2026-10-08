@@ -2,9 +2,9 @@
   <section class="admin-surface space-y-5 p-5">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div class="max-w-2xl">
-        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Grille des quotas Atom</h2>
+        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Grille des quotas (programme merchandiser)</h2>
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Nombre de PDV par canal et par jour dans la tournée de chaque merchandiser Atom. Chaque PDV n’est proposé
+          Nombre de PDV par canal et par jour dans la tournée de chaque merchandiser d’agence (Atom BTL, agence North…), commune aux directions South et North. Chaque PDV n’est proposé
           qu’une fois par mois. Quand un canal manque de PDV, les places restantes sont complétées par des boutiques.
         </p>
       </div>
@@ -56,7 +56,7 @@
         </tfoot>
       </table>
     </div>
-    <p class="text-xs text-gray-500 dark:text-gray-400">Dimanche : pas de tournée. Le canal d’un PDV vient de sa sous-catégorie (onglet « Canal Atom »).</p>
+    <p class="text-xs text-gray-500 dark:text-gray-400">Dimanche : pas de tournée. Le canal d’un PDV vient de sa sous-catégorie (onglet « Canal des quotas »).</p>
 
     <div class="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
       <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">Appliquer aux tournées à venir</p>
@@ -66,7 +66,7 @@
       </p>
       <div class="mt-3 flex flex-wrap items-center gap-3">
         <UButton color="amber" variant="soft" icon="i-heroicons-arrow-path" :loading="application" :disabled="modifie" @click="appliquer">
-          Recalculer les tournées Atom à venir
+          Recalculer les tournées à venir des agences
         </UButton>
         <span v-if="modifie" class="text-xs text-amber-600">Enregistrez d’abord la grille.</span>
         <span v-if="progression" class="text-xs text-gray-500">{{ progression }}</span>
@@ -78,6 +78,7 @@
 <script setup lang="ts">
 const supabase = useSupabaseClient()
 const toast = useToast()
+const { charger: chargerAgences } = useAgences()
 
 const CANAUX = ['Superette', 'Boutique', 'Aboki & Kiosque', 'Pushcart', 'Porridge']
 const JOURS = [
@@ -132,12 +133,14 @@ async function enregistrer() {
 }
 
 async function appliquer() {
-  if (!confirm('Recalculer les tournées Atom des 7 prochains jours qui n’ont pas commencé ?')) return
+  if (!confirm('Recalculer les tournées des merchandisers d’agence des 7 prochains jours qui n’ont pas commencé ?')) return
   application.value = true
   progression.value = ''
   try {
+    // Merchandisers des agences « programme » (Référentiels › Agences).
+    const codes = (await chargerAgences(true)).filter(a => a.programme && a.actif).map(a => a.code)
     const { data: agents, error } = await supabase.from('profiles').select('id, nom')
-      .eq('employeur', 'atom').eq('role', 'merchandiser').neq('is_active', false).order('nom')
+      .in('employeur', codes).eq('role', 'merchandiser').neq('is_active', false).order('nom')
     if (error) throw error
     let supprimees = 0
     let creees = 0

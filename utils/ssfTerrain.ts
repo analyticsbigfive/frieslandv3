@@ -1,13 +1,16 @@
 // utils/ssfTerrain.ts
-// SSF côté terrain (merchandisers Atom) : planning de la semaine renvoyé par
-// la RPC ssf_semaine, SSF du jour, et appartenance d'un PDV à la sous-zone
-// d'un SSF (même règle que etapes_quota_du_jour : zone et quartier exacts).
+// SSF côté terrain (merchandisers d'agence) : planning de la semaine (binômes
+// SSF ↔ merchandiser, RPC ssf_semaine), SSF du jour, et appartenance d'un PDV
+// aux quartiers du SSF (même règle que etapes_quota_du_jour : zone et quartier
+// exacts). Le SSF ne dirige pas le merchandiser : les deux dépendent du
+// commercial et passent dans les mêmes PDV.
 // Pur et testé (tests/ssfTerrain.spec.ts).
 
 /** Une ligne de ssf_semaine : un SSF prévu un jour de la semaine (0 = dimanche). */
 export interface JourSsf {
   jour_semaine: number
-  template_id: string
+  /** Règle « SSF — » qui porte le binôme ; null si le binôme n'a pas (encore) de règle. */
+  template_id: string | null
   libelle: string | null
   ssf_id: number
   ssf_nom: string

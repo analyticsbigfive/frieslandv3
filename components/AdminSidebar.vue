@@ -103,6 +103,7 @@ import {
   Trophy,
   GraduationCap,
   Target,
+  GitCompare,
 } from 'lucide-vue-next'
 
 defineProps<{ collapsed: boolean; mobileOpen?: boolean }>()
@@ -122,10 +123,15 @@ type AdminNavItem = {
 }
 
 function isActive(path: string, activePaths: string[] = []): boolean {
-  const targetPath = path.split('?')[0]
+  const [targetPath, query] = path.split('?')
   if (targetPath === '/admin') return route.path === '/admin'
-  // Routing & Planning ne s'allume pas sur sa sous-page Programme Atom.
-  if (targetPath === '/admin/routing' && route.path.startsWith('/admin/routing/programme-atom')) return false
+  // Routing & Planning ne s'allume pas sur ses sous-pages (programmes, écarts).
+  if (targetPath === '/admin/routing' && /^\/admin\/routing\/(programme-|ecarts-)/.test(route.path)) return false
+  // Programme South / North : même page, la direction départage.
+  if (targetPath === '/admin/routing/programme-merchandiser') {
+    const voulue = new URLSearchParams(query || '').get('direction') || 'south'
+    return route.path.startsWith(targetPath) && (route.query.direction === 'north' ? 'north' : 'south') === voulue
+  }
   return route.path.startsWith(targetPath) || activePaths.some(activePath => route.path.startsWith(activePath))
 }
 
@@ -137,7 +143,9 @@ const navSections: Array<{ key: string; title: string; items: AdminNavItem[] }> 
       { label: 'Perfect Store', to: '/admin', icon: Trophy },
       { label: 'Activité', to: '/admin/activite', icon: LayoutDashboard },
       { label: 'Routing & Planning', to: '/admin/routing', icon: Route, privilegie: true },
-      { label: 'Programme Atom', to: '/admin/routing/programme-atom', icon: Target },
+      { label: 'Programme merchandiser South', to: '/admin/routing/programme-merchandiser?direction=south', icon: Target },
+      { label: 'Programme merchandiser North', to: '/admin/routing/programme-merchandiser?direction=north', icon: Target },
+      { label: 'Écarts SSF ↔ merch', to: '/admin/routing/ecarts-ssf', icon: GitCompare },
       { label: 'Carte', to: '/admin/map', icon: Map },
       { label: 'Suivi commerciaux', to: '/admin/trajets', icon: Navigation },
     ],

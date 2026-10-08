@@ -14,11 +14,26 @@ export interface CreateUserInput {
   telephone: string | null
   zone_assignee: string | null
   commercial_id: string | null
-  /** friesland (défaut) ou atom : logique de tournée (migration 20261006100000). */
-  employeur?: 'friesland' | 'atom'
+  /** Code d'agence (table agence, défaut friesland) : logique de tournée. */
+  employeur?: string
+  /** south / north / mt ; vide = déduite des territoires. */
+  direction?: string | null
   territoires_assignes: string[]
   quartiers_assignes: string[]
   region: string | null
+}
+
+/**
+ * Code d'agence reçu du navigateur, vérifié contre la table agence ; inconnu
+ * ou vide : friesland. Avant la migration 20261008100000 (pas de table) :
+ * friesland ou atom.
+ */
+export async function employeurValide(service: any, code: unknown): Promise<string> {
+  const v = typeof code === 'string' ? code.trim() : ''
+  if (!v || v === 'friesland') return 'friesland'
+  const { data, error } = await service.from('agence').select('code').eq('code', v).maybeSingle()
+  if (error) return v === 'atom' ? 'atom' : 'friesland'
+  return data ? v : 'friesland'
 }
 
 // email_confirm: true -> compte utilisable immédiatement, aucun mail envoyé
@@ -56,7 +71,8 @@ export async function createUserWithProfile(service: any, input: CreateUserInput
       telephone: input.telephone,
       zone_assignee: input.zone_assignee,
       commercial_id: input.commercial_id,
-      employeur: input.employeur === 'atom' ? 'atom' : 'friesland',
+      employeur: input.employeur || 'friesland',
+      ...(input.direction ? { direction: input.direction } : {}),
       territoires_assignes: input.territoires_assignes,
       quartiers_assignes: input.quartiers_assignes,
       region: input.region,

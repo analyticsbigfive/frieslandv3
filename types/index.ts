@@ -6,7 +6,8 @@ import { catalogueProduits, getSkus } from '../utils/products'
 
 // ---- Enums & Constantes ----
 export type UserRole = 'admin' | 'superviseur' | 'merchandiser' | 'commercial'
-export type Employeur = 'friesland' | 'atom'
+/** Code d'agence (table agence) : friesland, atom (Atom BTL, South), agence-north… */
+export type Employeur = 'friesland' | 'atom' | (string & {})
 /** perimetre = tout le portefeuille chaque jour ; quota = N PDV par canal et par jour (Atom). */
 export type RoutingTemplateMode = 'perimetre' | 'quota'
 // Deux axes distincts : SyncStatus = transport device -> serveur ;
@@ -35,11 +36,14 @@ export interface Profile {
   region?: string
   avatar_url?: string
   /**
-   * friesland = salarié Friesland (tournée = tout le périmètre, 6j/7) ;
-   * atom = merchandiser Atom BTL (tournée par quotas journaliers par canal,
-   * chaque PDV une fois par mois civil — programme Bonnet Rouge).
+   * Code de l'agence employeur (table agence). friesland = salarié
+   * FrieslandCampina (tournée = tout le périmètre) ; une agence « programme »
+   * (atom = Atom BTL, South ; agence-north…) = tournée par quotas journaliers
+   * par canal, chaque PDV une fois par mois civil.
    */
   employeur?: Employeur
+  /** south (Abidjan), north (intérieur), mt (Modern Trade). */
+  direction?: 'south' | 'north' | 'mt' | null
   is_active: boolean
   created_at: string
   updated_at: string
@@ -458,6 +462,13 @@ export interface FieldCoaching {
   distributeur_id?: number | null
   distributeur_nom?: string | null
   vendeur_nom?: string | null
+  /** gt = vendeur (SSF) en General Trade ; mt = merchandiser en Modern Trade (migration 20261008160000). */
+  type_coaching?: 'gt' | 'mt'
+  /** Coaching GT : SSF coaché (référentiel ssf). */
+  ssf_id?: number | null
+  /** Coaching MT : merchandiser suivi. */
+  merchandiser_id?: string | null
+  objectif_code?: string | null
   engin_code?: string | null
   pdv_id: string
   route_jour?: string | null
@@ -486,6 +497,8 @@ export interface FieldCoaching {
   auteur?: Pick<Profile, 'nom' | 'email'>
   assigne?: Pick<Profile, 'nom' | 'email'>
   superviseur?: Pick<Profile, 'nom' | 'email'>
+  ssf?: { nom: string } | null
+  merchandiser?: Pick<Profile, 'nom'> | null
 }
 
 // ---- Actions commerciales (lot 3.5, 1.0.4) ----

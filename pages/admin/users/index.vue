@@ -104,10 +104,15 @@
                   {{ user.role }}
                 </span>
                 <span
-                  v-if="user.employeur === 'atom'"
+                  v-if="user.role === 'merchandiser' && estMerchandiserProgramme(user.employeur, agences)"
                   class="ml-1 rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-800 dark:bg-violet-900/40 dark:text-violet-200"
-                  title="Merchandiser Atom BTL : tournée par quotas"
-                >Atom</span>
+                  :title="`Merchandiser ${nomAgenceDe(user.employeur)} : tournée par quotas`"
+                >{{ nomAgenceDe(user.employeur) }}</span>
+                <span
+                  v-if="user.direction"
+                  class="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-200"
+                  :title="libelleDirection(user.direction)"
+                >{{ libelleDirection(user.direction, true) }}</span>
               </td>
               <td class="px-4 py-3 text-sm text-gray-600">{{ zoneLabel(user) }}</td>
               <td class="px-4 py-3 text-sm text-gray-600">{{ equipeLabel(user) }}</td>
@@ -209,17 +214,35 @@
             />
           </UFormGroup>
 
-          <!-- Deux logiques de tournée : Friesland = tout le périmètre chaque jour ;
-               Atom BTL = quotas journaliers par canal, chaque PDV une fois par mois. -->
+          <!-- Deux logiques de tournée : FrieslandCampina = tout le périmètre chaque jour ;
+               agence « programme » (Atom BTL, agence North…) = quotas journaliers par canal,
+               chaque PDV une fois par mois. Agences : Référentiels › Agences. -->
           <UFormGroup
             v-if="userForm.role === 'merchandiser'"
-            label="Employeur"
-            help="Atom BTL : tournée par quotas (programme Bonnet Rouge) depuis son portefeuille DMS. Friesland : tout son périmètre chaque jour."
+            label="Employeur (agence)"
+            help="Agence « programme » (Atom BTL, agence North…) : tournée par quotas depuis son portefeuille. FrieslandCampina : tout son périmètre chaque jour."
             size="md"
           >
             <USelectMenu
               v-model="userForm.employeur"
               :options="employeurOptions"
+              option-attribute="label"
+              value-attribute="value"
+              size="md"
+              class="w-full"
+            />
+          </UFormGroup>
+
+          <!-- Direction : South / North se déduisent des territoires ; MT (Modern
+               Trade) se choisit ici. Une personne à deux comptes a deux directions. -->
+          <UFormGroup
+            label="Direction"
+            help="Vide : déduite des territoires (South = Abidjan, North = intérieur). Modern Trade se choisit ici."
+            size="md"
+          >
+            <USelectMenu
+              v-model="userForm.direction"
+              :options="directionOptions"
               option-attribute="label"
               value-attribute="value"
               size="md"
@@ -511,6 +534,7 @@
 
 <script setup lang="ts">
 import { grouperQuartiersParTerritoire } from '~/utils/territoires'
+import { DIRECTIONS, estMerchandiserProgramme, libelleDirection } from '~/utils/agences'
 import type { Profile, UserRole, Employeur } from '~/types'
 
 definePageMeta({
@@ -526,10 +550,9 @@ const users = ref<Profile[]>([])
 const loading = ref(false)
 const searchQuery = ref('')
 const roleFilter = ref('')
-const employeurOptions = [
-  { value: 'friesland', label: 'Friesland' },
-  { value: 'atom', label: 'Atom BTL' },
-]
+// Agences : table agence (Référentiels › Agences).
+const { agences, options: employeurOptions, nom: nomAgenceDe, charger: chargerAgences } = useAgences()
+const directionOptions = [{ value: '', label: 'Déduite des territoires' }, ...DIRECTIONS.map(d => ({ value: d.value, label: d.label }))]
 const showCreate = ref(false)
 const editingUser = ref<Profile | null>(null)
 const saving = ref(false)
@@ -546,6 +569,7 @@ const userForm = ref({
   telephone: '',
   commercial_id: null as string | null,
   employeur: 'friesland' as Employeur,
+  direction: '' as string,
   // Cascade géo (UI) — non stockées telles quelles ; on dérive zone_assignee/region au save.
   region_code: '',
   sub_region_code: '',
@@ -720,7 +744,7 @@ function openCreateUser() {
   userForm.value = {
     nom: '', email: '', password: '', role: 'merchandiser',
     zone_assignee: '', region: '', territoires_assignes: [], quartiers_assignes: [], telephone: '', commercial_id: null,
-    employeur: 'friesland',
+    employeur: 'friesland', direction: '',
     region_code: '', sub_region_code: '', territory_codes: [],
   }
   showCreate.value = true
@@ -783,7 +807,8 @@ function getUserActions(user: Profile) {
         editingUser.value = user
         userForm.value.password = ''
         Object.assign(userForm.value, user)
-        userForm.value.employeur = user.employeur === 'atom' ? 'atom' : 'friesland'
+        userForm.value.employeur = user.employeur || 'friesland'
+        userForm.value.direction = user.direction || ''
         userForm.value.territoires_assignes = (user.territoires_assignes || []).filter(Boolean)
         userForm.value.quartiers_assignes = (user.quartiers_assignes || []).filter(Boolean)
         hydrateUserGeo()
@@ -857,6 +882,8 @@ function exportUsers() {
       territoires_assignes: terrs.join('|'),
       quartiers_assignes: (u.quartiers_assignes || []).filter(Boolean).join('|'),
       commercial: users.value.find(c => c.id === u.commercial_id)?.email || '',
+      agence: nomAgenceDe(u.employeur),
+      direction: libelleDirection(u.direction, true).replace('—', ''),
       sous_region: u.region || '',
       division: divs.join('|'),
     }
@@ -968,6 +995,7 @@ async function handleSaveUser() {
           telephone: userForm.value.telephone,
           commercial_id: userForm.value.role === 'merchandiser' ? (userForm.value.commercial_id || null) : null,
           employeur: userForm.value.role === 'merchandiser' ? userForm.value.employeur : 'friesland',
+          direction: userForm.value.direction || null,
         })
         .eq('id', editingUser.value.id)
 
@@ -985,6 +1013,7 @@ async function handleSaveUser() {
         telephone: userForm.value.telephone,
         commercial_id: userForm.value.role === 'merchandiser' ? (userForm.value.commercial_id || null) : null,
         employeur: userForm.value.role === 'merchandiser' ? userForm.value.employeur : 'friesland',
+        direction: userForm.value.direction || null,
         zone_assignee: zoneAssignee,
         territoires_assignes: terrs,
         quartiers_assignes: quartiers,
@@ -1107,6 +1136,7 @@ async function copyResetPassword() {
 
 onMounted(() => {
   fetchUsers()
+  chargerAgences()
   fetchReferentiels()
   fetchDeletionRequests()
 })

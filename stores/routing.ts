@@ -773,7 +773,7 @@ export const useRoutingStore = defineStore('routing', () => {
       dateFin?: string
       /** quota = Atom : N PDV par canal et par jour, chaque PDV une fois par mois. */
       mode?: RoutingTemplateMode
-      /** SSF de la règle : sa sous-zone borne les PDV (merchandisers Atom). */
+      /** SSF du binôme de la règle : ses quartiers bornent les PDV (merchandisers d'agence). */
       ssfId?: number | null
     } = {}
   ) {
