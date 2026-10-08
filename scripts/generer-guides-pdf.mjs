@@ -18,6 +18,11 @@
  *          sur la fiche des comptes qui ne l'ont pas encore remplacé
  *          (user_metadata.must_change_password encore à true).
  *
+ *   GUIDE_ADMIN_MOT_DE_PASSE=… node scripts/generer-guides-pdf.mjs --admin admin@friesland.ci
+ *       -> en plus, le guide admin avec la fiche de connexion de ce compte
+ *          (adresse, identifiant, mot de passe pris dans la variable
+ *          d'environnement) dans docs/guides/utilisateurs/admin/ — NON versionné.
+ *
  * Supabase ne garde que le hachage des mots de passe : on ne peut pas relire
  * le mot de passe actuel. Seul le mot de passe par défaut des comptes seedés
  * est connu, et il est PRÉSUMÉ (une réinitialisation faite depuis l'admin
@@ -71,6 +76,8 @@ const ROLES = {
   },
 }
 
+const URL_CONNEXION = 'https://frieslandv3.vercel.app/login'
+
 const JOURS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
 
 const echapper = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;' }[c]))
@@ -115,7 +122,9 @@ function ficheUtilisateur(u) {
     ['Identifiant (e-mail)', echapper(u.email)],
     ligneMotDePasse(u),
   ]
+  if (u.role === 'admin') lignes.unshift(['Adresse de connexion', echapper(URL_CONNEXION)])
   if (u.telephone) lignes.push(['Téléphone', echapper(u.telephone)])
+  if (u.role === 'admin') return blocFiche(u, lignes)
   const territoires = (u.territoires_assignes || []).filter(Boolean)
   lignes.push(['Territoire(s)', echapper(abreger(territoires, 12) || u.zone_assignee || 'À définir par l’administrateur')])
   const quartiers = (u.quartiers_assignes || []).filter(Boolean)
@@ -131,6 +140,10 @@ function ficheUtilisateur(u) {
       ? `${equipe.length} merchandiseur(s) : ${equipe.map(m => echapper(m.nom || m.email)).join(', ')}`
       : 'Aucun merchandiseur rattaché pour le moment'])
   }
+  return blocFiche(u, lignes)
+}
+
+function blocFiche(u, lignes) {
   return `
     <div class="fiche">
       <h2>Ma fiche de connexion</h2>
@@ -349,6 +362,9 @@ async function chargerUtilisateurs({ avecMotsDePasse }) {
 // ---------------------------------------------------------------------------
 const avecUtilisateurs = process.argv.includes('--utilisateurs')
 const avecMotsDePasse = process.argv.includes('--avec-mots-de-passe')
+const iAdmin = process.argv.indexOf('--admin')
+const emailAdmin = iAdmin > -1 ? process.argv[iAdmin + 1] : null
+if (iAdmin > -1 && !emailAdmin?.includes('@')) throw new Error('--admin attend un e-mail')
 const css = await feuilleDeStyle()
 const travail = await mkdtemp(join(tmpdir(), 'guides-html-'))
 const chrome = await demarrerChrome()
@@ -360,6 +376,17 @@ try {
     const pdf = join(SORTIE, `${ROLES[role].fichier}.pdf`)
     await imprimer(chrome, html, pdf, ROLES[role].titre)
     console.log(`✅ ${pdf.replace(`${RACINE}/`, '')}`)
+  }
+
+  if (emailAdmin) {
+    const dossier = join(SORTIE, 'utilisateurs', 'admin')
+    await mkdir(dossier, { recursive: true })
+    const admin = { role: 'admin', nom: 'Administrateur', email: emailAdmin, motDePasse: process.env.GUIDE_ADMIN_MOT_DE_PASSE || null }
+    const html = join(travail, 'admin-perso.html')
+    await writeFile(html, await assembler('admin', { css, utilisateur: admin }))
+    const nom = slug(emailAdmin.split('@')[0])
+    await imprimer(chrome, html, join(dossier, `${nom}.pdf`), `${ROLES.admin.titre} — ${emailAdmin}`)
+    console.log(`  ✅ utilisateurs/admin/${nom}.pdf${admin.motDePasse ? ' (mot de passe — à remettre en main propre)' : ''}`)
   }
 
   if (avecUtilisateurs) {

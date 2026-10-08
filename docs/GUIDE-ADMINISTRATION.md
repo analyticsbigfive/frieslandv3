@@ -1,6 +1,6 @@
 # Guide d'administration — Big Five / Perfect Store (Friesland Bonnet Rouge)
 
-> Version du 6 octobre 2026 (application mobile 1.0.12). Couvre le back-office
+> Version du 8 octobre 2026 (application mobile 1.0.12). Couvre le back-office
 > web (`/admin`) et tous les réglages qui pilotent l'application mobile : le
 > client gère ses données depuis l'admin, sans passer par l'éditeur SQL.
 > Données de référence Perfect Store : fichier client « BIG FIVE KPI UPDATE »
@@ -14,7 +14,10 @@
 
 ## 1. Connexion et rôles
 
-- **URL** : l'application web, page `/login`. Après connexion, un **admin** ou
+- **URL de connexion** : <https://frieslandv3.vercel.app/login>
+- **Compte administrateur** : `admin@friesland.ci`. Le mot de passe est remis
+  séparément, en main propre ; il ne figure jamais dans ce guide.
+- Après connexion, un **admin** ou
   **superviseur** arrive sur le dashboard Perfect Store (`/admin`) ; un
   **merchandiser** arrive sur l'app mobile (`/mobile`).
 - **Rôles** :
