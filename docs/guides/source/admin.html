@@ -28,7 +28,7 @@
     </ul>
   </div>
   <h3>Commercial, SSF et merchandiser</h3>
-  <p>Le <strong>commercial</strong> (sales officer, salarié FrieslandCampina) est responsable des PDV de son territoire. Il a deux leviers : la vente, assurée par les <strong>SSF</strong> (vendeurs des distributeurs, leur tournée vient du DMS), et l’exécution en magasin, assurée par les <strong>merchandiseurs</strong> des agences. Le SSF et le merchandiser dépendent tous deux du commercial : <strong>aucun ne donne d’ordres à l’autre</strong>. Leur seul lien est un <strong>binôme</strong> planifié (tel jour, dans tels quartiers), pour qu’ils passent dans les mêmes PDV.</p>
+  <p>Le <strong>commercial</strong> (sales officer, salarié FrieslandCampina) est responsable des PDV de son territoire. Il a deux leviers : la vente, assurée par les <strong>SSF</strong> (vendeurs des distributeurs, leur tournée vient du DMS), et l’exécution en magasin, assurée par les <strong>merchandiseurs</strong> des agences. Le SSF et le merchandiser dépendent tous deux du commercial : <strong>aucun ne donne d’ordres à l’autre</strong>. Leur seul lien est le <strong>routing mensuel</strong> de l’agence (tel jour, tel lieu, avec tel SSF), pour qu’ils passent dans les mêmes PDV.</p>
   <h3>Agence et direction</h3>
   <p>Chaque merchandiseur porte un <strong>employeur</strong> : une agence (<strong>Atom BTL</strong> à Abidjan, l’agence de l’intérieur) ou FrieslandCampina. Les agences « programme » suivent des tournées <strong>par quotas</strong> : voir le chapitre « Programme merchandiser ». Chaque compte porte aussi une <strong>direction</strong> : South (Abidjan), North (intérieur) ou Modern Trade. South et North se déduisent des territoires ; Modern Trade se choisit dans la fiche. Une personne peut avoir deux comptes (commercial MT et merchandiser) : ils ne sont pas fusionnés.</p>
   <p>La visibilité des sections par rôle se règle dans <span class="ui">Paramètres</span> → <span class="ui">Permissions</span> (chapitre « Équipes et permissions »).</p>
@@ -118,7 +118,7 @@
   <ul>
     <li>Chaque case montre la tournée du jour : PDV faits sur prévus (vert si tout est fait, orange sinon), PDV prévus (bleu), ou « à générer » en pointillés quand une règle prévoit la tournée. Pour un merchandiseur Atom, le SSF du jour s’affiche dessous.</li>
     <li>Un clic sur une case ouvre la tournée du jour, avec ses PDV et les actions habituelles.</li>
-    <li>Les flèches changent de semaine ; <span class="ui">Tous</span>, un bouton par agence (Atom BTL, FrieslandCampina…) et la recherche réduisent la liste. Sous le nombre de PDV : le SSF du binôme du jour. La dernière ligne totalise les PDV du jour.</li>
+    <li>Les flèches changent de semaine ; <span class="ui">Tous</span>, un bouton par agence (Atom BTL, FrieslandCampina…) et la recherche réduisent la liste. Sous le nombre de PDV : le SSF du jour. La dernière ligne totalise les PDV du jour.</li>
     <li><span class="ui">Par personne</span> revient aux cartes de chaque personne, avec sa liste de tournées et son calendrier du mois. Le choix est mémorisé.</li>
   </ul>
   <h3>Créer une tournée</h3>
@@ -140,49 +140,50 @@
 </section>
 
 <section class="chapitre">
-  <h2>Programme merchandiser : agences, binômes et quotas</h2>
-  <p>Les merchandiseurs des agences (Atom BTL à Abidjan, l’agence de l’intérieur) visitent chaque PDV de leur portefeuille <strong>une fois par mois</strong>. Certains jours, ils travaillent en <strong>binôme</strong> avec un <strong>SSF</strong> (vendeur du distributeur) : tous deux dépendent du commercial, aucun ne dirige l’autre, et ils passent dans les mêmes PDV. Ce planning vient de l’<strong>agence</strong> (fichier « SSF – merch – zone »). Tout se règle dans l’admin :</p>
+  <h2>Programme merchandiser : agences, routing mensuel et quotas</h2>
+  <p>Les merchandiseurs des agences (Atom BTL à Abidjan, l’agence de l’intérieur) visitent chaque PDV de leur portefeuille <strong>une fois par mois</strong>. L’agence fixe leur <strong>routing mensuel</strong> : pour chaque jour de chaque semaine du mois, un <strong>point de visite</strong> et, souvent, le <strong>SSF</strong> (vendeur du distributeur) avec qui ils travaillent ce jour-là. Le SSF et le merchandiseur dépendent tous deux du commercial ; aucun ne dirige l’autre, ils passent dans les mêmes PDV. Tout se règle dans l’admin :</p>
   <table>
     <thead><tr><th>Je veux…</th><th>Où</th></tr></thead>
     <tbody>
       <tr><td>Créer ou renommer une agence, lui donner sa direction</td><td><span class="ui">Référentiels</span> → <span class="ui">Distribution</span> → <span class="ui">Agences</span></td></tr>
       <tr><td>Rattacher un merchandiseur à son agence</td><td><span class="ui">Paramètres</span> → <span class="ui">Utilisateurs</span> → <span class="ui">Employeur (agence)</span></td></tr>
+      <tr><td>Charger le routing mensuel de l’agence</td><td><span class="ui">Import / Export</span> → <span class="ui">Imports terrain</span> → <span class="ui">Routing mensuel des merchandisers</span></td></tr>
+      <tr><td>Rattacher un point de visite à un quartier, un nom à un compte ou à un SSF</td><td><span class="ui">Référentiels</span> → <span class="ui">Distribution</span> → <span class="ui">Alias d’import</span></td></tr>
+      <tr><td>Corriger une case du routing</td><td><span class="ui">Référentiels</span> → <span class="ui">Distribution</span> → <span class="ui">Routing mensuel</span></td></tr>
       <tr><td>Créer ou corriger un SSF (nom, téléphone, distributeur, commercial)</td><td><span class="ui">Référentiels</span> → <span class="ui">Distribution</span> → <span class="ui">SSF (vendeurs)</span></td></tr>
-      <tr><td>Charger le fichier de l’agence (binômes)</td><td><span class="ui">Import / Export</span> → <span class="ui">Imports terrain</span> → <span class="ui">Binômes SSF ↔ merchandiser</span></td></tr>
-      <tr><td>Corriger un binôme à la main</td><td><span class="ui">Référentiels</span> → <span class="ui">Distribution</span> → <span class="ui">Binômes SSF ↔ merch</span></td></tr>
       <tr><td>Charger le routing des SSF (DMS)</td><td><span class="ui">Imports terrain</span> → <span class="ui">Routing des SSF (export DMS)</span></td></tr>
-      <tr><td>Voir les PDV hors du routing du SSF</td><td><span class="ui">Écarts SSF ↔ merch</span> (barre latérale)</td></tr>
+      <tr><td>Voir les PDV hors du routing du SSF du jour</td><td><span class="ui">Écarts SSF ↔ merch</span> (barre latérale)</td></tr>
       <tr><td>Changer le nombre de PDV par canal et par jour</td><td><span class="ui">Référentiels</span> → <span class="ui">Application mobile</span> → <span class="ui">Quotas</span></td></tr>
-      <tr><td>Rattacher une sous-catégorie de PDV à un canal</td><td><span class="ui">Référentiels</span> → <span class="ui">Application mobile</span> → <span class="ui">Canal des quotas</span></td></tr>
+      <tr><td>Décider de la 5e semaine du mois</td><td><span class="ui">Référentiels</span> → <span class="ui">Application mobile</span> → <span class="ui">Paramètres terrain</span> → « Routing de la 5e semaine »</td></tr>
       <tr><td>Suivre la couverture du mois</td><td><span class="ui">Programme merchandiser South</span> / <span class="ui">North</span> (barre latérale)</td></tr>
     </tbody>
   </table>
 
-  <h3>Le fichier de l’agence (binômes)</h3>
+  <h3>Le fichier de l’agence</h3>
   <ol class="etapes">
-    <li>Fichier Excel ou CSV, une ligne par binôme : <strong>SSF</strong>, <strong>Merchandiser</strong> (nom ou e-mail), <strong>Jour(s)</strong> (« Lundi », « Lun, Mer », « Lundi à samedi »), <strong>Zone</strong> et/ou <strong>Quartier(s)</strong>, et si possible <strong>Distributeur</strong> et <strong>Téléphone</strong> du SSF.</li>
-    <li><span class="ui">Simuler</span> : le rapport liste les binômes par merchandiseur, les SSF à créer et les lignes rejetées (zone, quartier ou merchandiseur inconnus).</li>
-    <li><span class="ui">Appliquer</span> : les binômes sont mis à jour <strong>sans doublon</strong> (un binôme = merchandiseur × jour × SSF) ; ceux d’un merchandiseur cité qui ne sont plus dans le fichier sont désactivés. Les quartiers des SSF et les règles de tournée « SSF — » suivent. Un SSF sans commercial reçoit celui de ses merchandiseurs.</li>
-    <li>Les SSF et merchandiseurs absents du fichier ne changent pas.</li>
+    <li>Fichier Excel ou CSV, une ligne par case : <strong>Zone</strong> (secteur), <strong>Merchandiser</strong>, <strong>Distributeur</strong>, <strong>Sales rep</strong> (commercial), <strong>Jour</strong>, <strong>Occurrence</strong> (semaine du mois, 1 à 4), <strong>Point de visite</strong>, <strong>SSF</strong> (« Aucun SSF » possible) et <strong>Type SSF</strong> (Mini van, Moto…). Sans colonne Occurrence, une ligne vaut pour les 4 semaines.</li>
+    <li><span class="ui">Simuler</span> : le rapport montre le planning de chaque merchandiseur (jour × semaine), les noms reconnus malgré une autre orthographe, les SSF à créer ou à relier, les lieux à rattacher, et les écarts de commercial entre le fichier et la base.</li>
+    <li>Les noms et les lieux que l’outil ne peut pas trancher se règlent par un <strong>alias</strong> (une fois pour toutes), puis on simule à nouveau. Un point de visite se rattache à un ou plusieurs quartiers des PDV (type « quartier », cible <code>COMMUNE›QUARTIER</code>). Aucun rapprochement approximatif n’est appliqué seul : « Port-Bouët 2 » est un quartier de Yopougon, pas la commune de Port-Bouët.</li>
+    <li><span class="ui">Appliquer</span> : le routing est mis à jour <strong>sans doublon</strong> (une case = merchandiseur × jour × semaine) ; les cases d’un merchandiseur cité qui ne sont plus dans le fichier sont désactivées. Chaque (jour, lieu, SSF) devient une règle de tournée avec ses semaines. Le commercial des merchandiseurs n’est <strong>jamais</strong> changé par l’import : les écarts sont signalés.</li>
   </ol>
-  <p>Chaque jour de binôme, la tournée prend d’abord les PDV de la règle, puis ceux des quartiers du SSF, selon la grille et sans repasser par un PDV déjà visité dans le mois. Un PDV créé sur le terrain dans ces quartiers devient éligible sans autre action. La règle « Portefeuille DMS » du merchandiseur couvre les jours sans binôme.</p>
+  <p>Chaque jour, la tournée prend les PDV des quartiers du point de visite (puis ceux du SSF), selon la grille et sans repasser par un PDV déjà visité dans le mois. La règle « Portefeuille DMS » du merchandiseur devient une règle de <strong>repli</strong> : elle ne sert que les jours sans case (lieu non reconnu, case vide, 5e semaine du mois selon le paramètre).</p>
 
   <h3>Le contrôle d’écart</h3>
-  <p><span class="ui">Écarts SSF ↔ merch</span> compare, pour un jour, la tournée de chaque merchandiseur au routing DMS du SSF de son binôme : <strong>Aligné</strong>, <strong>Écart</strong> (avec la liste des PDV concernés et le SSF qui les suit dans le DMS), <strong>Routing SSF absent</strong> (importer le routing des SSF) ou <strong>Sans binôme</strong>. Filtres : direction, commercial, statut ; <span class="ui">Exporter</span> produit le CSV. Un commercial y voit son équipe.</p>
+  <p><span class="ui">Écarts SSF ↔ merch</span> compare, pour un jour, la tournée de chaque merchandiseur au routing DMS du SSF prévu ce jour-là : <strong>Aligné</strong>, <strong>Écart</strong> (avec la liste des PDV concernés et le SSF qui les suit dans le DMS), <strong>Routing SSF absent</strong> (importer le routing des SSF) ou <strong>Sans SSF ce jour</strong>. Filtres : direction, commercial, statut ; <span class="ui">Exporter</span> produit le CSV. Un commercial y voit son équipe.</p>
 
   <h3>La grille des quotas et l’objectif du mois</h3>
   <p><span class="ui">Quotas</span> présente la grille <strong>5 canaux × 6 jours</strong>, commune aux directions (lancement : 20 PDV du lundi au jeudi, 15 le vendredi, 10 le samedi). Après un changement, <span class="ui">Appliquer aux tournées à venir</span> recalcule les tournées non commencées des merchandiseurs d’agence. L’<strong>objectif mensuel</strong> de chaque merchandiseur en découle : la grille, additionnée sur ses jours de tournée du mois (420 sur quatre semaines pleines, 465 en octobre 2026).</p>
-  <p><span class="ui">Programme merchandiser South</span> (Abidjan, ex-« Programme Atom ») et <span class="ui">North</span> (intérieur) affichent, par merchandiseur et pour le mois choisi : portefeuille, PDV éligibles, planifiés, visités, en Perfect Store, objectif et reste à visiter. Le programme North se remplit dès que des merchandiseurs sont rattachés à une agence de direction North.</p>
+  <p><span class="ui">Programme merchandiser South</span> (Abidjan, ex-« Programme Atom ») et <span class="ui">North</span> (intérieur) affichent, par merchandiseur et pour le mois choisi : portefeuille, PDV éligibles, planifiés, visités, en Perfect Store, objectif et reste à visiter.</p>
 
-  <h3>Côté téléphone (application 1.0.12)</h3>
+  <h3>Côté téléphone</h3>
   <ul>
-    <li><span class="ui">Plus</span> → <span class="ui">Ma semaine (SSF)</span> : le binôme de chaque jour (SSF, téléphone, quartiers), consultable hors ligne.</li>
-    <li>Le formulaire de visite propose le SSF du binôme du jour ; le merchandiseur peut le changer ou saisir un autre nom. Un bandeau orange signale un PDV hors des quartiers du binôme, sans bloquer.</li>
+    <li><span class="ui">Plus</span> → <span class="ui">Ma semaine (SSF)</span> : pour chaque jour, le SSF prévu, son téléphone et les quartiers ; consultable hors ligne. La prochaine version de l’application y ajoute le point de visite, la semaine du mois et les jours sans SSF.</li>
+    <li>Le formulaire de visite propose le SSF du jour ; le merchandiseur peut le changer ou saisir un autre nom. Un bandeau orange signale un PDV hors des quartiers du SSF, sans bloquer.</li>
     <li>Le SSF de chaque visite s’affiche dans le détail de la visite (admin).</li>
   </ul>
   <div class="encadre encadre--attention">
-    <span class="encadre__titre">Binômes « Règle existante »</span>
-    <p>Les binômes repris des règles en place (déduites des visites de septembre) portent l’origine <strong>Règle existante</strong>. Le fichier de l’agence les remplace : chargez-le dans <span class="ui">Imports terrain</span>, vérifiez la simulation, puis appliquez.</p>
+    <span class="encadre__titre">Avant le premier fichier de l’agence</span>
+    <p>Les cases reprises des règles en place (déduites des visites de septembre) portent l’origine <strong>Règle existante</strong>. Le routing mensuel de l’agence les remplace dès qu’il est appliqué.</p>
   </div>
 </section>
 
@@ -329,7 +330,7 @@
     <thead><tr><th>Rubrique</th><th>Référentiels</th></tr></thead>
     <tbody>
       <tr><td>Géographie</td><td>Régions, sous-régions, territoires, zones / areas, quartiers, <strong>alias de territoire</strong>.</td></tr>
-      <tr><td>Distribution</td><td>Distributeurs (option couverture nationale, <strong>renommage</strong> reporté sur les PDV et les règles), liens distributeur ↔ territoires et ↔ areas, <strong>Agences</strong>, <strong>SSF (vendeurs)</strong>, <strong>SSF ↔ Quartiers</strong>, <strong>Binômes SSF ↔ merch</strong>, <strong>alias d’import</strong> (noms des fichiers DMS et Atom → merchandiseur, distributeur ou SSF).</td></tr>
+      <tr><td>Distribution</td><td>Distributeurs (option couverture nationale, <strong>renommage</strong> reporté sur les PDV et les règles), liens distributeur ↔ territoires et ↔ areas, <strong>Agences</strong>, <strong>SSF (vendeurs)</strong>, <strong>SSF ↔ Quartiers</strong>, <strong>Routing mensuel</strong>, <strong>alias d’import</strong> (noms des fichiers DMS et Atom → merchandiseur, distributeur ou SSF).</td></tr>
       <tr><td>Points de vente</td><td>Catégories et types (avec leur <strong>libellé français</strong>), <strong>fréquence de visite</strong> (7 jours par défaut : au-delà, le PDV est « en retard »), <strong>fenêtre de suivi</strong>, segments.</td></tr>
       <tr><td>Produits</td><td>Catégories, références, <strong>correspondance SKU</strong> (produit du formulaire ↔ référence Perfect Store), marques et <strong>SKU concurrents</strong>, <strong>catégories du relevé</strong>.</td></tr>
       <tr><td>Perfect Store</td><td>Niveaux, poids SKU, seuils de disponibilité GT et MT (facings), assortiment, éléments et standards de visibilité.</td></tr>
@@ -380,7 +381,7 @@
     <li>Export : visites (Excel, <strong>toutes</strong> les visites de la plage de dates, avec la quantité de chaque produit), PDV (Excel).</li>
   </ul>
   <h3>Imports terrain (admin)</h3>
-  <p>Cinq traitements, sans passer par l’équipe technique : <span class="ui">Clients DMS → points de vente</span>, <span class="ui">Affectation des merchandisers (DMS)</span>, <span class="ui">Visites Atom (export Bonnet Rouge)</span>, <span class="ui">Binômes SSF ↔ merchandiser (fichier de l’agence)</span>, <span class="ui">Routing des SSF (export DMS)</span>.</p>
+  <p>Cinq traitements, sans passer par l’équipe technique : <span class="ui">Clients DMS → points de vente</span>, <span class="ui">Affectation des merchandisers (DMS)</span>, <span class="ui">Visites Atom (export Bonnet Rouge)</span>, <span class="ui">Routing mensuel des merchandisers (fichier de l’agence)</span>, <span class="ui">Routing des SSF (export DMS)</span>.</p>
   <ol class="etapes">
     <li>Choisissez le fichier Excel, puis <span class="ui">Simuler</span> : rien n’est écrit. Le résumé, le rapport et le fichier CSV des écarts s’affichent et se téléchargent.</li>
     <li>Relisez le rapport (lignes écartées, noms inconnus). Un nom mal reconnu se corrige dans <span class="ui">Alias d’import</span>, puis on simule à nouveau.</li>
@@ -421,7 +422,7 @@
   <div class="aide">
     <h3>Dépannage rapide</h3>
     <ul>
-      <li>Une tournée d’agence sort des quartiers du binôme : vérifiez le binôme (<span class="ui">Binômes SSF ↔ merch</span>), les quartiers du SSF (<span class="ui">SSF ↔ Quartiers</span>), puis <span class="ui">Recalculer les tournées à venir</span>.</li>
+      <li>Une tournée d’agence sort du lieu du jour : vérifiez la case (<span class="ui">Routing mensuel</span>) et l’alias du point de visite, les quartiers du SSF (<span class="ui">SSF ↔ Quartiers</span>), puis <span class="ui">Recalculer les tournées à venir</span>.</li>
       <li>Un jour sans tournée : aucune règle ne couvre ce jour, ou la règle est suspendue.</li>
       <li>Un produit absent du formulaire : il est retiré, ou sa catégorie l’est (<span class="ui">Produits du formulaire</span>, <span class="ui">Catégories du relevé</span>).</li>
       <li>Les scores n’ont pas bougé après un changement de standard ou de correspondance : <span class="ui">Recalculer</span>.</li>

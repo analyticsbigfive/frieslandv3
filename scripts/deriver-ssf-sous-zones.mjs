@@ -9,10 +9,10 @@
  *     PDV de son portefeuille situés dans la sous-zone ;
  *   - la règle de portefeuille (DMS ou périmètre) garde les jours non couverts, et passe en quotas si elle était en périmètre ;
  *   - le périmètre du profil est élargi aux zones et quartiers des sous-zones.
- * Le fichier « SSF – merch – zone » de l'agence (--fichier, .xlsx ou .csv)
- * remplace la dérivation pour les SSF et merchandisers qu'il cite et écrit leurs
- * binômes (binome_ssf_merch). --sans-derivation : seul le fichier compte (comme
- * dans l'admin).
+ * Un fichier « SSF ↔ zones » (--fichier, .xlsx ou .csv) remplace la dérivation
+ * pour les SSF et merchandisers qu'il cite ; --sans-derivation : seul le
+ * fichier compte. Diagnostic seulement : le planning des merchandisers vient
+ * désormais du routing mensuel de l'agence (Admin › Imports terrain).
  *
  * Logique : scripts/lib/imports/ssf-sous-zones.mjs (partagée avec Admin ›
  * Imports terrain). Écritures : scripts/lib/imports/operations.mjs.

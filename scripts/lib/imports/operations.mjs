@@ -81,15 +81,31 @@ const VALIDATEURS = {
       exiger(estListeTextes(r.pdv_ids, 20000, 64), 'règle SSF : pdv_ids invalides')
     }
   },
-  'binomes.remplacer'(op) {
-    exiger(UUID.test(op.user_id || ''), 'binomes.remplacer : user_id invalide')
-    exiger(texteOuNul(op.source, 200), 'binomes.remplacer : source invalide')
-    exiger(Array.isArray(op.lignes) && op.lignes.length <= 50, 'binomes.remplacer : lignes (≤ 50) requises')
+  'routing_mensuel.remplacer'(op) {
+    exiger(UUID.test(op.user_id || ''), 'routing_mensuel.remplacer : user_id invalide')
+    exiger(texteOuNul(op.source, 200), 'routing_mensuel.remplacer : source invalide')
+    exiger(Array.isArray(op.lignes) && op.lignes.length <= 40, 'routing_mensuel.remplacer : lignes (≤ 40) requises')
     for (const l of op.lignes) {
-      exiger(refSsf(l.ssf), 'binôme : ssf { id | nom } requis')
-      exiger(Number.isInteger(l.jour_semaine) && l.jour_semaine >= 0 && l.jour_semaine <= 6, 'binôme : jour_semaine 0-6 requis')
-      exiger(texteOuNul(l.zone, 200) && texteOuNul(l.source, 200), 'binôme : zone / source invalides')
-      exiger(estListeTextes(l.quartiers || [], 500, 200), 'binôme : quartiers invalides')
+      exiger(Number.isInteger(l.jour_semaine) && l.jour_semaine >= 0 && l.jour_semaine <= 6, 'case : jour_semaine 0-6 requis')
+      exiger(Number.isInteger(l.semaine_du_mois) && l.semaine_du_mois >= 1 && l.semaine_du_mois <= 5, 'case : semaine_du_mois 1-5 requise')
+      exiger(l.ssf == null || refSsf(l.ssf), 'case : ssf { id | nom } ou null')
+      exiger(l.commercial_id == null || UUID.test(l.commercial_id), 'case : commercial_id invalide')
+      for (const k of ['secteur', 'point_visite', 'zone', 'ssf_texte', 'type_engin', 'distributeur', 'source']) exiger(texteOuNul(l[k], 200), `case : ${k} invalide`)
+      exiger(estListeTextes(l.quartiers || [], 50, 200), 'case : quartiers invalides')
+    }
+  },
+  'regles_mensuelles.remplacer'(op) {
+    exiger(UUID.test(op.user_id || ''), 'regles_mensuelles.remplacer : user_id invalide')
+    exiger(op.created_by == null || UUID.test(op.created_by), 'regles_mensuelles.remplacer : created_by invalide')
+    exiger(Array.isArray(op.regles) && op.regles.length <= 60, 'regles_mensuelles.remplacer : regles (≤ 60) requises')
+    for (const r of op.regles) {
+      exiger(estTexte(r.label, 200) && (r.label.startsWith('Routing mensuel — ') || r.label.startsWith('SSF — ')), 'règle : libellé « Routing mensuel — … » ou « SSF — … » requis')
+      exiger(r.ssf == null || refSsf(r.ssf), 'règle : ssf { id | nom } ou null')
+      exiger(estJours(r.days_of_week) && r.days_of_week.length, 'règle : jours requis')
+      exiger(r.semaines_du_mois == null || (Array.isArray(r.semaines_du_mois) && r.semaines_du_mois.length && r.semaines_du_mois.every(x => Number.isInteger(x) && x >= 1 && x <= 5)), 'règle : semaines 1-5')
+      exiger(r.date_debut == null || DATE.test(r.date_debut), 'règle : date_debut invalide')
+      exiger(texteOuNul(r.territoire, 200) && texteOuNul(r.distributeur, 200) && texteOuNul(r.notes, 4000), 'règle : champs invalides')
+      exiger(estListeTextes(r.pdv_ids, 20000, 64) && r.pdv_ids.every(id => PDV_ID.test(id)), 'règle : pdv_ids invalides')
     }
   },
   'ssf.commercial'(op) {
@@ -108,6 +124,7 @@ const VALIDATEURS = {
     exiger(estJours(op.days_of_week), 'regle.jours : jours invalides')
     exiger(typeof op.is_active === 'boolean', 'regle.jours : is_active requis')
     exiger(op.mode === undefined || ['quota', 'perimetre'].includes(op.mode), 'regle.jours : mode invalide')
+    exiger(op.repli === undefined || typeof op.repli === 'boolean', 'regle.jours : repli booléen')
   },
   'profil.perimetre'(op) {
     exiger(UUID.test(op.user_id || ''), 'profil.perimetre : user_id invalide')
@@ -261,24 +278,53 @@ const EXECUTEURS = {
     return `${op.regles.length} règle(s) SSF, ${nbPdv} PDV`
   },
 
-  async 'binomes.remplacer'(sb, op) {
-    // Upsert sur la clé (merchandiser, jour, SSF) : pas de doublon. Les
-    // binômes actifs du merchandiser absents de la liste sont désactivés
-    // (pas supprimés : l'historique reste lisible).
+  async 'routing_mensuel.remplacer'(sb, op) {
+    // Upsert sur la clé (merchandiser, jour, semaine) : pas de doublon. Les
+    // cases actives du merchandiser absentes de la liste sont désactivées
+    // (pas supprimées : l'historique reste lisible).
     const lignes = []
     for (const l of op.lignes) {
       lignes.push({
-        merchandiser_id: op.user_id, ssf_id: await idSsf(sb, l.ssf), jour_semaine: l.jour_semaine,
-        zone: l.zone || null, quartiers: [...new Set(l.quartiers || [])], source: l.source || op.source || 'import', actif: true,
+        merchandiser_id: op.user_id, jour_semaine: l.jour_semaine, semaine_du_mois: l.semaine_du_mois,
+        secteur: l.secteur || null, point_visite: l.point_visite || null, zone: l.zone || null,
+        quartiers: [...new Set(l.quartiers || [])], ssf_id: l.ssf ? await idSsf(sb, l.ssf) : null,
+        ssf_texte: l.ssf_texte || null, type_engin: l.type_engin || null, commercial_id: l.commercial_id || null,
+        distributeur: l.distributeur || null, source: l.source || op.source || 'import', actif: true,
       })
     }
-    const garder = new Set(lignes.map(l => `${l.jour_semaine}|${l.ssf_id}`))
-    if (lignes.length) ok(await sb.from('binome_ssf_merch').upsert(lignes, { onConflict: 'merchandiser_id,jour_semaine,ssf_id' }), 'binômes (mise à jour)')
-    const { data: actifs, error } = await sb.from('binome_ssf_merch').select('id,jour_semaine,ssf_id').eq('merchandiser_id', op.user_id).eq('actif', true)
-    if (error) throw new Error(`binômes : ${error.message}`)
-    const aDesactiver = (actifs || []).filter(b => !garder.has(`${b.jour_semaine}|${b.ssf_id}`)).map(b => b.id)
-    if (aDesactiver.length) ok(await sb.from('binome_ssf_merch').update({ actif: false }).in('id', aDesactiver), 'binômes (désactivation)')
-    return `${lignes.length} binôme(s), ${aDesactiver.length} désactivé(s)`
+    const garder = new Set(lignes.map(l => `${l.jour_semaine}|${l.semaine_du_mois}`))
+    if (lignes.length) ok(await sb.from('routing_mensuel').upsert(lignes, { onConflict: 'merchandiser_id,jour_semaine,semaine_du_mois' }), 'routing mensuel (mise à jour)')
+    const { data: actifs, error } = await sb.from('routing_mensuel').select('id,jour_semaine,semaine_du_mois').eq('merchandiser_id', op.user_id).eq('actif', true)
+    if (error) throw new Error(`routing mensuel : ${error.message}`)
+    const aDesactiver = (actifs || []).filter(b => !garder.has(`${b.jour_semaine}|${b.semaine_du_mois}`)).map(b => b.id)
+    if (aDesactiver.length) ok(await sb.from('routing_mensuel').update({ actif: false }).in('id', aDesactiver), 'routing mensuel (désactivation)')
+    return `${lignes.length} case(s) du routing mensuel, ${aDesactiver.length} désactivée(s)`
+  },
+
+  async 'regles_mensuelles.remplacer'(sb, op) {
+    // Règles du routing mensuel et anciennes règles « SSF — » du merchandiser :
+    // remplacées ensemble. PDV et exceptions partent en cascade ; les tournées
+    // déjà générées gardent leurs étapes (template_id → NULL).
+    for (const prefixe of ['SSF — %', 'Routing mensuel — %']) {
+      ok(await sb.from('routing_templates').delete().eq('user_id', op.user_id).like('label', prefixe), 'règles du routing (suppression)')
+    }
+    let nbPdv = 0
+    for (const r of op.regles) {
+      const jours = [...new Set(r.days_of_week)].sort((a, b) => a - b)
+      const { data: regle, error } = await sb.from('routing_templates').insert({
+        user_id: op.user_id, label: r.label, mode: 'quota', ssf_id: r.ssf ? await idSsf(sb, r.ssf) : null,
+        days_of_week: jours, day_of_week: jours[0], semaines_du_mois: r.semaines_du_mois || null, repli: false,
+        territoire: r.territoire || null, distributeur: r.distributeur || null, date_debut: r.date_debut || null,
+        date_fin: null, notes: r.notes || null, is_active: true, created_by: op.created_by || null,
+      }).select('id').single()
+      if (error) throw new Error(`règle ${r.label} : ${error.message}`)
+      const lignes = [...new Set(r.pdv_ids)].map((pdv_id, k) => ({
+        template_id: regle.id, pdv_id, position_order: k + 1, objectifs: { releve_stock: true, photos: true },
+      }))
+      for (let i = 0; i < lignes.length; i += 500) ok(await sb.from('routing_template_pdv').insert(lignes.slice(i, i + 500)), `PDV de la règle ${r.label}`)
+      nbPdv += lignes.length
+    }
+    return `${op.regles.length} règle(s) du routing mensuel, ${nbPdv} PDV`
   },
 
   async 'ssf.commercial'(sb, op) {
@@ -307,6 +353,8 @@ const EXECUTEURS = {
     const maj = { days_of_week: jours, day_of_week: jours.length ? jours[0] : null, is_active: op.is_active }
     // Mode facultatif : un agent Atom en « périmètre » passe en quotas (retour : périmètre).
     if (op.mode) maj.mode = op.mode
+    // Repli : la règle de portefeuille ne s'applique que les jours sans autre règle.
+    if (op.repli !== undefined) maj.repli = op.repli
     ok(await sb.from('routing_templates').update(maj).eq('id', op.template_id), 'regle.jours')
     const mode = op.mode === 'quota' ? ', passée en quotas' : op.mode === 'perimetre' ? ', remise en périmètre' : ''
     if (!op.is_active) return `règle ${op.template_id} désactivée${mode}`
@@ -424,8 +472,9 @@ export const OPERATIONS_PAR_IMPORT = {
   'dms-pdv': ['pdv.creer', 'pdv.maj', 'pdv.supprimer'],
   'merch-dms': ['profil.perimetre', 'regle_dms.remplacer', 'regle.jours', 'tournees.generer'],
   'routing-atom': ['pdv.creer', 'pdv.supprimer', 'visites.importer', 'visites.supprimer'],
-  'ssf-sous-zones': ['ssf.creer', 'ssf_quartier.remplacer', 'regles_ssf.remplacer', 'regle.jours', 'profil.perimetre', 'tournees.recalculer', 'binomes.remplacer', 'ssf.commercial'],
+  'ssf-sous-zones': ['ssf.creer', 'ssf_quartier.remplacer', 'regles_ssf.remplacer', 'regle.jours', 'profil.perimetre', 'tournees.recalculer'],
   'routing-ssf-dms': ['ssf.creer', 'ssf_pdv.remplacer'],
+  'routing-mensuel': ['ssf.creer', 'ssf.commercial', 'ssf_quartier.remplacer', 'routing_mensuel.remplacer', 'regles_mensuelles.remplacer', 'regle.jours', 'profil.perimetre', 'tournees.recalculer'],
 }
 
 /**

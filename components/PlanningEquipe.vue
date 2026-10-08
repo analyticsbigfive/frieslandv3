@@ -115,7 +115,7 @@
       <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-amber-200 dark:bg-amber-500/40" />Incomplète</span>
       <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm border border-dashed border-gray-400" />Prévue par une règle, à générer</span>
       <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-gray-200 dark:bg-gray-600" />Suspendue / annulée</span>
-      <span>Sous le nombre de PDV : le SSF du binôme du jour (merchandisers d’agence).</span>
+      <span>Sous le nombre de PDV : le SSF du jour (routing mensuel des agences).</span>
     </div>
   </div>
 </template>

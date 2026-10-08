@@ -132,20 +132,20 @@
             <UInput v-model="form.date_visite" type="datetime-local" size="lg" />
           </div>
 
-          <!-- SSF (merchandisers d'agence) : vendeur du distributeur, binôme de la visite. -->
+          <!-- SSF (merchandisers d'agence) : vendeur du distributeur présent à la visite (routing mensuel). -->
           <div v-if="estAtom">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SSF (avec qui)</label>
             <USelect v-model="ssfSelection" :options="optionsSsf" placeholder="Choisir le SSF" size="lg" />
             <UInput v-if="ssfSelection === 'autre'" v-model="form.ssf_brut" class="mt-2" size="lg" placeholder="Nom du SSF" maxlength="80" />
             <p v-if="ssfPrevu" class="mt-1 text-xs text-gray-400">
-              Binôme du jour : {{ ssfPrevu.ssf_nom }}<template v-if="ssfPrevu.ssf_telephone"> · {{ ssfPrevu.ssf_telephone }}</template>
+              SSF du jour : {{ ssfPrevu.ssf_nom }}<template v-if="ssfPrevu.ssf_telephone"> · {{ ssfPrevu.ssf_telephone }}</template>
             </p>
             <p
               v-if="horsSousZone"
               class="mt-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 px-3 py-2 text-xs text-amber-800 dark:text-amber-200"
               role="status"
             >
-              Ce PDV n'est pas dans les quartiers de votre binôme avec {{ nomSsfChoisi }} ({{ sousZoneChoisie }}). La visite peut être enregistrée : vérifiez le PDV ou le SSF.
+              Ce PDV n'est pas dans les quartiers de {{ nomSsfChoisi }} ({{ sousZoneChoisie }}). La visite peut être enregistrée : vérifiez le PDV ou le SSF.
             </p>
           </div>
 

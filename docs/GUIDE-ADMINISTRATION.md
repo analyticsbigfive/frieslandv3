@@ -7,7 +7,7 @@
 > (copie CSV dans `docs/big-five-kpi-csv/`), vérifié conforme à la base.
 >
 > Nouveautés depuis juillet : programme merchandiser South / North (agences,
-> binômes SSF ↔ merchandiser, quotas, contrôle d'écart, §7 bis), produits du
+> routing mensuel de l'agence, quotas, contrôle d'écart, §7 bis), produits du
 > formulaire (§4 bis), paramètres terrain et publication de l'application
 > (§8), imports terrain (§11), maintenance (§12).
 
@@ -32,8 +32,8 @@
   est responsable des PDV de son territoire. Deux personnes travaillent pour
   lui : le **SSF** (vendeur d'un distributeur, tournée issue du DMS) et le
   **merchandiser** (employé d'une agence). Aucun des deux ne commande l'autre ;
-  leur seul lien est un **binôme** planifié (jour, zone/quartiers) pour passer
-  dans les mêmes PDV (§7 bis).
+  leur seul lien est le **routing mensuel** de l'agence (tel jour, tel lieu,
+  avec tel SSF) pour passer dans les mêmes PDV (§7 bis).
 - **Employeur** (fiche utilisateur) : code d'agence (table `agence`) :
   `friesland` (salariés, tournées par périmètre), `atom` (Atom BTL, Abidjan),
   `agence-north` (intérieur, à nommer)… Les agences « programme » ont des
@@ -201,8 +201,8 @@ Tous en CRUD direct, groupés par thème :
   - **Agences** : nom, direction, « programme », active (§7 bis).
   - **SSF (vendeurs)** : nom, variantes, téléphone, distributeur, **commercial**,
     actif, « à confirmer ». **SSF ↔ Quartiers** : les quartiers de chaque SSF.
-    **Binômes SSF ↔ merch** : jour × merchandiser × SSF, zone et quartiers
-    (§7 bis).
+    **Routing mensuel** : merchandiser × jour × semaine du mois, point de
+    visite, quartiers, SSF (§7 bis).
   - **Alias d'import** : nom tel qu'écrit dans les fichiers DMS ou Atom → 
     merchandiser, distributeur ou SSF (exact, commence par, contient).
 - **Points de vente** : Catégories (level 3, avec canal GT/MT) et Types (level 4),
@@ -255,59 +255,71 @@ Lien direct vers un onglet : `/admin/referentiels?onglet=<id>` (ex.
 
 ---
 
-## 7 bis. Programme merchandiser : agences, binômes SSF ↔ merchandiser, quotas
+## 7 bis. Programme merchandiser : agences, routing mensuel, quotas
 
 Principe : chaque PDV du portefeuille d'un merchandiser d'agence est visité
-**une fois par mois civil**. Le **SSF** (vendeur du distributeur) et le
-merchandiser dépendent du **commercial** ; certains jours ils forment un
-**binôme** (même zone, mêmes quartiers) pour passer dans les mêmes PDV, l'un
-pour vendre, l'autre pour l'exécution. Le binôme vient du fichier de
-l'**agence** (« SSF – merch – zone »).
+**une fois par mois civil**. L'agence fixe son **routing mensuel** : pour
+chaque jour de chaque semaine du mois (1 à 4), un point de visite et, souvent,
+le **SSF** (vendeur du distributeur) avec qui il travaille ce jour-là. SSF et
+merchandiser dépendent du **commercial** ; aucun ne dirige l'autre, ils passent
+dans les mêmes PDV, l'un pour vendre, l'autre pour l'exécution.
 
 | Je veux… | Où | Table |
 |---|---|---|
 | Créer / nommer une agence, sa direction | Référentiels → Distribution → **Agences** | `agence` |
 | Rattacher un merchandiser à son agence | Paramètres → Utilisateurs → **Employeur (agence)** | `profiles.employeur` |
+| Charger le routing mensuel de l'agence | Import / Export → **Imports terrain** → Routing mensuel des merchandisers | `routing_mensuel` |
+| Rattacher un lieu, un nom de merchandiser, de SSF ou de commercial | Référentiels → Distribution → **Alias d'import** (types quartier, merchandiser, ssf, commercial) | `alias_import` |
+| Corriger une case | Référentiels → Distribution → **Routing mensuel** | `routing_mensuel` |
 | Créer / corriger un SSF (dont son commercial) | Référentiels → Distribution → **SSF (vendeurs)** | `ssf` |
-| Charger le fichier de l'agence (binômes) | Import / Export → **Imports terrain** → Binômes SSF ↔ merchandiser | `binome_ssf_merch` |
-| Corriger un binôme | Référentiels → Distribution → **Binômes SSF ↔ merch** | `binome_ssf_merch` |
-| Quartiers d'un SSF | Référentiels → Distribution → **SSF ↔ Quartiers** | `ssf_quartier` |
 | Charger le routing des SSF (DMS) | Imports terrain → **Routing des SSF (export DMS)** | `ssf_pdv` |
 | Voir les PDV hors routing SSF | Barre latérale → **Écarts SSF ↔ merch** | `ecarts_binome_resume(jour)` |
 | Nombre de PDV par canal et par jour | Référentiels → Application mobile → **Quotas** | `routing_quota_canal` |
-| Canal d'une sous-catégorie de PDV | Référentiels → Application mobile → **Canal des quotas** | `canal_atom_sous_categorie` |
+| 5e semaine du mois (jours 29-31) | Référentiels → Application mobile → **Paramètres terrain** → Routing de la 5e semaine | `parametre_app` |
 | Suivi du mois | Barre latérale → **Programme merchandiser South / North** | `programme_merchandiser(mois, direction)` |
 
-**Fichier de l'agence** (`.xlsx` ou `.csv`) : une ligne par binôme, colonnes
-SSF, Merchandiser (nom ou e-mail), Jour(s), Zone et/ou Quartier(s), et si
-possible Distributeur et Téléphone. L'import met à jour les binômes **sans
-doublon** (clé merchandiser × jour × SSF) et désactive ceux d'un merchandiser
-cité qui ne sont plus dans le fichier ; il en tire les quartiers du SSF et les
-règles `SSF — <nom>`. Un SSF sans commercial reçoit celui de ses
-merchandisers. Les SSF et merchandisers absents du fichier ne changent pas.
+**Fichier de l'agence** (`.xlsx` ou `.csv`) : une ligne par case, colonnes
+Zone (secteur), Merchandiser, Distributeur, Sales rep, Jour, **Occurrence**
+(semaine du mois), Point de visite, SSF (« Aucun SSF » possible), Type SSF.
+L'import :
 
-**Tournée du jour** (générée chaque nuit pour 7 jours) : d'abord les PDV de la
-règle du jour, puis les PDV actifs des quartiers du SSF du binôme, selon la
-grille, sans PDV déjà planifié ou visité dans le mois. Grille de lancement,
-commune aux directions : 20 PDV du lundi au jeudi, 15 le vendredi, 10 le
-samedi (Superette, Boutique, Aboki & Kiosque, Pushcart, Porridge). Un canal
-absent est complété par des boutiques. La règle « Portefeuille DMS » couvre
-les jours sans binôme.
+- met le routing à jour **sans doublon** (clé merchandiser × jour × semaine) et
+  désactive les cases d'un merchandiser cité qui ne sont plus dans le fichier ;
+- crée une règle de tournée par (jour, lieu, SSF) avec ses semaines
+  (`routing_templates.semaines_du_mois`) ;
+- passe la règle « Portefeuille DMS » en **repli** (`repli = true`) : elle ne
+  sert que les jours sans case ;
+- met à jour les quartiers des SSF ;
+- rattache un SSF sans commercial au commercial de ses cases ;
+- élargit le périmètre du merchandiser.
+
+Il ne change jamais le commercial des merchandisers : les écarts entre le
+fichier et la base sont signalés. Les noms écrits autrement (orthographe,
+civilité, mots en plus) sont reconnus. Ceux qui restent incertains, et les
+points de visite absents des quartiers des PDV, se règlent par un **alias**,
+puis par une nouvelle simulation. Aucun rapprochement approximatif n'est
+appliqué seul.
+
+**Tournée du jour** (générée chaque nuit pour 7 jours) : d'abord les PDV des
+quartiers du point de visite, puis ceux du SSF, selon la grille, sans PDV déjà
+planifié ou visité dans le mois. Grille de lancement, commune aux directions :
+20 PDV du lundi au jeudi, 15 le vendredi, 10 le samedi (Superette, Boutique,
+Aboki & Kiosque, Pushcart, Porridge). Un canal absent est complété par des
+boutiques. Semaine du mois = (jour − 1) ÷ 7 + 1. La 5e semaine (jours 29 à 31)
+suit le paramètre `routing_semaine_5` :
+- 0 = portefeuille seul (défaut) ;
+- 1 = reprendre la semaine 1 ;
+- 4 = reprendre la semaine 4.
 
 **Contrôle d'écart** (Écarts SSF ↔ merch) : pour un jour, chaque tournée de
-merchandiser comparée au routing DMS du SSF de son binôme : Aligné, Écart
-(détail des PDV et SSF qui les suit dans le DMS), Routing SSF absent, Sans
-binôme. L'export DMS ne donne pas le jour : un PDV du routing vaut pour tous
-les jours du SSF. Un commercial y voit son équipe.
-
-**Règles** : modifier une règle (menu → **Modifier**) change libellé, jours,
-dates, mode, SSF, territoire et distributeur. Le sélecteur **SSF du binôme**
-préremplit libellé, territoire, distributeur et mode quota ; la liste des PDV
-est limitée aux quartiers du SSF.
+merchandiser est comparée au routing DMS du SSF prévu ce jour-là. Statuts :
+Aligné, Écart (détail des PDV et du SSF qui les suit dans le DMS), Routing SSF
+absent, Sans SSF ce jour. L'export DMS ne donne pas le jour : un PDV du routing
+vaut pour tous les jours du SSF. Un commercial y voit son équipe.
 
 **Planning d'équipe** : Routing & Planning › Tournées planifiées s'ouvre sur
 une grille personne × jour (lundi → samedi) : PDV faits / prévus, « à générer »,
-SSF du binôme ; un filtre par agence ; un clic ouvre la tournée du jour.
+SSF du jour ; un filtre par agence ; un clic ouvre la tournée du jour.
 
 **Objectif mensuel** (Programme merchandiser et écran mobile « Mes
 objectifs ») : la grille additionnée sur les jours de tournée du mois (420 sur
@@ -315,19 +327,22 @@ quatre semaines pleines, 465 en octobre 2026). **Programme merchandiser
 South** = ex-Programme Atom ; **North** se remplit dès que des merchandisers
 sont rattachés à une agence de direction North.
 
-**Après un changement** de binôme, de règle ou de grille : Maintenance →
+**Après un changement** de routing, de règle ou de grille : Maintenance →
 **Recalculer les tournées à venir**. Les tournées non commencées sont refaites ;
 celle du jour n'est jamais modifiée.
 
-**Côté téléphone (1.0.12)** : Plus → **Ma semaine (SSF)** (binôme de chaque
-jour : SSF, téléphone, quartiers, hors ligne) ; champ SSF dans la visite,
-prérempli avec le SSF du binôme, « autre » pour un nom libre ; bandeau orange
-si le PDV est hors des quartiers du binôme (non bloquant). Le SSF est
-enregistré dans la visite (`visites.ssf_id` / `ssf_brut`).
+**Côté téléphone**
+- 1.0.12 : Plus → **Ma semaine (SSF)** montre le SSF de chaque jour de la
+  semaine en cours, son téléphone et les quartiers, hors ligne.
+- Version suivante : la même page ajoute le point de visite, la semaine du mois
+  et les jours sans SSF (RPC `routing_semaine`).
+- Champ SSF dans la visite, prérempli avec le SSF du jour, « autre » pour un nom
+  libre ; bandeau orange si le PDV est hors des quartiers du SSF (non bloquant).
+  Le SSF est enregistré dans la visite (`visites.ssf_id` / `ssf_brut`).
 
-**Données de départ** : binômes repris des règles en place (origine « Règle
-existante », déduites des visites de septembre). Le fichier de l'agence les
-remplace dès qu'il est importé.
+**Données de départ** : cases reprises des règles « SSF — » en place (origine
+« Règle existante », déduites des visites de septembre). Le routing mensuel de
+l'agence les remplace dès qu'il est appliqué.
 
 **Field coaching** : le vendeur coaché en GT est un SSF (choisi parmi les SSF
 du distributeur ; la liste des PDV se limite à ses clients DMS). Objectif du
@@ -438,7 +453,7 @@ Procédure complète, AAB et Play Console : `docs/play-store/PUBLIER-MISE-A-JOUR
 | Le distributeur proposé n'est pas le bon | Mapping area/territoire | `/admin/referentiels` → Distrib ↔ Areas / Territoires |
 | Un merchandiser ne voit pas ses PDV | Zone/secteurs assignés ≠ zone/secteur du PDV (texte exact) | `/admin/users` : aligner la zone assignée sur le nom du territoire |
 | « Table non disponible (migration à exécuter) » dans referentiels | Migration `supabase/nouveau/` non appliquée | Exécuter les migrations dans l'ordre des timestamps (§13) |
-| Une tournée d'agence sort des quartiers du binôme | Binôme ou quartiers du SSF incomplets, ou règle sans SSF | Binômes SSF ↔ merch, SSF ↔ Quartiers, puis Recalculer les tournées à venir |
+| Une tournée d'agence sort du lieu du jour | Point de visite non rattaché (alias manquant) ou case à corriger | Alias d'import (quartier), Routing mensuel, puis Recalculer les tournées à venir |
 | Un jour sans tournée Atom | Aucune règle active ce jour (ou suspendue) | Routing → Règles : cocher le jour sur la bonne règle |
 | « Ce produit est noté au Perfect Store… » en retirant un produit | Correspondance SKU existante | Retirer la correspondance, puis le produit |
 | Un nom du fichier DMS/Atom n'est pas reconnu | Variante d'écriture | Alias d'import, puis relancer la simulation |
@@ -456,7 +471,7 @@ technique :
 | Clients DMS → points de vente | Export clients du DMS | Rapproche par code DMS, nom et GPS ; crée les PDV manquants, complète les existants |
 | Affectation des merchandisers (DMS) | Liste « merchandiser ↔ e-mail » + export DMS | Règles « Portefeuille DMS », périmètres, employeur |
 | Visites Atom (export Bonnet Rouge) | Export des visites Atom | Importe les visites (préfixe `ATOM-`), crée les PDV inconnus, rattache distributeur et SSF |
-| Binômes SSF ↔ merchandiser | Fichier de l'agence « SSF – merch – zone » (.xlsx ou .csv) | Binômes (sans doublon), quartiers des SSF, règles `SSF — <nom>`, commercial des SSF, périmètres |
+| Routing mensuel des merchandisers | Fichier de l'agence (.xlsx ou .csv) : jour × semaine du mois, point de visite, SSF | Routing (sans doublon), règles par jour et semaine, portefeuille en repli, quartiers et commercial des SSF, périmètres |
 | Routing des SSF (export DMS) | Export clients du DMS | Routing de chaque SSF (`ssf_pdv`), SSF manquants créés ; sert au contrôle d'écart |
 
 Déroulé : **Simuler** (aucune écriture ; résumé, rapport et CSV téléchargeables)
@@ -469,7 +484,7 @@ doublon) → **Historique** (chaque lot, avec **Annuler le lot** pour défaire s
 ## 12. Maintenance (Référentiels → Application mobile → Maintenance)
 
 - **Recalculer les tournées à venir** (une agence ou toutes) : après un
-  changement de binôme, de règle ou de grille.
+  changement de routing, de règle ou de grille.
 - **Générer les tournées manquantes (7 jours)**.
 - **Rafraîchir les statistiques maintenant** (sinon chaque heure).
 - **Tâches planifiées** : état, dernier passage, horaire modifiable (format

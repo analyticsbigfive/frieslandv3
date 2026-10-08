@@ -5,7 +5,7 @@
       <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Tournées</h2>
       <p class="text-sm text-gray-500 dark:text-gray-400">
         Les tournées sont générées chaque nuit pour les 7 jours suivants, à partir des règles (Routing › Règles), des quotas
-        et des binômes SSF ↔ merchandiser. Après un changement, on peut les recalculer tout de suite : seules les tournées à venir qui
+        et du routing mensuel des agences. Après un changement, on peut les recalculer tout de suite : seules les tournées à venir qui
         n’ont pas commencé sont refaites, celle du jour n’est jamais modifiée.
       </p>
       <div class="flex flex-wrap items-end gap-3">

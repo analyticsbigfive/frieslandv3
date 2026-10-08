@@ -50,7 +50,7 @@ const roleItems = computed(() => {
     )
     // Merchandisers d'agence : binôme SSF et quartiers de chaque jour (planning de la semaine).
     if (estMerchandiserProgramme(authStore.profile?.employeur)) {
-      items.push({ label: 'Ma semaine (SSF)', description: 'Votre binôme SSF et vos quartiers, chaque jour', to: '/mobile/semaine', icon: 'i-heroicons-user-group' })
+      items.push({ label: 'Ma semaine (SSF)', description: 'Votre lieu et votre SSF, chaque jour', to: '/mobile/semaine', icon: 'i-heroicons-user-group' })
     }
   }
   // Le commercial a le coaching en onglet du bas : pas de doublon ici.

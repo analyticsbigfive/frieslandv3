@@ -8,7 +8,8 @@
 -- « tous les jours » ; un fichier qui donne le jour le renseigne (1-6).
 --
 -- Écart d'un jour : les PDV de la tournée d'un merchandiser qui ne sont dans
--- le routing d'aucun SSF de son binôme ce jour-là. Deux fonctions :
+-- le routing d'aucun SSF de son routing mensuel ce jour-là (case du jour et de
+-- la semaine du mois, migration 20261008130000). Deux fonctions :
 --   - ecarts_binome_resume(date) : une ligne par merchandiser ;
 --   - ecarts_binome(date, merchandiser) : le détail des PDV.
 --
@@ -79,6 +80,7 @@ as $$
 declare
   v_role text := (select p.role from profiles p where p.id = auth.uid());
   v_dow  smallint := extract(dow from p_date)::smallint;
+  v_semaine integer := semaine_routing(p_date);
 begin
   if auth.uid() is not null and coalesce(v_role, '') not in ('admin', 'superviseur', 'commercial') then
     raise exception 'Accès refusé au contrôle d''écart' using errcode = '42501';
@@ -96,10 +98,9 @@ begin
   ),
   binomes as (
     select b.merchandiser_id, b.ssf_id
-    from binome_ssf_merch b
-    where b.actif and b.jour_semaine = v_dow
-      and (b.date_debut is null or b.date_debut <= p_date)
-      and (b.date_fin is null or b.date_fin >= p_date)
+    from routing_mensuel b
+    where b.actif and b.ssf_id is not null
+      and b.jour_semaine = v_dow and b.semaine_du_mois = v_semaine
   ),
   etapes as (
     select t.routing_id, t.user_id, rp.pdv_id,
@@ -143,7 +144,7 @@ end;
 $$;
 
 comment on function public.ecarts_binome_resume(date) is
-  'Contrôle d''écart d''un jour : par merchandiser, son binôme SSF, le nombre de PDV de sa tournée et ceux hors du routing de ses SSF du jour (statut ok / hors_routing_ssf / routing_ssf_absent / sans_binome).';
+  'Contrôle d''écart d''un jour : par merchandiser, le SSF de sa case du routing mensuel, le nombre de PDV de sa tournée et ceux hors du routing DMS de ce SSF (statut ok / hors_routing_ssf / routing_ssf_absent / sans_binome = pas de SSF ce jour).';
 
 revoke all on function public.ecarts_binome_resume(date) from public, anon;
 grant execute on function public.ecarts_binome_resume(date) to authenticated, service_role;
@@ -168,6 +169,7 @@ as $$
 declare
   v_role text := (select p.role from profiles p where p.id = auth.uid());
   v_dow  smallint := extract(dow from p_date)::smallint;
+  v_semaine integer := semaine_routing(p_date);
 begin
   if auth.uid() is not null and coalesce(v_role, '') not in ('admin', 'superviseur')
      and not exists (select 1 from profiles m where m.id = p_merchandiser and m.commercial_id = auth.uid()) then
@@ -179,11 +181,10 @@ begin
     p.pdv_id, p.nom_pdv, p.zone, p.quartier, p.sous_categorie_pdv,
     (select string_agg(distinct s.nom, ', ') from ssf_pdv sp join ssf s on s.id = sp.ssf_id where sp.pdv_id = p.pdv_id),
     exists (
-      select 1 from binome_ssf_merch b
+      select 1 from routing_mensuel b
       join ssf_pdv sp on sp.ssf_id = b.ssf_id and sp.pdv_id = rp.pdv_id and sp.jour_semaine in (0, v_dow)
-      where b.merchandiser_id = p_merchandiser and b.actif and b.jour_semaine = v_dow
-        and (b.date_debut is null or b.date_debut <= p_date)
-        and (b.date_fin is null or b.date_fin >= p_date)
+      where b.merchandiser_id = p_merchandiser and b.actif and b.ssf_id is not null
+        and b.jour_semaine = v_dow and b.semaine_du_mois = v_semaine
     )
   from routings rt
   join routing_pdv rp on rp.routing_id = rt.id
@@ -194,7 +195,7 @@ end;
 $$;
 
 comment on function public.ecarts_binome(date, uuid) is
-  'Détail du contrôle d''écart : PDV de la tournée du jour d''un merchandiser, dans ou hors du routing des SSF de son binôme.';
+  'Détail du contrôle d''écart : PDV de la tournée du jour d''un merchandiser, dans ou hors du routing DMS du SSF de sa case du jour.';
 
 revoke all on function public.ecarts_binome(date, uuid) from public, anon;
 grant execute on function public.ecarts_binome(date, uuid) to authenticated, service_role;

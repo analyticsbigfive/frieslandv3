@@ -11,7 +11,7 @@ export const LIBELLES_ECART: Record<StatutEcart, { label: string, aide: string, 
   ok: { label: 'Aligné', aide: 'Tous les PDV de la tournée sont dans le routing du SSF du binôme.', couleur: 'green' },
   hors_routing_ssf: { label: 'Écart', aide: 'Des PDV de la tournée ne sont pas dans le routing du SSF du binôme.', couleur: 'red' },
   routing_ssf_absent: { label: 'Routing SSF absent', aide: 'Le SSF du binôme n’a pas de routing importé (Imports terrain › Routing des SSF).', couleur: 'amber' },
-  sans_binome: { label: 'Sans binôme', aide: 'Aucun binôme SSF prévu ce jour pour ce merchandiser.', couleur: 'gray' },
+  sans_binome: { label: 'Sans SSF ce jour', aide: 'Pas de SSF prévu ce jour pour ce merchandiser dans le routing mensuel (case « Aucun SSF » ou sans case).', couleur: 'gray' },
 }
 
 /**

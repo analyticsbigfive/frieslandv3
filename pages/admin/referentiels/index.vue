@@ -314,6 +314,8 @@ const TYPES_ALIAS = [
   { value: 'merchandiser', label: 'Merchandiser → e-mail du compte' },
   { value: 'distributeur', label: 'Distributeur → nom du référentiel' },
   { value: 'ssf', label: 'SSF → nom du référentiel SSF' },
+  { value: 'quartier', label: 'Point de visite → COMMUNE›QUARTIER des PDV (plusieurs : séparés par |)' },
+  { value: 'commercial', label: 'Commercial (Sales rep) → e-mail du compte' },
 ]
 const MODES_ALIAS = [
   { value: 'exact', label: 'Texte exact' },
@@ -326,7 +328,7 @@ const PORTEES = () => [
   ...(store.agence?.length ? store.agence : AGENCES_DEFAUT).map((a: any) => ({ value: a.code, label: `${a.nom} uniquement` })),
 ]
 const libellePortee = (p: string) => PORTEES().find(x => x.value === p)?.label || p
-// Comptes (merchandisers des binômes, commerciaux des SSF).
+// Comptes (merchandisers du routing mensuel, commerciaux des SSF).
 const utilisateurs = ref<any[]>([])
 const nomUtilisateur = (id: string | null) => (id ? utilisateurs.value.find(u => u.id === id)?.nom || '—' : '—')
 const merchandiserOpts = () => utilisateurs.value.filter(u => u.role === 'merchandiser' && u.is_active !== false)
@@ -1120,7 +1122,7 @@ const defs: Def[] = [
     noDelete: true,
     aide: 'Une nouvelle catégorie apparaît dans le formulaire (web et app 1.0.12) dès qu’elle a des produits : ajoutez-les dans Paramètres › Produits du formulaire. Elle est saisie et exportée, mais ne compte au Perfect Store qu’après une correspondance SKU.',
   },
-  // ===== DISTRIBUTION : agences, SSF et binômes =====
+  // ===== DISTRIBUTION : agences, SSF et routing mensuel =====
   {
     id: 'agence', section: 'distrib', label: 'Agences', table: 'agence',
     select: 'code, nom, direction, programme, actif, ordre', order: q => q.order('ordre').order('nom'),
@@ -1155,7 +1157,7 @@ const defs: Def[] = [
     id: 'ssf', section: 'distrib', label: 'SSF (vendeurs)', table: 'ssf',
     select: 'id, nom, nom_brut, telephone, distributeur_id, commercial_id, actif, a_confirmer, source, commentaire', order: q => q.order('nom'),
     noDelete: true,
-    aide: 'SSF : vendeur d’un distributeur (pas un salarié Friesland), suivi par un commercial comme les merchandisers de son équipe. Il ne dirige pas le merchandiser : ils forment un binôme certains jours (onglet Binômes) pour passer dans les mêmes PDV.',
+    aide: 'SSF : vendeur d’un distributeur (pas un salarié Friesland), suivi par un commercial comme les merchandisers de son équipe. Il ne dirige pas le merchandiser : certains jours ils travaillent ensemble (onglet Routing mensuel) pour passer dans les mêmes PDV.',
     columns: [
       { label: 'SSF', cell: r => r.nom },
       { label: 'Distributeur', cell: r => (r.distributeur_id ? distributeurNameOf(r.distributeur_id) : '—'), muted: true },
@@ -1168,7 +1170,7 @@ const defs: Def[] = [
     fields: [
       { key: 'nom', label: 'Nom', type: 'text', required: true },
       { key: 'distributeur_id', label: 'Distributeur', type: 'select', opts: distributeurIdOpts },
-      { key: 'commercial_id', label: 'Commercial', type: 'select', opts: commercialOpts, hint: 'Sales officer dont dépend le SSF (le même que celui des merchandisers de ses binômes).' },
+      { key: 'commercial_id', label: 'Commercial', type: 'select', opts: commercialOpts, hint: 'Sales officer dont dépend le SSF (le même que celui des merchandisers avec qui il travaille).' },
       { key: 'telephone', label: 'Téléphone', type: 'text' },
       { key: 'nom_brut', label: 'Autres orthographes', type: 'text', hint: 'Variantes vues dans les fichiers, séparées par « | » (ex. Tra bi ta Arsène|TRA BI TA).' },
       { key: 'actif', label: 'Actif', type: 'bool', hint: 'Désactivé : n’est plus proposé dans l’app ni dans les règles. Les visites gardent leur SSF.' },
@@ -1201,7 +1203,7 @@ const defs: Def[] = [
   {
     id: 'ssf_quartier', section: 'distrib', label: 'SSF ↔ Quartiers', table: 'ssf_quartier',
     select: 'id, ssf_id, zone, quartier, source, a_confirmer', order: q => q.order('ssf_id').order('zone').order('quartier'),
-    aide: 'Quartiers couverts par un SSF (réunion de ceux de ses binômes). Ils bornent les PDV des tournées des jours de binôme. « Dérivée des visites » = proposée d’après les visites passées, à confirmer ; une ligne modifiée ici devient une saisie admin et n’est plus recalculée par les imports.',
+    aide: 'Quartiers couverts par un SSF (réunion des lieux de ses jours dans le routing mensuel). Ils complètent les PDV des tournées des jours où il travaille avec le merchandiser. « Dérivée des visites » = proposée d’après les visites passées, à confirmer ; une ligne modifiée ici devient une saisie admin et n’est plus recalculée par les imports.',
     columns: [
       { label: 'SSF', cell: r => ssfNomOf(r.ssf_id) },
       { label: 'Zone', cell: r => r.zone, muted: true },
@@ -1228,48 +1230,56 @@ const defs: Def[] = [
     del: r => table('ssf_quartier').delete().eq('id', r.id),
   },
   {
-    id: 'binome_ssf_merch', section: 'distrib', label: 'Binômes SSF ↔ merch', table: 'binome_ssf_merch',
-    select: 'id, merchandiser_id, ssf_id, jour_semaine, zone, quartiers, date_debut, date_fin, source, actif',
-    order: q => q.order('merchandiser_id').order('jour_semaine'),
-    aide: 'Planning des binômes : tel jour, tel merchandiser travaille avec tel SSF dans tels quartiers, pour qu’ils passent dans les mêmes PDV. Aucun des deux ne dirige l’autre : ils dépendent du commercial. Alimenté par le fichier de l’agence (Import / Export › Imports terrain), modifiable ici. Après une modification, relancez Routing › Règles ou Maintenance › Recalculer les tournées.',
+    id: 'routing_mensuel', section: 'distrib', label: 'Routing mensuel', table: 'routing_mensuel',
+    select: 'id, merchandiser_id, jour_semaine, semaine_du_mois, secteur, point_visite, zone, quartiers, ssf_id, ssf_texte, type_engin, source, actif',
+    order: q => q.order('merchandiser_id').order('jour_semaine').order('semaine_du_mois'),
+    aide: 'Routing mensuel de l’agence : pour chaque merchandiser, jour et semaine du mois, le point de visite, ses quartiers et le SSF du jour (binôme sans lien hiérarchique : tous deux dépendent du commercial). Alimenté par Import / Export › Imports terrain › Routing mensuel ; une correction ici vaut jusqu’au prochain import. Sans quartier reconnu, la tournée suit le portefeuille ce jour-là. Après une modification, relancez Maintenance › Recalculer les tournées.',
     columns: [
       { label: 'Merchandiser', cell: r => nomUtilisateur(r.merchandiser_id) },
       { label: 'Jour', cell: r => JOURS_SEMAINE[r.jour_semaine] },
-      { label: 'SSF', cell: r => ssfNomOf(r.ssf_id) },
-      { label: 'Zone', cell: r => r.zone || '—', muted: true },
-      { label: 'Quartiers', cell: r => (r.quartiers || []).join(', ') || 'Tous ceux du SSF', muted: true },
+      { label: 'Semaine', cell: r => `S${r.semaine_du_mois}`, align: 'c' },
+      { label: 'Point de visite', cell: r => r.point_visite || '—' },
+      { label: 'Quartiers', cell: r => (r.quartiers || []).join(', ') || 'Non reconnu (portefeuille)', muted: true },
+      { label: 'SSF', cell: r => (r.ssf_id ? ssfNomOf(r.ssf_id) : r.ssf_texte ? `${r.ssf_texte} (non relié)` : 'Aucun SSF') },
       { label: 'Origine', cell: r => ORIGINES_BINOME(r.source).label, kind: 'badge', color: r => ORIGINES_BINOME(r.source).color },
       { label: 'Actif', cell: r => r.actif, align: 'c', kind: 'bool' },
     ],
     fields: [
       { key: 'merchandiser_id', label: 'Merchandiser', type: 'select', opts: merchandiserOpts, required: true, lockEdit: true },
       { key: 'jour_semaine', label: 'Jour', type: 'select', opts: () => JOURS_OPTS, required: true, lockEdit: true },
-      { key: 'ssf_id', label: 'SSF', type: 'select', opts: ssfOpts, required: true, lockEdit: true },
-      { key: 'zone', label: 'Zone', type: 'text', hint: 'Libellé exact du territoire des PDV (ex. ABOBO 1).' },
-      { key: 'quartiers', label: 'Quartiers', type: 'text', hint: 'Séparés par des virgules. Vide : tous les quartiers du SSF.' },
+      { key: 'semaine_du_mois', label: 'Semaine du mois', type: 'select', opts: () => [1, 2, 3, 4].map(s => ({ value: s, label: `Semaine ${s}` })), required: true, lockEdit: true },
+      { key: 'point_visite', label: 'Point de visite', type: 'text' },
+      { key: 'zone', label: 'Zone', type: 'text', hint: 'Libellé exact du territoire des PDV (ex. YOPOUGON 3).' },
+      { key: 'quartiers', label: 'Quartiers', type: 'text', hint: 'Libellés exacts des PDV, séparés par des virgules. Vide : portefeuille ce jour-là.' },
+      { key: 'ssf_id', label: 'SSF', type: 'select', opts: () => [{ value: 0, label: 'Aucun SSF' }, ...ssfOpts()] },
+      { key: 'type_engin', label: 'Engin du SSF', type: 'text', hint: 'Mini van, Moto, Grossiste…' },
       { key: 'actif', label: 'Actif', type: 'bool' },
     ],
-    blank: () => ({ merchandiser_id: null, jour_semaine: 1, ssf_id: null, zone: '', quartiers: '', actif: true }),
-    fill: r => ({ ...r, quartiers: (r.quartiers || []).join(', ') }),
+    blank: () => ({ merchandiser_id: null, jour_semaine: 1, semaine_du_mois: 1, point_visite: '', zone: '', quartiers: '', ssf_id: 0, type_engin: '', actif: true }),
+    fill: r => ({ ...r, quartiers: (r.quartiers || []).join(', '), ssf_id: r.ssf_id || 0 }),
     rowKey: r => r.id,
-    search: r => `${nomUtilisateur(r.merchandiser_id)} ${ssfNomOf(r.ssf_id)} ${JOURS_SEMAINE[r.jour_semaine]} ${r.zone || ''} ${(r.quartiers || []).join(' ')}`.toLowerCase(),
-    valid: f => !!f.merchandiser_id && !!f.ssf_id && f.jour_semaine != null,
+    search: r => `${nomUtilisateur(r.merchandiser_id)} ${r.ssf_id ? ssfNomOf(r.ssf_id) : r.ssf_texte || ''} ${JOURS_SEMAINE[r.jour_semaine]} ${r.point_visite || ''} ${(r.quartiers || []).join(' ')}`.toLowerCase(),
+    valid: f => !!f.merchandiser_id && f.jour_semaine != null && !!f.semaine_du_mois,
     save: (f, e) => {
       const rec = {
+        point_visite: String(f.point_visite || '').trim() || null,
         zone: String(f.zone || '').trim() || null,
         quartiers: String(f.quartiers || '').split(/[,;|\n]+/).map(q => q.trim()).filter(Boolean),
+        ssf_id: f.ssf_id || null,
+        type_engin: String(f.type_engin || '').trim() || null,
         actif: f.actif !== false,
+        source: 'admin',
       }
       return e
-        ? table('binome_ssf_merch').update({ ...rec, source: 'admin' }).eq('id', f.id)
-        : table('binome_ssf_merch').upsert({ ...rec, merchandiser_id: f.merchandiser_id, jour_semaine: f.jour_semaine, ssf_id: f.ssf_id, source: 'admin' }, { onConflict: 'merchandiser_id,jour_semaine,ssf_id' })
+        ? table('routing_mensuel').update(rec).eq('id', f.id)
+        : table('routing_mensuel').upsert({ ...rec, merchandiser_id: f.merchandiser_id, jour_semaine: f.jour_semaine, semaine_du_mois: f.semaine_du_mois }, { onConflict: 'merchandiser_id,jour_semaine,semaine_du_mois' })
     },
-    del: r => table('binome_ssf_merch').delete().eq('id', r.id),
+    del: r => table('routing_mensuel').delete().eq('id', r.id),
   },
   {
     id: 'alias_import', section: 'distrib', label: 'Alias d’import', table: 'alias_import',
     select: 'id, type, motif, mode, cible, commentaire', order: q => q.order('type').order('motif'),
-    aide: 'Orthographes rencontrées dans les fichiers d’import (export Atom, DMS, fichier SSF) et leur correspondance dans le référentiel. Le texte est comparé en majuscules, sans accents ni ponctuation.',
+    aide: 'Orthographes rencontrées dans les fichiers d’import (export Atom, DMS, routing mensuel de l’agence) et leur correspondance dans le référentiel. Le texte est comparé en majuscules, sans accents ni ponctuation. Type « quartier » : rattache un point de visite du routing aux quartiers des PDV, une fois pour toutes.',
     columns: [
       { label: 'Type', cell: r => r.type, kind: 'badge' },
       { label: 'Texte du fichier', cell: r => r.motif, kind: 'mono' },
@@ -1281,7 +1291,7 @@ const defs: Def[] = [
       { key: 'type', label: 'Type', type: 'select', opts: () => TYPES_ALIAS, required: true },
       { key: 'motif', label: 'Texte du fichier', type: 'text', required: true, hint: 'Ex. DEHO WILFRIED, BOUSSOURA, NIARE…' },
       { key: 'mode', label: 'Correspondance', type: 'select', opts: () => MODES_ALIAS, required: true },
-      { key: 'cible', label: 'Cible', type: 'text', required: true, hint: 'Merchandiser : e-mail du compte. Distributeur : nom exact du référentiel. SSF : nom exact du SSF.' },
+      { key: 'cible', label: 'Cible', type: 'text', required: true, hint: 'Merchandiser et commercial : e-mail du compte. Distributeur : nom exact du référentiel. SSF : nom exact du SSF. Quartier : COMMUNE›QUARTIER tel qu’écrit dans les PDV (ex. YOPOUGON 3›ANDOKOI ; plusieurs séparés par |).' },
       { key: 'commentaire', label: 'Commentaire', type: 'text' },
     ],
     blank: () => ({ type: 'merchandiser', motif: '', mode: 'exact', cible: '', commentaire: '' }),

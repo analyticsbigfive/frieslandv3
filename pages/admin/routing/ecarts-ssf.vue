@@ -3,7 +3,7 @@
     <AdminPageHeader
       title="Écarts SSF ↔ merchandiser"
       eyebrow="Routing & Planning"
-      description="Le SSF (vendeur du distributeur) et le merchandiser d’un binôme doivent passer dans les mêmes PDV. Pour un jour donné : les PDV de la tournée du merchandiser absents du routing DMS du SSF de son binôme."
+      description="Le SSF (vendeur du distributeur) et le merchandiser qui travaillent ensemble un jour donné doivent passer dans les mêmes PDV. Pour un jour : les PDV de la tournée du merchandiser absents du routing DMS du SSF prévu ce jour-là (routing mensuel de l’agence)."
     >
       <template #actions>
         <UInput v-model="date" type="date" size="sm" class="w-40" aria-label="Jour" />
@@ -40,7 +40,7 @@
           <tr>
             <th class="th-l">Merchandiser</th>
             <th class="th-l">Commercial</th>
-            <th class="th-l">SSF du binôme</th>
+            <th class="th-l">SSF du jour</th>
             <th class="th-c">PDV de la tournée</th>
             <th class="th-c">Hors routing SSF</th>
             <th class="th-l">Statut</th>
@@ -117,9 +117,9 @@
     </div>
 
     <p class="text-xs text-gray-500 dark:text-gray-400">
-      Sources : binômes dans
-      <NuxtLink to="/admin/referentiels?onglet=binome_ssf_merch" class="font-semibold text-fc-red underline">Référentiels › Binômes</NuxtLink>
-      (fichier de l’agence), routing des SSF dans
+      Sources : SSF de chaque jour dans
+      <NuxtLink to="/admin/referentiels?onglet=routing_mensuel" class="font-semibold text-fc-red underline">Référentiels › Routing mensuel</NuxtLink>
+      (fichier de l’agence : SSF de chaque jour et semaine du mois), routing des SSF dans
       <NuxtLink to="/admin/import-export" class="font-semibold text-fc-red underline">Import / Export › Imports terrain</NuxtLink>
       (export clients DMS). L’export DMS ne donne pas le jour de passage : un PDV du routing d’un SSF vaut pour tous ses jours.
     </p>

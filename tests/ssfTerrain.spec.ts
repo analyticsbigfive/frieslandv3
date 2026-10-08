@@ -48,3 +48,13 @@ describe('SSF du terrain', () => {
     expect(libelleSousZone(quartiers, 9)).toBe('')
   })
 })
+
+describe('routing de la semaine (routing mensuel)', () => {
+  it('une case par jour, jours sans case vides (portefeuille)', async () => {
+    const { routingParJour, versRouting } = await import('../utils/ssfTerrain')
+    const lignes = versRouting([{ jour_semaine: 1, template_id: null, libelle: null, ssf_id: 3, ssf_nom: 'Kone Moussa', ssf_telephone: null, distributeur: 'NDA', zone: 'ABOBO 1', quartiers: ['SAMAKE'] }])
+    const jours = routingParJour([...lignes, { ...lignes[0], jour_semaine: 2, ssf_id: null, ssf_nom: null, point_visite: 'Maroc' }])
+    expect(jours.map(j => j.cases.length)).toEqual([1, 1, 0, 0, 0, 0])
+    expect(jours[1].cases[0]).toMatchObject({ point_visite: 'Maroc', ssf_id: null })
+  })
+})
