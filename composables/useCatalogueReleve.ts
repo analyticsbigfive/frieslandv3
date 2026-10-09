@@ -98,5 +98,6 @@ export function useCatalogueReleve() {
 
   const categoriesActives = computed(() => categoriesProduitsActives())
 
-  return { charger, categoriesActives }
+  // `charge` : catalogue lu en base (avant, les catégories par défaut font foi).
+  return { charger, categoriesActives, charge }
 }
