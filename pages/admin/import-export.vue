@@ -4,7 +4,7 @@
       <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Import / Export</h1>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div v-if="!authStore.isAgence" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- Import CSV -->
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 space-y-4">
         <h2 class="font-bold text-lg text-gray-900 dark:text-gray-100">Importer des données</h2>
@@ -95,9 +95,10 @@
       </div>
     </div>
 
-    <!-- Imports DMS, Atom et SSF : écritures par la route serveur, réservées à l'admin. -->
-    <AdminImportsTerrain v-if="authStore.isAdmin" />
-    <p v-else class="text-sm text-gray-500 dark:text-gray-400">Les imports terrain (DMS, Atom, sous-zones SSF) sont réservés aux administrateurs.</p>
+    <!-- Imports terrain : écritures par la route serveur ; administrateur (tous
+         les imports) ou compte agence (routing mensuel de ses merchandisers). -->
+    <AdminImportsTerrain v-if="authStore.isAdmin || authStore.isAgence" />
+    <p v-else class="text-sm text-slate-600 dark:text-slate-300">Les imports terrain (fichiers du distributeur, routing des agences) sont réservés aux administrateurs.</p>
   </div>
 </template>
 

@@ -10,7 +10,7 @@
 
     <!-- Cartes -->
     <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-      <div v-for="imp in IMPORTS" :key="imp.type" class="admin-surface space-y-3 p-4">
+      <div v-for="imp in importsVisibles" :key="imp.type" class="admin-surface space-y-3 p-4">
         <div>
           <p class="font-semibold text-gray-900 dark:text-gray-100">{{ imp.titre }}</p>
           <p class="text-xs text-gray-500 dark:text-gray-400">{{ imp.description }}</p>
@@ -203,6 +203,9 @@ const COULEURS_STATUT: Record<string, any> = { en_cours: 'blue', applique: 'gree
 const supabase = useSupabaseClient()
 const toast = useToast()
 const authStore = useAuthStore()
+// Compte agence : seulement le routing mensuel de ses merchandisers ; la route
+// serveur (requireAdminOuAgence) vérifie chaque opération.
+const importsVisibles = computed(() => (authStore.isAgence ? IMPORTS.filter(i => i.type === 'routing-mensuel') : IMPORTS))
 
 const fichiers = reactive<Record<string, Record<string, File | null>>>({})
 const maintenant = new Date()
