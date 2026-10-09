@@ -72,7 +72,7 @@
 
     <template v-if="!activeVue">
     <!-- Toolbar -->
-    <div class="admin-toolbar flex items-center justify-between gap-3">
+    <div class="admin-toolbar flex flex-wrap items-center justify-between gap-3">
       <UInput v-model="search" icon="i-heroicons-magnifying-glass" placeholder="Rechercher dans la liste" aria-label="Rechercher dans la liste" size="sm" class="w-full sm:w-80" />
       <p class="whitespace-nowrap text-sm tabular-nums text-slate-600 dark:text-slate-300">{{ filteredRows.length }} sur {{ (store[activeId] || []).length }}</p>
     </div>
@@ -82,13 +82,13 @@
       <table class="admin-table">
         <thead>
           <tr>
-            <th v-for="col in activeDef.columns" :key="col.label" :class="col.align === 'c' ? 'text-center' : ''">{{ col.label }}</th>
-            <th class="w-20 text-center"><span class="sr-only">Actions</span></th>
+            <th v-for="col in activeDef.columns" :key="col.label" scope="col" :class="col.kind === 'num' ? '!text-right' : col.align === 'c' ? '!text-center' : ''">{{ col.label }}</th>
+            <th scope="col" class="w-20"><span class="sr-only">Actions</span></th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="row in paginatedRefRows" :key="activeDef.rowKey(row)">
-            <td v-for="col in activeDef.columns" :key="col.label" class="px-4 py-2.5 text-sm" :class="col.align === 'c' ? 'text-center' : 'text-gray-900 dark:text-gray-100'">
+            <td v-for="col in activeDef.columns" :key="col.label" class="!py-2.5" :class="col.kind === 'num' ? 'text-right' : col.align === 'c' ? 'text-center' : 'text-slate-900 dark:text-white'">
               <template v-if="col.kind === 'badge'">
                 <UBadge :color="col.color ? col.color(row) : 'gray'" variant="soft" size="xs">{{ col.cell(row) }}</UBadge>
               </template>
@@ -96,17 +96,17 @@
                 <UIcon
                   :name="col.cell(row) ? 'i-heroicons-check-circle-solid' : 'i-heroicons-minus-circle'"
                   class="h-5 w-5"
-                  :class="col.cell(row) ? 'text-emerald-700' : 'text-slate-400 dark:text-slate-500'"
+                  :class="col.cell(row) ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'"
                   aria-hidden="true"
                 />
                 <span class="sr-only">{{ col.cell(row) ? 'Oui' : 'Non' }}</span>
               </template>
-              <span v-else-if="col.kind === 'mono'" class="font-mono text-xs text-gray-500 dark:text-gray-400">{{ col.cell(row) || '—' }}</span>
-              <span v-else :class="col.kind === 'num' ? 'font-semibold tabular-nums' : (col.muted ? 'text-gray-600 dark:text-gray-300' : '')">{{ col.cell(row) }}</span>
+              <span v-else-if="col.kind === 'mono'" class="font-mono text-xs text-slate-600 dark:text-slate-300">{{ col.cell(row) || '—' }}</span>
+              <span v-else :class="col.kind === 'num' ? 'font-semibold tabular-nums' : (col.muted ? 'text-slate-600 dark:text-slate-300' : '')">{{ col.cell(row) }}</span>
             </td>
-            <td class="px-4 py-2.5 text-center">
-              <UDropdown v-if="!activeDef.lectureSeule" :items="rowActions(row)">
-                <UButton variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" :aria-label="`Actions : ${activeDef.search(row)}`" />
+            <td class="!py-2.5 text-right">
+              <UDropdown v-if="!activeDef.lectureSeule" :items="rowActions(row)" :popper="{ placement: 'bottom-end' }">
+                <UButton color="gray" variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" :aria-label="`Actions : ${activeDef.search(row)}`" />
               </UDropdown>
             </td>
           </tr>
@@ -138,7 +138,7 @@
     <AdminFormModal
       v-model="showModal"
       :title="`${editing ? 'Modifier' : 'Ajouter'} : ${activeDef.label}`"
-      description="Renseignez les propriétés de cet élément de référentiel."
+      :description="editing ? 'La modification s’applique dès l’enregistrement.' : `La nouvelle ligne s’ajoute à la liste « ${activeDef.label} ».`"
       icon="i-heroicons-circle-stack"
       width="sm:max-w-3xl"
       body-class="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2"
@@ -206,7 +206,7 @@
           :disabled="!canSave"
           @click="save"
         >
-          {{ editing ? 'Mettre à jour' : 'Ajouter' }}
+          {{ editing ? 'Enregistrer' : 'Ajouter' }}
         </UButton>
       </template>
     </AdminFormModal>
@@ -248,15 +248,51 @@ function lirePoint(texte: unknown): [number, number] | null {
 
 // -- Enumérations métier (Système B) --------------------------------------
 const CANAUX = ['GT', 'MT']
-const BASES = [{ value: 'taux_vente', label: 'Taux vente' }, { value: 'taux_revu', label: 'Taux revu' }]
+const BASES = [
+  { value: 'taux_vente', label: 'Poids selon les ventes (taux de vente)' },
+  { value: 'taux_revu', label: 'Poids cible (taux revu)' },
+]
 const GRADES = ['A', 'B', 'C']
 const DISPO_SEGMENTS = ['Boutique', 'Minimarket', 'Kiosque', 'Aboki', 'Pushcart', 'TableTop', 'Porridge']
-const MT_SEGMENTS = ['Hypermarche', 'MoyenSuper', 'PetitSuper']
-const VISI_SEGMENTS = ['boutique', 'superette', 'mt', 'table_top', 'pushcart', 'porridge', 'kiosque_aboki']
-const NIVEAUX = ['flagship', 'vip', 'core', 'basic']
-const PILIERS = ['visibilite', 'promotion']
-const EMPLACEMENTS = ['exterieure', 'interieure', 'promotion']
-const ROLES = ['phare', 'soutien', 'croissance', 'nouveaute', 'a_retirer']
+// Valeurs enregistrées inchangées ; seuls les libellés affichés sont traduits.
+const MT_SEGMENTS = [
+  { value: 'Hypermarche', label: 'Hypermarché (grand format)' },
+  { value: 'MoyenSuper', label: 'Supermarché moyen (catégorie B)' },
+  { value: 'PetitSuper', label: 'Petit supermarché (catégorie C)' },
+]
+const VISI_SEGMENTS = [
+  { value: 'boutique', label: 'Boutique' },
+  { value: 'superette', label: 'Superette' },
+  { value: 'mt', label: 'Supermarchés (MT)' },
+  { value: 'table_top', label: 'Table-top' },
+  { value: 'pushcart', label: 'Pushcart' },
+  { value: 'porridge', label: 'Porridge' },
+  { value: 'kiosque_aboki', label: 'Kiosque et aboki' },
+]
+const NIVEAUX = [
+  { value: 'flagship', label: 'Flagship' },
+  { value: 'vip', label: 'VIP' },
+  { value: 'core', label: 'Core' },
+  { value: 'basic', label: 'Basic' },
+]
+const PILIERS = [{ value: 'visibilite', label: 'Visibilité' }, { value: 'promotion', label: 'Promotion' }]
+const EMPLACEMENTS = [
+  { value: 'exterieure', label: 'Extérieur' },
+  { value: 'interieure', label: 'Intérieur' },
+  { value: 'promotion', label: 'Promotion' },
+]
+const ROLES = [
+  { value: 'phare', label: 'Phare' },
+  { value: 'soutien', label: 'Soutien' },
+  { value: 'croissance', label: 'Croissance' },
+  { value: 'nouveaute', label: 'Nouveauté' },
+  { value: 'a_retirer', label: 'À retirer' },
+]
+const CANAUX_OPTS = CANAUX.map(v => ({ value: v, label: v === 'MT' ? 'Supermarchés (MT)' : 'Boutiques (GT)' }))
+/** Libellé affiché d'une valeur enregistrée (liste de couples valeur / libellé). */
+const libelleDe = (liste: { value: string, label: string }[], v: string | null | undefined) =>
+  (v == null || v === '' ? '—' : liste.find(o => o.value === v)?.label || v)
+const libelleCanal = (v: string | null | undefined) => libelleDe(CANAUX_OPTS, v)
 
 // -- Data store ------------------------------------------------------------
 const store = reactive<Record<string, any[]>>({})
@@ -345,19 +381,22 @@ const ssfQuartierCountOf = (id: number) => maps.ssfQuartierCount?.get(id) || 0
 const ssfOpts = () => opt((store.ssf || []).filter((r: any) => r.actif !== false), r => r.id, r => `${r.nom}${r.distributeur_id ? ' · ' + distributeurNameOf(r.distributeur_id) : ''}`)
 const quartierPdvOpts = () => quartiersPdv.value.map(q => ({ value: `${q.zone}|${q.quartier}`, label: `${q.zone} › ${q.quartier} (${q.nb_pdv})` }))
 const ORIGINES_SOUS_ZONE: Record<string, { label: string, color: string }> = {
-  derive: { label: 'Dérivée des visites', color: 'amber' },
+  derive: { label: 'Déduite des visites', color: 'amber' },
   client: { label: 'Fichier client', color: 'green' },
-  admin: { label: 'Saisie admin', color: 'blue' },
+  admin: { label: 'Saisie manuelle', color: 'blue' },
 }
 const origineSousZone = (source?: string) => (source?.startsWith('derive-') ? ORIGINES_SOUS_ZONE.derive
   : source?.startsWith('client-') ? ORIGINES_SOUS_ZONE.client : ORIGINES_SOUS_ZONE.admin)
 const TYPES_ALIAS = [
-  { value: 'merchandiser', label: 'Merchandiser → e-mail du compte' },
-  { value: 'distributeur', label: 'Distributeur → nom du référentiel' },
-  { value: 'ssf', label: 'SSF → nom du référentiel SSF' },
-  { value: 'quartier', label: 'Point de visite → COMMUNE›QUARTIER des PDV (plusieurs : séparés par |)' },
-  { value: 'commercial', label: 'Commercial (Sales rep) → e-mail du compte' },
+  { value: 'merchandiser', label: 'Merchandiser (relié à l’e-mail du compte)' },
+  { value: 'distributeur', label: 'Distributeur (relié au nom dans la liste des distributeurs)' },
+  { value: 'ssf', label: 'Vendeur du distributeur, SSF (relié au nom dans la liste des SSF)' },
+  { value: 'quartier', label: 'Point de visite (relié aux quartiers des PDV)' },
+  { value: 'commercial', label: 'Commercial (relié à l’e-mail du compte)' },
 ]
+const TYPES_ALIAS_COURTS: Record<string, string> = {
+  merchandiser: 'Merchandiser', distributeur: 'Distributeur', ssf: 'Vendeur (SSF)', quartier: 'Point de visite', commercial: 'Commercial',
+}
 const MODES_ALIAS = [
   { value: 'exact', label: 'Texte exact' },
   { value: 'commence', label: 'Commence par' },
@@ -371,16 +410,19 @@ const PORTEES = () => [
 const libellePortee = (p: string) => PORTEES().find(x => x.value === p)?.label || p
 // Comptes (merchandisers du routing mensuel, commerciaux des SSF).
 const utilisateurs = ref<any[]>([])
-const nomUtilisateur = (id: string | null) => (id ? utilisateurs.value.find(u => u.id === id)?.nom || '—' : '—')
+const LIBELLES_ROLES: Record<string, string> = {
+  admin: 'Administrateur', superviseur: 'Superviseur', commercial: 'Commercial', merchandiser: 'Merchandiser', agence: 'Agence',
+}
+const nomUtilisateur = (id: string | null) => (id ? utilisateurs.value.find(u => u.id === id)?.nom || 'Compte introuvable' : 'Aucun')
 const merchandiserOpts = () => utilisateurs.value.filter(u => u.role === 'merchandiser' && u.is_active !== false)
   .map(u => ({ value: u.id, label: `${u.nom} · ${u.email}` }))
 const commercialOpts = () => utilisateurs.value.filter(u => ['commercial', 'admin'].includes(u.role) && u.is_active !== false)
-  .map(u => ({ value: u.id, label: `${u.nom}${u.role === 'admin' ? ' (admin)' : ''}` }))
+  .map(u => ({ value: u.id, label: `${u.nom}${u.role === 'admin' ? ' (administrateur)' : ''}` }))
 const JOURS_OPTS = [1, 2, 3, 4, 5, 6, 0].map(j => ({ value: j, label: JOURS_SEMAINE[j] }))
 const DIRECTION_OPTS = [{ value: '', label: 'Toutes' }, ...DIRECTIONS.map(d => ({ value: d.value, label: d.label }))]
-const libelleGrille = (g: string) => (g === 'mt' ? 'Modern Trade' : 'General Trade')
+const libelleGrille = (g: string) => (g === 'mt' ? 'Supermarchés (MT)' : 'Boutiques (GT)')
 const ORIGINES_BINOME = (source?: string) => (source?.startsWith('client-') ? { label: 'Fichier agence', color: 'green' }
-  : source === 'regle-existante' ? { label: 'Règle existante', color: 'amber' } : { label: 'Saisie admin', color: 'blue' })
+  : source === 'regle-existante' ? { label: 'Règle existante', color: 'amber' } : { label: 'Saisie manuelle', color: 'blue' })
 const valeurParametre = (r: any) => (r.valeur == null ? 'Non défini' : `${r.valeur} ${r.unite || ''}`.trim())
 const bornesParametre = (r: any) => (r.min == null && r.max == null ? '—' : `${r.min ?? '…'} → ${r.max ?? '…'} ${r.unite || ''}`.trim())
 
@@ -489,14 +531,14 @@ const defs: Def[] = [
     id: 'zone', section: 'geo', label: 'Zones commerciales (areas)', table: 'zone',
     select: 'id, code, nom, territoire_code', order: q => q.order('territoire_code').order('code'),
     columns: [
-      { label: 'Code area', cell: r => r.code || '—', kind: 'mono' },
+      { label: 'Code de la zone', cell: r => r.code || '—', kind: 'mono' },
       { label: 'Territoire', cell: r => maps.territoire_code?.get(r.territoire_code)?.nom || r.territoire_code, muted: true },
       { label: 'Distributeur', cell: r => zoneDistribOf(r.id), muted: true },
       { label: 'Quartiers', cell: r => quartierCountOf(r.id), align: 'c', kind: 'num' },
     ],
     fields: [
-      { key: 'code', label: 'Code Area', type: 'text', required: true },
-      { key: 'nom', label: 'Libellé area (legacy)', type: 'text', hint: 'Ancien libellé collé — les quartiers se gèrent dans le référentiel « Quartiers ».' },
+      { key: 'code', label: 'Code de la zone', type: 'text', required: true },
+      { key: 'nom', label: 'Ancien libellé (facultatif)', type: 'text', hint: 'Ancien nom de la zone, qui regroupait ses quartiers. Les quartiers se gèrent maintenant dans la liste « Quartiers ».' },
       { key: 'territoire_code', label: 'Territoire', type: 'select', opts: territoireOpts, required: true },
     ],
     blank: () => ({ code: '', nom: '', territoire_code: '' }),
@@ -513,12 +555,12 @@ const defs: Def[] = [
     select: 'id, zone_id, nom, ordre', order: q => q.order('zone_id').order('ordre'),
     columns: [
       { label: 'Territoire', cell: r => zoneTerrLabelOf(r.zone_id), muted: true },
-      { label: 'Code area', cell: r => zoneCodeOf(r.zone_id), kind: 'mono' },
+      { label: 'Zone commerciale', cell: r => zoneCodeOf(r.zone_id), kind: 'mono' },
       { label: 'Quartier', cell: r => r.nom },
       { label: 'Distributeur', cell: r => zoneDistribOf(r.zone_id), muted: true },
     ],
     fields: [
-      { key: 'zone_id', label: 'Area (zone)', type: 'select', opts: zoneIdOpts, required: true, lockEdit: true },
+      { key: 'zone_id', label: 'Zone commerciale', type: 'select', opts: zoneIdOpts, required: true, lockEdit: true },
       { key: 'nom', label: 'Quartier', type: 'text', required: true },
       { key: 'ordre', label: 'Ordre', type: 'num', min: 1 },
     ],
@@ -540,7 +582,7 @@ const defs: Def[] = [
       { label: 'Code', cell: r => r.territoire_code, muted: true },
     ],
     fields: [
-      { key: 'alias', label: 'Libellé hors référentiel', type: 'text', required: true, lockEdit: true, hint: 'Tel qu\'il apparaît sur les PDV (pdv.zone) ou les profils, ex. MARCORY TREICHVILLE' },
+      { key: 'alias', label: 'Libellé hors référentiel', type: 'text', required: true, lockEdit: true, hint: 'Tel qu\'il est écrit sur les PDV ou les comptes, ex. MARCORY TREICHVILLE.' },
       { key: 'territoire_code', label: 'Territoire réel', type: 'select', opts: territoireOpts, required: true },
     ],
     blank: () => ({ alias: '', territoire_code: '' }),
@@ -601,12 +643,12 @@ const defs: Def[] = [
     id: 'zone_distributeur', section: 'distrib', label: 'Zones des distributeurs', table: 'zone_distributeur',
     select: 'zone_id, distributeur_id',
     columns: [
-      { label: 'Code area', cell: r => zoneCodeOf(r.zone_id), kind: 'mono' },
+      { label: 'Zone commerciale', cell: r => zoneCodeOf(r.zone_id), kind: 'mono' },
       { label: 'Territoire', cell: r => zoneTerrLabelOf(r.zone_id), muted: true },
       { label: 'Distributeur', cell: r => distributeurNameOf(r.distributeur_id) },
     ],
     fields: [
-      { key: 'zone_id', label: 'Area (zone)', type: 'select', opts: zoneIdOpts, required: true, lockEdit: true },
+      { key: 'zone_id', label: 'Zone commerciale', type: 'select', opts: zoneIdOpts, required: true, lockEdit: true },
       { key: 'distributeur_id', label: 'Distributeur', type: 'select', opts: distributeurIdOpts, required: true, lockEdit: true },
     ],
     blank: () => ({ zone_id: null, distributeur_id: null }),
@@ -624,12 +666,12 @@ const defs: Def[] = [
     columns: [
       { label: 'Catégorie (niveau 3)', cell: r => r.nom },
       { label: 'Libellé affiché', cell: r => r.nom_fr || '—', muted: true },
-      { label: 'Canal', cell: r => r.canal || '—', align: 'c', kind: 'badge', color: r => tierColor(r.canal) },
+      { label: 'Canal', cell: r => libelleCanal(r.canal), align: 'c', kind: 'badge', color: r => tierColor(r.canal) },
     ],
     fields: [
       { key: 'nom', label: 'Nom', type: 'text', required: true },
-      { key: 'nom_fr', label: 'Libellé affiché (français)', type: 'text', hint: 'Montré dans l’app et l’admin à la place du nom de référence.' },
-      { key: 'canal', label: 'Canal', type: 'select', opts: () => CANAUX, required: true },
+      { key: 'nom_fr', label: 'Libellé affiché (français)', type: 'text', hint: 'Montré dans l’application et le back-office à la place du nom de référence.' },
+      { key: 'canal', label: 'Canal', type: 'select', opts: () => CANAUX_OPTS, required: true },
     ],
     blank: () => ({ nom: '', nom_fr: '', canal: 'GT' }),
     fill: r => ({ ...r }),
@@ -647,11 +689,11 @@ const defs: Def[] = [
       { label: 'Type (niveau 4)', cell: r => r.nom },
       { label: 'Libellé affiché', cell: r => r.nom_fr || '—', muted: true },
       { label: 'Catégorie (niveau 3)', cell: r => maps.categorie_pdv?.get(r.categorie_pdv_id)?.nom || '—', muted: true },
-      { label: 'Canal', cell: r => maps.categorie_pdv?.get(r.categorie_pdv_id)?.canal || '—', align: 'c', kind: 'badge', color: r => tierColor(maps.categorie_pdv?.get(r.categorie_pdv_id)?.canal) },
+      { label: 'Canal', cell: r => libelleCanal(maps.categorie_pdv?.get(r.categorie_pdv_id)?.canal), align: 'c', kind: 'badge', color: r => tierColor(maps.categorie_pdv?.get(r.categorie_pdv_id)?.canal) },
     ],
     fields: [
       { key: 'nom', label: 'Type', type: 'text', required: true },
-      { key: 'nom_fr', label: 'Libellé affiché (français)', type: 'text', hint: 'Montré dans l’app et l’admin à la place du nom de référence.' },
+      { key: 'nom_fr', label: 'Libellé affiché (français)', type: 'text', hint: 'Montré dans l’application et le back-office à la place du nom de référence.' },
       { key: 'categorie_pdv_id', label: 'Catégorie', type: 'select', opts: categoriePdvOpts, required: true },
     ],
     blank: () => ({ nom: '', nom_fr: '', categorie_pdv_id: null }),
@@ -672,9 +714,9 @@ const defs: Def[] = [
       { label: 'Jours entre deux visites', cell: r => r.jours, align: 'c', kind: 'num' },
     ],
     fields: [
-      { key: 'zone', label: 'Territoire', type: 'select', opts: () => [{ value: '', label: 'Tous les territoires' }, ...territoireOpts().map(o => ({ value: o.label.split(' · ')[0], label: o.label }))], lockEdit: true, hint: 'Vide = tous. La surcharge la plus précise (territoire + type) gagne.' },
+      { key: 'zone', label: 'Territoire', type: 'select', opts: () => [{ value: '', label: 'Tous les territoires' }, ...territoireOpts().map(o => ({ value: o.label.split(' · ')[0], label: o.label }))], lockEdit: true, hint: 'Vide : tous les territoires. Quand plusieurs lignes s’appliquent, la plus précise (territoire et type) l’emporte.' },
       { key: 'type_pdv', label: 'Type de PDV', type: 'select', opts: () => [{ value: '', label: 'Tous les types' }, ...typePdvOpts().map(o => ({ value: o.label, label: o.label }))], lockEdit: true },
-      { key: 'jours', label: 'Jours entre deux visites', type: 'num', required: true, min: 1, hint: '7 = hebdomadaire. Au-delà, le PDV passe « en retard » dans la synthèse par zone.' },
+      { key: 'jours', label: 'Jours entre deux visites', type: 'num', required: true, min: 1, hint: '7 pour une visite par semaine. Au-delà, le PDV passe « en retard » dans la synthèse par zone.' },
     ],
     blank: () => ({ zone: '', type_pdv: '', jours: 7 }),
     fill: r => ({ ...r, zone: r.zone || '', type_pdv: r.type_pdv || '' }),
@@ -726,7 +768,7 @@ const defs: Def[] = [
     fields: [
       { key: 'cle', label: 'Paramètre', type: 'select', opts: () => [...(maps.parametreTous?.values() || [])].map((r: any) => ({ value: r.cle, label: r.libelle })), required: true, lockEdit: true },
       { key: 'portee', label: 'Portée', type: 'select', opts: PORTEES, required: true, lockEdit: true },
-      { key: 'valeur', label: 'Valeur', type: 'num', hint: 'Vide = non défini (pour l’objectif de visites : taille de la tournée du jour).' },
+      { key: 'valeur', label: 'Valeur', type: 'num', hint: 'Laissez vide pour ne rien imposer (pour l’objectif de visites : la taille de la tournée du jour).' },
     ],
     blank: () => ({ cle: null, portee: 'atom', valeur: null }),
     fill: r => ({ ...r }),
@@ -806,7 +848,7 @@ const defs: Def[] = [
     id: 'engin_vente', section: 'app', label: 'Engins de vente', table: 'engin_vente',
     select: 'code, libelle, ordre, actif', order: q => q.order('ordre'),
     noDelete: true,
-    aide: 'Engins proposés dans le field coaching des vendeurs.',
+    aide: 'Engins proposés dans le coaching terrain des vendeurs.',
     columns: [
       { label: 'Engin', cell: r => r.libelle },
       { label: 'Code', cell: r => r.code, kind: 'mono', muted: true },
@@ -831,18 +873,18 @@ const defs: Def[] = [
     id: 'coaching_objectif', section: 'app', label: 'Objectifs de coaching', table: 'coaching_objectif',
     select: 'code, libelle, description, type_coaching, ordre, actif', order: q => q.order('ordre').order('libelle'),
     noDelete: true,
-    aide: 'Objectifs proposés dans le formulaire de field coaching (valeurs fournies par le client). Tant que la liste est vide, le champ n’apparaît pas dans l’app.',
+    aide: 'Objectifs proposés dans le formulaire de coaching terrain (valeurs fournies par le client). Tant que la liste est vide, le champ n’apparaît pas dans l’application.',
     columns: [
       { label: 'Objectif', cell: r => r.libelle },
       { label: 'Code', cell: r => r.code, kind: 'mono', muted: true },
-      { label: 'Coaching', cell: r => (r.type_coaching ? libelleGrille(r.type_coaching) : 'GT et MT'), kind: 'badge', color: r => (r.type_coaching === 'mt' ? 'purple' : 'blue') },
+      { label: 'Coaching', cell: r => (r.type_coaching ? libelleGrille(r.type_coaching) : 'Boutiques et supermarchés'), kind: 'badge', color: r => (r.type_coaching === 'mt' ? 'purple' : 'blue') },
       { label: 'Actif', cell: r => r.actif, align: 'c', kind: 'bool' },
     ],
     fields: [
       { key: 'libelle', label: 'Libellé', type: 'text', required: true },
-      { key: 'code', label: 'Code', type: 'text', lockEdit: true, hint: 'Vide : déduit du libellé.' },
+      { key: 'code', label: 'Code', type: 'text', lockEdit: true, hint: 'Laissez vide : il est déduit du libellé.' },
       { key: 'description', label: 'Description', type: 'text' },
-      { key: 'type_coaching', label: 'Coaching', type: 'select', opts: () => [{ value: '', label: 'GT et MT' }, { value: 'gt', label: 'General Trade (vendeurs)' }, { value: 'mt', label: 'Modern Trade (merchandisers)' }] },
+      { key: 'type_coaching', label: 'Coaching', type: 'select', opts: () => [{ value: '', label: 'Boutiques et supermarchés (GT et MT)' }, { value: 'gt', label: 'Boutiques (GT), vendeurs' }, { value: 'mt', label: 'Supermarchés (MT), merchandisers' }] },
       { key: 'ordre', label: 'Ordre', type: 'num' },
       { key: 'actif', label: 'Actif', type: 'bool' },
     ],
@@ -861,7 +903,7 @@ const defs: Def[] = [
   {
     id: 'coaching_critere', section: 'app', label: 'Grille de coaching, supermarchés (MT)', table: 'coaching_critere',
     select: 'id, grille, bloc, code, libelle, aide, ordre, actif', order: q => q.order('grille').order('bloc').order('ordre'),
-    aide: 'Standards d’exécution Modern Trade (part linéaire, visibilité…) évalués quand un commercial MT suit un merchandiser. À remplir avec la grille fournie par le client ; tant qu’elle est vide, le coaching MT n’est pas proposé. La grille General Trade (vendeurs) reste celle de l’application.',
+    aide: 'Standards d’exécution en supermarché (part linéaire, visibilité…) évalués quand un commercial des supermarchés (MT) suit un merchandiser. À remplir avec la grille fournie par le client ; tant qu’elle est vide, ce coaching n’est pas proposé. La grille des boutiques (GT, vendeurs) reste celle de l’application.',
     columns: [
       { label: 'Grille', cell: r => libelleGrille(r.grille), kind: 'badge', color: r => (r.grille === 'mt' ? 'purple' : 'blue') },
       { label: 'Bloc', cell: r => r.bloc },
@@ -871,10 +913,10 @@ const defs: Def[] = [
       { label: 'Actif', cell: r => r.actif, align: 'c', kind: 'bool' },
     ],
     fields: [
-      { key: 'grille', label: 'Grille', type: 'select', opts: () => [{ value: 'mt', label: 'Modern Trade' }], required: true, lockEdit: true },
+      { key: 'grille', label: 'Grille', type: 'select', opts: () => [{ value: 'mt', label: 'Supermarchés (MT)' }], required: true, lockEdit: true },
       { key: 'bloc', label: 'Bloc', type: 'text', required: true, hint: 'Ex. Part linéaire, Visibilité, Promotion.' },
       { key: 'libelle', label: 'Critère', type: 'text', required: true },
-      { key: 'code', label: 'Code', type: 'text', lockEdit: true, hint: 'Vide : déduit du libellé.' },
+      { key: 'code', label: 'Code', type: 'text', lockEdit: true, hint: 'Laissez vide : il est déduit du libellé.' },
       { key: 'aide', label: 'Aide', type: 'text' },
       { key: 'ordre', label: 'Ordre', type: 'num' },
       { key: 'actif', label: 'Actif', type: 'bool' },
@@ -897,14 +939,14 @@ const defs: Def[] = [
     id: 'version_app', ailleurs: "Paramètres › Versions de l'app", section: 'app', label: 'Version minimale', table: 'version_app',
     select: 'plateforme, version_code_min, version_nom_min, url_telechargement, message', order: q => q.order('plateforme'), noDelete: true,
     columns: [
-      { label: 'Plateforme', cell: r => r.plateforme, kind: 'badge' },
-      { label: 'Version minimale', cell: r => `${r.version_nom_min || '?'} (code ${r.version_code_min})` },
+      { label: 'Plateforme', cell: r => (r.plateforme === 'android' ? 'Android' : r.plateforme), kind: 'badge' },
+      { label: 'Version minimale', cell: r => `${r.version_nom_min || 'Sans nom'} (numéro interne ${r.version_code_min})` },
       { label: 'Lien de téléchargement', cell: r => r.url_telechargement || '—', muted: true },
     ],
     fields: [
-      { key: 'version_code_min', label: 'Code de version minimal (versionCode)', type: 'num', required: true, min: 1, hint: 'En dessous, l’app est bloquée sur un écran de mise à jour. 1.0.9 = 11, 1.0.10 = 13. Vérifier d’abord la version installée dans « Versions installées ».' },
-      { key: 'version_nom_min', label: 'Version affichée', type: 'text', hint: 'Ex. 1.0.10' },
-      { key: 'url_telechargement', label: 'Lien de téléchargement', type: 'text', hint: 'Lien stable de l’APK, rempli par l’onglet « Publier une version ».' },
+      { key: 'version_code_min', label: 'Numéro interne de la version minimale', type: 'num', required: true, min: 1, hint: 'En dessous, l’application est bloquée sur un écran de mise à jour. Chaque version a un numéro interne : 1.0.9 = 11, 1.0.10 = 13. Vérifiez d’abord les versions installées.' },
+      { key: 'version_nom_min', label: 'Version affichée', type: 'text', hint: 'Le nom que voient les utilisateurs, ex. 1.0.10.' },
+      { key: 'url_telechargement', label: 'Lien de téléchargement', type: 'text', hint: 'Lien stable de l’APK, rempli lors de la publication d’une version.' },
       { key: 'message', label: 'Message affiché', type: 'text' },
     ],
     blank: () => ({ plateforme: 'android', version_code_min: 11, version_nom_min: '1.0.9', url_telechargement: '', message: '' }),
@@ -930,10 +972,10 @@ const defs: Def[] = [
     id: 'version_installee', ailleurs: "Paramètres › Versions de l'app", section: 'app', label: 'Versions installées', table: 'version_installee',
     select: 'user_id, plateforme, version_code, version_nom, vu_le, profil:user_id(nom, email, role)', order: q => q.order('vu_le', { ascending: false }), noDelete: true, lectureSeule: true,
     columns: [
-      { label: 'Utilisateur', cell: r => r.profil?.nom || r.profil?.email || r.user_id },
-      { label: 'Rôle', cell: r => r.profil?.role, kind: 'badge' },
-      { label: 'Version', cell: r => `${r.version_nom || '?'} (code ${r.version_code})`, kind: 'mono' },
-      { label: 'Dernière ouverture', cell: r => r.vu_le ? new Date(r.vu_le).toLocaleString('fr-FR') : '—', muted: true },
+      { label: 'Utilisateur', cell: r => r.profil?.nom || r.profil?.email || 'Compte sans nom' },
+      { label: 'Rôle', cell: r => LIBELLES_ROLES[r.profil?.role] || r.profil?.role || '—', kind: 'badge' },
+      { label: 'Version', cell: r => `${r.version_nom || 'Sans nom'} (${r.version_code})` },
+      { label: 'Dernière ouverture', cell: r => r.vu_le ? new Date(r.vu_le).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : 'Jamais', muted: true },
     ],
     fields: [],
     blank: () => ({}),
@@ -944,15 +986,15 @@ const defs: Def[] = [
     del: async () => ({ error: new Error('Déclarée automatiquement par l’application.') }),
   },
   {
-    id: 'segment_grade_type_pdv', ailleurs: "Paramètres › Standards Perfect Store", section: 'pdv', label: 'Segment / Grade', table: 'segment_grade_type_pdv',
+    id: 'segment_grade_type_pdv', ailleurs: "Paramètres › Standards Perfect Store", section: 'pdv', label: 'Segment et grade des types de PDV', table: 'segment_grade_type_pdv',
     select: 'type_pdv_id, segment, grade',
     columns: [
-      { label: 'Type PDV', cell: r => typePdvNameOf(r.type_pdv_id) },
-      { label: 'Segment (dispo)', cell: r => r.segment, align: 'c', kind: 'badge' },
+      { label: 'Type de PDV', cell: r => typePdvNameOf(r.type_pdv_id) },
+      { label: 'Segment (disponibilité)', cell: r => r.segment, align: 'c', kind: 'badge' },
       { label: 'Grade', cell: r => r.grade, align: 'c', kind: 'badge' },
     ],
     fields: [
-      { key: 'type_pdv_id', label: 'Type PDV', type: 'select', opts: typePdvOpts, required: true, lockEdit: true },
+      { key: 'type_pdv_id', label: 'Type de PDV', type: 'select', opts: typePdvOpts, required: true, lockEdit: true },
       { key: 'segment', label: 'Segment (disponibilité)', type: 'select', opts: () => DISPO_SEGMENTS, required: true },
       { key: 'grade', label: 'Grade', type: 'select', opts: () => GRADES, required: true },
     ],
@@ -966,14 +1008,14 @@ const defs: Def[] = [
     del: r => supabase.from('segment_grade_type_pdv').delete().eq('type_pdv_id', r.type_pdv_id),
   },
   {
-    id: 'segment_visibilite_type_pdv', ailleurs: "Paramètres › Standards Perfect Store", section: 'pdv', label: 'Segment Visibilité', table: 'segment_visibilite_type_pdv',
+    id: 'segment_visibilite_type_pdv', ailleurs: "Paramètres › Standards Perfect Store", section: 'pdv', label: 'Segment de visibilité des types de PDV', table: 'segment_visibilite_type_pdv',
     select: 'type_pdv_id, segment',
     columns: [
-      { label: 'Type PDV', cell: r => typePdvNameOf(r.type_pdv_id) },
-      { label: 'Segment (visibilité)', cell: r => r.segment, align: 'c', kind: 'badge' },
+      { label: 'Type de PDV', cell: r => typePdvNameOf(r.type_pdv_id) },
+      { label: 'Segment (visibilité)', cell: r => libelleDe(VISI_SEGMENTS, r.segment), align: 'c', kind: 'badge' },
     ],
     fields: [
-      { key: 'type_pdv_id', label: 'Type PDV', type: 'select', opts: typePdvOpts, required: true, lockEdit: true },
+      { key: 'type_pdv_id', label: 'Type de PDV', type: 'select', opts: typePdvOpts, required: true, lockEdit: true },
       { key: 'segment', label: 'Segment (visibilité)', type: 'select', opts: () => VISI_SEGMENTS, required: true },
     ],
     blank: () => ({ type_pdv_id: null, segment: 'boutique' }),
@@ -1012,7 +1054,7 @@ const defs: Def[] = [
     columns: [
       { label: 'Référence', cell: r => r.nom },
       { label: 'Catégorie', cell: r => catCodeOf(r.categorie_produit_id), align: 'c', kind: 'badge' },
-      { label: 'Rôle', cell: r => r.role || '—', align: 'c', kind: 'badge', color: r => r.role === 'phare' ? 'amber' : 'gray' },
+      { label: 'Rôle', cell: r => libelleDe(ROLES, r.role), align: 'c', kind: 'badge', color: r => r.role === 'phare' ? 'amber' : 'gray' },
     ],
     fields: [
       { key: 'nom', label: 'Nom', type: 'text', required: true },
@@ -1033,17 +1075,17 @@ const defs: Def[] = [
     select: 'reference_produit_id, categorie_jsonb, sku_key',
     columns: [
       { label: 'Référence', cell: r => refNameOf(r.reference_produit_id) },
-      { label: 'Catégorie', cell: r => r.categorie_jsonb, align: 'c', kind: 'badge' },
+      { label: 'Catégorie', cell: r => catalogueProduits().find(c => c.key === r.categorie_jsonb)?.label || r.categorie_jsonb, align: 'c', kind: 'badge' },
       { label: 'Produit du formulaire', cell: r => getSkuLabel(r.categorie_jsonb, r.sku_key) },
-      { label: 'Clé SKU', cell: r => r.sku_key, kind: 'mono' },
+      { label: 'Code du produit', cell: r => r.sku_key, kind: 'mono' },
     ],
     fields: [
       { key: 'reference_produit_id', label: 'Référence', type: 'select', opts: referenceOpts, required: true },
-      { key: 'categorie_jsonb', label: 'Catégorie', type: 'select', opts: () => catalogueProduits().map(c => ({ value: c.key, label: `${c.label} (${c.key})` })), required: true },
+      { key: 'categorie_jsonb', label: 'Catégorie', type: 'select', opts: () => catalogueProduits().map(c => ({ value: c.key, label: c.label })), required: true },
       {
         key: 'sku_key', label: 'Produit du formulaire', type: 'select', required: true,
         opts: () => getSkus(form.value?.categorie_jsonb || '', { inclureInactifs: true })
-          .map(s => ({ value: s.key, label: `${s.label} (${s.key})${s.actif === false ? ' — retiré' : ''}` })),
+          .map(s => ({ value: s.key, label: `${s.label}${s.actif === false ? ' (retiré du formulaire)' : ''}` })),
         hint: 'Produits gérés dans Paramètres › Produits du formulaire.',
       },
     ],
@@ -1059,7 +1101,7 @@ const defs: Def[] = [
         .eq('categorie_jsonb', f.cle_categorie).eq('sku_key', f.cle_sku)
       : supabase.from('correspondance_reference').insert({ reference_produit_id: f.reference_produit_id, categorie_jsonb: f.categorie_jsonb, sku_key: f.sku_key }),
     del: r => supabase.from('correspondance_reference').delete().eq('categorie_jsonb', r.categorie_jsonb).eq('sku_key', r.sku_key),
-    aide: 'Un produit du formulaire compte au Perfect Store quand il est relié à une référence. Après un ajout ou une modification, « Recalculer » (Perfect Store) renote aussi les visites passées.',
+    aide: 'Un produit du formulaire compte au Perfect Store quand il est relié à une référence. Après un ajout ou une modification, « Recalculer toutes les visites » (Paramètres › Standards Perfect Store) renote aussi les visites passées.',
   },
   {
     id: 'marque_concurrente', section: 'produit', label: 'Marques concurrentes', table: 'marque_concurrente',
@@ -1067,13 +1109,13 @@ const defs: Def[] = [
     columns: [
       { label: 'Famille', cell: r => r.famille?.toUpperCase(), align: 'c', kind: 'badge' },
       { label: 'Marque', cell: r => r.nom },
-      { label: 'Clé JSONB', cell: r => r.code, kind: 'mono', muted: true },
+      { label: 'Code', cell: r => r.code, kind: 'mono', muted: true },
       { label: 'Ordre', cell: r => r.ordre, align: 'c', kind: 'num' },
       { label: 'Actif', cell: r => r.actif, align: 'c', kind: 'bool' },
     ],
     fields: [
       { key: 'famille', label: 'Famille', type: 'select', opts: () => FAMILLES_CONCURRENCE.map(f => ({ value: f.key, label: f.key.toUpperCase() })), required: true, lockEdit: true },
-      { key: 'nom', label: 'Nom de la marque', type: 'text', required: true, hint: 'ex. Cowmilk — apparaît tel quel dans le formulaire mobile' },
+      { key: 'nom', label: 'Nom de la marque', type: 'text', required: true, hint: 'Ex. Cowmilk. Apparaît tel quel dans le formulaire de l’application ; son code est fixé à la création.' },
       { key: 'ordre', label: 'Ordre d\'affichage', type: 'num', min: 0 },
       { key: 'actif', label: 'Actif', type: 'bool' },
     ],
@@ -1093,21 +1135,21 @@ const defs: Def[] = [
     select: 'id, marque_id, code, libelle, grammage_g, format, colisage, image_url, actif, ordre', order: q => q.order('ordre').order('libelle'),
     columns: [
       { label: 'Marque', cell: r => marqueNomOf(r.marque_id) },
-      { label: 'SKU', cell: r => r.libelle },
+      { label: 'Référence (SKU)', cell: r => r.libelle },
       { label: 'Grammage', cell: r => r.grammage_g ? `${r.grammage_g} g` : '—', align: 'c', kind: 'num' },
       { label: 'Format', cell: r => r.format || '—', muted: true },
       { label: 'Colisage', cell: r => r.colisage ?? '—', align: 'c', kind: 'num' },
-      { label: 'Clé JSONB', cell: r => r.code, kind: 'mono', muted: true },
+      { label: 'Code', cell: r => r.code, kind: 'mono', muted: true },
       { label: 'Photo', cell: r => !!r.image_url, align: 'c', kind: 'bool' },
       { label: 'Actif', cell: r => r.actif, align: 'c', kind: 'bool' },
     ],
     fields: [
       { key: 'marque_id', label: 'Marque', type: 'select', opts: marqueConcurrenteOpts, required: true, lockEdit: true },
-      { key: 'libelle', label: 'Libellé', type: 'text', required: true, hint: 'ex. Nido 400g — affiché tel quel dans le formulaire mobile' },
+      { key: 'libelle', label: 'Libellé', type: 'text', required: true, hint: 'Ex. Nido 400g. Affiché tel quel dans le formulaire de l’application.' },
       { key: 'grammage_g', label: 'Grammage (g)', type: 'num', min: 0 },
       { key: 'format', label: 'Format', type: 'text', hint: 'Sachet, Pouch, Boîte…' },
       { key: 'colisage', label: 'Colisage', type: 'num', min: 0 },
-      { key: 'image_url', label: 'URL photo', type: 'text', hint: 'Lien public (bucket visite-images). Vide tant que le client n\'a pas fourni le visuel.' },
+      { key: 'image_url', label: 'Adresse de la photo', type: 'text', hint: 'Adresse web publique de la photo du produit (commence par https://). Laissez vide tant que le client n\'a pas fourni le visuel.' },
       { key: 'ordre', label: 'Ordre d\'affichage', type: 'num', min: 0 },
       { key: 'actif', label: 'Actif', type: 'bool' },
     ],
@@ -1132,7 +1174,7 @@ const defs: Def[] = [
       const code = f.grammage_g ? `${base}_${f.grammage_g}g` : `${base}_${normaliserNomConcurrent(f.libelle)}`
       return supabase.from('marque_concurrente_sku').insert({ ...rec, marque_id: f.marque_id, code })
     },
-    del: async () => ({ error: new Error('Suppression désactivée : désactivez le SKU.') }),
+    del: async () => ({ error: new Error('Suppression désactivée : désactivez plutôt la référence.') }),
     noDelete: true,
   },
   {
@@ -1142,15 +1184,15 @@ const defs: Def[] = [
       { label: 'Code', cell: r => r.code, kind: 'mono' },
       { label: 'Catégorie', cell: r => r.libelle },
       { label: 'Ordre', cell: r => r.ordre, align: 'c', kind: 'num' },
-      { label: 'Facings (MT)', cell: r => r.facings, align: 'c', kind: 'bool' },
+      { label: 'Faces en rayon (MT)', cell: r => r.facings, align: 'c', kind: 'bool' },
       { label: 'Active', cell: r => r.actif, align: 'c', kind: 'bool' },
     ],
     fields: [
-      { key: 'code', label: 'Code', type: 'text', required: true, lockEdit: true, hint: 'Minuscules, chiffres et _ (ex. beurre). Figé après création : c’est la clé des visites.' },
+      { key: 'code', label: 'Code', type: 'text', required: true, lockEdit: true, hint: 'Un mot court en minuscules, sans espace ni accent (lettres, chiffres et « _ »), ex. beurre ou lait_poudre. Il ne change plus après la création : les visites l’utilisent pour ranger les quantités.' },
       { key: 'libelle', label: 'Libellé', type: 'text', required: true },
       { key: 'ordre', label: 'Ordre', type: 'num', min: 0 },
-      { key: 'facings', label: 'Facings en Modern Trade', type: 'bool', hint: 'Cochée : le formulaire demande aussi le nombre de faces en rayon dans les PDV Modern Trade.' },
-      { key: 'actif', label: 'Active', type: 'bool', hint: 'Décochée : la catégorie disparaît du formulaire mobile et des onglets admin. Les visites déjà saisies sont conservées.' },
+      { key: 'facings', label: 'Faces en rayon (facings) en supermarché', type: 'bool', hint: 'Oui : le formulaire demande aussi le nombre de faces en rayon dans les supermarchés (MT).' },
+      { key: 'actif', label: 'Active', type: 'bool', hint: 'Non : la catégorie disparaît du formulaire de l’application et des écrans du back-office. Les visites déjà saisies sont conservées.' },
     ],
     blank: () => ({ code: '', libelle: '', ordre: 0, facings: false, actif: true }),
     fill: r => ({ ...r }),
@@ -1163,7 +1205,7 @@ const defs: Def[] = [
       : supabase.from('categorie_releve').insert({ code: f.code, libelle: f.libelle, ordre: f.ordre ?? 0, facings: !!f.facings, actif: f.actif !== false }),
     del: async () => ({ error: new Error('Suppression désactivée : désactivez la catégorie.') }),
     noDelete: true,
-    aide: 'Une nouvelle catégorie apparaît dans le formulaire (web et app 1.0.12) dès qu’elle a des produits : ajoutez-les dans Paramètres › Produits du formulaire. Elle est saisie et exportée, mais ne compte au Perfect Store qu’après une correspondance SKU.',
+    aide: 'Une nouvelle catégorie apparaît dans le formulaire (web et application 1.0.12) dès qu’elle a des produits : ajoutez-les dans Paramètres › Produits du formulaire. Elle est saisie et exportée, mais ne compte au Perfect Store qu’après sa correspondance avec une référence (SKU).',
   },
   // ===== DISTRIBUTION : agences, SSF et routing mensuel =====
   {
@@ -1180,9 +1222,9 @@ const defs: Def[] = [
     ],
     fields: [
       { key: 'nom', label: 'Nom', type: 'text', required: true },
-      { key: 'code', label: 'Code', type: 'text', required: true, lockEdit: true, hint: 'Minuscules, chiffres et tirets (ex. agence-north). Non modifiable ensuite.' },
+      { key: 'code', label: 'Code', type: 'text', required: true, lockEdit: true, hint: 'Un mot court en minuscules, sans espace ni accent (lettres, chiffres et tirets), ex. agence-north. Il ne change plus ensuite.' },
       { key: 'direction', label: 'Direction', type: 'select', opts: () => DIRECTION_OPTS },
-      { key: 'programme', label: 'Programme merchandiser', type: 'bool', hint: 'Tournées par quotas (grille Quotas), SSF du jour et objectifs du mois pour ses merchandisers.' },
+      { key: 'programme', label: 'Programme merchandiser', type: 'bool', hint: 'Oui : tournées par quotas (grille des quotas), vendeur du distributeur (SSF) du jour et objectifs du mois pour ses merchandisers.' },
       { key: 'actif', label: 'Active', type: 'bool' },
       { key: 'ordre', label: 'Ordre', type: 'num' },
     ],
@@ -1213,9 +1255,9 @@ const defs: Def[] = [
     fields: [
       { key: 'nom', label: 'Nom', type: 'text', required: true },
       { key: 'distributeur_id', label: 'Distributeur', type: 'select', opts: distributeurIdOpts },
-      { key: 'commercial_id', label: 'Commercial', type: 'select', opts: commercialOpts, hint: 'Sales officer dont dépend le SSF (le même que celui des merchandisers avec qui il travaille).' },
+      { key: 'commercial_id', label: 'Commercial', type: 'select', opts: commercialOpts, hint: 'Le commercial dont dépend ce vendeur : le même que celui des merchandisers avec qui il travaille.' },
       { key: 'telephone', label: 'Téléphone', type: 'text' },
-      { key: 'nom_brut', label: 'Autres orthographes', type: 'text', hint: 'Variantes vues dans les fichiers, séparées par « | » (ex. Tra bi ta Arsène|TRA BI TA).' },
+      { key: 'nom_brut', label: 'Autres orthographes', type: 'text', hint: 'Les autres façons dont ce nom est écrit dans les fichiers, séparées par une barre verticale « | ». Ex. Tra bi ta Arsène|TRA BI TA' },
       { key: 'actif', label: 'Actif', type: 'bool', hint: 'Désactivé : n’est plus proposé dans l’app ni dans les règles. Les visites gardent leur SSF.' },
       { key: 'a_confirmer', label: 'Distributeur à confirmer', type: 'bool', hint: 'Rattachement déduit d’un export, à confirmer par le client.' },
       { key: 'commentaire', label: 'Commentaire', type: 'text' },
@@ -1246,7 +1288,7 @@ const defs: Def[] = [
   {
     id: 'ssf_quartier', section: 'distrib', label: 'Quartiers des vendeurs (SSF)', table: 'ssf_quartier',
     select: 'id, ssf_id, zone, quartier, source, a_confirmer', order: q => q.order('ssf_id').order('zone').order('quartier'),
-    aide: 'Quartiers couverts par un SSF (réunion des lieux de ses jours dans le routing mensuel). Ils complètent les PDV des tournées des jours où il travaille avec le merchandiser. « Dérivée des visites » = proposée d’après les visites passées, à confirmer ; une ligne modifiée ici devient une saisie admin et n’est plus recalculée par les imports.',
+    aide: 'Quartiers couverts par un vendeur du distributeur (SSF) : les lieux de ses jours dans le routing mensuel. Ils complètent les PDV des tournées des jours où il travaille avec le merchandiser. « Déduite des visites » : proposée d’après les visites passées, à confirmer. Une ligne modifiée ici devient une saisie manuelle et n’est plus recalculée par les imports.',
     columns: [
       { label: 'SSF', cell: r => ssfNomOf(r.ssf_id) },
       { label: 'Zone', cell: r => r.zone, muted: true },
@@ -1255,8 +1297,8 @@ const defs: Def[] = [
       { label: 'À confirmer', cell: r => r.a_confirmer, align: 'c', kind: 'bool' },
     ],
     fields: [
-      { key: 'ssf_id', label: 'SSF', type: 'select', opts: ssfOpts, required: true },
-      { key: 'zq', label: 'Zone › quartier', type: 'select', opts: quartierPdvOpts, required: true, hint: 'Libellés exacts des PDV ; entre parenthèses, le nombre de PDV actifs du quartier.' },
+      { key: 'ssf_id', label: 'Vendeur (SSF)', type: 'select', opts: ssfOpts, required: true },
+      { key: 'zq', label: 'Zone et quartier', type: 'select', opts: quartierPdvOpts, required: true, hint: 'Tels qu’ils sont écrits sur les PDV ; entre parenthèses, le nombre de PDV actifs du quartier.' },
       { key: 'a_confirmer', label: 'À confirmer', type: 'bool' },
     ],
     blank: () => ({ ssf_id: null, zq: null, a_confirmer: false }),
@@ -1295,11 +1337,11 @@ const defs: Def[] = [
       { key: 'semaine_du_mois', label: 'Semaine du mois', type: 'select', opts: () => [1, 2, 3, 4].map(s => ({ value: s, label: `Semaine ${s}` })), required: true, lockEdit: true },
       { key: 'point_visite', label: 'Point de visite', type: 'text' },
       { key: 'commune', label: 'Commune', type: 'text', hint: 'Commune du fichier de l’agence (ex. Abobo). Sans quartier : portefeuille du merchandiser dans cette commune.' },
-      { key: 'point', label: 'Point GPS', type: 'text', hint: 'Latitude, longitude (copiées de Google Maps, ex. 5.3673, -4.0217). La tournée prend alors les PDV de son portefeuille dans le rayon.' },
-      { key: 'rayon_m', label: 'Rayon (m)', type: 'num', min: 100, max: 3000, step: 50, hint: '500 m si vide.' },
-      { key: 'lieux', label: 'Quartiers', type: 'text', hint: 'ZONE›QUARTIER tels que dans les PDV, séparés par « | » (ex. ABOBO 1›SAMAKE | ABOBO 1›BC). Sert sans point GPS. Vide : la commune, sinon tout le portefeuille.' },
-      { key: 'ssf_id', label: 'SSF', type: 'select', opts: () => [{ value: 0, label: 'Aucun SSF' }, ...ssfOpts()] },
-      { key: 'type_engin', label: 'Engin du SSF', type: 'text', hint: 'Mini van, Moto, Grossiste…' },
+      { key: 'point', label: 'Point GPS', type: 'text', hint: 'Latitude, longitude, copiées de Google Maps (ex. 5.3673, -4.0217). La tournée prend alors les PDV de son portefeuille dans le rayon.' },
+      { key: 'rayon_m', label: 'Rayon (m)', type: 'num', min: 100, max: 3000, step: 50, hint: 'Laissez vide pour 500 m.' },
+      { key: 'lieux', label: 'Quartiers', type: 'text', hint: 'Écrivez la zone, le signe ›, puis le quartier, comme sur les PDV : ABOBO 1›SAMAKE (copiez le signe › depuis cet exemple). Pour plusieurs quartiers, séparez-les par une barre verticale : ABOBO 1›SAMAKE | ABOBO 1›BC. Sert quand il n’y a pas de point GPS ; vide, la tournée prend la commune, sinon tout le portefeuille.' },
+      { key: 'ssf_id', label: 'Vendeur du distributeur (SSF)', type: 'select', opts: () => [{ value: 0, label: 'Aucun SSF' }, ...ssfOpts()] },
+      { key: 'type_engin', label: 'Engin du vendeur', type: 'text', hint: 'Mini van, moto, grossiste…' },
       { key: 'actif', label: 'Actif', type: 'bool' },
     ],
     blank: () => ({ merchandiser_id: null, jour_semaine: 1, semaine_du_mois: 1, point_visite: '', commune: '', point: '', rayon_m: null, lieux: '', ssf_id: 0, type_engin: '', actif: true }),
@@ -1331,23 +1373,23 @@ const defs: Def[] = [
         : await table('routing_mensuel').upsert({ ...rec, merchandiser_id: f.merchandiser_id, jour_semaine: f.jour_semaine, semaine_du_mois: f.semaine_du_mois }, { onConflict: 'merchandiser_id,jour_semaine,semaine_du_mois' })
       if (res.error) return res
       try { await appliquerRoutingMensuel(f.merchandiser_id) }
-      catch (err: any) { return { error: new Error(`Case enregistrée, mais tournées non refaites : ${err?.data?.statusMessage || err.message}`) } }
+      catch (err: any) { return { error: new Error(`Case enregistrée, mais les tournées n’ont pas été refaites. ${messageUtilisateur(err)}`) } }
       return res
     },
     del: async (r) => {
       const res = await table('routing_mensuel').delete().eq('id', r.id)
       if (res.error) return res
       try { await appliquerRoutingMensuel(r.merchandiser_id) }
-      catch (err: any) { return { error: new Error(`Case supprimée, mais tournées non refaites : ${err?.data?.statusMessage || err.message}`) } }
+      catch (err: any) { return { error: new Error(`Case supprimée, mais les tournées n’ont pas été refaites. ${messageUtilisateur(err)}`) } }
       return res
     },
   },
   {
     id: 'alias_import', section: 'distrib', label: 'Alias d’import (orthographes)', table: 'alias_import',
     select: 'id, type, motif, mode, cible, commentaire', order: q => q.order('type').order('motif'),
-    aide: 'Orthographes rencontrées dans les fichiers d’import (export Atom, DMS, routing mensuel de l’agence) et leur correspondance dans le référentiel. Le texte est comparé en majuscules, sans accents ni ponctuation. Type « quartier » : rattache un point de visite du routing aux quartiers des PDV, une fois pour toutes.',
+    aide: 'Orthographes rencontrées dans les fichiers d’import (export Atom, fichier du distributeur (DMS), routing mensuel de l’agence) et ce à quoi elles correspondent. Le texte est comparé en majuscules, sans accents ni ponctuation. Type « Point de visite » : rattache un point de visite du routing aux quartiers des PDV, une fois pour toutes.',
     columns: [
-      { label: 'Type', cell: r => r.type, kind: 'badge' },
+      { label: 'Type', cell: r => TYPES_ALIAS_COURTS[r.type] || r.type, kind: 'badge' },
       { label: 'Texte du fichier', cell: r => r.motif, kind: 'mono' },
       { label: 'Correspondance', cell: r => MODES_ALIAS.find(m => m.value === r.mode)?.label || r.mode, muted: true },
       { label: 'Cible', cell: r => r.cible },
@@ -1357,7 +1399,7 @@ const defs: Def[] = [
       { key: 'type', label: 'Type', type: 'select', opts: () => TYPES_ALIAS, required: true },
       { key: 'motif', label: 'Texte du fichier', type: 'text', required: true, hint: 'Ex. DEHO WILFRIED, BOUSSOURA, NIARE…' },
       { key: 'mode', label: 'Correspondance', type: 'select', opts: () => MODES_ALIAS, required: true },
-      { key: 'cible', label: 'Cible', type: 'text', required: true, hint: 'Merchandiser et commercial : e-mail du compte. Distributeur : nom exact du référentiel. SSF : nom exact du SSF. Quartier : COMMUNE›QUARTIER tel qu’écrit dans les PDV (ex. YOPOUGON 3›ANDOKOI ; plusieurs séparés par |).' },
+      { key: 'cible', label: 'Cible', type: 'text', required: true, hint: 'Merchandiser ou commercial : e-mail du compte. Distributeur : nom exact dans la liste des distributeurs. Vendeur (SSF) : nom exact dans la liste des SSF. Point de visite : la commune, le signe ›, puis le quartier, comme sur les PDV (ex. YOPOUGON 3›ANDOKOI) ; pour plusieurs, séparez-les par une barre verticale « | » (ex. YOPOUGON 3›ANDOKOI | YOPOUGON 3›TOITS ROUGES).' },
       { key: 'commentaire', label: 'Commentaire', type: 'text' },
     ],
     blank: () => ({ type: 'merchandiser', motif: '', mode: 'exact', cible: '', commentaire: '' }),
@@ -1375,18 +1417,18 @@ const defs: Def[] = [
     id: 'niveau_perfect_store', ailleurs: "Paramètres › Standards Perfect Store", section: 'ps', label: 'Niveaux Perfect Store', table: 'niveau_perfect_store',
     select: 'code, rang, dispo_rayon_min, visibilite_min, promotion_min', order: q => q.order('rang', { ascending: false }),
     columns: [
-      { label: 'Niveau', cell: r => r.code },
+      { label: 'Niveau', cell: r => NIVEAUX.find(o => o.value === String(r.code || '').toLowerCase())?.label || r.code },
       { label: 'Rang', cell: r => r.rang, align: 'c', kind: 'num' },
-      { label: 'Dispo min %', cell: r => r.dispo_rayon_min ?? '—', align: 'c', kind: 'num' },
-      { label: 'Visi min %', cell: r => r.visibilite_min ?? '—', align: 'c', kind: 'num' },
-      { label: 'Promo min %', cell: r => r.promotion_min ?? '—', align: 'c', kind: 'num' },
+      { label: 'Disponibilité minimale (%)', cell: r => r.dispo_rayon_min ?? '—', align: 'c', kind: 'num' },
+      { label: 'Visibilité minimale (%)', cell: r => r.visibilite_min ?? '—', align: 'c', kind: 'num' },
+      { label: 'Promotion minimale (%)', cell: r => r.promotion_min ?? '—', align: 'c', kind: 'num' },
     ],
     fields: [
-      { key: 'code', label: 'Code niveau', type: 'text', required: true, lockEdit: true },
-      { key: 'rang', label: 'Rang (4=Flagship)', type: 'num', required: true, min: 1 },
-      { key: 'dispo_rayon_min', label: 'Disponibilité min %', type: 'num', min: 0, max: 100 },
-      { key: 'visibilite_min', label: 'Visibilité min %', type: 'num', min: 0, max: 100 },
-      { key: 'promotion_min', label: 'Promotion min %', type: 'num', min: 0, max: 100 },
+      { key: 'code', label: 'Code du niveau', type: 'text', required: true, lockEdit: true },
+      { key: 'rang', label: 'Rang (4 = Flagship, le plus haut)', type: 'num', required: true, min: 1 },
+      { key: 'dispo_rayon_min', label: 'Disponibilité minimale (%)', type: 'num', min: 0, max: 100 },
+      { key: 'visibilite_min', label: 'Visibilité minimale (%)', type: 'num', min: 0, max: 100 },
+      { key: 'promotion_min', label: 'Promotion minimale (%)', type: 'num', min: 0, max: 100 },
     ],
     blank: () => ({ code: '', rang: 1, dispo_rayon_min: null, visibilite_min: 100, promotion_min: 100 }),
     fill: r => ({ ...r }),
@@ -1406,15 +1448,15 @@ const defs: Def[] = [
     columns: [
       { label: 'Référence', cell: r => refNameOf(r.reference_produit_id) },
       { label: 'Catégorie', cell: r => catCodeOf(maps.reference_produit?.get(r.reference_produit_id)?.categorie_produit_id), align: 'c', kind: 'badge' },
-      { label: 'Canal', cell: r => r.canal, align: 'c', kind: 'badge', color: r => tierColor(r.canal) },
-      { label: 'Base', cell: r => r.base_calcul === 'taux_revu' ? 'Taux revu' : 'Taux vente', align: 'c', muted: true },
-      { label: 'Poids', cell: r => `${(Number(r.poids) * 100).toFixed(1)}%`, align: 'c', kind: 'num' },
+      { label: 'Canal', cell: r => libelleCanal(r.canal), align: 'c', kind: 'badge', color: r => tierColor(r.canal) },
+      { label: 'Pondération', cell: r => libelleDe(BASES, r.base_calcul), muted: true },
+      { label: 'Poids', cell: r => `${(Number(r.poids) * 100).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`, align: 'c', kind: 'num' },
     ],
     fields: [
       { key: 'reference_produit_id', label: 'Référence', type: 'select', opts: referenceOpts, required: true, lockEdit: true },
-      { key: 'canal', label: 'Canal', type: 'select', opts: () => CANAUX, required: true, lockEdit: true },
-      { key: 'base_calcul', label: 'Base de calcul', type: 'select', opts: () => BASES, required: true, lockEdit: true },
-      { key: 'poids', label: 'Poids (0 à 1)', type: 'num', required: true, step: 0.0001, min: 0, max: 1 },
+      { key: 'canal', label: 'Canal', type: 'select', opts: () => CANAUX_OPTS, required: true, lockEdit: true },
+      { key: 'base_calcul', label: 'Pondération', type: 'select', opts: () => BASES, required: true, lockEdit: true, hint: 'Poids selon les ventes, ou poids cible fixé dans le fichier du client.' },
+      { key: 'poids', label: 'Poids (de 0 à 1)', type: 'num', required: true, step: 0.0001, min: 0, max: 1, hint: 'Ex. 0,25 pour 25 %. Le total par famille et par canal doit faire 1.' },
     ],
     blank: () => ({ reference_produit_id: null, canal: 'GT', base_calcul: 'taux_vente', poids: 0 }),
     fill: r => ({ ...r }),
@@ -1433,7 +1475,7 @@ const defs: Def[] = [
       { label: 'Référence', cell: r => refNameOf(r.reference_produit_id) },
       { label: 'Segment', cell: r => r.segment, kind: 'badge' },
       { label: 'Grade', cell: r => r.grade, align: 'c', kind: 'badge' },
-      { label: 'Qté min', cell: r => r.quantite_min, align: 'c', kind: 'num' },
+      { label: 'Quantité minimale', cell: r => r.quantite_min, align: 'c', kind: 'num' },
     ],
     fields: [
       { key: 'reference_produit_id', label: 'Référence', type: 'select', opts: referenceOpts, required: true, lockEdit: true },
@@ -1456,15 +1498,15 @@ const defs: Def[] = [
     select: 'reference_produit_id, segment_mt, quantite_min, facings',
     columns: [
       { label: 'Référence', cell: r => refNameOf(r.reference_produit_id) },
-      { label: 'Format MT', cell: r => r.segment_mt, kind: 'badge' },
-      { label: 'Qté min', cell: r => r.quantite_min, align: 'c', kind: 'num' },
-      { label: 'Facings min', cell: r => r.facings, align: 'c', kind: 'num' },
+      { label: 'Format de supermarché', cell: r => libelleDe(MT_SEGMENTS, r.segment_mt), kind: 'badge' },
+      { label: 'Quantité minimale', cell: r => r.quantite_min, align: 'c', kind: 'num' },
+      { label: 'Faces en rayon minimum', cell: r => r.facings, align: 'c', kind: 'num' },
     ],
     fields: [
       { key: 'reference_produit_id', label: 'Référence', type: 'select', opts: referenceOpts, required: true, lockEdit: true },
-      { key: 'segment_mt', label: 'Format supermarché', type: 'select', opts: () => MT_SEGMENTS, required: true, lockEdit: true, hint: 'Hypermarche = Hyper/Grand · MoyenSuper = Supermarket B · PetitSuper = Supermarket C' },
+      { key: 'segment_mt', label: 'Format de supermarché', type: 'select', opts: () => MT_SEGMENTS, required: true, lockEdit: true, hint: 'Les trois formats du fichier du client : hypermarché (grand format), supermarché moyen (catégorie B) et petit supermarché (catégorie C).' },
       { key: 'quantite_min', label: 'Quantité minimale', type: 'num', required: true, min: 0 },
-      { key: 'facings', label: 'Facings minimum', type: 'num', required: true, min: 0 },
+      { key: 'facings', label: 'Faces en rayon minimum (facings)', type: 'num', required: true, min: 0 },
     ],
     blank: () => ({ reference_produit_id: null, segment_mt: 'Hypermarche', quantite_min: 0, facings: 0 }),
     fill: r => ({ ...r }),
@@ -1482,16 +1524,16 @@ const defs: Def[] = [
     columns: [
       { label: 'Segment', cell: r => r.segment, kind: 'badge' },
       { label: 'Grade', cell: r => r.grade, align: 'c', kind: 'badge' },
-      { label: 'SKU cibles', cell: r => r.sku_cibles, align: 'c', kind: 'num' },
-      { label: 'Min SKU présents', cell: r => r.min_sku_presents, align: 'c', kind: 'num' },
-      { label: 'Héros obligatoires', cell: r => r.heros_obligatoires, align: 'c', kind: 'bool' },
+      { label: 'Références cibles (SKU)', cell: r => r.sku_cibles, align: 'c', kind: 'num' },
+      { label: 'Références présentes, minimum', cell: r => r.min_sku_presents, align: 'c', kind: 'num' },
+      { label: 'Références prioritaires (hero SKU) obligatoires', cell: r => r.heros_obligatoires, align: 'c', kind: 'bool' },
     ],
     fields: [
       { key: 'segment', label: 'Segment (disponibilité)', type: 'select', opts: () => DISPO_SEGMENTS, required: true, lockEdit: true },
       { key: 'grade', label: 'Grade', type: 'select', opts: () => GRADES, required: true, lockEdit: true },
-      { key: 'sku_cibles', label: 'SKU cibles', type: 'num', required: true, min: 0 },
-      { key: 'min_sku_presents', label: 'Min SKU présents', type: 'num', required: true, min: 0 },
-      { key: 'heros_obligatoires', label: 'Héros obligatoires', type: 'bool' },
+      { key: 'sku_cibles', label: 'Références cibles (SKU)', type: 'num', required: true, min: 0 },
+      { key: 'min_sku_presents', label: 'Références présentes, minimum', type: 'num', required: true, min: 0 },
+      { key: 'heros_obligatoires', label: 'Références prioritaires (hero SKU) obligatoires', type: 'bool' },
     ],
     blank: () => ({ segment: 'Boutique', grade: 'A', sku_cibles: 0, min_sku_presents: 0, heros_obligatoires: true }),
     fill: r => ({ ...r }),
@@ -1506,11 +1548,11 @@ const defs: Def[] = [
     id: 'element_visibilite', section: 'ps', label: 'Éléments de visibilité (PLV)', table: 'element_visibilite',
     select: 'id, segment, code, nom, pilier, emplacement, optionnel', order: q => q.order('segment').order('id'),
     columns: [
-      { label: 'Segment', cell: r => r.segment, kind: 'badge' },
+      { label: 'Segment', cell: r => libelleDe(VISI_SEGMENTS, r.segment), kind: 'badge' },
       { label: 'Code', cell: r => r.code, kind: 'mono' },
       { label: 'Nom', cell: r => r.nom },
-      { label: 'Pilier', cell: r => r.pilier, align: 'c', kind: 'badge', color: r => r.pilier === 'promotion' ? 'amber' : 'blue' },
-      { label: 'Emplacement', cell: r => r.emplacement, align: 'c', muted: true },
+      { label: 'Pilier', cell: r => libelleDe(PILIERS, r.pilier), align: 'c', kind: 'badge', color: r => r.pilier === 'promotion' ? 'amber' : 'blue' },
+      { label: 'Emplacement', cell: r => libelleDe(EMPLACEMENTS, r.emplacement), align: 'c', muted: true },
       { label: 'Optionnel', cell: r => r.optionnel, align: 'c', kind: 'bool' },
     ],
     fields: [
@@ -1537,8 +1579,8 @@ const defs: Def[] = [
     id: 'standard_visibilite', ailleurs: "Paramètres › Standards Perfect Store", section: 'ps', label: 'Standards visibilité', table: 'standard_visibilite',
     select: 'segment, niveau_perfect_store, element_visibilite_id, requis',
     columns: [
-      { label: 'Segment', cell: r => r.segment, kind: 'badge' },
-      { label: 'Niveau', cell: r => r.niveau_perfect_store, align: 'c', kind: 'badge' },
+      { label: 'Segment', cell: r => libelleDe(VISI_SEGMENTS, r.segment), kind: 'badge' },
+      { label: 'Niveau', cell: r => libelleDe(NIVEAUX, r.niveau_perfect_store), align: 'c', kind: 'badge' },
       { label: 'Élément', cell: r => elementVisNameOf(r.element_visibilite_id) },
       { label: 'Requis', cell: r => r.requis, align: 'c', kind: 'bool' },
     ],
@@ -1674,7 +1716,7 @@ async function save() {
   try {
     const { error: err } = await activeDef.value.save(form.value, editing.value)
     if (err) throw err
-    toast.add({ title: 'Enregistré', color: 'green' })
+    toast.add({ title: editing.value ? 'Modification enregistrée' : 'Ligne ajoutée', description: activeDef.value.label, color: 'green' })
     showModal.value = false
     await reload(activeDef.value)
     if (activeDef.value.id === 'categorie_releve') void chargerCatalogue(true)
@@ -1693,15 +1735,15 @@ async function remove(row: any) {
   // « Supprimer cet enregistrement ? » ne donnait aucun moyen de vérifier ce
   // qu'on s'apprête à supprimer.
   const quoi = activeDef.value.search(row)
-  if (!confirm(`Supprimer définitivement :\n\n${quoi}\n\n(${activeDef.value.label})`)) return
+  if (!confirm(`Supprimer définitivement cette ligne de la liste « ${activeDef.value.label} » ?\n\n${quoi}\n\nCette suppression ne peut pas être annulée.`)) return
   try {
     const { error: err } = await activeDef.value.del(row)
     if (err) throw err
-    toast.add({ title: 'Supprimé', color: 'green' })
+    toast.add({ title: 'Ligne supprimée', description: activeDef.value.label, color: 'green' })
     await reload(activeDef.value)
   }
   catch (err: any) {
-    toast.add({ title: 'Enregistrement impossible', description: messageUtilisateur(err), color: 'red' })
+    toast.add({ title: 'Suppression impossible', description: messageUtilisateur(err), color: 'red' })
   }
 }
 

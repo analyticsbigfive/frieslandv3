@@ -1,17 +1,24 @@
 <template>
   <div class="space-y-6">
     <AdminPageHeader
-      title="Utilisateurs"
-    />
+      description="Les comptes du back-office et de l’application : rôle, équipe et territoires de chacun."
+    >
+      <template v-if="authStore.isAdmin" #actions>
+        <UButton icon="i-heroicons-plus" @click="openCreateUser">
+          Nouvel utilisateur
+        </UButton>
+      </template>
+    </AdminPageHeader>
 
-    <!-- Header -->
-    <div class="admin-toolbar flex-col items-stretch sm:flex-row sm:items-center sm:justify-between">
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+    <!-- Recherche, filtre et échanges de fichiers -->
+    <div class="admin-toolbar flex flex-wrap items-center justify-between gap-3">
+      <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
         <UInput
           v-model="searchQuery"
-          placeholder="Rechercher..."
+          placeholder="Nom ou e-mail"
           icon="i-heroicons-magnifying-glass"
           size="sm"
+          aria-label="Rechercher un utilisateur par nom ou e-mail"
           class="w-full sm:w-64"
         />
         <USelectMenu
@@ -21,18 +28,19 @@
           value-attribute="value"
           placeholder="Rôle"
           size="sm"
+          aria-label="Filtrer par rôle"
           class="w-full sm:w-48"
         />
+        <span class="text-xs tabular-nums text-slate-600 dark:text-slate-300" aria-live="polite">
+          {{ filteredUsers.length }} utilisateur{{ filteredUsers.length > 1 ? 's' : '' }}
+        </span>
       </div>
-      <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <UButton v-if="authStore.isAdmin" size="sm" variant="outline" icon="i-heroicons-arrow-down-tray" @click="exportUsers">
+      <div v-if="authStore.isAdmin" class="flex flex-wrap items-center gap-2">
+        <UButton size="sm" variant="outline" icon="i-heroicons-arrow-down-tray" @click="exportUsers">
           Exporter
         </UButton>
-        <UButton v-if="authStore.isAdmin" size="sm" variant="outline" icon="i-heroicons-arrow-up-tray" @click="showImportModal = true">
-          Importer CSV
-        </UButton>
-        <UButton v-if="authStore.isAdmin" size="sm" @click="openCreateUser" icon="i-heroicons-plus" class="bg-fc-blue">
-          Nouvel utilisateur
+        <UButton size="sm" variant="outline" icon="i-heroicons-arrow-up-tray" @click="showImportModal = true">
+          Importer un CSV
         </UButton>
       </div>
     </div>
@@ -40,21 +48,22 @@
     <!-- Demandes de suppression de compte (posées depuis /supprimer-compte) -->
     <div
       v-if="deletionRequests.length"
-      class="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30"
+      class="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30"
+      role="status"
     >
       <div class="flex items-start gap-3">
-        <UIcon name="i-heroicons-exclamation-triangle" class="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+        <UIcon name="i-heroicons-exclamation-triangle" class="mt-0.5 h-5 w-5 shrink-0 text-amber-700" aria-hidden="true" />
         <div class="min-w-0 flex-1">
           <p class="text-sm font-semibold text-amber-900 dark:text-amber-100">
-            {{ deletionRequests.length }} demande(s) de suppression de compte en attente
+            {{ deletionRequests.length }} demande{{ deletionRequests.length > 1 ? 's' : '' }} de suppression de compte en attente
           </p>
-          <p class="mt-0.5 text-xs text-amber-800 dark:text-amber-200">
-            À traiter sous 30 jours : menu Actions de la ligne concernée → Supprimer (compte, profil et positions de tournée).
+          <p class="mt-0.5 text-sm text-amber-800 dark:text-amber-200">
+            À traiter sous 30 jours : ouvrez le menu Actions de la ligne concernée, puis choisissez « Supprimer définitivement ».
           </p>
           <ul class="mt-2 space-y-1">
-            <li v-for="d in deletionRequests" :key="d.id" class="text-xs text-amber-900 dark:text-amber-100">
+            <li v-for="d in deletionRequests" :key="d.id" class="text-sm text-amber-900 dark:text-amber-100">
               <strong>{{ d.email }}</strong> · demandé le {{ formatDateFr(d.requested_at, { day: '2-digit', month: 'short', year: 'numeric' }) }}
-              <span v-if="d.reason" class="text-amber-700 dark:text-amber-300"> — « {{ d.reason }} »</span>
+              <span v-if="d.reason" class="text-amber-800 dark:text-amber-300"> · motif : « {{ d.reason }} »</span>
             </li>
           </ul>
         </div>
@@ -65,78 +74,79 @@
     <div class="admin-surface overflow-hidden">
       <div class="overflow-x-auto">
         <table class="admin-table">
-          <thead class="bg-gray-50">
+          <thead>
             <tr>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Utilisateur</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Email</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Rôle</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Zone</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Équipe</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Statut</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
+              <th scope="col">Utilisateur</th>
+              <th scope="col">E-mail</th>
+              <th scope="col">Rôle</th>
+              <th scope="col">Territoires</th>
+              <th scope="col">Équipe</th>
+              <th scope="col">Statut</th>
+              <th scope="col"><span class="sr-only">Actions</span></th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100">
-            <tr
-              v-for="user in paginatedUsers"
-              :key="user.id"
-              class="hover:bg-gray-50 dark:hover:bg-gray-700"
-            >
-              <td class="px-4 py-3">
+          <tbody>
+            <tr v-for="user in paginatedUsers" :key="user.id">
+              <td>
                 <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-medium"
-                    :class="getRoleBg(user.role)">
-                    {{ user.nom?.substring(0, 2).toUpperCase() || '??' }}
+                  <div
+                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200"
+                    aria-hidden="true"
+                  >
+                    {{ initiales(user) }}
                   </div>
-                  <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ user.nom || '-' }}</span>
+                  <span class="text-sm font-medium text-slate-900 dark:text-white">{{ user.nom || 'Sans nom' }}</span>
                   <span
                     v-if="deletionRequestById.has(user.id)"
-                    class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
+                    class="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
                     title="Suppression du compte demandée par l’utilisateur"
                   >Suppression demandée</span>
                 </div>
               </td>
-              <td class="px-4 py-3 text-sm text-gray-600">{{ user.email }}</td>
-              <td class="px-4 py-3">
-                <span
-                  class="text-xs font-medium px-2.5 py-1 rounded-full"
-                  :class="getRoleBadge(user.role)"
-                >
-                  {{ libelleRole(user.role) }}
+              <td class="text-slate-600 dark:text-slate-300">{{ user.email }}</td>
+              <td>
+                <div class="flex flex-wrap items-center gap-1">
+                  <span class="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+                    {{ libelleRole(user.role) }}
+                  </span>
+                  <span
+                    v-if="(user.role === 'merchandiser' && estMerchandiserProgramme(user.employeur, agences)) || user.role === 'agence'"
+                    class="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+                    :title="user.role === 'agence'
+                      ? `Compte agence ${nomAgenceDe(user.employeur)} : ne voit que les merchandisers de son agence`
+                      : `Merchandiser ${nomAgenceDe(user.employeur)} : tournée par quotas`"
+                  >{{ nomAgenceDe(user.employeur) }}</span>
+                  <span
+                    v-if="user.direction"
+                    class="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+                    :title="libelleDirection(user.direction)"
+                  >{{ libelleDirection(user.direction, true) }}</span>
+                </div>
+              </td>
+              <td class="text-slate-600 dark:text-slate-300">{{ zoneLabel(user) }}</td>
+              <td class="text-slate-600 dark:text-slate-300">{{ equipeLabel(user) }}</td>
+              <td class="whitespace-nowrap">
+                <span class="inline-flex items-center gap-1.5 text-sm" :class="user.is_active ? 'text-slate-700 dark:text-slate-200' : 'text-slate-600 dark:text-slate-400'">
+                  <span class="h-2 w-2 rounded-full" :class="user.is_active ? 'bg-emerald-600' : 'bg-slate-400'" aria-hidden="true" />
+                  {{ user.is_active ? 'Actif' : 'Désactivé' }}
                 </span>
-                <span
-                  v-if="(user.role === 'merchandiser' && estMerchandiserProgramme(user.employeur, agences)) || user.role === 'agence'"
-                  class="ml-1 rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-800 dark:bg-violet-900/40 dark:text-violet-200"
-                  :title="user.role === 'agence'
-                    ? `Compte agence ${nomAgenceDe(user.employeur)} : ne voit que les merchandisers de son agence`
-                    : `Merchandiser ${nomAgenceDe(user.employeur)} : tournée par quotas`"
-                >{{ nomAgenceDe(user.employeur) }}</span>
-                <span
-                  v-if="user.direction"
-                  class="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-200"
-                  :title="libelleDirection(user.direction)"
-                >{{ libelleDirection(user.direction, true) }}</span>
               </td>
-              <td class="px-4 py-3 text-sm text-gray-600">{{ zoneLabel(user) }}</td>
-              <td class="px-4 py-3 text-sm text-gray-600">{{ equipeLabel(user) }}</td>
-              <td class="px-4 py-3 text-center">
-                <span
-                  class="w-2.5 h-2.5 rounded-full inline-block"
-                  :class="user.is_active ? 'bg-emerald-500' : 'bg-gray-300'"
-                />
-              </td>
-              <td class="px-4 py-3 text-center">
-                <UDropdown v-if="authStore.isAdmin" :items="getUserActions(user)">
-                  <UButton variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" />
+              <td class="text-right">
+                <UDropdown v-if="authStore.isAdmin" :items="getUserActions(user)" :popper="{ placement: 'bottom-end' }">
+                  <UButton color="gray" variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" :aria-label="`Actions pour ${user.nom || user.email}`" />
                 </UDropdown>
-                <span v-else class="text-xs text-gray-400">-</span>
+              </td>
+            </tr>
+            <tr v-if="!loading && !paginatedUsers.length">
+              <td colspan="7" class="py-10 text-center text-slate-600 dark:text-slate-300">
+                {{ searchQuery || roleFilter ? 'Aucun utilisateur ne correspond à la recherche ou au rôle choisi. Effacez la recherche ou choisissez « Tous les rôles ».' : 'Aucun utilisateur pour l’instant. Créez le premier compte avec « Nouvel utilisateur ».' }}
               </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <div class="border-t border-gray-100 px-4 py-3 dark:border-gray-700">
+      <div class="border-t border-slate-200 px-4 py-3 dark:border-slate-700">
         <AdminPagination
           :total="filteredUsers.length"
           :page="usersPage"
@@ -146,8 +156,8 @@
         />
       </div>
 
-      <div v-if="loading" class="p-8 text-center">
-        <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-fc-blue mx-auto" />
+      <div v-if="loading" class="p-8">
+        <ChargementContenu variante="compact" libelle="Chargement des utilisateurs…" />
       </div>
     </div>
 
@@ -155,7 +165,7 @@
     <AdminFormModal
       v-model="showCreate"
       :title="editingUser ? 'Modifier l’utilisateur' : 'Nouvel utilisateur'"
-      description="Configurez le compte, le rôle et le périmètre terrain de l’utilisateur."
+      description="Identité, rôle et périmètre terrain du compte."
       icon="i-heroicons-user-plus"
       width="sm:max-w-3xl"
       body-class="space-y-8"
@@ -163,16 +173,16 @@
       required-note
       @submit="handleSaveUser"
     >
-      <section aria-labelledby="user-account-title">
+      <section aria-labelledby="user-identity-title">
         <div class="mb-4 flex items-center gap-3">
-          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+          <div class="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300" aria-hidden="true">
             <UIcon name="i-heroicons-identification" class="h-4 w-4" />
           </div>
           <div>
-            <h3 id="user-account-title" class="text-sm font-semibold text-slate-900 dark:text-white">
-              Compte et accès
+            <h3 id="user-identity-title" class="text-base font-semibold text-slate-900 dark:text-white">
+              Identité
             </h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400">Informations de connexion et niveau d’autorisation.</p>
+            <p class="text-sm text-slate-600 dark:text-slate-400">Nom, coordonnées et informations de connexion.</p>
           </div>
         </div>
 
@@ -180,12 +190,32 @@
           <UFormGroup label="Nom complet" required size="md">
             <UInput v-model="userForm.nom" placeholder="Ex. Awa Koné" size="md" class="w-full" />
           </UFormGroup>
-          <UFormGroup label="Email" required size="md">
+          <UFormGroup label="E-mail" required size="md">
             <UInput v-model="userForm.email" type="email" placeholder="nom@entreprise.com" size="md" class="w-full" />
           </UFormGroup>
           <UFormGroup v-if="!editingUser" label="Mot de passe" required help="8 caractères minimum." size="md">
             <UInput v-model="userForm.password" type="password" placeholder="Saisir un mot de passe" minlength="8" size="md" class="w-full" />
           </UFormGroup>
+          <UFormGroup label="Téléphone" size="md" :class="editingUser ? 'sm:col-span-2' : ''">
+            <UInput v-model="userForm.telephone" placeholder="Ex. +225 07 00 00 00 00" size="md" class="w-full" />
+          </UFormGroup>
+        </div>
+      </section>
+
+      <section aria-labelledby="user-role-title" class="border-t border-slate-200 pt-7 dark:border-slate-700">
+        <div class="mb-4 flex items-center gap-3">
+          <div class="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300" aria-hidden="true">
+            <UIcon name="i-heroicons-user-group" class="h-4 w-4" />
+          </div>
+          <div>
+            <h3 id="user-role-title" class="text-base font-semibold text-slate-900 dark:text-white">
+              Rôle et équipe
+            </h3>
+            <p class="text-sm text-slate-600 dark:text-slate-400">Ce que le compte peut faire, et à qui il est rattaché.</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2">
           <UFormGroup
             label="Rôle"
             :help="userForm.role === 'agence' ? 'Responsable du routing d\'une agence : ne voit et ne charge que les merchandisers de son agence.' : undefined"
@@ -199,9 +229,6 @@
               size="md"
               class="w-full"
             />
-          </UFormGroup>
-          <UFormGroup label="Téléphone" size="md" class="sm:col-span-2">
-            <UInput v-model="userForm.telephone" placeholder="Ex. +225 07 00 00 00 00" size="md" class="w-full" />
           </UFormGroup>
 
           <UFormGroup
@@ -217,7 +244,7 @@
               value-attribute="value"
               placeholder="Aucun"
               searchable
-              searchable-placeholder="Rechercher un commercial..."
+              searchable-placeholder="Rechercher un commercial…"
               size="md"
               class="w-full"
             />
@@ -249,7 +276,7 @@
                Trade) se choisit ici. Une personne à deux comptes a deux directions. -->
           <UFormGroup
             label="Direction"
-            help="Vide : déduite des territoires (South = Abidjan, North = intérieur). Modern Trade se choisit ici."
+            help="Par défaut, déduite des territoires : South pour Abidjan, North pour l’intérieur. Choisissez « Modern Trade » ici pour la direction des supermarchés (MT)."
             size="md"
           >
             <USelectMenu
@@ -266,19 +293,19 @@
 
       <section aria-labelledby="user-scope-title" class="border-t border-slate-200 pt-7 dark:border-slate-700">
         <div class="mb-4 flex items-center gap-3">
-          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+          <div class="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300" aria-hidden="true">
             <UIcon name="i-heroicons-map" class="h-4 w-4" />
           </div>
           <div>
-            <h3 id="user-scope-title" class="text-sm font-semibold text-slate-900 dark:text-white">
+            <h3 id="user-scope-title" class="text-base font-semibold text-slate-900 dark:text-white">
               Périmètre terrain
             </h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400">Définissez les territoires et les quartiers accessibles à l’utilisateur.</p>
+            <p class="text-sm text-slate-600 dark:text-slate-400">Les territoires et les quartiers que l’utilisateur suit.</p>
           </div>
         </div>
 
         <div class="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2">
-          <UFormGroup label="Région" help="Filtre d’affichage — n’efface pas les territoires cochés." size="md">
+          <UFormGroup label="Région" help="Filtre la liste des territoires ci-dessous ; les territoires déjà cochés restent cochés." size="md">
             <USelectMenu
               v-model="userForm.region_code"
               :options="regionOptions"
@@ -286,14 +313,14 @@
               value-attribute="value"
               placeholder="Sélectionner une région"
               searchable
-              searchable-placeholder="Rechercher..."
+              searchable-placeholder="Rechercher…"
               size="md"
               class="w-full"
               @update:model-value="onRegionChange"
             />
           </UFormGroup>
 
-          <UFormGroup label="Sous-région" help="Filtre d’affichage — n’efface pas les territoires cochés." size="md">
+          <UFormGroup label="Sous-région" help="Filtre la liste des territoires ci-dessous ; les territoires déjà cochés restent cochés." size="md">
             <USelectMenu
               v-model="userForm.sub_region_code"
               :options="subRegionOptions"
@@ -302,35 +329,35 @@
               :disabled="!userForm.region_code"
               placeholder="Sélectionner une sous-région"
               searchable
-              searchable-placeholder="Rechercher..."
+              searchable-placeholder="Rechercher…"
               size="md"
               class="w-full"
             />
           </UFormGroup>
 
-          <UFormGroup label="Territoires assignés" help="Cochez un ou plusieurs territoires, y compris dans plusieurs sous-régions : changer les filtres ci-dessus ne désélectionne rien." size="md" class="sm:col-span-2">
+          <UFormGroup label="Territoires assignés" help="Cochez un ou plusieurs territoires, y compris dans plusieurs sous-régions : changer les filtres ci-dessus ne décoche rien." size="md" class="sm:col-span-2">
             <div
               v-if="!userForm.sub_region_code"
-              class="rounded-lg border border-dashed border-slate-300 px-4 py-3 text-xs text-slate-400 dark:border-slate-600"
+              class="rounded-md border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-600 dark:border-slate-600 dark:text-slate-400"
             >
-              Sélectionnez d’abord une sous-région.
+              Choisissez d’abord une région et une sous-région pour afficher leurs territoires.
             </div>
             <div
               v-else-if="!territoryOptions.length"
-              class="rounded-lg border border-dashed border-slate-300 px-4 py-3 text-xs text-slate-400 dark:border-slate-600"
+              class="rounded-md border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-600 dark:border-slate-600 dark:text-slate-400"
             >
-              Aucun territoire pour cette sous-région.
+              Aucun territoire dans cette sous-région. Choisissez-en une autre.
             </div>
             <div v-else>
               <div class="mb-2 flex items-center justify-end gap-3 text-xs">
-                <button type="button" class="font-medium text-fc-blue hover:underline" @click="toggleAllVisibleTerritories(true)">
+                <button type="button" class="rounded font-semibold text-brand-600 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-brand-300" @click="toggleAllVisibleTerritories(true)">
                   Tout cocher
                 </button>
-                <button type="button" class="font-medium text-slate-500 hover:underline dark:text-slate-400" @click="toggleAllVisibleTerritories(false)">
+                <button type="button" class="rounded font-semibold text-slate-600 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-slate-400" @click="toggleAllVisibleTerritories(false)">
                   Tout décocher
                 </button>
               </div>
-              <div class="grid max-h-56 grid-cols-1 gap-1.5 overflow-y-auto rounded-lg border border-slate-200 p-3 sm:grid-cols-2 dark:border-slate-700">
+              <div class="grid max-h-56 grid-cols-1 gap-1.5 overflow-y-auto rounded-md border border-slate-200 p-3 sm:grid-cols-2 dark:border-slate-700">
                 <label
                   v-for="opt in territoryOptions"
                   :key="opt.value"
@@ -348,22 +375,28 @@
               <span
                 v-for="code in userForm.territory_codes"
                 :key="code"
-                class="inline-flex items-center gap-1 rounded-full bg-fc-blue/10 px-2.5 py-0.5 text-xs font-medium text-fc-blue"
+                class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200"
               >
                 {{ territoryChipLabel(code) }}
-                <button type="button" class="hover:text-fc-red" @click="toggleTerritory(code)">
-                  <UIcon name="i-heroicons-x-mark-20-solid" class="h-3.5 w-3.5" />
+                <button
+                  type="button"
+                  class="rounded-full hover:text-brand-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                  :aria-label="`Retirer ${territoryChipLabel(code)}`"
+                  @click="toggleTerritory(code)"
+                >
+                  <UIcon name="i-heroicons-x-mark-20-solid" class="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
               </span>
             </p>
-            <div v-if="unmatchedTerritories.length" class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/50 dark:bg-amber-900/10">
-              <p class="text-xs font-semibold text-amber-700 dark:text-amber-300">Territoires hors référentiel</p>
-              <p class="mt-0.5 text-[11px] text-amber-700/80 dark:text-amber-300/80">
-                Rattachez chaque libellé à un territoire réel : le profil ne gardera que le territoire réel et les PDV portant encore l'ancien libellé resteront dans son périmètre (alias).
+            <div v-if="unmatchedTerritories.length" class="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/50 dark:bg-amber-900/10">
+              <p class="text-sm font-semibold text-amber-900 dark:text-amber-200">Territoires absents de la liste des territoires</p>
+              <p class="mt-0.5 text-xs text-amber-800 dark:text-amber-300">
+                Rattachez chaque libellé à un territoire de la liste : le profil ne gardera que ce territoire, et les PDV qui portent encore l’ancien libellé resteront dans son périmètre.
               </p>
               <div v-for="nom in unmatchedTerritories" :key="nom" class="mt-2 flex flex-wrap items-center gap-2">
-                <span class="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-slate-800 dark:text-amber-200">{{ nom }}</span>
-                <UIcon name="i-heroicons-arrow-right" class="h-3.5 w-3.5 text-amber-500" />
+                <span class="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-amber-900 dark:bg-slate-800 dark:text-amber-200">{{ nom }}</span>
+                <UIcon name="i-heroicons-arrow-right" class="h-3.5 w-3.5 text-amber-700" aria-hidden="true" />
+                <span class="sr-only">rattaché à</span>
                 <USelectMenu
                   :model-value="rattachements[nom] || ''"
                   :options="allTerritoryOptions"
@@ -373,16 +406,16 @@
                   searchable
                   searchable-placeholder="Rechercher un territoire…"
                   size="xs"
-                  class="w-64"
+                  class="w-full sm:w-64"
+                  :aria-label="`Territoire de rattachement pour ${nom}`"
                   @update:model-value="rattachements[nom] = $event"
                 />
                 <UButton
                   v-if="rattachements[nom]"
                   size="2xs"
-                  variant="soft"
-                  color="amber"
+                  variant="outline"
                   :loading="applyingAlias === nom"
-                  title="Enregistre l'alias et remplace ce libellé sur tous les profils qui le portent"
+                  title="Enregistre le rattachement et remplace ce libellé sur tous les profils qui le portent"
                   @click="appliquerAliasPartout(nom)"
                 >
                   Appliquer à tous les profils
@@ -391,24 +424,26 @@
             </div>
           </UFormGroup>
 
-          <UFormGroup label="Quartiers assignés" help="Agrégés sur les territoires cochés. Laissez vide pour tout autoriser." size="md" class="sm:col-span-2">
+          <UFormGroup label="Quartiers assignés" help="Les quartiers des territoires cochés. Laissez tout décoché pour autoriser tous les quartiers." size="md" class="sm:col-span-2">
             <div
               v-if="!userForm.territory_codes.length"
-              class="rounded-lg border border-dashed border-slate-300 px-4 py-3 text-xs text-slate-400 dark:border-slate-600"
+              class="rounded-md border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-600 dark:border-slate-600 dark:text-slate-400"
             >
               Cochez au moins un territoire pour lister ses quartiers.
             </div>
             <div
               v-else-if="!quartierOptions.length"
-              class="rounded-lg border border-dashed border-slate-300 px-4 py-3 text-xs text-slate-400 dark:border-slate-600"
+              class="rounded-md border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-600 dark:border-slate-600 dark:text-slate-400"
             >
-              Aucun quartier référencé sur les territoires sélectionnés.
+              Aucun quartier enregistré pour les territoires cochés. Ajoutez-les dans Paramètres › Référentiels › Quartiers.
             </div>
-            <div v-else class="max-h-72 space-y-3 overflow-y-auto rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+            <div v-else class="max-h-72 space-y-3 overflow-y-auto rounded-md border border-slate-200 p-3 dark:border-slate-700">
               <div v-for="g in quartierGroupes" :key="g.code">
-                <div class="mb-1 flex items-center justify-between">
-                  <span class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ g.territoire }} · {{ g.quartiers.filter(q => userForm.quartiers_assignes.includes(q)).length }}/{{ g.quartiers.length }}</span>
-                  <button type="button" class="text-[11px] font-medium text-fc-blue hover:underline" @click="toggleGroupeQuartiers(g.quartiers)">
+                <div class="mb-1 flex items-center justify-between gap-2">
+                  <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    {{ g.territoire }} · <span class="tabular-nums">{{ g.quartiers.filter(q => userForm.quartiers_assignes.includes(q)).length }} sur {{ g.quartiers.length }}</span>
+                  </span>
+                  <button type="button" class="rounded text-xs font-semibold text-brand-600 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-brand-300" @click="toggleGroupeQuartiers(g.quartiers)">
                     {{ g.quartiers.every(q => userForm.quartiers_assignes.includes(q)) ? 'Tout décocher' : 'Tout cocher' }}
                   </button>
                 </div>
@@ -438,24 +473,28 @@
         <UButton
           type="submit"
           icon="i-heroicons-check"
-          class="bg-fc-blue text-white hover:bg-fc-blue-600 disabled:bg-fc-blue-300 aria-disabled:bg-fc-blue-300 focus-visible:outline-fc-blue-500 dark:bg-fc-blue dark:text-white dark:hover:bg-fc-blue-600 dark:disabled:bg-fc-blue-700 dark:aria-disabled:bg-fc-blue-700 dark:focus-visible:outline-fc-blue-400"
           :loading="saving"
         >
-          {{ editingUser ? 'Mettre à jour' : 'Créer l’utilisateur' }}
+          {{ editingUser ? 'Enregistrer les modifications' : 'Créer l’utilisateur' }}
         </UButton>
       </template>
     </AdminFormModal>
 
     <!-- Import CSV utilisateurs -->
     <UModal v-model="showImportModal">
-      <div class="p-6 space-y-4">
+      <div class="space-y-4 p-6">
         <div>
-          <h3 class="text-lg font-semibold">Importer des utilisateurs (CSV)</h3>
-          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Mise à jour par email ; les emails inconnus créent un compte
-            (colonne <code>mot_de_passe</code>, sinon mot de passe par défaut).
-            Territoires et quartiers séparés par <code>|</code>, libellés préservés tels quels.
-          </p>
+          <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Importer des utilisateurs (CSV)</h2>
+          <div class="mt-1 space-y-1 text-sm text-slate-600 dark:text-slate-300">
+            <p>
+              Chaque ligne met à jour le compte qui a cet e-mail ; un e-mail inconnu crée un compte
+              (mot de passe de la colonne <code class="font-mono text-xs">mot_de_passe</code>, sinon un mot de passe par défaut).
+            </p>
+            <p>
+              Plusieurs territoires ou quartiers : séparez-les par une barre verticale « | », ex. ADJAME|PLATEAU.
+              Les libellés sont gardés tels quels.
+            </p>
+          </div>
           <UButton variant="link" size="xs" class="px-0" icon="i-heroicons-document-arrow-down" @click="downloadUsersTemplate">
             Télécharger le modèle
           </UButton>
@@ -463,28 +502,29 @@
 
         <div>
           <input ref="importFileInput" type="file" accept=".csv" class="hidden" @change="handleImportFileSelect" />
-          <UButton variant="outline" @click="($refs.importFileInput as HTMLInputElement)?.click()">
+          <UButton variant="outline" icon="i-heroicons-document-text" @click="($refs.importFileInput as HTMLInputElement)?.click()">
             Choisir un fichier CSV
           </UButton>
-          <p v-if="importFile" class="text-sm text-gray-600 mt-2">{{ importFile.name }}</p>
+          <p v-if="importFile" class="mt-2 text-sm text-slate-700 dark:text-slate-200">{{ importFile.name }}</p>
         </div>
 
-        <div v-if="importSummary" class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 space-y-2">
+        <div v-if="importSummary" class="space-y-2 rounded-md bg-slate-50 p-3 dark:bg-slate-700/50" aria-live="polite">
           <div class="flex flex-wrap gap-3 text-sm">
-            <span class="text-emerald-600 font-medium">{{ importSummary.created }} créé(s)</span>
-            <span class="text-blue-600 font-medium">{{ importSummary.updated }} mis à jour</span>
-            <span v-if="importSummary.errors.length" class="text-red-600 font-medium">{{ importSummary.errors.length }} erreur(s)</span>
+            <span class="font-medium text-slate-900 dark:text-white"><span class="tabular-nums">{{ importSummary.created }}</span> créé{{ importSummary.created > 1 ? 's' : '' }}</span>
+            <span class="font-medium text-slate-900 dark:text-white"><span class="tabular-nums">{{ importSummary.updated }}</span> mis à jour</span>
+            <span v-if="importSummary.errors.length" class="font-medium text-red-700 dark:text-red-300"><span class="tabular-nums">{{ importSummary.errors.length }}</span> ligne{{ importSummary.errors.length > 1 ? 's' : '' }} en erreur</span>
           </div>
-          <div v-if="importSummary.errors.length" class="max-h-40 overflow-y-auto space-y-1 border-t border-gray-200 dark:border-gray-600 pt-2">
-            <p v-for="(e, i) in importSummary.errors" :key="i" class="text-xs text-red-600">
-              ⚠ Ligne {{ e.line }}<template v-if="e.email"> ({{ e.email }})</template> : {{ e.message }}
-            </p>
-          </div>
+          <ul v-if="importSummary.errors.length" class="max-h-40 space-y-1 overflow-y-auto border-t border-slate-200 pt-2 dark:border-slate-600">
+            <li v-for="(e, i) in importSummary.errors" :key="i" class="flex items-start gap-1.5 text-xs text-red-700 dark:text-red-300">
+              <UIcon name="i-heroicons-exclamation-triangle" class="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span>Ligne {{ e.line }}<template v-if="e.email"> ({{ e.email }})</template> : {{ e.message }}</span>
+            </li>
+          </ul>
         </div>
 
-        <div class="flex justify-end gap-3 pt-4 border-t">
-          <UButton variant="ghost" @click="closeImportModal">Fermer</UButton>
-          <UButton class="bg-fc-blue hover:bg-fc-blue-600 text-white" :disabled="!importFile" :loading="importing" @click="importUsers">
+        <div class="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
+          <UButton color="gray" variant="ghost" @click="closeImportModal">Fermer</UButton>
+          <UButton icon="i-heroicons-arrow-up-tray" :disabled="!importFile" :loading="importing" @click="importUsers">
             Importer
           </UButton>
         </div>
@@ -492,21 +532,21 @@
     </UModal>
 
     <UModal v-model="showResetPassword">
-      <div v-if="resetTarget" class="p-6 space-y-4">
+      <div v-if="resetTarget" class="space-y-4 p-6">
         <div>
-          <h3 class="text-lg font-semibold">Réinitialiser le mot de passe</h3>
-          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {{ resetTarget.nom || 'Utilisateur' }} · {{ resetTarget.email }}
+          <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Réinitialiser le mot de passe</h2>
+          <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            {{ resetTarget.nom || 'Utilisateur sans nom' }} · {{ resetTarget.email }}
           </p>
         </div>
 
         <template v-if="!resetResult">
-          <p class="text-sm text-gray-600 dark:text-gray-300">
+          <p class="text-sm text-slate-700 dark:text-slate-300">
             Un mot de passe provisoire sera appliqué immédiatement. L’utilisateur devra en
             choisir un nouveau à sa prochaine connexion. Aucun e-mail n’est envoyé :
             c’est à vous de lui transmettre le mot de passe affiché à l’étape suivante.
           </p>
-          <UFormGroup label="Mot de passe provisoire" hint="Laisser vide pour en générer un automatiquement">
+          <UFormGroup label="Mot de passe provisoire" hint="Laissez vide pour en générer un automatiquement.">
             <UInput
               v-model="resetCustomPassword"
               type="text"
@@ -514,8 +554,8 @@
               placeholder="Généré automatiquement"
             />
           </UFormGroup>
-          <div class="flex justify-end gap-3 pt-4 border-t">
-            <UButton variant="ghost" @click="closeResetPassword">Annuler</UButton>
+          <div class="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
+            <UButton color="gray" variant="ghost" @click="closeResetPassword">Annuler</UButton>
             <UButton color="red" icon="i-heroicons-key" :loading="resetting" @click="confirmResetPassword">
               Réinitialiser
             </UButton>
@@ -523,22 +563,51 @@
         </template>
 
         <template v-else>
-          <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/30">
-            <p class="text-xs font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Nouveau mot de passe provisoire</p>
-            <div class="mt-2 flex items-center gap-3">
-              <code class="select-all rounded bg-white px-3 py-2 text-lg font-mono tracking-wider text-gray-900 dark:bg-gray-900 dark:text-gray-100">{{ resetResult }}</code>
+          <div class="rounded-md border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/30">
+            <p class="text-xs font-semibold text-emerald-800 dark:text-emerald-300">Nouveau mot de passe provisoire</p>
+            <div class="mt-2 flex flex-wrap items-center gap-3">
+              <code class="select-all rounded-md bg-white px-3 py-2 font-mono text-lg tracking-wider text-slate-900 dark:bg-slate-900 dark:text-white">{{ resetResult }}</code>
               <UButton size="sm" variant="outline" :icon="resetCopied ? 'i-heroicons-check' : 'i-heroicons-clipboard'" @click="copyResetPassword">
                 {{ resetCopied ? 'Copié' : 'Copier' }}
               </UButton>
             </div>
-            <p class="mt-3 text-xs text-emerald-800 dark:text-emerald-200">
+            <p class="mt-3 text-sm text-emerald-800 dark:text-emerald-200">
               Affiché une seule fois : notez-le avant de fermer. L’utilisateur devra le changer à sa prochaine connexion.
             </p>
           </div>
-          <div class="flex justify-end pt-4 border-t">
-            <UButton class="bg-fc-blue hover:bg-fc-blue-600 text-white" @click="closeResetPassword">Fermer</UButton>
+          <div class="flex justify-end border-t border-slate-200 pt-4 dark:border-slate-700">
+            <UButton @click="closeResetPassword">Fermer</UButton>
           </div>
         </template>
+      </div>
+    </UModal>
+
+    <!-- Confirmation : désactiver ou supprimer un compte (nomme le compte et dit la conséquence). -->
+    <UModal v-model="confirmation.ouvert">
+      <div v-if="confirmation.user" class="space-y-4 p-6">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">
+          {{ confirmation.type === 'supprimer'
+            ? `Supprimer définitivement le compte de ${nomCompte(confirmation.user)} ?`
+            : `Désactiver le compte de ${nomCompte(confirmation.user)} ?` }}
+        </h2>
+        <p v-if="confirmation.type === 'supprimer'" class="text-sm leading-6 text-slate-700 dark:text-slate-200">
+          Le compte de connexion et le profil sont supprimés ; cette action ne peut pas être annulée.
+          Pour seulement bloquer l’accès en gardant le compte, choisissez plutôt « Désactiver ».
+        </p>
+        <p v-else class="text-sm leading-6 text-slate-700 dark:text-slate-200">
+          Il ne pourra plus se connecter. Ses visites et ses tournées sont conservées, et vous pourrez réactiver le compte à tout moment.
+        </p>
+        <div class="flex justify-end gap-2">
+          <UButton color="gray" variant="ghost" :disabled="confirmation.enCours" @click="confirmation.ouvert = false">Annuler</UButton>
+          <UButton
+            color="red"
+            :icon="confirmation.type === 'supprimer' ? 'i-heroicons-trash' : 'i-heroicons-no-symbol'"
+            :loading="confirmation.enCours"
+            @click="executerConfirmation"
+          >
+            {{ confirmation.type === 'supprimer' ? 'Supprimer le compte' : 'Désactiver le compte' }}
+          </UButton>
+        </div>
       </div>
     </UModal>
   </div>
@@ -548,6 +617,7 @@
 import { grouperQuartiersParTerritoire } from '~/utils/territoires'
 import { DIRECTIONS, estMerchandiserProgramme, libelleDirection } from '~/utils/agences'
 import type { Profile, UserRole, Employeur } from '~/types'
+import { messageUtilisateur } from '~/utils/supabaseErrors'
 
 definePageMeta({
   middleware: ['auth', 'admin', 'admin-strict'],
@@ -621,9 +691,9 @@ const commercialOptions = computed(() => users.value
   .sort((a, b) => a.label.localeCompare(b.label, 'fr')))
 
 function equipeLabel(user: Profile) {
-  if (!user.commercial_id) return user.role === 'merchandiser' ? '—' : ''
+  if (!user.commercial_id) return user.role === 'merchandiser' ? 'Aucune' : ''
   const c = users.value.find(u => u.id === user.commercial_id)
-  return c?.nom || c?.email || '—'
+  return c?.nom || c?.email || 'Commercial introuvable'
 }
 
 const regionOptions = computed(() => regions.value.map(r => ({ value: r.code, label: r.nom_affichage ? `${r.nom_affichage} · ${r.name}` : r.name })))
@@ -667,7 +737,7 @@ async function appliquerAliasPartout(nom: string) {
     const res = await $fetch<{ profils: number }>('/api/admin/territoire-alias', {
       method: 'POST', body: { alias: nom, territoire_code: code },
     })
-    toast.add({ title: 'Alias appliqué', description: `${res.profils} profil(s) mis à jour.`, color: 'green' })
+    toast.add({ title: 'Rattachement appliqué', description: `${res.profils} profil${res.profils > 1 ? 's' : ''} mis à jour.`, color: 'green' })
     // Le formulaire courant suit : le libellé devient le territoire réel.
     unmatchedTerritories.value = unmatchedTerritories.value.filter(n => n !== nom)
     if (!userForm.value.territory_codes.includes(code)) userForm.value.territory_codes.push(code)
@@ -675,7 +745,7 @@ async function appliquerAliasPartout(nom: string) {
     await fetchUsers()
   }
   catch (err: any) {
-    toast.add({ title: 'Rattachement impossible', description: err?.data?.message || err?.message, color: 'red' })
+    toast.add({ title: 'Rattachement impossible', description: messageUtilisateur(err), color: 'red' })
   }
   finally {
     applyingAlias.value = null
@@ -809,31 +879,17 @@ watch([searchQuery, roleFilter], () => { usersPage.value = 1 })
 function zoneLabel(user: Profile) {
   const terrs = (user.territoires_assignes || []).filter(Boolean)
   if (terrs.length > 1) return `${terrs[0]} +${terrs.length - 1}`
-  return terrs[0] || user.zone_assignee || '-'
+  return terrs[0] || user.zone_assignee || 'Aucun territoire'
 }
 
-function getRoleBg(role: string) {
-  const map: Record<string, string> = {
-    admin: 'bg-purple-600',
-    superviseur: 'bg-fc-red',
-    merchandiser: 'bg-emerald-600',
-    commercial: 'bg-amber-600',
-    agence: 'bg-violet-600',
-  }
-  return map[role] || 'bg-gray-600'
+/** Deux premières lettres du nom, pour l'avatar (décoratif). */
+function initiales(user: Profile) {
+  return (user.nom || user.email || '').trim().substring(0, 2).toUpperCase() || '?'
 }
+const nomCompte = (user: Profile) => user.nom || user.email || 'cet utilisateur'
 
-function getRoleBadge(role: string) {
-  const map: Record<string, string> = {
-    admin: 'bg-purple-50 text-purple-700',
-    superviseur: 'bg-red-50 text-red-700',
-    merchandiser: 'bg-emerald-50 text-emerald-700',
-    commercial: 'bg-amber-50 text-amber-700',
-    agence: 'bg-violet-50 text-violet-700',
-  }
-  return map[role] || 'bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300'
-}
-
+// Menu d'une ligne : actions courantes, puis l'accès au compte, puis la
+// suppression, isolée et en rouge, loin de « Désactiver ».
 function getUserActions(user: Profile) {
   return [[
     {
@@ -856,17 +912,35 @@ function getUserActions(user: Profile) {
       icon: 'i-heroicons-key',
       click: () => openResetPassword(user),
     },
+  ], [
+    user.is_active
+      ? { label: 'Désactiver', icon: 'i-heroicons-no-symbol', click: () => demanderConfirmation('desactiver', user) }
+      : { label: 'Réactiver', icon: 'i-heroicons-check-circle', click: () => toggleUserActive(user) },
+  ], [
     {
-      label: user.is_active ? 'Désactiver' : 'Activer',
-      icon: user.is_active ? 'i-heroicons-x-circle' : 'i-heroicons-check-circle',
-      click: () => toggleUserActive(user),
-    },
-    {
-      label: 'Supprimer',
+      label: 'Supprimer définitivement',
       icon: 'i-heroicons-trash',
-      click: () => deleteUser(user),
+      class: 'text-red-700 dark:text-red-400',
+      iconClass: 'text-red-600 dark:text-red-400',
+      click: () => demanderConfirmation('supprimer', user),
     },
   ]]
+}
+
+// Confirmation nommée avant de désactiver ou de supprimer un compte.
+const confirmation = reactive<{ ouvert: boolean, type: 'desactiver' | 'supprimer', user: Profile | null, enCours: boolean }>({
+  ouvert: false, type: 'desactiver', user: null, enCours: false,
+})
+function demanderConfirmation(type: 'desactiver' | 'supprimer', user: Profile) {
+  Object.assign(confirmation, { ouvert: true, type, user, enCours: false })
+}
+async function executerConfirmation() {
+  const user = confirmation.user
+  if (!user) return
+  confirmation.enCours = true
+  const ok = confirmation.type === 'supprimer' ? await deleteUser(user) : await toggleUserActive(user)
+  confirmation.enCours = false
+  if (ok) confirmation.ouvert = false
 }
 
 async function fetchUsers() {
@@ -878,7 +952,7 @@ async function fetchUsers() {
     users.value = data as Profile[]
   }
   catch (err: any) {
-    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+    toast.add({ title: 'Utilisateurs non chargés', description: messageUtilisateur(err), color: 'red' })
   }
   finally {
     loading.value = false
@@ -951,7 +1025,7 @@ async function importUsers() {
   try {
     const text = (await importFile.value.text()).replace(/^\uFEFF/, '')
     const parsed = parseCsv(text)
-    if (!parsed.length) throw new Error('Fichier vide ou en-têtes manquants')
+    if (!parsed.length) throw new Error('Le fichier est vide, ou sa première ligne ne contient pas les en-têtes du modèle.')
     // line = numéro de ligne dans le fichier (1 = en-têtes) ; colonnes
     // export-only (division, sous_region) ignorées côté serveur.
     const rows = parsed.map((r, i) => ({
@@ -977,12 +1051,12 @@ async function importUsers() {
     importSummary.value = result
     toast.add({
       title: 'Import terminé',
-      description: `${result.created} créé(s), ${result.updated} mis à jour, ${result.errors.length} erreur(s)`,
+      description: `${result.created} créé${result.created > 1 ? 's' : ''}, ${result.updated} mis à jour, ${result.errors.length} ligne${result.errors.length > 1 ? 's' : ''} en erreur.`,
       color: result.errors.length ? 'amber' : 'green',
     })
     await fetchUsers()
   } catch (err: any) {
-    toast.add({ title: 'Erreur d\'import', description: err?.data?.message || err.message, color: 'red' })
+    toast.add({ title: 'Import impossible', description: messageUtilisateur(err), color: 'red' })
   } finally {
     importing.value = false
   }
@@ -1040,7 +1114,7 @@ async function handleSaveUser() {
         .eq('id', editingUser.value.id)
 
       if (error) throw error
-      toast.add({ title: 'Utilisateur mis à jour' })
+      toast.add({ title: 'Utilisateur mis à jour', description: userForm.value.nom || userForm.value.email, color: 'green' })
     }
     else {
       // Compte + profil créés en une passe côté serveur (service_role) : pas de
@@ -1059,7 +1133,7 @@ async function handleSaveUser() {
         quartiers_assignes: quartiers,
         region,
       })
-      toast.add({ title: 'Utilisateur créé' })
+      toast.add({ title: 'Utilisateur créé', description: userForm.value.nom || userForm.value.email, color: 'green' })
     }
 
     showCreate.value = false
@@ -1067,39 +1141,48 @@ async function handleSaveUser() {
     fetchUsers()
   }
   catch (err: any) {
-    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+    toast.add({ title: editingUser.value ? 'Modifications non enregistrées' : 'Utilisateur non créé', description: messageUtilisateur(err), color: 'red' })
   }
   finally {
     saving.value = false
   }
 }
 
-async function toggleUserActive(user: Profile) {
+/** Active ou désactive le compte ; renvoie vrai si l'enregistrement a réussi. */
+async function toggleUserActive(user: Profile): Promise<boolean> {
+  const desactiver = !!user.is_active
   const { error } = await supabase
     .from('profiles')
     .update({ is_active: !user.is_active })
     .eq('id', user.id)
 
   if (error) {
-    toast.add({ title: 'Erreur', description: error.message, color: 'red' })
-    return
+    toast.add({ title: desactiver ? 'Compte non désactivé' : 'Compte non réactivé', description: messageUtilisateur(error), color: 'red' })
+    return false
   }
+  toast.add({
+    title: desactiver ? 'Compte désactivé' : 'Compte réactivé',
+    description: desactiver ? `${nomCompte(user)} ne peut plus se connecter.` : `${nomCompte(user)} peut de nouveau se connecter.`,
+    color: 'green',
+  })
   fetchUsers()
+  return true
 }
 
 // Supprime le compte auth ET le profil (cascade FK). Supprimer le seul profil
 // laissait un compte auth orphelin encore capable de se connecter.
-async function deleteUser(user: Profile) {
-  if (!confirm(`Supprimer définitivement ${user.nom || user.email} ? Le compte de connexion est également supprimé.`)) return
-
+// La confirmation (nommée) est demandée avant l'appel : voir demanderConfirmation.
+async function deleteUser(user: Profile): Promise<boolean> {
   try {
     await authStore.deleteUser(user.id)
-    toast.add({ title: 'Utilisateur supprimé' })
+    toast.add({ title: 'Compte supprimé', description: nomCompte(user), color: 'green' })
     fetchUsers()
     fetchDeletionRequests()
+    return true
   }
   catch (err: any) {
-    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+    toast.add({ title: 'Compte non supprimé', description: messageUtilisateur(err), color: 'red' })
+    return false
   }
 }
 
@@ -1152,10 +1235,10 @@ async function confirmResetPassword() {
   resetting.value = true
   try {
     resetResult.value = await authStore.resetUserPassword(resetTarget.value.id, resetCustomPassword.value || undefined)
-    toast.add({ title: 'Mot de passe réinitialisé', description: `${resetTarget.value.nom || resetTarget.value.email} devra le changer à sa prochaine connexion.` })
+    toast.add({ title: 'Mot de passe réinitialisé', description: `${resetTarget.value.nom || resetTarget.value.email} devra le changer à sa prochaine connexion.`, color: 'green' })
   }
   catch (err: any) {
-    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+    toast.add({ title: 'Mot de passe non réinitialisé', description: messageUtilisateur(err), color: 'red' })
   }
   finally {
     resetting.value = false
