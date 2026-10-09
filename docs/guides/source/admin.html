@@ -148,8 +148,8 @@
   <p>Une règle dit « cette personne visite ces points de vente tel jour de la semaine » ; les tournées se génèrent ensuite toutes seules, chaque nuit. <span class="ui">Nouvelle règle</span> : personne, jours, territoire, distributeur, période de validité (sans fin possible), mode et liste ordonnée de points de vente.</p>
   <ul>
     <li><strong>Tout le périmètre</strong> (salariés FrieslandCampina) : la tournée reprend tous les points de vente de la règle.</li>
-    <li><strong>Quotas</strong> (agences) : chaque jour, un nombre de points de vente par canal, chaque point de vente une fois par mois.</li>
-    <li><span class="ui">Décocher une semaine</span> enregistre une exception (congé, magasin fermé). <span class="ui">Pré-générer 7 jours</span> et <span class="ui">Générer sur une période</span> créent les tournées à l’avance.</li>
+    <li><strong>Quotas</strong> (agences) : chaque jour, un nombre de points de vente par canal, chaque point de vente une fois par mois. Si le lieu du jour n’en a pas assez, la tournée est complétée avec les points de vente du portefeuille les plus proches, à moins de <strong>1,5 km</strong> ; au-delà, une boutique proche remplace un canal manquant, et un point de vente plus lointain n’est pris qu’en dernier recours.</li>
+    <li><span class="ui">Décocher une semaine</span> enregistre une exception (congé, magasin fermé). <span class="ui">Générer les 7 prochains jours</span> et <span class="ui">Générer sur une période</span> créent les tournées à l’avance.</li>
     <li>Modifier une règle ne change pas les tournées déjà générées : lancez ensuite <span class="ui">Recalculer les tournées à venir</span> (Paramètres › Référentiels › Tâches automatiques).</li>
   </ul>
 
@@ -170,7 +170,7 @@
   <p>Le guide du compte agence détaille le fichier du mois, ses points GPS et les règles de rattachement des lieux.</p>
 
   <h3>Les écarts de tournée</h3>
-  <p><span class="ui">Écarts de tournée</span> compare, pour un jour, la tournée de chaque merchandiser aux clients du vendeur du distributeur prévu ce jour-là : <strong>Aligné</strong>, <strong>Écart</strong> (avec les points de vente concernés), <strong>Routing du vendeur absent</strong> ou <strong>Sans vendeur ce jour</strong>. Filtres : direction, commercial, statut ; <span class="ui">Exporter</span> produit le fichier.</p>
+  <p><span class="ui">Écarts de tournée</span> compare, pour un jour, la tournée de chaque merchandiser aux clients du vendeur du distributeur prévu ce jour-là : <strong>Aligné</strong>, <strong>Écart</strong> (avec les points de vente concernés), <strong>Tournée du vendeur manquante</strong> (le fichier de ce vendeur n’a pas été chargé) ou <strong>Sans vendeur ce jour</strong>. Filtres : direction, commercial, statut ; <span class="ui">Exporter</span> produit le fichier.</p>
 </section>
 
 <section class="chapitre">
