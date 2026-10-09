@@ -4,7 +4,7 @@
     <section class="admin-surface space-y-3 p-5" aria-labelledby="titre-maint-tournees">
       <h3 id="titre-maint-tournees" class="text-base font-semibold text-slate-900 dark:text-white">Tournées</h3>
       <p class="max-w-3xl text-sm text-slate-600 dark:text-slate-300">
-        Les tournées sont générées chaque nuit pour les 7 jours suivants, à partir des règles (Routing › Règles), des quotas
+        Les tournées sont générées chaque nuit pour les 7 jours suivants, à partir des règles (Planning › Règles récurrentes), des quotas
         et du routing mensuel des agences. Après un changement, vous pouvez les recalculer tout de suite : seules les tournées à venir qui
         n’ont pas commencé sont refaites, celle du jour n’est jamais modifiée.
       </p>

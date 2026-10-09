@@ -731,7 +731,7 @@
       v-model="showTemplateCreateModal"
       :title="regleEditionId ? 'Modifier la règle' : 'Nouvelle règle récurrente'"
       :description="regleEditionId
-        ? 'Les tournées déjà générées ne changent pas ; Référentiels › Maintenance › « Recalculer les tournées à venir » applique tout de suite la règle modifiée.'
+        ? 'Les tournées déjà générées ne changent pas ; Paramètres › Référentiels › « Tâches automatiques » › « Recalculer les tournées à venir » applique tout de suite la règle modifiée.'
         : '« Ce merchandiser visite ces PDV chaque lundi et chaque jeudi. » La règle se répète d’elle-même, mois suivant compris.'"
       icon="i-heroicons-arrow-path-rounded-square"
       width="sm:max-w-2xl"
@@ -2597,7 +2597,7 @@ async function handleCreateTemplate() {
         // Colonne ssf_id écrite seulement quand les SSF sont disponibles (migration appliquée).
         ...(sousZonesSsf.value.length ? { ssf_id: newTemplate.ssfId } : {}),
       })
-      toast.add({ title: 'Règle modifiée', description: 'Les tournées déjà générées ne changent pas : Référentiels › Maintenance › « Recalculer les tournées à venir » les met à jour.', color: 'green' })
+      toast.add({ title: 'Règle modifiée', description: 'Les tournées déjà générées ne changent pas : Paramètres › Référentiels › « Tâches automatiques » › « Recalculer les tournées à venir » les met à jour.', color: 'green' })
       showTemplateCreateModal.value = false
       reinitialiserFormulaireRegle()
       loadTemplates()

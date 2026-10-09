@@ -209,7 +209,7 @@ export const ADMIN_DOMAINS: AdminDomain[] = [
       { id: 'parametres.standards', label: 'Standards Perfect Store', path: '/admin/perfect-store/standards', access: 'parametres' },
       { id: 'parametres.produits', label: 'Produits du formulaire', path: '/admin/produits/seuils', access: 'parametres' },
       { id: 'parametres.utilisateurs', label: 'Utilisateurs', path: '/admin/users', access: 'parametres', roles: ['admin'] },
-      { id: 'parametres.equipes', label: 'Équipes', path: '/admin/users/equipes', access: 'parametres' },
+      { id: 'parametres.equipes', label: 'Équipes', path: '/admin/users/equipes', access: 'parametres', roles: ['admin'] },
       { id: 'parametres.permissions', label: 'Permissions', path: '/admin/permissions', access: 'parametres', roles: ['admin'] },
       { id: 'parametres.versions', label: 'Versions de l\'app', path: '/admin/users/versions', access: 'parametres', ouvertA: ['agence'] },
       { id: 'parametres.import-export', label: 'Import / Export', path: '/admin/import-export', access: 'parametres', ouvertA: ['agence'] },

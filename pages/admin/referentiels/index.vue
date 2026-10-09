@@ -68,7 +68,6 @@
     <!-- Écrans dédiés (grille, actions) : pas de table générique -->
     <AdminQuotasAtom v-if="activeVue?.id === 'quotas_atom'" />
     <AdminMaintenance v-else-if="activeVue?.id === 'maintenance'" />
-    <AdminPublierVersion v-else-if="activeVue?.id === 'publier_version'" />
 
     <template v-if="!activeVue">
     <!-- Toolbar -->
@@ -1242,7 +1241,7 @@ const defs: Def[] = [
     id: 'ssf', section: 'distrib', label: 'Vendeurs des distributeurs (SSF)', table: 'ssf',
     select: 'id, nom, nom_brut, telephone, distributeur_id, commercial_id, actif, a_confirmer, source, commentaire', order: q => q.order('nom'),
     noDelete: true,
-    aide: 'SSF : vendeur d’un distributeur (pas un salarié Friesland), suivi par un commercial comme les merchandisers de son équipe. Il ne dirige pas le merchandiser : certains jours ils travaillent ensemble (onglet Routing mensuel) pour passer dans les mêmes PDV.',
+    aide: 'SSF : vendeur d’un distributeur (pas un salarié Friesland), suivi par un commercial comme les merchandisers de son équipe. Il ne dirige pas le merchandiser : certains jours ils travaillent ensemble (liste Routing mensuel) pour passer dans les mêmes PDV.',
     columns: [
       { label: 'SSF', cell: r => r.nom },
       { label: 'Distributeur', cell: r => (r.distributeur_id ? distributeurNameOf(r.distributeur_id) : '—'), muted: true },

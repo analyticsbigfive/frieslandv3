@@ -186,9 +186,11 @@ describe('droits par rôle', () => {
   })
 
   it('un rôle réservé ne se transmet pas aux pages voisines', () => {
-    // Utilisateurs est réservé à l'admin ; Équipes, sous le même chemin, suit la section.
+    // Utilisateurs est réservé à l'admin ; Versions de l'app, sous le même chemin, suit la section.
     const avecParametres = (path: string) => peutOuvrirChemin(path, undefined, 'superviseur', () => true)
     expect(avecParametres('/admin/users')).toBe(false)
-    expect(avecParametres('/admin/users/equipes')).toBe(true)
+    expect(avecParametres('/admin/users/versions')).toBe(true)
+    // Équipes enregistre par /api/admin/equipes, réservée à l'admin côté serveur.
+    expect(avecParametres('/admin/users/equipes')).toBe(false)
   })
 })

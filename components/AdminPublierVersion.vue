@@ -29,7 +29,7 @@
             {{ v.nom }} ({{ v.code }}) : {{ v.nombre }} utilisateur{{ v.nombre > 1 ? 's' : '' }} · {{ v.code >= (actuelle?.version_code_min || 0) ? 'à jour' : 'sous le minimum' }}
           </UBadge>
         </div>
-        <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">Détail par utilisateur : onglet « Versions installées ».</p>
+        <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">Le détail par utilisateur est dans le tableau en haut de cette page.</p>
       </div>
     </section>
 
