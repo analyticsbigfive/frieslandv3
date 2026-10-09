@@ -1,35 +1,37 @@
 <template>
   <div class="space-y-6">
-    <AdminPageHeader
-      title="Versions de l'app"
-      description="Qui a installé la version minimale exigée, qui est bloqué, qui tourne encore sur une ancienne version."
-    >
+    <AdminPageHeader description="La version minimale exigée, la publication d'une nouvelle version, et qui a installé quoi.">
       <template #actions>
         <UButton icon="i-heroicons-arrow-path" variant="soft" color="gray" :loading="loading" @click="charger">Actualiser</UButton>
       </template>
     </AdminPageHeader>
 
-    <div v-if="erreur" class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+    <div v-if="erreur" class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-100">
       {{ erreur }}
     </div>
 
     <!-- Version exigée -->
     <div class="admin-surface flex flex-wrap items-center justify-between gap-3 p-4">
       <div>
-        <p class="text-xs uppercase tracking-wide text-gray-400">Version minimale exigée (Android)</p>
-        <p class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+        <p class="text-sm font-semibold text-slate-600 dark:text-slate-300">Version minimale exigée (Android)</p>
+        <p class="text-lg font-semibold text-slate-900 dark:text-white">
           {{ versionApp ? `${versionApp.version_nom_min || '?'} (code ${versionApp.version_code_min})` : '—' }}
         </p>
-        <p class="text-xs text-gray-400">Modifiable dans Référentiels › Application mobile › Version minimale.</p>
+        <p class="text-sm text-slate-600 dark:text-slate-300">En dessous, l'application affiche un écran de mise à jour obligatoire.</p>
       </div>
-      <UButton
-        v-if="versionApp?.url_telechargement"
-        icon="i-heroicons-clipboard-document"
-        variant="soft"
-        @click="copierLien"
-      >
-        Copier le lien de l'APK
-      </UButton>
+      <div class="flex flex-wrap gap-2">
+        <UButton
+          v-if="versionApp?.url_telechargement"
+          icon="i-heroicons-clipboard-document"
+          variant="outline"
+          @click="copierLien"
+        >
+          Copier le lien de l'APK
+        </UButton>
+        <UButton v-if="authStore.isAdmin && versionApp" icon="i-heroicons-pencil-square" variant="outline" @click="ouvrirVersionMin">
+          Modifier la version minimale
+        </UButton>
+      </div>
     </div>
 
     <ChargementContenu v-if="loading && !lignes.length" variante="lignes" libelle="Chargement des versions…" />
@@ -137,6 +139,35 @@
         </p>
       </div>
     </template>
+
+    <!-- Publier une version : réservé à l'administrateur (dépôt de l'APK,
+         vérifications, version obligatoire ou non). -->
+    <section v-if="authStore.isAdmin" id="publier" class="space-y-3">
+      <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Publier une nouvelle version</h2>
+      <AdminPublierVersion />
+    </section>
+
+    <AdminFormModal
+      v-model="modaleVersionMin"
+      title="Modifier la version minimale"
+      description="Les téléphones sous cette version verront un écran de mise à jour obligatoire. Vérifiez d'abord dans le tableau ci-dessus que la plupart des comptes l'ont installée."
+      icon="i-heroicons-device-phone-mobile"
+      required-note
+    >
+      <UFormGroup label="Code de version minimal" required help="Le numéro interne de la version (1.0.10 = 13, 1.0.12 = 15…)." size="md">
+        <UInput v-model.number="formVersionMin.version_code_min" type="number" min="1" size="md" class="w-full" />
+      </UFormGroup>
+      <UFormGroup label="Version affichée" help="Ex. 1.0.12" size="md">
+        <UInput v-model="formVersionMin.version_nom_min" size="md" class="w-full" />
+      </UFormGroup>
+      <UFormGroup label="Message affiché sur l'écran de mise à jour" size="md">
+        <UInput v-model="formVersionMin.message" size="md" class="w-full" />
+      </UFormGroup>
+      <template #footer>
+        <UButton color="gray" variant="ghost" @click="modaleVersionMin = false">Annuler</UButton>
+        <UButton icon="i-heroicons-check" :loading="enregistrementVersionMin" :disabled="!(formVersionMin.version_code_min >= 1)" @click="enregistrerVersionMin">Enregistrer</UButton>
+      </template>
+    </AdminFormModal>
   </div>
 </template>
 
@@ -151,12 +182,48 @@ import { CheckCircle2, HelpCircle, Lock, Smartphone } from 'lucide-vue-next'
 import { fetchAllRows } from '~/utils/fetchAll'
 import { LIBELLES_STATUT, ROLES_APP_MOBILE, estCompteTest, inventaireComptes, joursDepuis, statutVersion, syntheseAdoption, type StatutVersion } from '~/utils/adoptionApp'
 import { DIRECTIONS, libelleDirection } from '~/utils/agences'
-import { describeSupabaseError } from '~/utils/supabaseErrors'
+import { describeSupabaseError, messageUtilisateur } from '~/utils/supabaseErrors'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const supabase = useSupabaseClient()
 const toast = useToast()
+const authStore = useAuthStore()
+
+// Version minimale (anciennement Référentiels › Application mobile › Version minimale).
+const modaleVersionMin = ref(false)
+const enregistrementVersionMin = ref(false)
+const formVersionMin = reactive({ version_code_min: 0, version_nom_min: '', message: '' })
+async function ouvrirVersionMin() {
+  const { data } = await (supabase.from('version_app') as any).select('version_code_min, version_nom_min, message').eq('plateforme', 'android').maybeSingle()
+  Object.assign(formVersionMin, {
+    version_code_min: data?.version_code_min ?? versionApp.value?.version_code_min ?? 1,
+    version_nom_min: data?.version_nom_min ?? '',
+    message: data?.message ?? '',
+  })
+  modaleVersionMin.value = true
+}
+async function enregistrerVersionMin() {
+  enregistrementVersionMin.value = true
+  try {
+    const { error } = await (supabase.from('version_app') as any).update({
+      version_code_min: formVersionMin.version_code_min,
+      version_nom_min: formVersionMin.version_nom_min || null,
+      message: formVersionMin.message || null,
+      updated_at: new Date().toISOString(),
+    }).eq('plateforme', 'android')
+    if (error) throw error
+    toast.add({ title: 'Version minimale enregistrée', color: 'green' })
+    modaleVersionMin.value = false
+    await charger()
+  }
+  catch (error) {
+    toast.add({ title: 'Enregistrement impossible', description: messageUtilisateur(error), color: 'red' })
+  }
+  finally {
+    enregistrementVersionMin.value = false
+  }
+}
 
 interface Ligne {
   user_id: string

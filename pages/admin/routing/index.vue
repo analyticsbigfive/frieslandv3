@@ -1,35 +1,22 @@
 <template>
   <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Routing & Planning</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Les règles récurrentes génèrent les tournées automatiquement, mois suivant compris.
-        </p>
-      </div>
-    </div>
-
-    <!-- Tabs -->
-    <div class="border-b border-gray-200 dark:border-gray-600">
-      <nav class="flex gap-6">
-        <button
-          v-for="tab in tabs"
-          :key="tab.key"
-          class="pb-3 text-sm font-medium border-b-2 transition-colors"
-          :class="activeTab === tab.key ? 'border-fc-red text-fc-red' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300'"
-          @click="activeTab = tab.key"
-        >
-          {{ tab.label }}
-        </button>
-      </nav>
-    </div>
+    <!-- Tournées / Règles récurrentes : onglets du domaine Planning (?vue=regles),
+         plus de barre d'onglets dans la page. -->
+    <AdminPageHeader
+      :description="activeTab === 'templates'
+        ? 'Les règles qui génèrent les tournées chaque semaine ou chaque mois, mois suivant compris.'
+        : 'Les tournées prévues pour chaque merchandiser, générées par les règles récurrentes.'"
+    />
+    <p v-if="lectureSeule" class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+      <UIcon name="i-heroicons-eye" class="h-4 w-4" aria-hidden="true" />
+      Consultation : le routing de vos merchandisers se charge dans Paramètres › Import / Export, et se corrige dans Paramètres › Référentiels › Routing mensuel.
+    </p>
 
     <!-- ==================== TAB 1: ROUTINGS PONCTUELS ==================== -->
     <template v-if="activeTab === 'routings'">
       <!-- Action bar -->
-      <div class="flex items-center justify-between">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 flex flex-wrap items-end gap-4 flex-1">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="admin-toolbar flex flex-1 flex-wrap items-end gap-4">
           <div v-if="vueTournees === 'personnes'">
             <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Date début</label>
             <UInput v-model="filters.dateFrom" type="date" size="sm" />
@@ -39,11 +26,11 @@
             <UInput v-model="filters.dateTo" type="date" size="sm" />
           </div>
           <div>
-            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Utilisateur</label>
+            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Personne</label>
             <USelectMenu
               v-model="filters.userId"
               :options="userOptions"
-              placeholder="Tous"
+              placeholder="Toute l'équipe"
               option-attribute="label"
               value-attribute="value"
               size="sm"
@@ -66,7 +53,7 @@
             Actualiser
           </UButton>
         </div>
-        <div class="flex gap-2 ml-4">
+        <div class="flex flex-wrap gap-2">
           <UButton v-if="authStore.isAdmin" variant="outline" icon="i-heroicons-arrow-down-tray" :loading="downloadingTemplate" @click="handleDownloadTemplate">
             Modèle Excel
           </UButton>
@@ -76,30 +63,47 @@
           <UButton variant="outline" icon="i-heroicons-document-arrow-down" :loading="exportEnCours" :disabled="!routings.length" @click="handleExportTournees">
             Exporter
           </UButton>
-          <UButton icon="i-heroicons-plus" class="bg-fc-red hover:bg-fc-red/90" @click="openCreateRouting">
-            Nouveau routing
+          <UButton v-if="!lectureSeule" icon="i-heroicons-plus" @click="openCreateRouting">
+            Nouvelle tournée
           </UButton>
         </div>
       </div>
 
-      <!-- Planning d'équipe (une ligne par personne, une colonne par jour) ou
-           cartes par personne (liste et calendrier mensuel de chacun). -->
-      <div class="inline-flex rounded-lg bg-white p-0.5 shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700" role="tablist" aria-label="Affichage des tournées">
-        <button
-          v-for="v in VUES_TOURNEES"
-          :key="v.k"
-          type="button"
-          role="tab"
-          :aria-selected="vueTournees === v.k"
-          class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition"
-          :class="vueTournees === v.k ? 'bg-fc-red text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'"
-          @click="choisirVueTournees(v.k)"
-        >
-          <UIcon :name="v.i" class="h-4 w-4" />{{ v.l }}
-        </button>
+      <!-- Affichage (pas une navigation) : planning d'équipe (une ligne par
+           personne, une colonne par jour), liste par personne, ou calendrier
+           du mois d'une personne. -->
+      <div class="flex flex-wrap items-center gap-3">
+        <span class="text-sm font-medium text-slate-600 dark:text-slate-300">Affichage</span>
+        <div class="inline-flex rounded-md border border-slate-300 bg-white p-0.5 dark:border-slate-600 dark:bg-slate-800" role="radiogroup" aria-label="Affichage des tournées">
+          <button
+            v-for="v in VUES_TOURNEES"
+            :key="v.k"
+            type="button"
+            role="radio"
+            :aria-checked="vueTournees === v.k"
+            class="inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-sm font-medium transition-colors"
+            :class="vueTournees === v.k ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700'"
+            @click="choisirVueTournees(v.k)"
+          >
+            <UIcon :name="v.i" class="h-4 w-4" aria-hidden="true" />{{ v.l }}
+          </button>
+        </div>
       </div>
 
-      <div v-if="vueTournees === 'planning'" class="rounded-xl bg-white p-3 shadow-sm dark:bg-gray-800 sm:p-4">
+      <div v-if="vueTournees === 'calendrier'" class="admin-surface p-3 sm:p-4">
+        <CalendrierTournees
+          v-if="filters.userId"
+          :user-id="filters.userId"
+          :regles="reglesDe(filters.userId)"
+          :rafraichir="rafraichirCalendrier"
+          @jour="ouvrirJourCalendrier(filters.userId, profilDe(filters.userId), $event)"
+        />
+        <p v-else class="py-8 text-center text-sm text-slate-600 dark:text-slate-300">
+          Choisissez une personne dans le filtre « Personne » pour voir son calendrier du mois.
+        </p>
+      </div>
+
+      <div v-else-if="vueTournees === 'planning'" class="admin-surface p-3 sm:p-4">
         <PlanningEquipe
           :regles="groupedTemplates"
           :utilisateurs="users"
@@ -166,8 +170,11 @@
                 <p class="text-xs text-gray-500 dark:text-gray-400">{{ p.nbFaits }}/{{ p.nbPdv }} PDV faits</p>
               </div>
 
-              <UButton size="xs" variant="soft" icon="i-heroicons-plus" @click.stop="openCreateRoutingPour(p.id)">
-                Nouveau routing
+              <UButton size="xs" variant="outline" icon="i-heroicons-calendar-days" @click.stop="voirCalendrier(p.id)">
+                Voir son calendrier
+              </UButton>
+              <UButton v-if="!lectureSeule" size="xs" variant="outline" icon="i-heroicons-plus" @click.stop="openCreateRoutingPour(p.id)">
+                Nouvelle tournée
               </UButton>
               <UIcon
                 :name="personneTourneesOuverte(p.id) ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
@@ -177,31 +184,7 @@
 
             <!-- Tournées de la personne -->
             <div v-if="personneTourneesOuverte(p.id)" class="border-t border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 px-5 py-4 space-y-3">
-            <div class="flex flex-wrap items-center gap-2">
-              <div class="inline-flex rounded-lg bg-white p-0.5 shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700" role="tablist">
-                <button
-                  v-for="v in [{ k: false, l: 'Tournées', i: 'i-heroicons-list-bullet' }, { k: true, l: 'Calendrier', i: 'i-heroicons-calendar-days' }]"
-                  :key="v.l"
-                  type="button"
-                  role="tab"
-                  :aria-selected="vueCalendrier.has(p.id) === v.k"
-                  class="inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition"
-                  :class="vueCalendrier.has(p.id) === v.k ? 'bg-fc-red text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'"
-                  @click="v.k ? vueCalendrier.add(p.id) : vueCalendrier.delete(p.id)"
-                >
-                  <UIcon :name="v.i" class="h-3.5 w-3.5" />{{ v.l }}
-                </button>
-              </div>
-            </div>
-            <div v-if="vueCalendrier.has(p.id)" class="rounded-lg bg-white p-3 shadow-sm dark:bg-gray-800 sm:p-4">
-              <CalendrierTournees
-                :user-id="p.id"
-                :regles="reglesDe(p.id)"
-                :rafraichir="rafraichirCalendrier"
-                @jour="ouvrirJourCalendrier(p.id, p.user, $event)"
-              />
-            </div>
-            <template v-else>
+            <template v-if="p.routings">
               <div
                 v-for="routing in p.routings"
                 :key="routing.id"
@@ -224,8 +207,8 @@
                     <span class="text-sm font-medium text-gray-600 dark:text-gray-300">
                       {{ routing.nb_faits ?? completedPdvCount(routing) }}/{{ routing.nb_pdv ?? routing.routing_pdv?.length ?? 0 }} PDV
                     </span>
-                    <UDropdown :items="routingActions(routing)" :popper="{ placement: 'bottom-end' }">
-                      <UButton variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" />
+                    <UDropdown v-if="!lectureSeule" :items="routingActions(routing)" :popper="{ placement: 'bottom-end' }">
+                      <UButton variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" :aria-label="`Actions sur la tournée du ${formatDate(routing.date_routing)}`" />
                     </UDropdown>
                   </div>
                 </div>
@@ -248,14 +231,14 @@
     <!-- ==================== TAB 2: TEMPLATES PERMANENTS ==================== -->
     <template v-if="activeTab === 'templates'">
       <!-- Action bar -->
-      <div class="flex items-center justify-between">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 flex items-end gap-4">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="admin-toolbar flex flex-wrap items-end gap-4">
           <div>
-            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Utilisateur</label>
+            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Personne</label>
             <USelectMenu
               v-model="templateFilterUser"
               :options="userOptions"
-              placeholder="Tous"
+              placeholder="Toute l'équipe"
               option-attribute="label"
               value-attribute="value"
               size="sm"
@@ -266,14 +249,14 @@
             Actualiser
           </UButton>
         </div>
-        <div class="flex gap-2">
+        <div v-if="!lectureSeule" class="flex flex-wrap gap-2">
           <UButton icon="i-heroicons-bolt" variant="outline" :loading="preGenerating" @click="handlePreGenerer">
             Pré-générer 7 jours
           </UButton>
           <UButton icon="i-heroicons-calendar-days" variant="outline" @click="showGenerateModal = true">
             Générer sur une période
           </UButton>
-          <UButton icon="i-heroicons-plus" class="bg-fc-red hover:bg-fc-red/90" @click="showTemplateCreateModal = true">
+          <UButton icon="i-heroicons-plus" @click="showTemplateCreateModal = true">
             Nouvelle règle
           </UButton>
         </div>
@@ -346,31 +329,10 @@
 
           <!-- Règles de la personne -->
           <div v-if="personneReglesOuverte(p.id)" class="border-t border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 px-5 py-4 space-y-4">
-            <div class="flex flex-wrap items-center gap-2">
-              <div class="inline-flex rounded-lg bg-white p-0.5 shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700" role="tablist">
-                <button
-                  v-for="v in [{ k: false, l: 'Règles', i: 'i-heroicons-list-bullet' }, { k: true, l: 'Calendrier', i: 'i-heroicons-calendar-days' }]"
-                  :key="v.l"
-                  type="button"
-                  role="tab"
-                  :aria-selected="vueCalendrier.has(p.id) === v.k"
-                  class="inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition"
-                  :class="vueCalendrier.has(p.id) === v.k ? 'bg-fc-red text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'"
-                  @click="v.k ? vueCalendrier.add(p.id) : vueCalendrier.delete(p.id)"
-                >
-                  <UIcon :name="v.i" class="h-3.5 w-3.5" />{{ v.l }}
-                </button>
-              </div>
+            <div class="flex justify-end">
+              <UButton size="xs" variant="outline" icon="i-heroicons-calendar-days" @click="voirCalendrier(p.id)">Voir son calendrier</UButton>
             </div>
-            <div v-if="vueCalendrier.has(p.id)" class="rounded-lg bg-white p-3 shadow-sm dark:bg-gray-800 sm:p-4">
-              <CalendrierTournees
-                :user-id="p.id"
-                :regles="reglesDe(p.id)"
-                :rafraichir="rafraichirCalendrier"
-                @jour="ouvrirJourCalendrier(p.id, p.user, $event)"
-              />
-            </div>
-            <template v-else>
+            <template v-if="p.regles">
             <div
               v-for="tpl in p.regles"
               :key="tpl.id"
@@ -418,11 +380,11 @@
                   <UBadge :color="tpl.is_active ? 'green' : 'gray'" variant="soft" size="sm">
                     {{ tpl.is_active ? 'Actif' : 'Inactif' }}
                   </UBadge>
-                  <UButton size="xs" variant="outline" icon="i-heroicons-no-symbol" @click="openExceptionModal(tpl)">
+                  <UButton v-if="!lectureSeule" size="xs" variant="outline" icon="i-heroicons-no-symbol" @click="openExceptionModal(tpl)">
                     Décocher une semaine
                   </UButton>
-                  <UDropdown :items="templateActions(tpl)" :popper="{ placement: 'bottom-end' }">
-                    <UButton variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" />
+                  <UDropdown v-if="!lectureSeule" :items="templateActions(tpl)" :popper="{ placement: 'bottom-end' }">
+                    <UButton variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" :aria-label="`Actions sur la règle ${tpl.label || libelleJours(tpl)}`" />
                   </UDropdown>
                 </div>
               </div>
@@ -1309,7 +1271,7 @@ definePageMeta({
     'admin',
     () => {
       const authStore = useAuthStore()
-      if (!authStore.isSuperviseur) return navigateTo('/admin')
+      if (!authStore.isSuperviseur && !authStore.isAgence) return navigateTo('/admin')
     },
   ],
   layout: 'admin',
@@ -1410,12 +1372,14 @@ async function handleImportRoutings() {
   }
 }
 
-// ---- Tabs ----
-const tabs = [
-  { key: 'routings', label: '📋 Tournées planifiées' },
-  { key: 'templates', label: '🔁 Règles récurrentes' },
-]
-const activeTab = ref('routings')
+// ---- Onglets du domaine Planning (utils/adminNavigation.ts) ----
+// Tournées = /admin/routing, Règles récurrentes = /admin/routing?vue=regles :
+// la barre d'onglets du layout change la requête, la page reste montée
+// (fenêtres et données conservées).
+const route = useRoute()
+const activeTab = computed(() => (route.query.vue === 'regles' ? 'templates' : 'routings'))
+// Compte agence : consultation (les règles de la base limitent aussi les écritures).
+const lectureSeule = computed(() => authStore.isAgence)
 
 // ---- Shared state ----
 // true d'emblée : sans ça, « Aucun routing trouvé » s'affichait le temps du
@@ -2212,7 +2176,8 @@ function modifierTourneeDuJour() {
 // ---- Planning d'équipe ou cartes par personne (onglet Tournées) ----
 const VUES_TOURNEES = [
   { k: 'planning', l: 'Planning d\'équipe', i: 'i-heroicons-table-cells' },
-  { k: 'personnes', l: 'Par personne', i: 'i-heroicons-user-group' },
+  { k: 'personnes', l: 'Liste par personne', i: 'i-heroicons-user-group' },
+  { k: 'calendrier', l: 'Calendrier', i: 'i-heroicons-calendar-days' },
 ] as const
 type VueTournees = typeof VUES_TOURNEES[number]['k']
 const CLE_VUE_TOURNEES = 'admin-routing-vue'
@@ -2225,13 +2190,23 @@ function choisirVueTournees(v: VueTournees) {
 onMounted(() => {
   try {
     const v = localStorage.getItem(CLE_VUE_TOURNEES)
-    if (v === 'planning' || v === 'personnes') vueTournees.value = v
+    if (v === 'planning' || v === 'personnes' || v === 'calendrier') vueTournees.value = v
   }
   catch { /* stockage indisponible */ }
 })
 
-// ---- Vue calendrier par personne ----
-const vueCalendrier = ref(new Set<string>())
+// ---- Calendrier d'une personne ----
+// « Voir son calendrier » (carte d'une personne) : la personne devient le
+// filtre et l'affichage passe au calendrier, dans l'onglet Tournées.
+const router = useRouter()
+function voirCalendrier(userId: string) {
+  filters.userId = userId
+  choisirVueTournees('calendrier')
+  if (activeTab.value !== 'routings') router.push({ query: { ...route.query, vue: undefined } })
+}
+function profilDe(userId: string) {
+  return (users.value as Profile[]).find(u => u.id === userId) || null
+}
 // Incrémenté à chaque rechargement des tournées : les calendriers ouverts se rechargent.
 const rafraichirCalendrier = ref(0)
 function reglesDe(userId: string) {
