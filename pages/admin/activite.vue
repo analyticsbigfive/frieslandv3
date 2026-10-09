@@ -11,28 +11,22 @@
     </div>
 
     <template v-else>
-      <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between print:hidden">
-        <div>
-          <p class="text-sm font-medium text-fc-red">Pilotage commercial</p>
-          <h2 class="mt-1 text-3xl font-semibold tracking-tight text-slate-950 dark:text-white">Vue d’ensemble</h2>
-          <p class="mt-2 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
-            Suivi du Perfect Store, de la couverture terrain et de la disponibilité produit.
-          </p>
-          <p class="mt-2 text-xs text-slate-400 dark:text-slate-500">{{ lastRefreshLabel }}</p>
-        </div>
-        <div class="flex items-center gap-2">
+      <AdminPageHeader class="print:hidden" description="La couverture terrain, la performance des équipes et la disponibilité produit, tous points de vente confondus.">
+        <template #description>
+          <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">{{ lastRefreshLabel }}</p>
+        </template>
+        <template #actions>
           <UButton size="sm" variant="ghost" icon="i-heroicons-printer" @click="handlePrint">Imprimer</UButton>
           <UDropdown :items="exportMenuItems">
             <UButton size="sm" variant="outline" icon="i-heroicons-arrow-down-tray" trailing-icon="i-heroicons-chevron-down">
               Exporter
             </UButton>
           </UDropdown>
-        </div>
-      </header>
+        </template>
+      </AdminPageHeader>
 
-      <UTabs :items="dashboardTabs" class="w-full">
-        <template #kpis>
-          <div class="space-y-8 pt-6">
+      <!-- Une seule vue : indicateurs, puis l'activité récente (plus d'onglets). -->
+          <div class="space-y-8">
       <section v-if="dashboardAlerts.length" class="admin-surface overflow-hidden" aria-labelledby="dashboard-alerts-heading">
         <div class="flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-4 dark:border-slate-700 sm:px-6">
           <div>
@@ -209,42 +203,10 @@
           </div>
         </article>
       </section>
-          </div>
-        </template>
-
-        <template #apercu>
-          <div class="space-y-8 pt-6">
             <CommerciauxEnTournee class="print:hidden" />
 
-            <section class="grid gap-5 xl:grid-cols-12" aria-labelledby="admin-quick-access-heading">
-              <article class="admin-surface p-5 sm:p-6 xl:col-span-7">
-                <div class="mb-5 flex items-start justify-between gap-4">
-                  <div>
-                    <h2 id="admin-quick-access-heading" class="text-lg font-semibold tracking-tight text-slate-950 dark:text-white">Accès directs</h2>
-                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Retrouvez rapidement les espaces les plus utilisés.</p>
-                  </div>
-                  <UIcon name="i-heroicons-squares-2x2" class="h-5 w-5 text-slate-300 dark:text-slate-600" aria-hidden="true" />
-                </div>
-                <div class="grid gap-3 sm:grid-cols-2">
-                  <NuxtLink
-                    v-for="action in dashboardShortcuts"
-                    :key="action.label"
-                    :to="action.to"
-                    class="group flex items-center gap-3 rounded-xl border border-slate-200/80 bg-slate-50/70 px-3.5 py-3 transition hover:-translate-y-0.5 hover:border-red-200 hover:bg-white dark:border-slate-700 dark:bg-slate-900/50 dark:hover:border-red-900 dark:hover:bg-slate-800"
-                  >
-                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-fc-red shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-800 dark:ring-slate-700">
-                      <UIcon :name="action.icon" class="h-4 w-4" aria-hidden="true" />
-                    </span>
-                    <span class="min-w-0 flex-1">
-                      <span class="block truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{{ action.label }}</span>
-                      <span class="mt-0.5 block truncate text-xs text-slate-500 dark:text-slate-400">{{ action.hint }}</span>
-                    </span>
-                    <UIcon name="i-heroicons-arrow-up-right" class="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-fc-red dark:text-slate-600" aria-hidden="true" />
-                  </NuxtLink>
-                </div>
-              </article>
-
-              <article class="admin-surface overflow-hidden xl:col-span-5" aria-labelledby="recent-visits-heading">
+            <section aria-labelledby="recent-visits-heading">
+              <article class="admin-surface overflow-hidden" aria-labelledby="recent-visits-heading">
                 <div class="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-700 sm:px-6">
                   <div>
                     <h2 id="recent-visits-heading" class="text-lg font-semibold tracking-tight text-slate-950 dark:text-white">Dernières informations</h2>
@@ -294,8 +256,6 @@
               </article>
             </section>
           </div>
-        </template>
-      </UTabs>
     </template>
   </div>
 </template>
@@ -309,6 +269,7 @@ definePageMeta({
 })
 
 const visitesStore = useVisitesStore()
+const authStore = useAuthStore()
 const { exportToCsv } = useCsvExport()
 const { fetchGlobalKpi, fetchCoverage } = usePerfectStore()
 const toast = useToast()
@@ -327,18 +288,6 @@ const recentVisits = ref<Array<{
 const supabase: any = useSupabaseClient()
 const numberFormatter = new Intl.NumberFormat('fr-FR')
 const lastRefreshAt = ref<Date | null>(null)
-
-const dashboardTabs = [
-  { key: 'kpis', label: 'KPIs', slot: 'kpis', icon: 'i-heroicons-chart-bar' },
-  { key: 'apercu', label: 'Vue générale', slot: 'apercu', icon: 'i-heroicons-squares-2x2' },
-]
-
-const dashboardShortcuts = [
-  { label: 'Visites terrain', hint: 'Consulter les visites', to: '/admin/visites', icon: 'i-heroicons-clipboard-document-list' },
-  { label: 'Points de vente', hint: 'Gérer le parc actif', to: '/admin/pdv', icon: 'i-heroicons-map-pin' },
-  { label: 'Disponibilité produit', hint: 'Contrôler les stocks', to: '/admin/produits/inventaire', icon: 'i-heroicons-cube' },
-  { label: 'Perfect Store', hint: 'Analyser la conformité', to: '/admin', icon: 'i-heroicons-trophy' },
-]
 
 const dashboardAlerts = computed(() => {
   const alerts: Array<{ key: string; title: string; description: string; value: string; to: string; level: 'warning' | 'critical' }> = []
@@ -554,12 +503,14 @@ onMounted(async () => {
   try {
     await visitesStore.fetchStats()
     lastRefreshAt.value = new Date()
-    if (!stats.value?.total_visites && !stats.value?.total_pdv) {
+    // Statistiques vides : normal pour un compte agence (elles portent sur tout
+    // le parc, pas sur son agence) ; sinon on le signale sans jargon.
+    if (!stats.value?.total_visites && !stats.value?.total_pdv && !authStore.isAgence) {
       toast.add({
-        title: 'Aucune donnée',
-        description: 'Les vues SQL ne semblent pas configurées. Exécutez les migrations Supabase.',
+        title: 'Aucune statistique pour l’instant',
+        description: 'Les chiffres apparaîtront dès que des visites auront été enregistrées. Si ce n’est pas normal, prévenez l’administrateur technique.',
         color: 'amber',
-        icon: 'i-heroicons-exclamation-triangle',
+        icon: 'i-heroicons-information-circle',
         timeout: 8000,
       })
     }

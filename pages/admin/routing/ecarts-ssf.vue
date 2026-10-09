@@ -115,17 +115,19 @@
       </table>
     </div>
 
-    <p class="text-xs text-gray-500 dark:text-gray-400">
-      Sources : SSF de chaque jour dans
-      <NuxtLink to="/admin/referentiels?liste=routing_mensuel" class="font-semibold text-fc-red underline">Référentiels › Routing mensuel</NuxtLink>
-      (fichier de l’agence : SSF de chaque jour et semaine du mois), routing des SSF dans
-      <NuxtLink to="/admin/import-export" class="font-semibold text-fc-red underline">Import / Export › Imports terrain</NuxtLink>
-      (export clients DMS). L’export DMS ne donne pas le jour de passage : un PDV du routing d’un SSF vaut pour tous ses jours.
+    <!-- D'où viennent les données ; les liens ne s'affichent qu'à qui peut les ouvrir. -->
+    <p class="text-sm text-slate-600 dark:text-slate-300">
+      D'où viennent ces données : le vendeur du distributeur (SSF) prévu chaque jour vient du routing mensuel de l’agence
+      (<NuxtLink v-if="peutOuvrir('/admin/referentiels')" to="/admin/referentiels?liste=routing_mensuel" class="font-semibold text-brand-600 underline underline-offset-2">Référentiels › Routing mensuel</NuxtLink><span v-else>Référentiels › Routing mensuel</span>) ;
+      les clients de chaque vendeur viennent du fichier du distributeur (DMS), chargé dans
+      <NuxtLink v-if="peutOuvrir('/admin/import-export')" to="/admin/import-export" class="font-semibold text-brand-600 underline underline-offset-2">Import / Export</NuxtLink><span v-else>Import / Export</span>.
+      Ce fichier ne donne pas le jour de passage : un client d’un vendeur compte pour tous ses jours.
     </p>
   </div>
 </template>
 
 <script setup lang="ts">
+const { peutOuvrir } = useAdminNavigation()
 // Contrôle d'écart SSF ↔ merchandiser (réunion client du 08/10/2026). Données
 // calculées en base (RPC ecarts_binome_resume / ecarts_binome, migration
 // 20261008140000) : admin et superviseur voient tout, un commercial son équipe.

@@ -5,7 +5,21 @@
       :description="`Couverture du mois par merchandiser des agences ${direction === 'north' ? 'de l’intérieur' : 'd’Abidjan'}${agencesTexte ? ` (${agencesTexte})` : ''} : chaque PDV une fois par mois. Objectif de chaque agent = quotas de la grille sur ses jours de tournée du mois (${objectifAffiche}).`"
     >
       <template #actions>
-        <USelect v-model="direction" :options="OPTIONS_DIRECTION" size="sm" class="w-36" aria-label="Direction" />
+        <!-- Direction : un filtre de la page (pas deux entrées de menu). -->
+        <div class="inline-flex rounded-md border border-slate-300 bg-white p-0.5 dark:border-slate-600 dark:bg-slate-800" role="radiogroup" aria-label="Direction">
+          <button
+            v-for="d in OPTIONS_DIRECTION"
+            :key="d.value"
+            type="button"
+            role="radio"
+            :aria-checked="direction === d.value"
+            class="rounded px-3 py-1 text-sm font-medium transition-colors"
+            :class="direction === d.value ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700'"
+            @click="direction = d.value"
+          >
+            {{ d.label }}
+          </button>
+        </div>
         <UInput v-model="mois" type="month" size="sm" class="w-44" aria-label="Mois" />
         <UButton size="sm" color="gray" variant="soft" icon="i-heroicons-arrow-path" :loading="chargement" @click="charger">Actualiser</UButton>
       </template>
@@ -86,11 +100,15 @@
       </table>
     </div>
 
-    <p class="text-xs text-gray-500 dark:text-gray-400">
-      Réglages : grille des quotas, commune aux directions (elle fixe aussi l'objectif mensuel), et canal des sous-catégories dans
-      <NuxtLink to="/admin/referentiels?liste=quotas_atom" class="font-semibold text-fc-red underline">Référentiels › Quotas</NuxtLink>,
-      routing mensuel de l’agence dans <NuxtLink to="/admin/referentiels?liste=routing_mensuel" class="font-semibold text-fc-red underline">Référentiels › Routing mensuel</NuxtLink>,
-      agences dans <NuxtLink to="/admin/referentiels?liste=agence" class="font-semibold text-fc-red underline">Référentiels › Agences</NuxtLink>.
+    <!-- Liens vers les réglages : seulement ceux que ce compte peut ouvrir. -->
+    <p v-if="peutOuvrir('/admin/referentiels')" class="text-sm text-slate-600 dark:text-slate-300">
+      Réglages :
+      <template v-if="!authStore.isAgence">
+        la grille des quotas, commune aux directions (elle fixe aussi l'objectif du mois), dans
+        <NuxtLink to="/admin/referentiels?liste=quotas_atom" class="font-semibold text-brand-600 underline underline-offset-2">Référentiels › Quotas</NuxtLink> ;
+        les agences dans <NuxtLink to="/admin/referentiels?liste=agence" class="font-semibold text-brand-600 underline underline-offset-2">Référentiels › Agences</NuxtLink> ;
+      </template>
+      le routing mensuel de l’agence dans <NuxtLink to="/admin/referentiels?liste=routing_mensuel" class="font-semibold text-brand-600 underline underline-offset-2">Référentiels › Routing mensuel</NuxtLink>.
     </p>
   </div>
 </template>
@@ -103,6 +121,8 @@ import { DIRECTIONS, libelleDirection, type Direction } from '~/utils/agences'
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const supabase = useSupabaseClient()
+const authStore = useAuthStore()
+const { peutOuvrir } = useAdminNavigation()
 const route = useRoute()
 const router = useRouter()
 const OPTIONS_DIRECTION = DIRECTIONS.filter(d => d.value !== 'mt').map(d => ({ value: d.value, label: d.court }))
