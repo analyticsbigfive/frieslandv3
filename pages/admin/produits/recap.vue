@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-6">
     <AdminPageHeader
-      title="Récapitulatif produits"
+      description="Présence en rayon et respect des prix, par famille de produits, sur les visites de la période."
     />
 
     <DashboardFilters
@@ -9,108 +9,127 @@
       @filter="dashboard.fetchVisites()"
     />
 
-    <div v-if="dashboard.loading.value" class="flex items-center justify-center py-12">
-      <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-fc-blue" />
-    </div>
+    <ChargementContenu v-if="dashboard.loading.value" libelle="Chargement des relevés…" />
 
     <template v-else>
-      <!-- Indicateurs compacts par catégorie produit -->
-      <div class="admin-surface grid grid-cols-2 gap-x-5 gap-y-3 px-4 py-3 sm:grid-cols-3 xl:grid-cols-6">
-        <div v-for="cat in productCategories" :key="cat.key" class="min-w-0">
-          <p class="truncate text-[11px] font-semibold text-slate-500 dark:text-slate-400">{{ cat.label }} présent</p>
-          <p class="mt-1 text-xl font-semibold tabular-nums" :class="catPct(cat.key) >= 50 ? 'text-emerald-600' : 'text-amber-600'">{{ catPct(cat.key) }}%</p>
+      <div v-if="!dashboard.totalVisites.value" class="admin-surface p-8 text-center text-sm text-slate-600 dark:text-slate-300">
+        Aucune visite sur la période. Élargissez la période ou changez les filtres.
+      </div>
+
+      <template v-else>
+        <!-- Indicateurs : la réponse d'abord -->
+        <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatsCard title="Visites analysées" :value="dashboard.totalVisites.value" icon="i-heroicons-clipboard-document-list" color="blue" />
+          <StatsCard
+            title="Famille la plus présente"
+            :value="plusPresente?.label || 'Aucune'"
+            format="none"
+            :subtitle="plusPresente ? `en rayon dans ${pourcent(plusPresente.pct)} % des visites` : undefined"
+            icon="i-heroicons-arrow-trending-up"
+            color="green"
+          />
+          <StatsCard
+            title="Famille la moins présente"
+            :value="moinsPresente?.label || 'Aucune'"
+            format="none"
+            :subtitle="moinsPresente ? `en rayon dans ${pourcent(moinsPresente.pct)} % des visites` : undefined"
+            icon="i-heroicons-arrow-trending-down"
+            color="orange"
+          />
+          <StatsCard
+            title="Prix respectés"
+            :value="`${pctPrixGlobal} %`"
+            format="none"
+            subtitle="des relevés où la famille est en rayon"
+            icon="i-heroicons-banknotes"
+            color="green"
+          />
         </div>
-      </div>
 
-      <!-- Pie charts côte à côte -->
-      <h2 class="text-base font-semibold text-slate-900 dark:text-white">Présence par famille de produit</h2>
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <ClientOnly>
-          <div v-for="cat in productCategories" :key="cat.key" class="admin-surface p-4">
-            <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 text-center">{{ cat.label }}</h4>
-            <ChartsPieChart
-              :labels="['Absent', 'Présent']"
-              :values="[catAbsent(cat.key), catPresent(cat.key)]"
-              :colors="['#D1D5DB', cat.color]"
-              height="sm"
-              :show-percentages="true"
-            />
+        <!-- Une ligne par famille : présence en rayon puis prix respectés -->
+        <section class="admin-surface overflow-hidden">
+          <div class="px-5 py-4">
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Présence et prix par famille de produits</h2>
+            <p class="mt-0.5 text-sm text-slate-600 dark:text-slate-300">
+              Présence : part des visites où la famille est en rayon. Prix respectés : part de ces visites où le prix relevé est conforme.
+            </p>
           </div>
-        </ClientOnly>
-      </div>
-
-      <!-- Prix respectés par famille -->
-      <h2 class="text-base font-semibold text-slate-900 dark:text-white">Prix respectés</h2>
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <ClientOnly>
-          <div v-for="cat in productCategories" :key="cat.key + '_prix'" class="admin-surface p-4">
-            <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 text-center">{{ cat.label }} prix</h4>
-            <ChartsPieChart
-              :labels="['Non respecté', 'Respecté']"
-              :values="[prixNon(cat.key), prixOui(cat.key)]"
-              :colors="['#EF4444', '#10B981']"
-              height="sm"
-              :show-percentages="true"
-            />
+          <p
+            v-if="!lignes.length"
+            class="border-t border-slate-200 px-5 py-8 text-center text-sm text-slate-600 dark:border-slate-700 dark:text-slate-300"
+          >
+            Aucune famille de produits n'est active dans le formulaire. Ajoutez-en dans Réglages, Produits du formulaire.
+          </p>
+          <div v-else class="overflow-x-auto border-t border-slate-200 dark:border-slate-700">
+            <table class="admin-table" data-no-column-tools>
+              <thead>
+                <tr>
+                  <th>Famille de produits</th>
+                  <th class="min-w-[14rem]">Présence en rayon</th>
+                  <th class="min-w-[14rem]">Prix respectés</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="l in lignes" :key="l.key">
+                  <td>
+                    <span class="flex items-center gap-2 font-medium text-slate-900 dark:text-white">
+                      <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="{ backgroundColor: couleurFamille(l.key) }" aria-hidden="true" />
+                      {{ l.label }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="flex items-baseline justify-between gap-3">
+                      <strong class="font-semibold tabular-nums text-slate-900 dark:text-white">{{ pourcent(l.pct) }} %</strong>
+                      <span class="text-xs tabular-nums text-slate-500 dark:text-slate-400">
+                        {{ nombre(l.present) }} visite{{ l.present > 1 ? 's' : '' }}
+                      </span>
+                    </div>
+                    <div class="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700" aria-hidden="true">
+                      <div class="h-full rounded-full" :style="{ width: `${l.pct}%`, backgroundColor: couleurFamille(l.key) }" />
+                    </div>
+                  </td>
+                  <td>
+                    <template v-if="l.present">
+                      <div class="flex items-baseline justify-between gap-3">
+                        <strong class="font-semibold tabular-nums text-slate-900 dark:text-white">{{ l.pctPrix }} %</strong>
+                        <span class="text-xs tabular-nums text-slate-500 dark:text-slate-400">{{ nombre(l.prixOui) }} sur {{ nombre(l.present) }}</span>
+                      </div>
+                      <div class="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700" aria-hidden="true">
+                        <div class="h-full rounded-full" :style="{ width: `${l.pctPrix}%`, backgroundColor: STATUT.bon }" />
+                      </div>
+                    </template>
+                    <span v-else class="text-sm text-slate-500 dark:text-slate-400">Pas de relevé de prix</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-        </ClientOnly>
-      </div>
-
-      <!-- Tableau récapitulatif global -->
-      <div class="admin-surface overflow-hidden">
-        <div class="border-b border-slate-100 px-5 py-4 dark:border-slate-700">
-          <h3 class="font-semibold text-slate-900 dark:text-white">Tableau récapitulatif</h3>
-        </div>
-        <table class="w-full">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="text-left text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">Catégorie</th>
-              <th class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">Présent</th>
-              <th class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">% Présence</th>
-              <th class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">Prix respectés</th>
-              <th class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">% Prix</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100">
-            <tr v-for="cat in productCategories" :key="cat.key" class="hover:bg-gray-50 dark:hover:bg-gray-700">
-              <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">{{ cat.label }}</td>
-              <td class="px-4 py-3 text-center text-sm font-bold text-green-600">{{ catPresent(cat.key) }}</td>
-              <td class="px-4 py-3 text-center">
-                <div class="flex items-center justify-center gap-2">
-                  <div class="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div class="h-full rounded-full" :style="{ width: catPct(cat.key) + '%', backgroundColor: cat.color }" />
-                  </div>
-                  <span class="text-xs font-medium text-gray-600">{{ catPct(cat.key) }}%</span>
-                </div>
-              </td>
-              <td class="px-4 py-3 text-center text-sm font-bold text-red-600">{{ prixOui(cat.key) }}</td>
-              <td class="px-4 py-3 text-center text-sm">
-                {{ catPresent(cat.key) > 0 ? Math.round(prixOui(cat.key) / catPresent(cat.key) * 100) : 0 }}%
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        </section>
+      </template>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
 import { categoriesProduitsActives } from '~/utils/products'
+import { STATUT, couleurFamille } from '~/utils/chartPalette'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const dashboard = useDashboardDirection()
 
+// Pourcentages à la française (virgule décimale).
+const pourcent = (n: number) => n.toLocaleString('fr-FR')
+
+// Nombres à la française (« 9 587 »).
+const nombre = (n: number) => n.toLocaleString('fr-FR')
+
 // Catégories actives du catalogue (Paramètres › Produits du formulaire).
 const { charger: chargerCatalogue } = useCatalogueReleve()
-const productCategories = computed(() => categoriesProduitsActives().map(c => ({ key: c.key, label: c.label, color: c.color })))
+const productCategories = computed(() => categoriesProduitsActives().map(c => ({ key: c.key, label: c.label })))
 
 function catPresent(key: string) {
   return dashboard.countWhere(v => v.data?.produits?.[key]?.present)
-}
-function catAbsent(key: string) {
-  return dashboard.totalVisites.value - catPresent(key)
 }
 function catPct(key: string) {
   return dashboard.pctWhere(v => v.data?.produits?.[key]?.present)
@@ -120,9 +139,32 @@ function prixOui(key: string) {
     v.data?.produits?.[key]?.present && v.data?.produits?.[key]?.prix_respectes
   )
 }
-function prixNon(key: string) {
-  return catPresent(key) - prixOui(key)
-}
+
+// Une ligne par famille, de la plus présente à la moins présente. Mêmes
+// calculs qu'avant (camemberts et tableau), regroupés.
+const lignes = computed(() => productCategories.value
+  .map((cat) => {
+    const present = catPresent(cat.key)
+    const oui = prixOui(cat.key)
+    return {
+      ...cat,
+      present,
+      pct: catPct(cat.key),
+      prixOui: oui,
+      pctPrix: present > 0 ? Math.round(oui / present * 100) : 0,
+    }
+  })
+  .sort((a, b) => b.pct - a.pct || a.label.localeCompare(b.label, 'fr')))
+
+const plusPresente = computed(() => lignes.value[0])
+const moinsPresente = computed(() => (lignes.value.length > 1 ? lignes.value[lignes.value.length - 1] : undefined))
+
+// Prix respectés, toutes familles : relevés conformes / relevés où la famille est en rayon.
+const pctPrixGlobal = computed(() => {
+  const present = lignes.value.reduce((s, l) => s + l.present, 0)
+  const oui = lignes.value.reduce((s, l) => s + l.prixOui, 0)
+  return present ? Math.round(oui / present * 100) : 0
+})
 
 onMounted(() => {
   Promise.all([dashboard.fetchVisites(), chargerCatalogue()])

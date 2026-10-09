@@ -1,102 +1,223 @@
 <template>
   <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">VISIBILITÉ CONCURRENCE — RÉCAPITULATIF</h1>
+    <AdminPageHeader
+      description="Une ligne par visite : marques concurrentes visibles à l'extérieur et à l'intérieur du point de vente."
+    />
 
     <DashboardFilters
       v-model="dashboard.filters.value"
       @filter="dashboard.fetchVisites()"
     />
 
-    <div v-if="dashboard.loading.value" class="flex items-center justify-center py-12">
-      <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-fc-blue" />
-    </div>
+    <ChargementContenu v-if="dashboard.loading.value" variante="lignes" libelle="Chargement des visites…" />
 
     <template v-else>
-      <!-- KPI -->
-      <div class="flex items-center gap-6 text-sm text-gray-500 dark:text-gray-400">
-        <span>Total visites : <strong class="text-gray-900 dark:text-gray-100">{{ dashboard.totalVisites.value }}</strong></span>
-        <span>Lignes affichées : <strong class="text-gray-900 dark:text-gray-100">{{ paginatedRows.length }}</strong></span>
-      </div>
+      <section class="admin-surface overflow-hidden">
+        <div class="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
+          <div class="min-w-0">
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Détail par visite</h2>
+            <p class="mt-0.5 text-sm tabular-nums text-slate-600 dark:text-slate-300">
+              <strong class="font-semibold text-slate-900 dark:text-white">{{ nombre(filteredRows.length) }}</strong>
+              visite{{ filteredRows.length > 1 ? 's' : '' }}
+              <template v-if="filtresActifs"> correspondent aux filtres, sur {{ nombre(dashboard.totalVisites.value) }}</template>
+            </p>
+          </div>
+          <UButton v-if="filtresActifs" color="gray" variant="ghost" size="sm" icon="i-heroicons-x-mark" @click="effacerFiltres">
+            Effacer les filtres du tableau
+          </UButton>
+        </div>
 
-      <!-- Tableau récapitulatif -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-x-auto">
-        <table class="w-full text-xs" data-no-column-tools>
-          <thead class="bg-gray-50 dark:bg-gray-700/50 sticky top-0">
-            <tr>
-              <th class="px-3 py-2 text-left font-semibold text-gray-600">Date</th>
-              <th class="px-3 py-2 text-left font-semibold text-gray-600">PDV</th>
-              <th class="px-3 py-2 text-left font-semibold text-gray-600">Canal</th>
-              <th class="px-3 py-2 text-left font-semibold text-gray-600">Région</th>
-              <th class="px-3 py-2 text-left font-semibold text-gray-600">Zone</th>
-              <th class="px-3 py-2 text-left font-semibold text-gray-600">Commercial</th>
-              <th v-for="m in marques" :key="m.key + '_ext'" class="px-2 py-2 text-center font-semibold" :class="m.textClass">
-                {{ m.label }} Ext.
-              </th>
-              <th v-for="m in marques" :key="m.key + '_int'" class="px-2 py-2 text-center font-semibold" :class="m.textClass">
-                {{ m.label }} Int.
-              </th>
-            </tr>
-            <!-- Column filters -->
-            <tr class="bg-gray-25">
-              <th class="px-3 py-1"><UInput v-model="colFilters.date" size="2xs" placeholder="Filtrer..." class="w-20" /></th>
-              <th class="px-3 py-1"><UInput v-model="colFilters.pdv" size="2xs" placeholder="Filtrer..." class="w-24" /></th>
-              <th class="px-3 py-1">
-                <USelectMenu v-model="colFilters.canal" :options="['', 'General trade', 'Modern trade']" size="2xs" class="w-24" />
-              </th>
-              <th class="px-3 py-1"><UInput v-model="colFilters.region" size="2xs" placeholder="Filtrer..." class="w-20" /></th>
-              <th class="px-3 py-1"><UInput v-model="colFilters.zone" size="2xs" placeholder="Filtrer..." class="w-20" /></th>
-              <th class="px-3 py-1">
-                <USelectMenu v-model="colFilters.commercial" :options="commercialColOptions" size="2xs" class="w-24" searchable searchable-placeholder="..." value-attribute="value" option-attribute="label" />
-              </th>
-              <th v-for="m in marques" :key="m.key + '_ext_f'" class="px-2 py-1">
-                <USelectMenu v-model="colFilters[m.key + '_ext']" :options="presenceOptions" size="2xs" class="w-16" />
-              </th>
-              <th v-for="m in marques" :key="m.key + '_int_f'" class="px-2 py-1">
-                <USelectMenu v-model="colFilters[m.key + '_int']" :options="presenceOptions" size="2xs" class="w-16" />
-              </th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100">
-            <tr v-for="row in paginatedRows" :key="row.visite_id" class="hover:bg-gray-50 dark:hover:bg-gray-700">
-              <td class="px-3 py-2 whitespace-nowrap">{{ formatDate(row.date_visite) }}</td>
-              <td class="px-3 py-2 font-medium text-gray-900 dark:text-gray-100">
-                <div class="flex items-center gap-1">
-                  <span>{{ row.pdv?.nom_pdv || '—' }}</span>
-                  <PDVPhotoModal v-if="row.pdv?.pdv_id" :pdv-id="row.pdv.pdv_id" :pdv-name="row.pdv.nom_pdv" />
-                </div>
-              </td>
-              <td class="px-3 py-2">{{ row.pdv?.canal || '—' }}</td>
-              <td class="px-3 py-2">{{ row.pdv?.region || '—' }}</td>
-              <td class="px-3 py-2">{{ row.pdv?.zone || '—' }}</td>
-              <td class="px-3 py-2">{{ row.commercial }}</td>
-              <td v-for="m in marques" :key="m.key + '_ext_v'" class="px-2 py-2 text-center">
-                <span
-                  class="inline-block w-5 h-5 rounded-full text-white text-[10px] font-bold leading-5"
-                  :class="getExtVal(row, m.key) ? 'bg-green-500' : 'bg-gray-300'"
-                >
-                  {{ getExtVal(row, m.key) ? '✓' : '—' }}
-                </span>
-              </td>
-              <td v-for="m in marques" :key="m.key + '_int_v'" class="px-2 py-2 text-center">
-                <span
-                  class="inline-block w-5 h-5 rounded-full text-white text-[10px] font-bold leading-5"
-                  :class="getIntVal(row, m.key) ? 'bg-green-500' : 'bg-gray-300'"
-                >
-                  {{ getIntVal(row, m.key) ? '✓' : '—' }}
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <ul
+          v-if="marques.length"
+          class="flex flex-wrap gap-x-5 gap-y-1 border-t border-slate-200 px-5 py-2.5 text-xs text-slate-600 dark:border-slate-700 dark:text-slate-300"
+          aria-label="Légende du tableau"
+        >
+          <li class="inline-flex items-center gap-1.5">
+            <UIcon name="i-heroicons-check-circle-20-solid" class="h-4 w-4 text-emerald-700 dark:text-emerald-400" aria-hidden="true" />
+            Marque visible
+          </li>
+          <li class="inline-flex items-center gap-1.5">
+            <UIcon name="i-heroicons-minus-circle" class="h-4 w-4 text-slate-500 dark:text-slate-400" aria-hidden="true" />
+            Marque non visible
+          </li>
+        </ul>
 
-      <AdminPagination
-        :total="filteredRows.length"
-        :page="page"
-        :page-size="perPage"
-        item-label="ligne(s)"
-        @update:page="(p) => page = p"
-      />
+        <div class="overflow-x-auto border-t border-slate-200 dark:border-slate-700">
+          <table class="admin-table" data-no-column-tools>
+            <thead>
+              <tr>
+                <th rowspan="2" class="align-bottom">Date</th>
+                <th rowspan="2" class="align-bottom">Point de vente</th>
+                <th rowspan="2" class="align-bottom">Canal</th>
+                <th rowspan="2" class="align-bottom">Sous-région</th>
+                <th rowspan="2" class="align-bottom">Territoire</th>
+                <th rowspan="2" class="align-bottom">Merchandiser</th>
+                <th
+                  v-if="marques.length"
+                  :colspan="marques.length"
+                  class="border-l border-slate-200 text-center dark:border-slate-700"
+                >
+                  Visible à l'extérieur
+                </th>
+                <th
+                  v-if="marques.length"
+                  :colspan="marques.length"
+                  class="border-l border-slate-200 text-center dark:border-slate-700"
+                >
+                  Visible à l'intérieur
+                </th>
+              </tr>
+              <tr>
+                <th
+                  v-for="(m, i) in marques"
+                  :key="m.key + '_ext'"
+                  class="whitespace-nowrap px-2 pt-0 text-center"
+                  :class="{ 'border-l border-slate-200 dark:border-slate-700': i === 0 }"
+                >
+                  {{ m.label }}
+                </th>
+                <th
+                  v-for="(m, i) in marques"
+                  :key="m.key + '_int'"
+                  class="whitespace-nowrap px-2 pt-0 text-center"
+                  :class="{ 'border-l border-slate-200 dark:border-slate-700': i === 0 }"
+                >
+                  {{ m.label }}
+                </th>
+              </tr>
+              <!-- Filtres par colonne -->
+              <tr class="bg-white dark:bg-slate-800">
+                <th class="py-2"><UInput v-model="colFilters.date" size="xs" placeholder="jj/mm" aria-label="Filtrer par date" class="w-24" /></th>
+                <th class="py-2"><UInput v-model="colFilters.pdv" size="xs" placeholder="Nom" aria-label="Filtrer par point de vente" class="w-32" /></th>
+                <th class="py-2">
+                  <USelectMenu
+                    v-model="colFilters.canal"
+                    :options="optionsCanal"
+                    option-attribute="label"
+                    value-attribute="value"
+                    size="xs"
+                    aria-label="Filtrer par canal"
+                    class="w-36"
+                  />
+                </th>
+                <th class="py-2"><UInput v-model="colFilters.region" size="xs" placeholder="Sous-région" aria-label="Filtrer par sous-région" class="w-28" /></th>
+                <th class="py-2"><UInput v-model="colFilters.zone" size="xs" placeholder="Territoire" aria-label="Filtrer par territoire" class="w-28" /></th>
+                <th class="py-2">
+                  <USelectMenu
+                    v-model="colFilters.commercial"
+                    :options="commercialColOptions"
+                    size="xs"
+                    class="w-36"
+                    searchable
+                    searchable-placeholder="Rechercher…"
+                    value-attribute="value"
+                    option-attribute="label"
+                    aria-label="Filtrer par merchandiser"
+                  />
+                </th>
+                <th
+                  v-for="(m, i) in marques"
+                  :key="m.key + '_ext_f'"
+                  class="px-2 py-2"
+                  :class="{ 'border-l border-slate-200 dark:border-slate-700': i === 0 }"
+                >
+                  <USelectMenu
+                    v-model="colFilters[m.key + '_ext']"
+                    :options="presenceOptions"
+                    placeholder="Toutes"
+                    option-attribute="label"
+                    value-attribute="value"
+                    size="xs"
+                    :aria-label="`Filtrer : ${m.label} à l'extérieur`"
+                    class="w-24"
+                  />
+                </th>
+                <th
+                  v-for="(m, i) in marques"
+                  :key="m.key + '_int_f'"
+                  class="px-2 py-2"
+                  :class="{ 'border-l border-slate-200 dark:border-slate-700': i === 0 }"
+                >
+                  <USelectMenu
+                    v-model="colFilters[m.key + '_int']"
+                    :options="presenceOptions"
+                    placeholder="Toutes"
+                    option-attribute="label"
+                    value-attribute="value"
+                    size="xs"
+                    :aria-label="`Filtrer : ${m.label} à l'intérieur`"
+                    class="w-24"
+                  />
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="!paginatedRows.length">
+                <td :colspan="6 + marques.length * 2" class="py-8 text-center text-slate-600 dark:text-slate-300">
+                  {{ filtresActifs
+                    ? 'Aucune visite ne correspond aux filtres du tableau. Effacez-les pour tout revoir.'
+                    : 'Aucune visite sur la période. Élargissez la période ou changez les filtres.' }}
+                </td>
+              </tr>
+              <tr v-for="row in paginatedRows" :key="row.visite_id">
+                <td class="whitespace-nowrap tabular-nums">{{ formatDate(row.date_visite) }}</td>
+                <td class="max-w-[220px] font-medium text-slate-900 dark:text-white">
+                  <div class="flex items-center gap-1">
+                    <span class="truncate" :title="row.pdv?.nom_pdv || undefined">{{ row.pdv?.nom_pdv || 'Point de vente sans nom' }}</span>
+                    <PDVPhotoModal v-if="row.pdv?.pdv_id" :pdv-id="row.pdv.pdv_id" :pdv-name="row.pdv.nom_pdv" />
+                  </div>
+                </td>
+                <td class="whitespace-nowrap">{{ libelleCanal(row.pdv?.canal) }}</td>
+                <td>{{ row.pdv?.region || '—' }}</td>
+                <td>{{ row.pdv?.zone || '—' }}</td>
+                <td class="whitespace-nowrap">{{ row.commercial || '—' }}</td>
+                <td
+                  v-for="(m, i) in marques"
+                  :key="m.key + '_ext_v'"
+                  class="px-2 text-center"
+                  :class="{ 'border-l border-slate-200 dark:border-slate-700': i === 0 }"
+                >
+                  <span class="inline-flex" :title="getExtVal(row, m.key) ? 'Visible' : 'Non visible'">
+                    <UIcon
+                      :name="getExtVal(row, m.key) ? 'i-heroicons-check-circle-20-solid' : 'i-heroicons-minus-circle'"
+                      class="h-5 w-5"
+                      :class="getExtVal(row, m.key) ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'"
+                      aria-hidden="true"
+                    />
+                    <span class="sr-only">{{ m.label }} à l'extérieur : {{ getExtVal(row, m.key) ? 'visible' : 'non visible' }}</span>
+                  </span>
+                </td>
+                <td
+                  v-for="(m, i) in marques"
+                  :key="m.key + '_int_v'"
+                  class="px-2 text-center"
+                  :class="{ 'border-l border-slate-200 dark:border-slate-700': i === 0 }"
+                >
+                  <span class="inline-flex" :title="getIntVal(row, m.key) ? 'Visible' : 'Non visible'">
+                    <UIcon
+                      :name="getIntVal(row, m.key) ? 'i-heroicons-check-circle-20-solid' : 'i-heroicons-minus-circle'"
+                      class="h-5 w-5"
+                      :class="getIntVal(row, m.key) ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'"
+                      aria-hidden="true"
+                    />
+                    <span class="sr-only">{{ m.label }} à l'intérieur : {{ getIntVal(row, m.key) ? 'visible' : 'non visible' }}</span>
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="border-t border-slate-200 px-5 py-3 dark:border-slate-700">
+          <AdminPagination
+            :total="filteredRows.length"
+            :page="page"
+            :page-size="perPage"
+            item-label="visite(s)"
+            @update:page="(p) => page = p"
+          />
+        </div>
+      </section>
     </template>
   </div>
 </template>
@@ -107,6 +228,9 @@ import { visibiliteConcurrencePresente } from '~/utils/concurrence'
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const dashboard = useDashboardDirection()
+
+// Nombres à la française (« 9 587 »).
+const nombre = (n: number) => n.toLocaleString('fr-FR')
 const { users: cachedUsers, fetchUsers: fetchCachedUsers } = useUsersCache()
 
 // Liste complète des commerciaux (users), pas seulement ceux ayant une visite
@@ -126,12 +250,25 @@ const commercialColOptions = computed(() => {
 // 2026 (clés plates nido_exterieur…) restent lues via
 // visibiliteConcurrencePresente.
 const { marquesVisibilite, charger: chargerMarques } = useMarquesConcurrentes()
-const TEXT_CLASSES = ['text-red-600', 'text-orange-600', 'text-green-600', 'text-purple-600', 'text-blue-600', 'text-pink-600']
 const marques = computed(() =>
-  marquesVisibilite.value.map((m, i) => ({ key: m.cle, label: m.nom.toUpperCase(), textClass: TEXT_CLASSES[i % TEXT_CLASSES.length] })),
+  marquesVisibilite.value.map(m => ({ key: m.cle, label: m.nom })),
 )
 
-const presenceOptions = ['', 'Présent', 'Absent']
+// Valeurs inchangées ('Présent' / 'Absent'), libellés en clair.
+const presenceOptions = [
+  { value: '', label: 'Toutes' },
+  { value: 'Présent', label: 'Visible' },
+  { value: 'Absent', label: 'Non visible' },
+]
+
+// Valeurs de base inchangées ('General trade' / 'Modern trade') : seul
+// l'affichage dit « boutiques (GT) » et « supermarchés (MT) ».
+const optionsCanal = [
+  { value: '', label: 'Tous' },
+  { value: 'General trade', label: 'Boutiques (GT)' },
+  { value: 'Modern trade', label: 'Supermarchés (MT)' },
+]
+const libelleCanal = (canal?: string | null) => optionsCanal.find(o => o.value && o.value === canal)?.label || canal || '—'
 
 const colFilters = reactive<Record<string, string>>({
   date: '',
@@ -141,6 +278,11 @@ const colFilters = reactive<Record<string, string>>({
   zone: '',
   commercial: '',
 })
+
+const filtresActifs = computed(() => Object.values(colFilters).some(Boolean))
+function effacerFiltres() {
+  for (const cle of Object.keys(colFilters)) colFilters[cle] = ''
+}
 
 const page = ref(1)
 const perPage = 100

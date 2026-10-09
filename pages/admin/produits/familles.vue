@@ -28,7 +28,7 @@
         <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <StatsCard title="Visites analysées" :value="dashboard.totalVisites.value" icon="i-heroicons-clipboard-document-list" color="blue" />
           <StatsCard :title="`Visites avec ${nomFamille}`" :value="nbPresence" icon="i-heroicons-check-circle" color="green" />
-          <StatsCard title="Présence de la famille" :value="`${pctPresence} %`" format="none" icon="i-heroicons-chart-bar" color="blue" />
+          <StatsCard title="Présence de la famille" :value="`${pctPresence.toLocaleString('fr-FR')} %`" format="none" icon="i-heroicons-chart-bar" color="blue" />
           <StatsCard title="Prix respectés" :value="`${pctPrix} %`" format="none" icon="i-heroicons-banknotes" color="orange" />
         </div>
 
@@ -57,13 +57,20 @@
           </div>
         </section>
 
-        <div class="admin-surface p-6">
-          <h2 class="mb-4 text-base font-semibold text-slate-900 dark:text-white">Évolution : visites où {{ nomFamille }} est présent</h2>
-          <ClientOnly>
-            <ChartsVisitesLineChart v-if="evoPresence.length" title="" :data="evoPresence" series-label="Visites" subtitle="" />
-            <p v-else class="py-8 text-center text-sm text-slate-600 dark:text-slate-300">Pas assez de visites sur la période pour tracer une évolution.</p>
-          </ClientOnly>
-        </div>
+        <!-- Le graphique porte sa propre carte : pas de carte dans une carte. -->
+        <ClientOnly>
+          <ChartsVisitesLineChart
+            v-if="evoPresence.length"
+            :title="`Évolution : visites où ${nomFamille} est présent`"
+            subtitle="Nombre de visites par semaine."
+            :data="evoPresence"
+            series-label="Visites"
+          />
+          <div v-else class="admin-surface p-6">
+            <h2 class="text-base font-semibold text-slate-900 dark:text-white">Évolution : visites où {{ nomFamille }} est présent</h2>
+            <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Pas assez de visites sur la période pour tracer une évolution. Élargissez la période.</p>
+          </div>
+        </ClientOnly>
       </template>
 
       <!-- ======= Prix ======= -->
@@ -90,13 +97,19 @@
               <p v-else class="py-8 text-center text-sm text-slate-600 dark:text-slate-300">Aucun relevé de prix sur la période.</p>
             </ClientOnly>
           </div>
-          <div class="admin-surface p-6">
-            <h2 class="mb-4 text-base font-semibold text-slate-900 dark:text-white">Évolution des prix respectés</h2>
-            <ClientOnly>
-              <ChartsVisitesLineChart v-if="evoPrix.length" title="" :data="evoPrix" series-label="Visites" subtitle="" />
-              <p v-else class="py-8 text-center text-sm text-slate-600 dark:text-slate-300">Pas assez de visites sur la période pour tracer une évolution.</p>
-            </ClientOnly>
-          </div>
+          <ClientOnly>
+            <ChartsVisitesLineChart
+              v-if="evoPrix.length"
+              title="Évolution des prix respectés"
+              subtitle="Visites par semaine où le prix relevé est conforme."
+              :data="evoPrix"
+              series-label="Visites"
+            />
+            <div v-else class="admin-surface p-6">
+              <h2 class="text-base font-semibold text-slate-900 dark:text-white">Évolution des prix respectés</h2>
+              <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Pas assez de visites sur la période pour tracer une évolution. Élargissez la période.</p>
+            </div>
+          </ClientOnly>
         </div>
       </template>
 
@@ -113,7 +126,7 @@
                 <th>Date</th>
                 <th>Point de vente</th>
                 <th>Canal</th>
-                <th>Région</th>
+                <th>Sous-région</th>
                 <th>Merchandiser</th>
                 <th class="text-center">Famille présente</th>
                 <th class="text-center">Prix respectés</th>
@@ -125,7 +138,7 @@
                 <th>
                   <USelectMenu v-model="filtres.canal" :options="optionsCanal" option-attribute="label" value-attribute="value" size="xs" aria-label="Filtrer par canal" class="w-32" />
                 </th>
-                <th><UInput v-model="filtres.region" size="xs" placeholder="Région" aria-label="Filtrer par région" class="w-24" /></th>
+                <th><UInput v-model="filtres.region" size="xs" placeholder="Sous-région" aria-label="Filtrer par sous-région" class="w-28" /></th>
                 <th>
                   <USelectMenu v-model="filtres.commercial" :options="optionsPersonnes" size="xs" searchable searchable-placeholder="Rechercher…" value-attribute="value" option-attribute="label" aria-label="Filtrer par merchandiser" class="w-32" />
                 </th>
@@ -144,7 +157,7 @@
                 <td class="whitespace-nowrap tabular-nums">{{ formatDate(row.date_visite) }}</td>
                 <td class="max-w-[220px] font-medium text-slate-900 dark:text-white">
                   <div class="flex items-center gap-1">
-                    <span class="truncate">{{ row.pdv?.nom_pdv || 'Sans nom' }}</span>
+                    <span class="truncate">{{ row.pdv?.nom_pdv || 'Point de vente sans nom' }}</span>
                     <PDVPhotoModal v-if="row.pdv?.pdv_id" :pdv-id="row.pdv.pdv_id" :pdv-name="row.pdv.nom_pdv" />
                   </div>
                 </td>
@@ -299,7 +312,7 @@ const Indicateur = defineComponent({
     return () => h('span', { class: 'inline-flex items-center justify-center', title: props.oui ? props.libelleOui : props.libelleNon }, [
       h(resolveComponent('UIcon') as any, {
         name: props.oui ? 'i-heroicons-check-circle-20-solid' : 'i-heroicons-minus-circle',
-        class: props.oui ? 'h-5 w-5 text-emerald-700' : 'h-5 w-5 text-slate-400',
+        class: props.oui ? 'h-5 w-5 text-emerald-700 dark:text-emerald-400' : 'h-5 w-5 text-slate-500 dark:text-slate-400',
         'aria-hidden': 'true',
       }),
       h('span', { class: 'sr-only' }, props.oui ? props.libelleOui : props.libelleNon),

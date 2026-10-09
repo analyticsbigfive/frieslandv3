@@ -59,7 +59,7 @@
         />
       </UFormGroup>
 
-      <div class="flex items-end gap-2">
+      <div class="col-span-2 flex flex-wrap items-end gap-2 lg:col-span-1">
         <UButton size="sm" variant="outline" icon="i-heroicons-arrow-path" @click="emitFilter">Actualiser</UButton>
         <UButton size="sm" variant="ghost" @click="reset">Réinitialiser</UButton>
       </div>

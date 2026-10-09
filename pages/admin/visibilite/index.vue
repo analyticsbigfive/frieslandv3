@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-6">
     <AdminPageHeader
-      title="Visibilité extérieure"
+      description="Éléments de visibilité relevés à l'extérieur des points de vente visités : présence de chaque élément et conformité par niveau."
     />
 
     <DashboardFilters
@@ -12,81 +12,117 @@
 
     <ChargementContenu v-if="dashboard.loading.value" libelle="Chargement des visites…" />
     <template v-else>
-
-    <!-- KPI -->
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <div class="admin-metric-tile">
-        <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Visites analysées</p>
-        <p class="mt-2 text-3xl font-bold tabular-nums text-slate-900 dark:text-white">{{ totalVisites }}</p>
-      </div>
-      <div class="admin-metric-tile">
-        <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Avec visibilité extérieure</p>
-        <p class="mt-2 text-3xl font-bold tabular-nums text-slate-900 dark:text-white">{{ visExtCount }}</p>
-      </div>
-      <VisibilityPresenceTile :present="extTotals.present" :total="extTotals.applicable" />
-    </div>
-
-    <!-- Présence par élément -->
-    <section class="admin-surface p-5 sm:p-6">
-      <div class="mb-5 flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-700">
-        <h2 class="text-base font-semibold text-slate-900 dark:text-white">Présence par élément</h2>
-        <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium tabular-nums text-slate-500 dark:bg-slate-700 dark:text-slate-300">
-          {{ extElements.length }} élément{{ extElements.length > 1 ? 's' : '' }}
-        </span>
-      </div>
-      <div v-if="extElements.length" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        <VisibilityStatTile
-          v-for="el in extElements"
-          :key="el.code"
-          :label="el.label"
-          :present="el.present"
-          :total="el.applicable"
+      <!-- Indicateurs -->
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatsCard title="Visites analysées" :value="totalVisites" icon="i-heroicons-clipboard-document-list" color="blue" />
+        <StatsCard
+          title="Visites avec au moins un élément extérieur"
+          :value="visExtCount"
+          icon="i-heroicons-eye"
+          color="green"
+        />
+        <StatsCard
+          title="Taux de présence des éléments"
+          :value="`${pct(extTotals.present, extTotals.applicable)} %`"
+          format="none"
+          :subtitle="`${nombre(extTotals.present)} présents sur ${nombre(extTotals.applicable)} attendus`"
+          icon="i-heroicons-chart-bar"
+          color="green"
         />
       </div>
-      <p v-else class="text-sm text-slate-400">Aucun élément extérieur pour les segments des visites chargées.</p>
-    </section>
 
-    <!-- Conformité par niveau (éléments requis, aligné score PS) -->
-    <section class="admin-surface p-5 sm:p-6">
-      <div class="mb-1 flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-700">
-        <h2 class="text-base font-semibold text-slate-900 dark:text-white">Conformité par niveau — extérieur</h2>
-        <span class="text-xs text-slate-400">éléments requis uniquement</span>
-      </div>
-      <p class="mb-4 mt-3 text-xs text-slate-500 dark:text-slate-400">
-        Part des PDV dont <strong>tous</strong> les éléments extérieurs <em>requis</em> du niveau sont présents (gate = 100 %).
-        Le score Perfect Store combine extérieur + intérieur ; ceci en est la composante extérieure.
-      </p>
-      <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <VisibilityLevelCard
-          v-for="lvl in extConformity"
-          :key="lvl.key"
-          :level-key="lvl.key"
-          :label="lvl.label"
-          :gate-pass-pct="lvl.gatePassPct"
-          :avg-rate="lvl.avgRate"
-          :total="lvl.total"
-        />
-      </div>
-    </section>
+      <!-- Présence par élément -->
+      <section class="admin-surface p-5 sm:p-6">
+        <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Présence par élément</h2>
+          <span class="text-sm tabular-nums text-slate-600 dark:text-slate-300">
+            {{ extElements.length }} élément{{ extElements.length > 1 ? 's' : '' }}
+          </span>
+        </div>
+        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+          Part des visites où l'élément est présent, parmi celles où il est prévu pour le type de point de vente.
+        </p>
+        <ul v-if="extElements.length" class="mt-5 grid gap-x-10 gap-y-4 md:grid-cols-2">
+          <li v-for="el in extElements" :key="el.code">
+            <div class="flex items-baseline justify-between gap-3 text-sm">
+              <span class="min-w-0 text-slate-700 dark:text-slate-200">{{ el.label }}</span>
+              <span class="shrink-0 tabular-nums text-slate-600 dark:text-slate-300">
+                <strong class="font-semibold text-slate-900 dark:text-white">{{ pct(el.present, el.applicable) }} %</strong>
+                · {{ nombre(el.present) }} sur {{ nombre(el.applicable) }}
+              </span>
+            </div>
+            <div class="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700" aria-hidden="true">
+              <div class="h-full rounded-full" :style="{ width: `${pct(el.present, el.applicable)}%`, backgroundColor: STATUT.bon }" />
+            </div>
+          </li>
+        </ul>
+        <p v-else class="mt-5 text-sm text-slate-600 dark:text-slate-300">
+          Aucun élément extérieur n'est prévu pour les points de vente visités sur la période. Élargissez la période ou changez les filtres.
+        </p>
+      </section>
 
-    <!-- Évolution -->
-    <section class="admin-surface p-5 sm:p-6">
-      <h3 class="mb-4 text-base font-semibold text-slate-900 dark:text-white">Évolution des visites avec visibilité extérieure</h3>
+      <!-- Conformité par niveau (éléments requis, aligné sur le score Perfect Store) -->
+      <section class="admin-surface p-5 sm:p-6">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Conformité par niveau de point de vente</h2>
+        <p class="mt-1 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
+          Part des visites où <strong class="font-semibold text-slate-900 dark:text-white">tous</strong> les éléments extérieurs requis
+          pour le niveau du point de vente sont présents. Le score Perfect Store combine l'extérieur et l'intérieur : ce bloc en montre la part extérieure.
+        </p>
+        <dl class="mt-5 grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div v-for="lvl in extConformity" :key="lvl.key" class="min-w-0">
+            <dt class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ lvl.label }}</dt>
+            <dd v-if="lvl.total" class="mt-1">
+              <p class="text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{{ lvl.gatePassPct }} %</p>
+              <p class="text-xs text-slate-600 dark:text-slate-300">
+                des {{ nombre(lvl.total) }} visite{{ lvl.total > 1 ? 's' : '' }} ont tous les éléments requis
+              </p>
+              <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700" aria-hidden="true">
+                <div class="h-full rounded-full" :style="{ width: `${lvl.gatePassPct}%`, backgroundColor: STATUT.bon }" />
+              </div>
+              <p class="mt-2 text-xs tabular-nums text-slate-600 dark:text-slate-300">
+                En moyenne, {{ lvl.avgRate }} % des éléments requis sont présents.
+              </p>
+            </dd>
+            <dd v-else class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+              Aucune visite d'un point de vente de ce niveau sur la période.
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <!-- Évolution -->
       <ClientOnly>
-        <ChartsVisitesLineChart v-if="evolutionData.length" title="" :data="evolutionData" />
-        <p v-else class="text-sm text-slate-400">Pas assez de données pour tracer l'évolution.</p>
+        <ChartsVisitesLineChart
+          v-if="evolutionData.length"
+          title="Évolution des visites avec visibilité extérieure"
+          subtitle="Nombre de visites, par semaine, où au moins un élément extérieur est présent."
+          series-label="Visites"
+          :data="evolutionData"
+        />
+        <section v-else class="admin-surface p-5 sm:p-6">
+          <h2 class="text-base font-semibold text-slate-900 dark:text-white">Évolution des visites avec visibilité extérieure</h2>
+          <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+            Pas assez de visites sur la période pour tracer une évolution. Élargissez la période.
+          </p>
+        </section>
       </ClientOnly>
-    </section>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
+import { STATUT } from '~/utils/chartPalette'
+
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const dashboard = useDashboardDirection()
 const { fetchElements, aggregate, hasPresence, elementTotals } = useVisibilityAggregation()
 const { fetchConformity, byLevel } = useVisibilityConformity()
+
+const pct = (n: number, d: number) => (d ? Math.round((n / d) * 100) : 0)
+
+// Nombres à la française (« 9 587 »).
+const nombre = (n: number) => n.toLocaleString('fr-FR')
 
 const totalVisites = computed(() => dashboard.visites.value.length)
 const visExtCount = computed(() => dashboard.visites.value.filter(v => hasPresence(v, 'exterieure')).length)
