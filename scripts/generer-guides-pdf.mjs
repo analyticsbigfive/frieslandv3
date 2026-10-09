@@ -3,7 +3,7 @@
  *
  * Usage :
  *   node scripts/generer-guides-pdf.mjs
- *       -> les 4 guides génériques : docs/guides/GUIDE-{ADMIN,COMMERCIAL,MERCHANDISER,MERCHANDISER-ATOM}.pdf
+ *       -> les 5 guides génériques : docs/guides/GUIDE-{ADMIN,ADMIN-ATOM,COMMERCIAL,MERCHANDISER,MERCHANDISER-ATOM}.pdf
  *   node scripts/generer-guides-pdf.mjs --utilisateurs
  *       -> en plus, un guide personnalisé par commercial et merchandiseur actif
  *          (nom, e-mail, territoires, équipe / commercial responsable) dans
@@ -66,6 +66,13 @@ const ROLES = {
     titre: 'Guide du merchandiseur',
     libelleRole: 'Merchandiseur · visites PDV',
     intro: 'Ce guide accompagne les merchandiseurs dans l’application mobile : tournée du jour, visites des points de vente, relevés produits, visibilité et actions à réaliser.',
+  },
+  admin_atom: {
+    fichier: 'GUIDE-ADMIN-ATOM',
+    source: 'admin-atom',
+    titre: 'Guide de l’administrateur Atom',
+    libelleRole: 'Agence Atom · routing mensuel',
+    intro: 'Ce guide accompagne le responsable du routing de l’agence Atom dans le back-office : les règles du client, le fichier du mois avec ses points GPS, l’import, les corrections en cours de mois et le contrôle des tournées.',
   },
   merchandiser_atom: {
     fichier: 'GUIDE-MERCHANDISER-ATOM',
