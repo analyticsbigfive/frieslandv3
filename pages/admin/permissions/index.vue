@@ -46,7 +46,7 @@
         <strong class="text-slate-900 dark:text-white">Agence</strong> : en plus des cases cochées, le compte agence ouvre toujours
         {{ ecransAgence.join(', ') }}, limités au routing de ses merchandisers.
       </p>
-      <p>Utilisateurs et Permissions restent réservés à l'administrateur.</p>
+      <p>Utilisateurs, Équipes et Permissions restent réservés à l'administrateur.</p>
     </div>
   </div>
 </template>
