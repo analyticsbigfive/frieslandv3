@@ -69,6 +69,8 @@ export default defineEventHandler(async (event) => {
     const nom = String(row?.nom || '').trim().substring(0, 100)
     const roleRaw = String(row?.role || '').trim().toLowerCase()
     if (roleRaw && !USER_ROLES.includes(roleRaw as UserRole)) { fail(`Rôle invalide : ${roleRaw}`); continue }
+    // Le fichier ne porte pas l'agence : un compte agence se crée depuis sa fiche.
+    if (roleRaw === 'agence') { fail('Rôle agence : créer ou modifier ce compte depuis sa fiche (agence obligatoire)'); continue }
     const isActiveRaw = String(row?.is_active ?? '').trim()
     const isActive = isActiveRaw ? parseBool(isActiveRaw) : null
     if (isActiveRaw && isActive === null) { fail(`Valeur is_active invalide : ${isActiveRaw}`); continue }

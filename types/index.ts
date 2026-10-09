@@ -5,7 +5,8 @@
 import { catalogueProduits, getSkus } from '../utils/products'
 
 // ---- Enums & Constantes ----
-export type UserRole = 'admin' | 'superviseur' | 'merchandiser' | 'commercial'
+// agence : responsable du routing d'une agence (profiles.employeur), limité à ses merchandisers.
+export type UserRole = 'admin' | 'superviseur' | 'merchandiser' | 'commercial' | 'agence'
 /** Code d'agence (table agence) : friesland, atom (Atom BTL, South), agence-north… */
 export type Employeur = 'friesland' | 'atom' | (string & {})
 /** perimetre = tout le portefeuille chaque jour ; quota = N PDV par canal et par jour (Atom). */
