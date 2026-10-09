@@ -44,3 +44,30 @@ Script : `scripts/reponses-client-2026-10-09.mjs` (simulation par défaut, `--ap
 - **SSF de Guihi** : 4 vendredis « Non nommé », 4 samedis « À préciser ».
 - **Compte homonyme** `moustapha.ndiaye@friesland-terrain.ci` (Friesland, actif) : ancien compte de test ou personne réelle ?
 - **Port-Bouët vacant** : à réaffecter quand un merchandiser sera nommé.
+
+## Soir du 09/10 : lieux rattachés par commune
+
+Vérification après l'import du routing mensuel (lot du 09/10, 16 h 50) : 8 cases avaient un lieu rattaché hors de leur commune, dont 4 hors d'Abidjan. L'import cherchait le libellé dans tout le pays quand il n'existait pas dans le secteur. Cas concernés : « Kennedy 2 » de Seregone à Daloa (tournée du samedi 10/10), « Grand marché » de Gui à Daloa, « Château » de Yao à Adzopé, « Azito » de Deheo dans la zone « Marcory ».
+
+- **Tout de suite** : `~/Downloads/correction-tournees-hors-commune-2026-10-09.sql`, à coller dans l'éditeur SQL. Il remet les périmètres d'avant l'import (5 merchandisers), désactive les 5 règles hors commune et recalcule les tournées à venir.
+- **Fichier d'Elias avec Commune et Quartier** : `~/Downloads/Routing_mensuel_merchandisers_avec_quartiers_2026-10-09.csv`. On y a ajouté le samedi S4 d'Abbé (Quartier rouge, Tamdia Aliou), absent du CSV.
+- **Nouvel import (PR `jl/routing-commune`)** : un lieu se cherche dans les zones de sa commune et dans les zones principales du portefeuille, jamais ailleurs. Ordre : alias, libellé exact, libellé approché (signalé), puis la commune (portefeuille du merchandiser dans la commune).
+- **Simulation sur la production** (lecture seule) : 215 cases.
+
+  | Rattachement | Résultat |
+  |---|---|
+  | Libellé exact | 65 lieux |
+  | Alias | 76 lieux |
+  | Approché | 3 lieux : Lubafrik → LUBAFRIQUE, Arras → Aras, Quartier Apollo → Quartier Appolo |
+  | Niveau commune | 58 lieux (55 cases) |
+  | Portefeuille entier | 1 case (Quartier rouge, sans commune) |
+
+  Aucun PDV hors d'Abidjan.
+- **Journées trop courtes** : `etapes_quota_du_jour` complète une case trop petite avec le portefeuille (cas de Pangolin et d'Ananeraie).
+- **Correction d'une case** dans Référentiels › Routing mensuel : les règles du merchandiser et ses tournées des 7 jours à venir sont refaites aussitôt.
+
+Ordre :
+1. Le SQL ci-dessus.
+2. Les migrations `20261009110000` (déjà en production), `20261009120000` et `20261009130000`.
+3. Fusionner la PR.
+4. Imports terrain › Routing mensuel avec le CSV corrigé : simuler, relire, appliquer.

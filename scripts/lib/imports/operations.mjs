@@ -13,7 +13,7 @@
  * Chaque opération est idempotente : la rejouer donne le même état.
  * Aucune dépendance Node : module partagé navigateur / serveur / scripts.
  */
-import { toutesLesLignes } from '../commun.mjs'
+import { norm, toutesLesLignes } from '../commun.mjs'
 
 // ---------------------------------------------------------------------------
 // Validation
@@ -90,8 +90,9 @@ const VALIDATEURS = {
       exiger(Number.isInteger(l.semaine_du_mois) && l.semaine_du_mois >= 1 && l.semaine_du_mois <= 5, 'case : semaine_du_mois 1-5 requise')
       exiger(l.ssf == null || refSsf(l.ssf), 'case : ssf { id | nom } ou null')
       exiger(l.commercial_id == null || UUID.test(l.commercial_id), 'case : commercial_id invalide')
-      for (const k of ['secteur', 'point_visite', 'zone', 'ssf_texte', 'type_engin', 'distributeur', 'source']) exiger(texteOuNul(l[k], 200), `case : ${k} invalide`)
+      for (const k of ['secteur', 'commune', 'point_visite', 'zone', 'ssf_texte', 'type_engin', 'distributeur', 'source']) exiger(texteOuNul(l[k], 200), `case : ${k} invalide`)
       exiger(estListeTextes(l.quartiers || [], 50, 200), 'case : quartiers invalides')
+      exiger(estListeTextes(l.lieux || [], 50, 300) && (l.lieux || []).every(x => x.includes('›')), 'case : lieux « ZONE›QUARTIER » invalides')
     }
   },
   'regles_mensuelles.remplacer'(op) {
@@ -216,12 +217,16 @@ async function idDistributeur(sb, nom) {
 
 const EXECUTEURS = {
   async 'ssf.creer'(sb, op) {
-    const { data: existant } = await sb.from('ssf').select('id').eq('nom', op.nom.trim()).limit(1)
-    if (existant?.length) return `SSF « ${op.nom} » déjà présent`
+    // Nom unique sans tenir compte des accents ni de la casse (index ssf_nom_unique).
+    const { data: tous, error } = await sb.from('ssf').select('id,nom')
+    if (error) throw new Error(`ssf.creer : ${error.message}`)
+    if ((tous || []).some(s => norm(s.nom) === norm(op.nom))) return `SSF « ${op.nom} » déjà présent`
+    const distributeurId = await idDistributeur(sb, op.distributeur)
+    if (!distributeurId) throw new Error(`ssf.creer : distributeur « ${op.distributeur || '—'} » introuvable pour « ${op.nom} »`)
     ok(await sb.from('ssf').insert({
       nom: op.nom.trim(),
       telephone: op.telephone || null,
-      distributeur_id: await idDistributeur(sb, op.distributeur),
+      distributeur_id: distributeurId,
       a_confirmer: false,
       source: op.source || 'import',
     }), 'ssf.creer')
@@ -286,8 +291,8 @@ const EXECUTEURS = {
     for (const l of op.lignes) {
       lignes.push({
         merchandiser_id: op.user_id, jour_semaine: l.jour_semaine, semaine_du_mois: l.semaine_du_mois,
-        secteur: l.secteur || null, point_visite: l.point_visite || null, zone: l.zone || null,
-        quartiers: [...new Set(l.quartiers || [])], ssf_id: l.ssf ? await idSsf(sb, l.ssf) : null,
+        secteur: l.secteur || null, commune: l.commune || null, point_visite: l.point_visite || null, zone: l.zone || null,
+        quartiers: [...new Set(l.quartiers || [])], lieux: [...new Set(l.lieux || [])], ssf_id: l.ssf ? await idSsf(sb, l.ssf) : null,
         ssf_texte: l.ssf_texte || null, type_engin: l.type_engin || null, commercial_id: l.commercial_id || null,
         distributeur: l.distributeur || null, source: l.source || op.source || 'import', actif: true,
       })

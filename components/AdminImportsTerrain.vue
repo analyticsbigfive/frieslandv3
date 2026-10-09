@@ -185,8 +185,8 @@ const IMPORTS: DefImport[] = [
   {
     type: 'routing-mensuel',
     titre: 'Routing mensuel des merchandisers (fichier de l’agence)',
-    description: 'Déploiement mensuel de l’agence : pour chaque merchandiser, jour et semaine du mois (Occurrence), le point de visite et le SSF du jour (ou « Aucun SSF »). Met à jour le routing sans doublon et les règles de tournée ; un lieu non reconnu laisse le portefeuille ce jour-là. Seuls les merchandisers cités changent.',
-    fichiers: [{ cle: 'principal', libelle: 'Fichier de l’agence (.xlsx ou .csv) : Merchandiser, Jour, Occurrence, Point de visite, SSF…', requis: true, accept: '.xlsx,.csv' }],
+    description: 'Déploiement mensuel de l’agence : pour chaque merchandiser, jour et semaine du mois (Occurrence), la commune, le quartier ou point de visite et le SSF du jour (ou « Aucun SSF »). Les lieux sont cherchés dans la commune et le portefeuille du merchandiser, jamais ailleurs ; un quartier introuvable donne le portefeuille dans la commune ce jour-là. Met à jour le routing sans doublon et les règles de tournée. Seuls les merchandisers cités changent.',
+    fichiers: [{ cle: 'principal', libelle: 'Fichier de l’agence (.xlsx ou .csv) : Merchandiser, Jour, Occurrence, Commune, Quartier, Point de visite, SSF…', requis: true, accept: '.xlsx,.csv' }],
   },
   {
     type: 'routing-ssf-dms',

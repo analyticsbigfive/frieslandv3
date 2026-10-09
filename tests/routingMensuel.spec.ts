@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 // @ts-ignore module JS sans types
-import { departagerHomonymes, lireRoutingMensuel, lireRoutingMensuelCsv, lireSemaines, simulerRoutingMensuel } from '../scripts/lib/imports/routing-mensuel.mjs'
+import {
+  approcherLieu, departagerHomonymes, indexerPdv, lireRoutingMensuel, lireRoutingMensuelCsv, lireSemaines, reglesDuRouting, simulerRoutingMensuel, territoireDe,
+} from '../scripts/lib/imports/routing-mensuel.mjs'
 // @ts-ignore module JS sans types
 import { feuillesDepuisCsv, motsProches, trouverPersonne } from '../scripts/lib/commun.mjs'
 // @ts-ignore module JS sans types
@@ -193,5 +195,98 @@ describe('simulation du routing mensuel', () => {
 
   it('sans la migration : application bloquée', () => {
     expect(simulerRoutingMensuel(lireRoutingMensuel(feuilles), donnees({ migrationAppliquee: false })).bloquants).toHaveLength(1)
+  })
+})
+
+// Fichier du 09/10 avec les colonnes « Commune » et « Quartier » : le lieu se
+// cherche dans la commune et le portefeuille, jamais ailleurs (« Kennedy 2 »
+// d'Abobo était parti à Daloa).
+describe('rattachement par commune', () => {
+  const ENTETE_C = ['Zone', 'Commune', 'Quartier', 'Merchandiser', 'Distributeur', 'Sales rep', 'Jour', 'Occurrence', 'Point de visite', 'SSF', 'Type SSF']
+  const LIGNES_C = [
+    L('Abobo - Anyama', 'Abobo', 'Kennedy 2', 'Tano Venance', 'Niare & Frères', 'M. Rachid', 'Samedi', '2', 'Kennedy 2', 'Yapi Athanase', 'Mini van'),
+    L('Abobo - Anyama', 'Anyama', 'Anyama', 'Tano Venance', 'Niare & Frères', 'M. Rachid', 'Vendredi', '2', 'Anyama', 'Aucun SSF', '-'),
+    L('Abobo - Anyama', 'Abobo', 'Samaké 2', 'Tano Venance', 'Niare & Frères', 'M. Rachid', 'Lundi', '1', 'Samaké 2', 'Aucun SSF', '-'),
+    L('Abobo - Anyama', 'Abobo', 'Samaké et BC', 'Tano Venance', 'Niare & Frères', 'M. Rachid', 'Lundi', '2', 'Samaké et BC', 'Aucun SSF', '-'),
+    L('Abobo - Anyama', 'Abobo', 'Château', 'Tano Venance', 'Niare & Frères', 'M. Rachid', 'Samedi', '3', 'Château', 'Aucun SSF', '-'),
+    L('Cocody', 'Cocody', 'Anono', 'Bamba Bernadin', 'PRODISMA', 'Mme Tea', 'Mardi', '1', 'Anono', 'Aucun SSF', '-'),
+  ]
+  const feuillesC = [{ nom: 'Routing', lignes: [ENTETE_C, ...LIGNES_C].map((v, i) => ({ n: i + 1, cellules: ['', ...v] })) }]
+  const pdvsC = [
+    pdv('P3', 'ABOBO 1', 'SAMAKE'), pdv('P6', 'ABOBO 1', 'BC'), pdv('P7', 'ABOBO 2', 'ANYAMA'), pdv('P8', 'ABOBO 1', 'PLATEAU DOKOUI'),
+    pdv('D1', 'DALOA', 'Kennedy 2'), pdv('D2', 'DALOA', 'Kennedy 2'), pdv('Z1', 'ADZOPE', 'CHÂTEAU'),
+    ...[1, 2, 3, 4, 5].map(n => pdv(`N${n}`, 'COCODY 2', `ANONO ${n}`)), pdv('P5', 'COCODY 2', 'RIVIERA'),
+  ]
+  const portefeuille = [{ template_id: T_DMS, pdv_id: 'P3', position_order: 1 }, { template_id: T_DMS, pdv_id: 'P6', position_order: 2 }, { template_id: T_DMS, pdv_id: 'P8', position_order: 3 }]
+  const d = donnees({ pdvs: pdvsC, reglesPdv: [{ template_id: T_SSF, pdv_id: 'P3', position_order: 1 }, ...portefeuille], aliasImport: donnees().aliasImport.filter((a: any) => a.type !== 'quartier') })
+  const lignesC = lireRoutingMensuel(feuillesC)
+  const res = simulerRoutingMensuel(lignesC, d, { fichier: 'routing-communes.csv', debut: '2026-10-12' })
+  const ops = res.operations as any[]
+  const casesDe = (userId: string) => ops.find(o => o.type === 'routing_mensuel.remplacer' && o.user_id === userId).lignes
+  const caseDe = (userId: string, j: number, s: number) => casesDe(userId).find((l: any) => l.jour_semaine === j && l.semaine_du_mois === s)
+  const reglesDe = (userId: string) => ops.find(o => o.type === 'regles_mensuelles.remplacer' && o.user_id === userId).regles
+
+  it('lit Commune et Quartier ; le point de visite reste le libellé', () => {
+    expect(lignesC[0]).toMatchObject({ secteur: 'Abobo - Anyama', commune: 'Abobo', lieu: 'Kennedy 2', point: 'Kennedy 2' })
+  })
+
+  it('territoire : zones de la commune, ou quartier quand la commune n’est pas une zone', () => {
+    const index = indexerPdv(pdvsC)
+    expect([...territoireDe('Abobo', 'Abobo - Anyama', index).zones].sort()).toEqual(['ABOBO 1', 'ABOBO 2'])
+    const anyama = territoireDe('Anyama', 'Abobo - Anyama', index)
+    expect(anyama.quartiers.map((q: any) => q.quartier)).toEqual(['ANYAMA'])
+    expect([...anyama.zones]).toEqual(['ABOBO 2'])
+  })
+
+  it('« Kennedy 2 » d’Abobo n’est jamais rattaché à Daloa : portefeuille dans la commune', () => {
+    const c = caseDe(M2, 6, 2)
+    expect(c).toMatchObject({ commune: 'Abobo', lieux: [], quartiers: [], zone: null })
+    const regle = reglesDe(M2).find((r: any) => r.days_of_week[0] === 6 && r.semaines_du_mois.includes(2))
+    expect(regle.pdv_ids.sort()).toEqual(['P3', 'P6', 'P8'])
+    expect(regle.label).toBe('Routing mensuel — Samedi S2 — Kennedy 2')
+    expect(JSON.stringify(ops)).not.toMatch(/DALOA|ADZOPE/)
+  })
+
+  it('« Château » (seulement à Adzopé) : la commune d’Abobo', () => {
+    expect(caseDe(M2, 6, 3)).toMatchObject({ lieux: [], commune: 'Abobo' })
+    expect(res.rapport).toMatch(/\| Abobo - Anyama \| Abobo \| Château \| commune \(portefeuille\)/)
+  })
+
+  it('commune qui est un quartier : Anyama → ABOBO 2 › ANYAMA', () => {
+    expect(caseDe(M2, 5, 2).lieux).toEqual(['ABOBO 2›ANYAMA'])
+  })
+
+  it('approché dans la commune : numéro retiré, « X et Y » découpé, signalé', () => {
+    expect(caseDe(M2, 1, 1).lieux).toEqual(['ABOBO 1›SAMAKE'])
+    expect(caseDe(M2, 1, 2).lieux.sort()).toEqual(['ABOBO 1›BC', 'ABOBO 1›SAMAKE'])
+    expect(res.resume.lieuxApproches).toBe(2)
+    expect(res.rapport).toMatch(/Lieux approchés dans la commune/)
+    expect(res.csv['lieux-approches.csv']).toMatch(/Samaké 2/)
+  })
+
+  it('plus de 4 quartiers approchés : rien n’est tranché (commune)', () => {
+    const index = indexerPdv(pdvsC)
+    expect(approcherLieu('Anono', new Set(['COCODY 2']), index)).toHaveLength(5)
+    expect(caseDe(M3, 2, 1)).toMatchObject({ lieux: [], commune: 'Cocody' })
+    expect(res.rapport).toMatch(/5 quartiers approchés, trop pour trancher/)
+  })
+
+  it('les règles se refont à l’identique depuis les cases (correction dans l’admin)', () => {
+    const index = indexerPdv(pdvsC)
+    const ctx = { index, portefeuille: ['P3', 'P6', 'P8'], territoires: ['ABOBO 1'], zonesPortefeuille: ['ABOBO 1'], debut: '2026-10-12', origine: 'routing-communes.csv' }
+    const refaites = reglesDuRouting(casesDe(M2), ctx)
+    const resume = (rs: any[]) => rs.map(r => [r.label, r.days_of_week, r.semaines_du_mois, [...r.pdv_ids].sort()])
+    expect(resume(refaites)).toEqual(resume(reglesDe(M2)))
+  })
+
+  it('opérations valides avec commune et lieux', () => {
+    for (const op of [...ops, ...res.retour]) expect(() => validerOperation(op, OPERATIONS_PAR_IMPORT['routing-mensuel'])).not.toThrow()
+    const op = { type: 'routing_mensuel.remplacer', user_id: M2, source: 'x', lignes: [{ jour_semaine: 1, semaine_du_mois: 1, lieux: ['SANS SEPARATEUR'] }] }
+    expect(() => validerOperation(op, OPERATIONS_PAR_IMPORT['routing-mensuel'])).toThrow(/lieux/)
+  })
+
+  it('SSF à créer sans distributeur reconnu : application bloquée', () => {
+    const f = [{ nom: 'R', lignes: [ENTETE_C, L('Abobo', 'Abobo', 'Samaké', 'Tano Venance', 'Distrib Fantôme', 'M. Rachid', 'Lundi', '1', 'Samaké', 'Vendeur Sans Maison', 'Moto')].map((v, i) => ({ n: i + 1, cellules: ['', ...v] })) }]
+    expect(simulerRoutingMensuel(lireRoutingMensuel(f), d).bloquants.join(' ')).toMatch(/Vendeur Sans Maison.*distributeur introuvable/)
   })
 })
