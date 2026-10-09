@@ -290,3 +290,69 @@ describe('rattachement par commune', () => {
     expect(simulerRoutingMensuel(lireRoutingMensuel(f), d).bloquants.join(' ')).toMatch(/Vendeur Sans Maison.*distributeur introuvable/)
   })
 })
+
+// Point GPS par case (09/10) : la tournée prend les PDV du portefeuille du
+// merchandiser dans le rayon, quel que soit le quartier écrit.
+describe('point GPS et rayon', () => {
+  const ENTETE_P = ['Zone', 'Commune', 'Merchandiser', 'Distributeur', 'Sales rep', 'Jour', 'Occurrence', 'Point de visite', 'SSF', 'Type SSF', 'Latitude', 'Longitude', 'Rayon']
+  const pdvG = (id: string, zone: string, quartier: string, lat: number, lng: number) => ({ pdv_id: id, zone, quartier, is_active: true, geolocation_lat: lat, geolocation_lng: lng })
+  // Point Kennedy 2 (Abobo) : 5.4195, -4.0084. 0,001° ≈ 111 m.
+  const pdvsP = [
+    pdvG('K1', 'ABOBO 1', 'SAMAKE', 5.4196, -4.0084), // portefeuille, ~11 m
+    pdvG('K2', 'ABOBO 1', 'ABOBO CENTRE', 5.4220, -4.0084), // portefeuille, ~280 m
+    pdvG('K3', 'ABOBO 1', 'SAMAKE', 5.4260, -4.0084), // portefeuille, ~720 m : hors rayon 500 m
+    pdvG('X1', 'ABOBO 1', 'SAMAKE', 5.4197, -4.0085), // pas dans le portefeuille
+    pdvG('D1', 'DALOA', 'Kennedy 2', 6.8800, -6.4500),
+  ]
+  const L_ = (...v: string[]) => v
+  const lignesP = [
+    L_('Abobo - Anyama', 'Abobo', 'Tano Venance', 'Niare & Frères', 'M. Rachid', 'Samedi', '2', 'Kennedy 2', 'Aucun SSF', '-', '5,4195', '-4.0084', ''),
+    L_('Abobo - Anyama', 'Abobo', 'Tano Venance', 'Niare & Frères', 'M. Rachid', 'Samedi', '3', 'Kennedy 2', 'Aucun SSF', '-', '5.4195', '-4.0084', '1000'),
+    L_('Abobo - Anyama', 'Abobo', 'Tano Venance', 'Niare & Frères', 'M. Rachid', 'Lundi', '1', 'Désert', 'Aucun SSF', '-', '5.3000', '-3.9000', ''),
+  ]
+  const feuillesP = [{ nom: 'R', lignes: [ENTETE_P, ...lignesP].map((v, i) => ({ n: i + 1, cellules: ['', ...v] })) }]
+  const dP = donnees({
+    pdvs: pdvsP, aliasImport: [],
+    reglesPdv: [{ template_id: T_SSF, pdv_id: 'P3', position_order: 1 }, ...['K1', 'K2', 'K3'].map((id, i) => ({ template_id: T_DMS, pdv_id: id, position_order: i + 1 }))],
+  })
+  const lus = lireRoutingMensuel(feuillesP)
+  const res = simulerRoutingMensuel(lus, dP, { fichier: 'gps.csv', debut: '2026-10-12' })
+  const ops = res.operations as any[]
+  const cases = ops.find(o => o.type === 'routing_mensuel.remplacer' && o.user_id === M2).lignes
+  const regles = ops.find(o => o.type === 'regles_mensuelles.remplacer' && o.user_id === M2).regles
+
+  it('lit Latitude, Longitude (virgule décimale) et Rayon ; 500 m par défaut', () => {
+    expect(lus[0]).toMatchObject({ latitude: 5.4195, longitude: -4.0084, rayon: 500 })
+    expect(lus[1].rayon).toBe(1000)
+    expect(cases.find((c: any) => c.jour_semaine === 6 && c.semaine_du_mois === 2)).toMatchObject({ latitude: 5.4195, longitude: -4.0084, rayon_m: 500 })
+  })
+
+  it('PDV du portefeuille dans le rayon seulement (ni hors portefeuille, ni hors rayon, jamais Daloa)', () => {
+    const s2 = regles.find((r: any) => r.days_of_week[0] === 6 && r.semaines_du_mois.includes(2))
+    expect([...s2.pdv_ids].sort()).toEqual(['K1', 'K2'])
+    const s3 = regles.find((r: any) => r.days_of_week[0] === 6 && r.semaines_du_mois.includes(3))
+    expect([...s3.pdv_ids].sort()).toEqual(['K1', 'K2', 'K3'])
+    expect(JSON.stringify(regles)).not.toMatch(/D1|X1/)
+    expect(res.resume.casesPoint).toBe(2)
+  })
+
+  it('point sans PDV du portefeuille dans le rayon : on retombe sur la commune, et c’est signalé', () => {
+    const lundi = regles.find((r: any) => r.days_of_week[0] === 1)
+    expect([...lundi.pdv_ids].sort()).toEqual(['K1', 'K2', 'K3'])
+    expect(lundi.notes).toMatch(/portefeuille dans la commune/)
+  })
+
+  it('les règles se refont à l’identique depuis les cases (correction dans l’admin)', () => {
+    const ctx = { index: indexerPdv(pdvsP), portefeuille: ['K1', 'K2', 'K3'], territoires: ['ABOBO 1'], zonesPortefeuille: ['ABOBO 1'], debut: '2026-10-12', origine: 'gps.csv' }
+    const resume = (rs: any[]) => rs.map(r => [r.label, r.semaines_du_mois, [...r.pdv_ids].sort()])
+    expect(resume(reglesDuRouting(cases, ctx))).toEqual(resume(regles))
+  })
+
+  it('validation : point et rayon contrôlés', () => {
+    for (const op of [...ops, ...res.retour]) expect(() => validerOperation(op, OPERATIONS_PAR_IMPORT['routing-mensuel'])).not.toThrow()
+    const op = (l: any) => ({ type: 'routing_mensuel.remplacer', user_id: M2, source: 'x', lignes: [{ jour_semaine: 1, semaine_du_mois: 1, ...l }] })
+    expect(() => validerOperation(op({ latitude: 5.4, longitude: null }), OPERATIONS_PAR_IMPORT['routing-mensuel'])).toThrow(/point GPS/)
+    expect(() => validerOperation(op({ latitude: 95, longitude: -4 }), OPERATIONS_PAR_IMPORT['routing-mensuel'])).toThrow(/point GPS/)
+    expect(() => validerOperation(op({ latitude: 5.4, longitude: -4, rayon_m: 50 }), OPERATIONS_PAR_IMPORT['routing-mensuel'])).toThrow(/rayon/)
+  })
+})
