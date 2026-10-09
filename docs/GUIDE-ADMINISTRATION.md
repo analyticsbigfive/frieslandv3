@@ -716,7 +716,11 @@ quartiers du point de visite, ou commune), puis ceux des quartiers du SSF,
 puis le portefeuille du merchandiser **le plus proche du lieu** pour
 atteindre le quota ; quotas par canal ; un canal absent est complété par des
 boutiques ; jamais un PDV déjà planifié ou visité dans le mois (migration
-`20261009140000_friesland_quota_complement_au_plus_pres.sql`). Grille de
+`20261009140000_friesland_quota_complement_au_plus_pres.sql`). Un complément
+(sous-zone du SSF ou portefeuille) à plus de **1,5 km** du lieu ne sert plus
+au quota d'un canal : une boutique proche le remplace ; il n'est pris qu'en
+dernier recours, pour atteindre le quota du jour (migration
+`20261010120000_friesland_quota_limite_1500m.sql`). Grille de
 lancement, commune aux directions : 20 PDV du lundi au jeudi, 15 le
 vendredi, 10 le samedi (Superette, Boutique, Aboki et Kiosque, Pushcart,
 Porridge) ; pas de tournée le dimanche. Semaine du mois = (jour − 1) ÷ 7 + 1.
@@ -1055,6 +1059,7 @@ Restent dans le code, car ils changent la structure de l'application :
   15. `20261010100000_friesland_role_agence.sql`
   16. `20261010110000_friesland_role_agence_cloisonnement.sql` (les deux
       avant de créer un compte agence)
+  17. `20261010120000_friesland_quota_limite_1500m.sql`
 - la table historique `zones_secteurs` : plus éditée dans l'admin, mais
   encore lue par le préchargement hors ligne de l'application
   (`composables/useOfflineData.ts`). La retirer d'abord du code, puis de la
