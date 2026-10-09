@@ -34,13 +34,62 @@ export function isMissingObjectError(err: AnyError): boolean {
 /** Message utilisateur adapté à la cause. */
 export function describeSupabaseError(err: AnyError, fallback = 'Erreur inattendue.'): string {
   if (isTimeoutError(err)) {
-    return 'La base de données a mis trop de temps à répondre (délai dépassé). Réessaie dans quelques secondes.'
+    return 'Le serveur met trop de temps à répondre (délai dépassé). Réessayez dans quelques instants.'
   }
   if (isMissingObjectError(err)) {
-    return 'Objet SQL manquant : lance les migrations supabase/nouveau dans Supabase.'
+    console.error('[erreur] objet SQL manquant (migration supabase/nouveau à appliquer ?)', err)
+    return 'Cet écran n\'est pas encore disponible sur le serveur. Prévenez l\'administrateur technique.'
   }
   if (typeof err === 'string') return err || fallback
   return String(err?.message || fallback)
+}
+
+/**
+ * Message à afficher à un utilisateur non technique, quelle que soit l'erreur
+ * (Supabase, PostgREST, $fetch vers nos routes /api, réseau). Jamais de code
+ * SQL, de nom de table ni de consigne de migration : le détail part dans la
+ * console pour l'équipe technique.
+ *
+ * Nos routes /api renvoient déjà un message rédigé en français (apiError) :
+ * il est repris tel quel.
+ */
+export function messageUtilisateur(err: unknown, fallback = 'L\'opération n\'a pas abouti. Réessayez ; si le problème continue, prévenez l\'administrateur.'): string {
+  if (err) console.error('[erreur]', err)
+  if (!err) return fallback
+  if (typeof err === 'string') return err || fallback
+  const e = err as Record<string, any>
+
+  const messageApi = e.data?.message ?? e.data?.statusMessage
+  if (typeof messageApi === 'string' && messageApi.trim() && !estTexteTechnique(messageApi)) return messageApi
+
+  if (estErreurReseau(e)) return 'Pas de connexion au serveur. Vérifiez la connexion internet puis réessayez.'
+  if (isTimeoutError(e as AnyError)) return 'Le serveur met trop de temps à répondre. Réessayez dans quelques instants.'
+
+  const code = String(e.code ?? '')
+  const status = Number(e.status ?? e.statusCode ?? 0)
+  if (code === 'PGRST301' || status === 401 || /jwt|session/i.test(String(e.message ?? ''))) {
+    return 'Votre session a expiré. Reconnectez-vous puis recommencez.'
+  }
+  if (code === '42501' || status === 403 || /permission denied|row-level security/i.test(String(e.message ?? ''))) {
+    return 'Vous n\'avez pas les droits pour cette action.'
+  }
+  if (code === '23505') return 'Cet élément existe déjà.'
+  if (code === '23503') return 'Impossible : cet élément est encore utilisé ailleurs (visites, tournées, utilisateurs…).'
+  if (code === '23502') return 'Un champ obligatoire est vide.'
+  if (code === '23514' || code === '22P02' || code === '22007') return 'Une valeur saisie n\'est pas acceptée. Vérifiez le formulaire.'
+  if (isMissingObjectError(e as AnyError)) {
+    return 'Cet écran n\'est pas encore disponible sur le serveur. Prévenez l\'administrateur technique.'
+  }
+
+  const message = String(e.message ?? '')
+  if (message && !estTexteTechnique(message)) return message
+  return fallback
+}
+
+/** Vrai pour un message destiné aux développeurs (anglais technique, SQL, codes). */
+function estTexteTechnique(message: string): boolean {
+  return /\b(sql|relation|column|constraint|violates|function|schema|rpc|postgres|pgrst|uuid|syntax|null value|duplicate key|fetch|undefined|migration)\b/i.test(message)
+    || /^[A-Za-z]+Error\b/.test(message)
 }
 
 /**
