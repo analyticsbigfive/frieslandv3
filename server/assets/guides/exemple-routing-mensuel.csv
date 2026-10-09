@@ -1,0 +1,7 @@
+Zone;Commune;Quartier;Merchandiser;Distributeur;Sales rep;Jour;Occurrence;Point de visite;SSF;Type SSF;Latitude;Longitude;Rayon
+Yopougon;Yopougon;Andokoi;EXEMPLE Merchandiser;NOM DU DISTRIBUTEUR;NOM DU COMMERCIAL;Lundi;1;Carrefour Andokoi;Aucun SSF;;5.3636;-4.0708;
+Yopougon;Yopougon;Micao;EXEMPLE Merchandiser;NOM DU DISTRIBUTEUR;NOM DU COMMERCIAL;Lundi;2;Micao;Aucun SSF;;5.3820;-4.0968;800
+Yopougon;Yopougon;Maroc;EXEMPLE Merchandiser;NOM DU DISTRIBUTEUR;NOM DU COMMERCIAL;Lundi;3;Maroc;NOM DU SSF;Moto;5.3471;-4.0996;
+Yopougon;Yopougon;Toits Rouges;EXEMPLE Merchandiser;NOM DU DISTRIBUTEUR;NOM DU COMMERCIAL;Lundi;4;Toits Rouges;Aucun SSF;;;;
+Yopougon;Yopougon;;EXEMPLE Merchandiser;NOM DU DISTRIBUTEUR;NOM DU COMMERCIAL;Mardi;;Gare de Yopougon;Aucun SSF;;;;
+Yopougon;Yopougon;Maroc;EXEMPLE Merchandiser;NOM DU DISTRIBUTEUR;NOM DU COMMERCIAL;Samedi;1, 3;Maroc;Aucun SSF;;5.3471;-4.0996;

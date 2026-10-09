@@ -1,440 +1,353 @@
 <section class="chapitre">
-  <h2>Rôles et accès</h2>
+  <h2>Bienvenue dans le back-office</h2>
+  <p>Le back-office est l’outil de bureau qui permet de suivre le travail du terrain et de le préparer : où en sont les points de vente par rapport au standard Perfect Store, qui a visité quoi, quelles tournées sont prévues, quels produits manquent en rayon. On l’ouvre dans un navigateur (Chrome conseillé), sur ordinateur ou tablette.</p>
   <div class="encadre encadre--astuce">
-    <span class="encadre__titre">Accès au back-office</span>
-    <p>Adresse de connexion : <strong>https://frieslandv3.vercel.app/login</strong><br>
-    Compte administrateur : <code>admin@friesland.ci</code>. Le mot de passe vous est remis séparément, en main propre ; il ne figure jamais dans ce guide.</p>
+    <span class="encadre__titre">Se connecter</span>
+    <p>Adresse : <strong>https://frieslandv3.vercel.app/login</strong>. Votre identifiant est votre adresse e-mail. Le mot de passe vous est remis en main propre ; il ne figure jamais dans un guide. À la première connexion, l’application peut vous demander d’en choisir un nouveau.</p>
   </div>
 
-  <p>Le back-office s’ouvre à l’adresse de l’application, page de connexion. Chaque rôle arrive sur son écran : <strong>admin</strong> et <strong>superviseur</strong> sur le tableau de bord Perfect Store (<code>/admin</code>), <strong>commercial</strong> sur « Équipe » de l’application mobile, <strong>merchandiseur</strong> sur « Visites ».</p>
-
+  <h3>Qui voit quoi</h3>
   <table>
-    <thead><tr><th>Rôle</th><th>Back-office web</th><th>Données</th><th>Saisie</th></tr></thead>
+    <thead><tr><th>Rôle</th><th>Ce qu’il fait dans le back-office</th><th>Points de vente visibles</th></tr></thead>
     <tbody>
-      <tr><td><strong>Admin</strong></td><td>Tout. Seul à gérer Utilisateurs, Équipes, Permissions, imports CSV d’utilisateurs et de routings, mots de passe et suppressions de comptes.</td><td>Tout le parc</td><td>Tout</td></tr>
-      <tr><td><strong>Superviseur</strong></td><td>Toutes les sections sauf <span class="ui">Paramètres</span> (par défaut). Accès à Routing &amp; Planning.</td><td>Tout le parc</td><td>PDV, visites, routings, field coaching</td></tr>
-      <tr><td><strong>Commercial</strong></td><td>Analyse en lecture seule, sur navigateur uniquement (pas dans l’APK). Sans Paramètres ni Routing.</td><td>Ses territoires et quartiers</td><td>Actions commerciales et field coachings (mobile)</td></tr>
-      <tr><td><strong>Merchandiseur</strong></td><td>Aucun accès : renvoyé vers l’application mobile.</td><td>PDV de son périmètre, ses visites, ses actions</td><td>Visites, PDV</td></tr>
+      <tr><td><strong>Administrateur</strong></td><td>Tout, y compris les utilisateurs, les permissions, les imports et la publication de l’application.</td><td>Tout le parc</td></tr>
+      <tr><td><strong>Superviseur</strong></td><td>Tous les tableaux de bord et le Planning. Les Paramètres seulement si l’administrateur les lui ouvre.</td><td>Tout le parc</td></tr>
+      <tr><td><strong>Commercial</strong></td><td>Consultation des tableaux de bord, du programme et des écarts de tournée. Son travail quotidien se fait dans l’application mobile.</td><td>Ses territoires et quartiers</td></tr>
+      <tr><td><strong>Agence</strong></td><td>Le responsable du routing d’une agence (par exemple Atom BTL) : charge et corrige le routing du mois de ses merchandisers, consulte leurs tournées et leurs visites. Il a son propre guide.</td><td>Ceux de ses merchandisers</td></tr>
+      <tr><td><strong>Merchandiser</strong></td><td>Aucun : il travaille dans l’application mobile.</td><td>Son périmètre</td></tr>
     </tbody>
   </table>
+  <p>Ce que voit un utilisateur du terrain dépend de ses <strong>territoires</strong> et, s’ils sont renseignés, de ses <strong>quartiers</strong>. Le rattachement à un commercial (Équipes) est organisationnel : il ne change pas ce qu’on voit.</p>
 
-  <div class="encadre encadre--regle">
-    <span class="encadre__titre">Le périmètre</span>
-    <ul>
-      <li>Ce que voit un utilisateur terrain est défini par ses <strong>territoires assignés</strong> et, s’ils sont renseignés, ses <strong>quartiers assignés</strong>. Un PDV sans quartier reste visible dès que son territoire correspond.</li>
-      <li>Le rattachement à un commercial (<span class="ui">Équipes</span>) est organisationnel : il <strong>ne change pas</strong> le périmètre.</li>
-      <li>Un PDV <strong>sans territoire</strong> est invisible pour tout le terrain. Retrouvez-les avec le filtre <span class="ui">— Sans territoire —</span> de la liste PDV.</li>
-      <li>Les utilisateurs ne peuvent modifier ni leurs territoires, ni leurs quartiers, ni leur commercial, ni leur e-mail : tout passe par l’admin.</li>
-    </ul>
-  </div>
-  <h3>Commercial, SSF et merchandiser</h3>
-  <p>Le <strong>commercial</strong> (sales officer, salarié FrieslandCampina) est responsable des PDV de son territoire. Il a deux leviers : la vente, assurée par les <strong>SSF</strong> (vendeurs des distributeurs, leur tournée vient du DMS), et l’exécution en magasin, assurée par les <strong>merchandiseurs</strong> des agences. Le SSF et le merchandiser dépendent tous deux du commercial : <strong>aucun ne donne d’ordres à l’autre</strong>. Leur seul lien est le <strong>routing mensuel</strong> de l’agence (tel jour, tel lieu, avec tel SSF), pour qu’ils passent dans les mêmes PDV.</p>
-  <h3>Agence et direction</h3>
-  <p>Chaque merchandiseur porte un <strong>employeur</strong> : une agence (<strong>Atom BTL</strong> à Abidjan, l’agence de l’intérieur) ou FrieslandCampina. Les agences « programme » suivent des tournées <strong>par quotas</strong> : voir le chapitre « Programme merchandiser ». Chaque compte porte aussi une <strong>direction</strong> : South (Abidjan), North (intérieur) ou Modern Trade. South et North se déduisent des territoires ; Modern Trade se choisit dans la fiche. Une personne peut avoir deux comptes (commercial MT et merchandiser) : ils ne sont pas fusionnés.</p>
-  <p>La visibilité des sections par rôle se règle dans <span class="ui">Paramètres</span> → <span class="ui">Permissions</span> (chapitre « Équipes et permissions »).</p>
+  <h3>Les personnes du terrain</h3>
+  <p>Le <strong>commercial</strong> (salarié FrieslandCampina) est responsable des points de vente de son territoire. Deux métiers travaillent pour lui : le <strong>vendeur du distributeur</strong> (on dit « SSF ») vend et livre ; le <strong>merchandiser</strong> (souvent employé d’une agence) installe les produits et la visibilité en magasin. Ni l’un ni l’autre ne dirige l’autre : le <strong>routing mensuel</strong> de l’agence les fait simplement passer dans les mêmes points de vente le même jour.</p>
 </section>
 
 <section class="chapitre">
-  <h2>Se repérer dans le back-office</h2>
+  <h2>Se repérer</h2>
+  <p>Le back-office a <strong>deux niveaux de navigation, jamais plus</strong> : à gauche, le menu des domaines ; en haut de la page, les onglets du domaine choisi.</p>
+  <figure class="ecran">
+    <img src="guides/source/captures/guide/se-reperer.png" alt="Le menu latéral, le fil d’Ariane et la barre d’onglets">
+    <figcaption>À gauche, le menu en quatre familles ; en haut, le fil d’Ariane « Domaine › Vue » et les onglets du domaine.</figcaption>
+  </figure>
+
+  <h3>Le menu de gauche</h3>
+  <table>
+    <thead><tr><th>Famille</th><th>Domaines</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Piloter</strong></td><td><span class="ui">Perfect Store</span>, <span class="ui">Activité</span>, <span class="ui">Carte et suivi</span></td></tr>
+      <tr><td><strong>Terrain</strong></td><td><span class="ui">Planning</span>, <span class="ui">Points de vente</span>, <span class="ui">Visites</span>, <span class="ui">Actions</span></td></tr>
+      <tr><td><strong>Marché</strong></td><td><span class="ui">Visibilité</span>, <span class="ui">Concurrence</span>, <span class="ui">Produits</span></td></tr>
+      <tr><td><strong>Réglages</strong></td><td><span class="ui">Paramètres</span></td></tr>
+    </tbody>
+  </table>
+  <p>Vous ne voyez que les domaines et les onglets que votre rôle peut ouvrir. Si vous suivez un lien vers un écran qui vous est fermé, l’application vous ramène à votre première page et affiche « Vous n’avez pas accès à… ». Le bouton <span class="ui">Réduire</span>, en bas du menu, le replie en icônes ; sur téléphone, le menu s’ouvre par le bouton en haut à gauche.</p>
+
   <h3>L’en-tête</h3>
   <ul>
-    <li>Indicateurs permanents : <span class="ui">Visites mois</span>, <span class="ui">PDV actifs</span>, <span class="ui">Commerciaux actifs</span>.</li>
-    <li>Pastille <span class="ui">N en ligne</span> : les personnes dont un point GPS vient d’arriver ; un clic ouvre le Suivi commerciaux.</li>
-    <li>Bascule mode sombre ; menu utilisateur avec <span class="ui">App Mobile</span> et <span class="ui">Déconnexion</span>.</li>
+    <li><strong>Fil d’Ariane</strong> : où vous êtes, par exemple <span class="ui">Points de vente › Liste</span>. Un clic sur le domaine revient à sa première vue.</li>
+    <li><span class="ui">N en tournée</span> : les personnes dont la position GPS vient d’arriver (moins de 10 minutes) ; un clic ouvre le Suivi des équipes.</li>
+    <li><span class="ui">Aide</span> : ouvre ce guide.</li>
+    <li>Le mode sombre, puis votre compte : <span class="ui">Application mobile</span>, <span class="ui">Changer mon mot de passe</span>, <span class="ui">Se déconnecter</span>.</li>
   </ul>
-  <h3>La barre latérale</h3>
-  <table>
-    <thead><tr><th>Groupe</th><th>Entrées</th></tr></thead>
-    <tbody>
-      <tr><td>Principal</td><td><span class="ui">Perfect Store</span>, <span class="ui">Activité</span>, <span class="ui">Routing &amp; Planning</span>, <span class="ui">Programme merchandiser South</span>, <span class="ui">Programme merchandiser North</span>, <span class="ui">Écarts SSF ↔ merch</span>, <span class="ui">Carte</span>, <span class="ui">Suivi commerciaux</span></td></tr>
-      <tr><td>PDV</td><td><span class="ui">Points de vente</span></td></tr>
-      <tr><td>Visites</td><td><span class="ui">Visites</span>, <span class="ui">Field coaching</span></td></tr>
-      <tr><td>Analyses</td><td><span class="ui">Visibilité extérieure</span>, <span class="ui">Concurrence</span>, <span class="ui">Produits</span></td></tr>
-      <tr><td>Actions</td><td><span class="ui">Actions</span></td></tr>
-      <tr><td>Paramètres</td><td><span class="ui">Paramètres</span></td></tr>
-    </tbody>
-  </table>
-  <p>Chaque section a des <strong>onglets</strong> en haut de page ; ils conservent les filtres en cours.</p>
 
-  <h3>Outils communs</h3>
+  <h3>Les outils communs</h3>
   <ul>
-    <li><strong>Période</strong> : <span class="ui">Jour</span>, <span class="ui">Semaine</span>, <span class="ui">30 jours</span> (défaut le plus fréquent), <span class="ui">Mois</span>, <span class="ui">Trimestre</span>, <span class="ui">Tout</span>, <span class="ui">Personnalisé</span> (Du / Au).</li>
-    <li><strong>Bloc Filtres</strong> : canal, commercial, recherche PDV ; <span class="ui">Plus de filtres</span> ajoute catégorie, sous-catégorie, division, sous-région, territoire, area, quartier. Valider par <span class="ui">Filtrer</span>.</li>
-    <li>Les pastilles de filtres actifs se retirent d’un clic. Les tableaux sont paginés et proposent <span class="ui">Colonnes : tri et filtres</span>.</li>
+    <li><strong>Période</strong> : <span class="ui">Jour</span>, <span class="ui">Semaine</span>, <span class="ui">30 jours</span>, <span class="ui">Mois</span>, <span class="ui">Trimestre</span>, <span class="ui">Tout</span>, ou <span class="ui">Personnalisé</span> (dates Du / Au).</li>
+    <li><strong>Filtres</strong> : canal (<em>boutiques</em> ou <em>supermarchés</em>), personne, recherche d’un point de vente ; <span class="ui">Plus de filtres</span> ajoute catégorie, direction, sous-région, territoire, zone commerciale, quartier. <strong>Les résultats se mettent à jour seuls</strong> dès qu’un filtre change ; chaque filtre actif apparaît en pastille, qu’un clic retire.</li>
+    <li><strong>Tableaux</strong> : un clic sur un en-tête trie la colonne. Les tableaux longs proposent aussi <span class="ui">Filtrer par colonne</span> et <span class="ui">Réinitialiser</span>.</li>
+    <li>Les filtres suivent quand vous changez d’onglet dans un même domaine.</li>
   </ul>
+  <div class="encadre encadre--regle">
+    <span class="encadre__titre">Les couleurs ont un sens</span>
+    <p>Le <strong>rouge</strong> sert à l’action principale de l’écran et à indiquer où vous êtes. Un statut s’écrit toujours en toutes lettres (« Actif », « En retard », « Présent ») : la couleur n’est qu’un repère.</p>
+  </div>
 </section>
 
 <section class="chapitre">
-  <h2>Le tableau de bord Perfect Store</h2>
-  <p>Premier écran après connexion. Onglets : <span class="ui">Tableau de bord</span>, <span class="ui">Liste par niveau</span>, <span class="ui">Visites</span>, <span class="ui">Synthèse par zone</span>, <span class="ui">Analyse des gaps</span>.</p>
-  <p>Les filtres (période, <span class="ui">Division (North/South)</span>, <span class="ui">Territoire</span>, <span class="ui">Quartier</span>, <span class="ui">Distributeur</span>) pilotent toute la page. De haut en bas :</p>
+  <h2>Le Perfect Store</h2>
+  <p>Première page après la connexion. Ses onglets : <span class="ui">Vue d’ensemble</span>, <span class="ui">Liste par niveau</span>, <span class="ui">Synthèse par zone</span>, <span class="ui">Écarts au standard</span>.</p>
+  <figure class="ecran">
+    <img src="guides/source/captures/guide/perfect-store.png" alt="La vue d’ensemble du Perfect Store">
+    <figcaption>La vue d’ensemble commence par ce qui est à traiter.</figcaption>
+  </figure>
+
+  <h3>Lire la vue d’ensemble</h3>
   <ol class="etapes">
-    <li><strong>Perfect Stores de la période</strong> : nombre de PDV Perfect Store, puis « X % des N PDV visités », ventilé Flagship / VIP / Core / Basic et non conformes. La liste des PDV ouvre le détail de leur visite.</li>
-    <li><strong>Six indicateurs</strong> : couverture effective (PDV uniques / parc), couverture des visites (passages), taux de présence (quantité ≥ 1), taux de disponibilité (quantité ≥ seuil), score global moyen, assortiment moyen.</li>
-    <li><strong>Présence et disponibilité</strong> par catégorie et pour les SKU clés.</li>
-    <li><strong>Visites par merchandiser</strong> : PDV distincts, jours travaillés, visites par jour, passages répétés.</li>
-    <li><strong>Autres piliers</strong> (visibilité, promotion), <strong>évolution</strong> du taux de Perfect Stores, <strong>Perfect Store par type de magasin</strong>, <strong>PDV par niveau</strong>.</li>
-    <li><strong>Passer au niveau supérieur</strong> : pour chaque PDV, le niveau actuel, le niveau cible et les <strong>critères exacts qui manquent</strong> (disponibilité insuffisante, assortiment, éléments de visibilité ou de promotion). C’est la liste de travail à transmettre aux commerciaux.</li>
+    <li>Choisissez la <strong>période</strong> et, si besoin, la direction, le territoire, le quartier ou le distributeur : toute la page suit.</li>
+    <li>En haut : les points de vente <strong>à traiter</strong>, c’est-à-dire sous leur niveau, avec les critères exacts qui leur manquent (disponibilité, assortiment, éléments de visibilité ou de promotion). C’est la liste de travail à transmettre aux commerciaux.</li>
+    <li>Puis les <strong>indicateurs</strong> : couverture, présence, disponibilité, score moyen.</li>
+    <li>Plus bas, le détail par catégorie, par merchandiser, par type de magasin, et l’évolution. Un seul bloc détaillé s’ouvre à la fois.</li>
   </ol>
   <div class="encadre encadre--attention">
     <span class="encadre__titre">Présence ≠ disponibilité</span>
-    <p>Présence = au moins 1 unité en rayon. Disponibilité = quantité minimale du standard atteinte (et facings minimum en Modern Trade).</p>
+    <p><strong>Présence</strong> : au moins une unité en rayon. <strong>Disponibilité</strong> : la quantité minimale du standard est atteinte (et, en supermarché, le nombre minimum de faces).</p>
   </div>
 
   <h3>Comment le niveau est calculé</h3>
-  <p><strong>Perfect Store = Disponibilité + Assortiment + Visibilité + Promotion</strong> (la promotion n’est évaluée que si « Promotion en cours » est coché sur la visite). À chaque visite enregistrée, le type du PDV détermine son canal (GT / MT), son segment et son grade ; le moteur calcule la disponibilité pondérée par catégorie (EVAP, IMP, SCM), l’assortiment et le pourcentage d’éléments de visibilité requis installés. Le niveau atteint est le plus haut dont <strong>tous</strong> les critères passent.</p>
+  <p><strong>Perfect Store = disponibilité + assortiment + visibilité + promotion</strong>. La promotion ne compte que si « Promotion en cours » est coché pendant la visite. Le type du point de vente donne son canal, son segment et son grade ; le niveau atteint est le plus haut dont <strong>tous</strong> les critères sont remplis.</p>
   <table>
-    <thead><tr><th>Niveau</th><th>Disponibilité rayon (défaut)</th><th>Visibilité</th><th>Promotion (si applicable)</th></tr></thead>
+    <thead><tr><th>Niveau</th><th>Disponibilité en rayon (par défaut)</th><th>Visibilité</th><th>Promotion (si elle s’applique)</th></tr></thead>
     <tbody>
-      <tr><td>FLAGSHIP</td><td>≥ 95 %</td><td>100 % du requis</td><td>100 %</td></tr>
-      <tr><td>VIP</td><td>≥ 85 %</td><td>100 %</td><td>100 %</td></tr>
-      <tr><td>CORE</td><td>≥ 75 %</td><td>100 %</td><td>100 %</td></tr>
-      <tr><td>BASIC</td><td>≥ 60 %</td><td>100 %</td><td>100 %</td></tr>
+      <tr><td>Flagship</td><td>95 % ou plus</td><td>100 % des éléments exigés</td><td>100 %</td></tr>
+      <tr><td>VIP</td><td>85 % ou plus</td><td>100 %</td><td>100 %</td></tr>
+      <tr><td>Core</td><td>75 % ou plus</td><td>100 %</td><td>100 %</td></tr>
+      <tr><td>Basic</td><td>60 % ou plus</td><td>100 %</td><td>100 %</td></tr>
     </tbody>
   </table>
-  <p>Ces seuils se modifient dans <span class="ui">Standards Perfect Store</span> → <span class="ui">Niveaux</span> (chapitre « Standards, produits et référentiels »).</p>
+  <p>Ces seuils se règlent dans <span class="ui">Paramètres › Standards Perfect Store</span> (chapitre « Paramètres »).</p>
+
+  <h3>Les autres onglets</h3>
+  <ul>
+    <li><span class="ui">Liste par niveau</span> : chaque point de vente visité, son niveau et son score.</li>
+    <li><span class="ui">Synthèse par zone</span> : les niveaux par territoire et par quartier, avec le détail d’une zone.</li>
+    <li><span class="ui">Écarts au standard</span> : ce qui manque le plus souvent pour atteindre le niveau visé.</li>
+  </ul>
 </section>
 
 <section class="chapitre">
   <h2>Activité, carte et suivi des équipes</h2>
   <h3>Activité</h3>
-  <p>Pilotage commercial : alertes <span class="ui">À traiter maintenant</span> (catégorie sous 40 % de disponibilité, Perfect Store sous le seuil critique), couverture du mois, santé des piliers, disponibilité par catégorie, évolution des visites, activité des commerciaux. <span class="ui">Exporter</span> propose plusieurs CSV (KPIs, performance, visites par jour, distribution PDV, tout).</p>
-  <h3>Carte</h3>
-  <p>Tous les PDV géolocalisés, filtrables par zone ; la fenêtre d’un PDV affiche ses informations et sa photo.</p>
-  <h3>Suivi commerciaux</h3>
+  <p>Une seule page : les alertes <span class="ui">À traiter maintenant</span> (catégorie sous 40 % de disponibilité, Perfect Store sous le seuil), la couverture du mois, la disponibilité par catégorie, l’évolution des visites et l’activité des équipes, puis les dernières visites. <span class="ui">Exporter</span> propose plusieurs fichiers (indicateurs, performance, visites par jour, répartition des points de vente, tout) ; <span class="ui">Imprimer</span> produit une version papier.</p>
+  <h3>Carte des PDV</h3>
+  <p>Tous les points de vente qui ont une position GPS, filtrables par zone. Un clic sur un point affiche le magasin, son canal et sa photo.</p>
+  <h3>Suivi des équipes</h3>
   <ul>
-    <li>Choisissez une date (les 30 derniers jours tracés sont proposés) et une personne : kilomètres, durée, PDV visités.</li>
+    <li>Choisissez une personne et un jour : kilomètres parcourus, durée, points de vente visités.</li>
     <li>Alertes : <span class="ui">GPS non démarré</span>, <span class="ui">Pas de tournée</span>, <span class="ui">Immobile</span>, <span class="ui">Sans signal</span>.</li>
-    <li>La carte montre le trajet lissé, les arrêts de plus de 5 min, les visites (et celles <strong>hors géofence</strong>) ; une barre de rejeu rejoue la journée.</li>
-    <li><span class="ui">Localiser</span> : qui était près d’un point, à quelle heure, dans un rayon de 200 m à 2 km.</li>
+    <li>La carte trace le trajet, les arrêts de plus de 5 minutes et les visites, en distinguant celles faites <strong>hors du rayon de visite</strong> ; une barre rejoue la journée.</li>
+    <li><span class="ui">Localiser</span> : qui était près d’un lieu, à quelle heure, dans un rayon de 200 m à 2 km.</li>
   </ul>
 </section>
 
 <section class="chapitre">
-  <h2>Routing &amp; Planning</h2>
-  <p>Réservé à l’admin et au superviseur. Deux onglets : <span class="ui">Tournées planifiées</span> et <span class="ui">Règles récurrentes</span>.</p>
-  <h3>Planning d’équipe</h3>
-  <p>L’onglet <span class="ui">Tournées planifiées</span> s’ouvre sur le <strong>planning d’équipe</strong> : une ligne par personne, une colonne par jour, du lundi au samedi.</p>
+  <h2>Le Planning</h2>
+  <p>Quatre onglets : <span class="ui">Tournées</span>, <span class="ui">Règles récurrentes</span>, <span class="ui">Programme merchandiser</span>, <span class="ui">Écarts de tournée</span>. Les deux premiers sont réservés à l’administrateur, au superviseur et, en consultation, au compte agence ; le commercial ouvre directement le Programme.</p>
+  <figure class="ecran">
+    <img src="guides/source/captures/guide/planning.png" alt="Le planning d’équipe">
+    <figcaption>Le planning d’équipe : une ligne par personne, une colonne par jour.</figcaption>
+  </figure>
+
+  <h3>Voir les tournées</h3>
+  <p>La bascule <span class="ui">Affichage</span> propose trois présentations des mêmes tournées :</p>
   <ul>
-    <li>Chaque case montre la tournée du jour : PDV faits sur prévus (vert si tout est fait, orange sinon), PDV prévus (bleu), ou « à générer » en pointillés quand une règle prévoit la tournée. Pour un merchandiseur Atom, le SSF du jour s’affiche dessous.</li>
-    <li>Un clic sur une case ouvre la tournée du jour, avec ses PDV et les actions habituelles.</li>
-    <li>Les flèches changent de semaine ; <span class="ui">Tous</span>, un bouton par agence (Atom BTL, FrieslandCampina…) et la recherche réduisent la liste. Sous le nombre de PDV : le SSF du jour. La dernière ligne totalise les PDV du jour.</li>
-    <li><span class="ui">Par personne</span> revient aux cartes de chaque personne, avec sa liste de tournées et son calendrier du mois. Le choix est mémorisé.</li>
+    <li><span class="ui">Planning d’équipe</span> : une ligne par personne, une colonne par jour, du lundi au samedi. Chaque case montre les points de vente faits sur prévus (vert si tout est fait, orange sinon), ou « à générer » en pointillés quand une règle prévoit la tournée. Sous le nombre : le vendeur du distributeur (SSF) du jour. Un clic sur une case ouvre la tournée. Les flèches changent de semaine ; les boutons par agence et la recherche réduisent la liste.</li>
+    <li><span class="ui">Liste par personne</span> : une carte par personne, avec ses tournées et leur avancement.</li>
+    <li><span class="ui">Calendrier</span> : le mois d’une personne. Choisissez-la d’abord dans le filtre <span class="ui">Personne</span>, ou cliquez sur <span class="ui">Voir son calendrier</span> depuis sa carte.</li>
   </ul>
+
   <h3>Créer une tournée</h3>
   <ol class="etapes">
-    <li><span class="ui">Nouveau routing</span> → choisissez l’<span class="ui">Utilisateur</span> et la <span class="ui">Date</span>.</li>
-    <li>Ajoutez les PDV (seuls ceux du périmètre de l’utilisateur sont proposés ; filtres canal, région, zone, quartier ; <span class="ui">Tout ajouter</span>).</li>
-    <li>Réordonnez par glisser-déposer et cochez les objectifs par PDV : Stock, Encaissement, Photos, Merchandising, Prospection.</li>
-    <li><span class="ui">Créer le routing</span>. Le menu d’une tournée permet de la <span class="ui">Modifier</span>, la <span class="ui">Dupliquer</span> (autre date / autre utilisateur) ou la <span class="ui">Supprimer</span>.</li>
+    <li><span class="ui">Nouvelle tournée</span> → choisissez la personne et la date.</li>
+    <li>Ajoutez les points de vente (seuls ceux de son périmètre sont proposés ; filtres canal, région, zone, quartier ; <span class="ui">Tout ajouter</span>).</li>
+    <li>Réordonnez par glisser-déposer et cochez les objectifs par point de vente : stock, encaissement, photos, merchandising, prospection.</li>
+    <li>Enregistrez. Le menu d’une tournée permet de la modifier, la dupliquer ou la supprimer.</li>
   </ol>
-  <h3>Règles récurrentes</h3>
-  <p><span class="ui">Nouvelle règle</span> : merchandiseur, jours de la semaine, territoire, distributeur, période de validité (sans fin possible), <strong>mode</strong> et liste ordonnée de PDV. Les tournées sont générées automatiquement chaque nuit ; <span class="ui">Pré-générer 7 jours</span> et <span class="ui">Générer sur une période</span> les créent à l’avance. <span class="ui">Décocher une semaine</span> enregistre une exception (congé, PDV fermé) avec un motif.</p>
-  <ul>
-    <li><strong>Mode périmètre</strong> (FrieslandCampina) : la tournée reprend tous les PDV de la règle.</li>
-    <li><strong>Mode quota</strong> (agences) : la tournée prend chaque jour un nombre de PDV par canal (grille <span class="ui">Quotas</span>), chaque PDV une fois par mois.</li>
-  </ul>
-  <p>Le menu d’une règle propose <span class="ui">Modifier</span> : libellé, jours, dates, mode, SSF, territoire et distributeur se changent sans recréer la règle. Les tournées déjà générées ne changent pas : relancez <span class="ui">Recalculer les tournées à venir</span> (chapitre « L’application mobile depuis l’admin »).</p>
-  <h3>Import CSV de tournées</h3>
-  <p>Une ligne = un PDV. Colonnes : <code>email, date, pdv_id, ordre, releve_stock, encaissement, photos, merchandising, prospection, notes, statut</code>. Une tournée existante (même utilisateur, même date) est mise à jour : <span class="ui">Fusionner</span> conserve les PDV absents du fichier, <span class="ui">Remplacer</span> aligne exactement la tournée sur le fichier. Téléchargez le modèle avec <span class="ui">Modèle CSV</span>.</p>
-</section>
 
-<section class="chapitre">
-  <h2>Programme merchandiser : agences, routing mensuel et quotas</h2>
-  <p>Les merchandiseurs des agences (Atom BTL à Abidjan, l’agence de l’intérieur) visitent chaque PDV de leur portefeuille <strong>une fois par mois</strong>. L’agence fixe leur <strong>routing mensuel</strong> : pour chaque jour de chaque semaine du mois, un <strong>point de visite</strong> et, souvent, le <strong>SSF</strong> (vendeur du distributeur) avec qui ils travaillent ce jour-là. Le SSF et le merchandiseur dépendent tous deux du commercial ; aucun ne dirige l’autre, ils passent dans les mêmes PDV. Tout se règle dans l’admin :</p>
+  <h3>Les règles récurrentes</h3>
+  <p>Une règle dit « cette personne visite ces points de vente tel jour de la semaine » ; les tournées se génèrent ensuite toutes seules, chaque nuit. <span class="ui">Nouvelle règle</span> : personne, jours, territoire, distributeur, période de validité (sans fin possible), mode et liste ordonnée de points de vente.</p>
+  <ul>
+    <li><strong>Tout le périmètre</strong> (salariés FrieslandCampina) : la tournée reprend tous les points de vente de la règle.</li>
+    <li><strong>Quotas</strong> (agences) : chaque jour, un nombre de points de vente par canal, chaque point de vente une fois par mois.</li>
+    <li><span class="ui">Décocher une semaine</span> enregistre une exception (congé, magasin fermé). <span class="ui">Pré-générer 7 jours</span> et <span class="ui">Générer sur une période</span> créent les tournées à l’avance.</li>
+    <li>Modifier une règle ne change pas les tournées déjà générées : lancez ensuite <span class="ui">Recalculer les tournées à venir</span> (Paramètres › Référentiels › Tâches automatiques).</li>
+  </ul>
+
+  <h3>Le programme merchandiser</h3>
+  <p>Les merchandisers des agences (Atom BTL à Abidjan, l’agence de l’intérieur) visitent chaque point de vente de leur portefeuille <strong>une fois par mois</strong>, selon le <strong>routing mensuel</strong> fourni par l’agence : chaque jour de chaque semaine du mois, un lieu et, souvent, le vendeur du distributeur qui l’accompagne. L’onglet <span class="ui">Programme merchandiser</span> montre, pour la direction choisie (<span class="ui">South</span> ou <span class="ui">North</span>) et le mois : portefeuille, points de vente éligibles, planifiés, visités, en Perfect Store, objectif et reste à visiter.</p>
   <table>
     <thead><tr><th>Je veux…</th><th>Où</th></tr></thead>
     <tbody>
-      <tr><td>Créer ou renommer une agence, lui donner sa direction</td><td><span class="ui">Référentiels</span> → <span class="ui">Distribution</span> → <span class="ui">Agences</span></td></tr>
-      <tr><td>Rattacher un merchandiseur à son agence</td><td><span class="ui">Paramètres</span> → <span class="ui">Utilisateurs</span> → <span class="ui">Employeur (agence)</span></td></tr>
-      <tr><td>Charger le routing mensuel de l’agence</td><td><span class="ui">Import / Export</span> → <span class="ui">Imports terrain</span> → <span class="ui">Routing mensuel des merchandisers</span></td></tr>
-      <tr><td>Rattacher un point de visite à un quartier, un nom à un compte ou à un SSF</td><td><span class="ui">Référentiels</span> → <span class="ui">Distribution</span> → <span class="ui">Alias d’import</span></td></tr>
-      <tr><td>Corriger une case du routing (les règles et les tournées des 7 jours à venir suivent aussitôt)</td><td><span class="ui">Référentiels</span> → <span class="ui">Distribution</span> → <span class="ui">Routing mensuel</span></td></tr>
-      <tr><td>Créer ou corriger un SSF (nom, téléphone, distributeur, commercial)</td><td><span class="ui">Référentiels</span> → <span class="ui">Distribution</span> → <span class="ui">SSF (vendeurs)</span></td></tr>
-      <tr><td>Charger le routing des SSF (DMS)</td><td><span class="ui">Imports terrain</span> → <span class="ui">Routing des SSF (export DMS)</span></td></tr>
-      <tr><td>Voir les PDV hors du routing du SSF du jour</td><td><span class="ui">Écarts SSF ↔ merch</span> (barre latérale)</td></tr>
-      <tr><td>Changer le nombre de PDV par canal et par jour</td><td><span class="ui">Référentiels</span> → <span class="ui">Application mobile</span> → <span class="ui">Quotas</span></td></tr>
-      <tr><td>Décider de la 5e semaine du mois</td><td><span class="ui">Référentiels</span> → <span class="ui">Application mobile</span> → <span class="ui">Paramètres terrain</span> → « Routing de la 5e semaine »</td></tr>
-      <tr><td>Suivre la couverture du mois</td><td><span class="ui">Programme merchandiser South</span> / <span class="ui">North</span> (barre latérale)</td></tr>
+      <tr><td>Créer une agence, lui donner sa direction</td><td><span class="ui">Paramètres › Référentiels › Agences</span></td></tr>
+      <tr><td>Rattacher un merchandiser à son agence</td><td><span class="ui">Paramètres › Utilisateurs</span>, champ <span class="ui">Employeur (agence)</span></td></tr>
+      <tr><td>Créer le compte du responsable d’une agence</td><td><span class="ui">Paramètres › Utilisateurs</span>, rôle <span class="ui">Agence</span> et son agence</td></tr>
+      <tr><td>Charger le routing du mois</td><td><span class="ui">Paramètres › Import / Export › Imports terrain › Routing mensuel</span></td></tr>
+      <tr><td>Corriger une case du routing</td><td><span class="ui">Paramètres › Référentiels › Routing mensuel</span> (les tournées des 7 jours à venir suivent aussitôt)</td></tr>
+      <tr><td>Rattacher un nom de lieu à un quartier</td><td><span class="ui">Paramètres › Référentiels › Alias d’import</span>, type « quartier »</td></tr>
+      <tr><td>Changer le nombre de points de vente par canal et par jour</td><td><span class="ui">Paramètres › Référentiels › Quotas du programme merchandiser</span></td></tr>
     </tbody>
   </table>
+  <p>Le guide du compte agence détaille le fichier du mois, ses points GPS et les règles de rattachement des lieux.</p>
 
-  <h3>Le fichier de l’agence</h3>
-  <ol class="etapes">
-    <li>Fichier Excel ou CSV, une ligne par case : <strong>Zone</strong> (secteur), <strong>Commune</strong>, <strong>Quartier</strong>, <strong>Merchandiser</strong>, <strong>Distributeur</strong>, <strong>Sales rep</strong> (commercial), <strong>Jour</strong>, <strong>Occurrence</strong> (semaine du mois, 1 à 4), <strong>Point de visite</strong>, <strong>SSF</strong> (« Aucun SSF » possible) et <strong>Type SSF</strong> (Mini van, Moto…), plus, facultatif, <strong>Latitude</strong>, <strong>Longitude</strong> et <strong>Rayon</strong> (en mètres, 500 par défaut). Sans colonne Occurrence, une ligne vaut pour les 4 semaines ; sans Quartier, on cherche le point de visite.</li>
-    <li><strong>Point GPS</strong> : quand une case a une latitude et une longitude, la tournée de ce jour prend les PDV du <strong>portefeuille du merchandiseur</strong> (son distributeur, celui du SSF) à moins du rayon autour du point. C’est la façon la plus sûre de viser un lieu : elle ne dépend ni de l’orthographe du quartier ni de l’area des PDV. Une position se copie depuis Google Maps (clic droit sur le lieu).</li>
-    <li><strong>Rattachement des lieux</strong>, toujours dans le territoire de la ligne : les zones de sa <strong>commune</strong> (Yopougon → YOPOUGON 1 à 4 ; Anyama → le quartier ANYAMA d’Abobo 2) et les zones principales du portefeuille du merchandiseur, <strong>jamais ailleurs</strong> (« Kennedy 2 » d’Abobo n’est pas celui de Daloa). Dans l’ordre : alias validé, libellé identique, libellé <strong>approché</strong> (numéro, parenthèses, « X et Y » ou une faute ignorés ; 4 quartiers au plus), sinon la <strong>commune</strong> : ce jour-là, la tournée prend le portefeuille du merchandiseur dans cette commune.</li>
-    <li><span class="ui">Simuler</span> : le rapport montre le planning de chaque merchandiseur (jour × semaine ; ≈ approché, ◌ commune, ⚠ portefeuille entier), les <strong>lieux approchés à relire</strong>, les lieux traités au niveau de la commune, les noms reconnus malgré une autre orthographe, les SSF à créer ou à relier et les écarts de commercial entre le fichier et la base.</li>
-    <li>Un rapprochement faux, ou un lieu à viser précisément, se règle par un <strong>alias</strong> de type « quartier » (cible <code>ZONE›QUARTIER</code>, plusieurs séparées par « | »), puis on simule à nouveau. « Port-Bouët 2 » est un quartier de Yopougon, pas la commune de Port-Bouët.</li>
-    <li><span class="ui">Appliquer</span> : le routing est mis à jour <strong>sans doublon</strong> (une case = merchandiseur × jour × semaine) ; les cases d’un merchandiseur cité qui ne sont plus dans le fichier sont désactivées. Chaque (jour, lieu, SSF) devient une règle de tournée avec ses semaines. Le commercial des merchandiseurs n’est <strong>jamais</strong> changé par l’import : les écarts sont signalés.</li>
-  </ol>
-  <p>Chaque jour, la tournée prend les PDV du point GPS de la case (ou, sans point, ceux de ses quartiers, ou du portefeuille dans la commune), puis ceux de la sous-zone du SSF, selon la grille et sans repasser par un PDV déjà visité dans le mois. Le quota du jour est toujours visé (NB du client) : s’il manque des PDV d’un canal, des boutiques les remplacent ; si le lieu n’a pas assez de PDV, la tournée est <strong>complétée au plus près</strong>, avec les PDV de son portefeuille les plus proches du lieu (il ne sort pas de sa zone). La règle « Portefeuille DMS » du merchandiseur devient une règle de <strong>repli</strong> : elle fait la tournée des jours sans case (case vide, 5e semaine du mois selon le paramètre) et fournit ce complément.</p>
-  <h3>Chaque mois, dans l’ordre</h3>
-  <ol class="etapes">
-    <li><span class="ui">Imports terrain</span> → <span class="ui">Routing des SSF (export DMS)</span> : simuler, appliquer.</li>
-    <li><span class="ui">Imports terrain</span> → <span class="ui">Routing mensuel des merchandisers</span> avec le fichier de l’agence : simuler ; relire les sections « Lieux approchés » et « Lieux à rattacher » ; ajouter les alias utiles et simuler à nouveau ; appliquer (case « Recalculer les tournées des 7 prochains jours » cochée).</li>
-    <li>Contrôler : <span class="ui">Planning d’équipe</span> (chaque merchandiseur a sa tournée, aucune journée vide), puis <span class="ui">Écarts SSF ↔ merch</span>.</li>
-    <li>Envoyer à l’agence le fichier <em>lieux-a-rattacher.csv</em> du rapport : chaque quartier qu’elle confirme devient un alias.</li>
-  </ol>
-
-  <h3>Le contrôle d’écart</h3>
-  <p><span class="ui">Écarts SSF ↔ merch</span> compare, pour un jour, la tournée de chaque merchandiseur au routing DMS du SSF prévu ce jour-là : <strong>Aligné</strong>, <strong>Écart</strong> (avec la liste des PDV concernés et le SSF qui les suit dans le DMS), <strong>Routing SSF absent</strong> (importer le routing des SSF) ou <strong>Sans SSF ce jour</strong>. Filtres : direction, commercial, statut ; <span class="ui">Exporter</span> produit le CSV. Un commercial y voit son équipe.</p>
-
-  <h3>La grille des quotas et l’objectif du mois</h3>
-  <p><span class="ui">Quotas</span> présente la grille <strong>5 canaux × 6 jours</strong>, commune aux directions (lancement : 20 PDV du lundi au jeudi, 15 le vendredi, 10 le samedi). Après un changement, <span class="ui">Appliquer aux tournées à venir</span> recalcule les tournées non commencées des merchandiseurs d’agence. L’<strong>objectif mensuel</strong> de chaque merchandiseur en découle : la grille, additionnée sur ses jours de tournée du mois (420 sur quatre semaines pleines, 465 en octobre 2026).</p>
-  <p><span class="ui">Programme merchandiser South</span> (Abidjan, ex-« Programme Atom ») et <span class="ui">North</span> (intérieur) affichent, par merchandiseur et pour le mois choisi : portefeuille, PDV éligibles, planifiés, visités, en Perfect Store, objectif et reste à visiter.</p>
-
-  <h3>Côté téléphone</h3>
-  <ul>
-    <li><span class="ui">Plus</span> → <span class="ui">Ma semaine (SSF)</span> : pour chaque jour, le SSF prévu, son téléphone et les quartiers ; consultable hors ligne. La prochaine version de l’application y ajoute le point de visite, la semaine du mois et les jours sans SSF.</li>
-    <li>Le formulaire de visite propose le SSF du jour ; le merchandiseur peut le changer ou saisir un autre nom. Un bandeau orange signale un PDV hors des quartiers du SSF, sans bloquer.</li>
-    <li>Le SSF de chaque visite s’affiche dans le détail de la visite (admin).</li>
-  </ul>
-  <div class="encadre encadre--attention">
-    <span class="encadre__titre">Avant le premier fichier de l’agence</span>
-    <p>Les cases reprises des règles en place (déduites des visites de septembre) portent l’origine <strong>Règle existante</strong>. Le routing mensuel de l’agence les remplace dès qu’il est appliqué.</p>
-  </div>
+  <h3>Les écarts de tournée</h3>
+  <p><span class="ui">Écarts de tournée</span> compare, pour un jour, la tournée de chaque merchandiser aux clients du vendeur du distributeur prévu ce jour-là : <strong>Aligné</strong>, <strong>Écart</strong> (avec les points de vente concernés), <strong>Routing du vendeur absent</strong> ou <strong>Sans vendeur ce jour</strong>. Filtres : direction, commercial, statut ; <span class="ui">Exporter</span> produit le fichier.</p>
 </section>
 
 <section class="chapitre">
   <h2>Points de vente</h2>
-  <p>Onglets : <span class="ui">Liste</span>, <span class="ui">Répartition</span>, <span class="ui">Évolution</span>, <span class="ui">Historique PDV</span>, <span class="ui">Distributeurs</span>.</p>
-  <h3>Liste et fiche</h3>
+  <p>Onglets : <span class="ui">Liste</span>, <span class="ui">Répartition</span>, <span class="ui">Évolution</span>, <span class="ui">Historique</span> et, pour l’administrateur, <span class="ui">Distributeurs</span>.</p>
+  <h3>Chercher, créer, corriger</h3>
   <ul>
-    <li>Recherche par nom, code ou adressage ; filtres <span class="ui">Territoire</span> (dont <span class="ui">— Sans territoire —</span>) et <span class="ui">Sous-région</span>.</li>
-    <li><span class="ui">Nouveau PDV</span> / <span class="ui">Modifier</span> : identité (nom, catégorie, <strong>sous-catégorie = type de PDV, qui pilote le scoring</strong>), zone commerciale (division, sous-région, territoire, code area, quartier, distributeur), <strong>code DMS</strong>, objectif Perfect Store, adressage, coordonnées GPS et <strong>rayon de geofence</strong> propre au PDV (vide = rayon des paramètres terrain).</li>
-    <li><span class="ui">Export</span> produit un fichier Excel ; <span class="ui">Import CSV</span> met à jour ou crée les PDV par <code>PDV ID</code>.</li>
+    <li>Recherche par nom, code ou adresse ; filtres territoire (dont <span class="ui">Sans territoire</span>), sous-région et GPS. Le bouton <span class="ui">Sans GPS</span> liste les points de vente sans position.</li>
+    <li><span class="ui">Nouveau PDV</span> ou <span class="ui">Modifier</span> : identité (nom, catégorie, <strong>type de point de vente</strong>, qui décide de la grille Perfect Store), zone commerciale, code client du fichier du distributeur, adresse, position GPS et <strong>rayon de visite</strong> propre au magasin (vide = rayon par défaut des paramètres terrain).</li>
+    <li><span class="ui">Retirer</span> : le point de vente n’apparaît plus dans les listes ni dans les tournées ; ses visites passées restent. L’application vous demande de confirmer en nommant le magasin.</li>
   </ul>
   <div class="encadre encadre--attention">
-    <span class="encadre__titre">Import CSV des PDV</span>
-    <p>Colonnes reconnues : <code>PDV ID</code>, <code>Nom du PDV</code>, <code>Canal</code>, <code>Catégorie de PDV</code>, <code>Sous-catégorie de PDV</code>, <code>Région</code>, <code>Zone</code>, <code>Quartier</code>, <code>Geolocation</code> (« lat, lng » dans une cellule), <code>Adressage</code>, <code>Image</code>, <code>Territoire</code>, <code>Area</code>, <code>Distributeur</code>, <code>Objectif Perfect Store</code>. <strong>Ne réimportez pas l’export Excel tel quel</strong> : ses en-têtes sont différents et les colonnes non reconnues seraient remplacées par des valeurs par défaut.</p>
+    <span class="encadre__titre">Un point de vente sans territoire est invisible</span>
+    <p>Pour tout le terrain. Retrouvez-les avec le filtre <span class="ui">Sans territoire</span> de la liste.</p>
   </div>
-  <h3>Historique PDV</h3>
-  <p>Courbe visite par visite (disponibilité, visibilité, promotion, score) d’un PDV, comparaison avec un second PDV ou entre deux périodes, tableau des visites.</p>
-  <h3>Distributeurs</h3>
-  <p>Consultation : portée nationale ou territoriale, PDV et visites par distributeur. Les distributeurs se créent dans <span class="ui">Référentiels</span>.</p>
+  <h3>Historique d’un point de vente</h3>
+  <p>Visite par visite : disponibilité, visibilité, promotion et score ; comparaison avec un second point de vente ou entre deux périodes.</p>
 </section>
 
 <section class="chapitre">
-  <h2>Visites et field coaching</h2>
-  <p>Onglets : <span class="ui">Toutes les visites</span>, <span class="ui">Évolution</span>, <span class="ui">Par catégorie</span>, <span class="ui">Commerciaux</span>, <span class="ui">Field coaching</span>.</p>
+  <h2>Visites et coaching terrain</h2>
+  <p>Onglets : <span class="ui">Toutes les visites</span>, <span class="ui">Évolution</span>, <span class="ui">Par catégorie</span>, <span class="ui">Par merchandiser</span>, <span class="ui">Coaching terrain</span>.</p>
   <ul>
-    <li><strong>Toutes les visites</strong> : filtres période et commercial ; <span class="ui">Export</span> Excel (5 000 lignes maximum) ; menu de ligne <span class="ui">Voir le détail</span> / <span class="ui">Supprimer</span> ; galerie de photos.</li>
-    <li><strong>Évolution</strong> et <strong>Par catégorie</strong> : volumes par jour / semaine / mois, par canal et par type de PDV.</li>
-    <li><strong>Commerciaux</strong> : classement (visites, PDV distincts, visites par jour, dernière visite) et export CSV.</li>
+    <li><strong>Toutes les visites</strong> : filtres période et merchandiser ; export Excel (5 000 lignes au plus) ; détail de chaque visite avec ses photos. La suppression d’une visite est <strong>définitive</strong> : elle est réservée à l’administrateur et au superviseur, et demande confirmation.</li>
+    <li><strong>Évolution</strong> et <strong>Par catégorie</strong> : volumes par jour, semaine ou mois, par canal et par type de point de vente.</li>
+    <li><strong>Par merchandiser</strong> : visites, points de vente distincts, visites par jour, dernière visite.</li>
   </ul>
-  <h3>Field coaching</h3>
-  <p>Les coachings sont saisis sur le mobile par les commerciaux et superviseurs : évaluation du <strong>vendeur d’un distributeur</strong> (le SSF, choisi dans la liste des SSF du distributeur ; la liste des PDV se limite alors à ses clients DMS) en 13 questions Oui / Non / Non applicable (8 Perfect Visibility, 5 Effective Promotion). Un <strong>objectif</strong> se choisit quand la liste <span class="ui">Référentiels</span> → <span class="ui">Application mobile</span> → <span class="ui">Objectifs de coaching</span> est remplie. Le coaching <strong>Modern Trade</strong> (un commercial MT suit un merchandiseur, avec les standards d’exécution MT) sera proposé dès que la <span class="ui">Grille coaching MT</span> sera chargée. Le rapport se filtre par période, superviseur, zone et type (GT / MT) ; indicateurs : nombre de coachings, PDV couverts, scores Perfect Visibility et Effective Promotion. <span class="ui">Export CSV</span> contient toutes les réponses ; <span class="ui">Imprimer</span> produit le rapport papier.</p>
-  <p>Score = Oui ÷ (Oui + Non). Lecture : vert ≥ 70 %, orange ≥ 40 %, rouge en dessous.</p>
+  <h3>Coaching terrain</h3>
+  <p>Le commercial évalue sur le mobile le vendeur d’un distributeur en 13 questions Oui / Non / Non applicable (8 sur la visibilité, 5 sur la promotion). Le rapport se filtre par période, commercial, zone et canal ; score = Oui ÷ (Oui + Non) ; vert à partir de 70 %, orange à partir de 40 %, rouge en dessous. <span class="ui">Exporter</span> donne toutes les réponses, <span class="ui">Imprimer</span> le rapport papier.</p>
+</section>
+
+<section class="chapitre">
+  <h2>Actions</h2>
+  <ul>
+    <li><span class="ui">Synthèse</span> : taux de réalisation des actions cochées pendant les visites (référencement, promotion, prospection, rotation des stocks, rangement, affiches, matériel de visibilité).</li>
+    <li><span class="ui">Actions commerciales</span> : les actions décidées par les commerciaux sur le mobile, avec leur statut (ouverte, <strong>en retard</strong>, faite). <span class="ui">Prévenir par WhatsApp</span> ouvre un message qui liste les actions ouvertes d’un merchandiser ; le bouton est inactif si son téléphone manque sur sa fiche.</li>
+  </ul>
 </section>
 
 <section class="chapitre">
   <h2>Visibilité, concurrence et produits</h2>
   <h3>Visibilité</h3>
-  <p>Onglets <span class="ui">Extérieure</span>, <span class="ui">Récap. extérieure</span>, <span class="ui">Intérieure</span>, <span class="ui">Évolution intérieure</span>, <span class="ui">Intérieure GT</span>, <span class="ui">Intérieure MT</span>, <span class="ui">Promotion</span> : présence par élément, conformité par niveau (éléments requis uniquement), détail par PDV filtrable par élément. La promotion n’est calculée que sur les visites où elle est applicable.</p>
+  <p>Extérieure, intérieure (boutiques et supermarchés séparément) et promotion : présence de chaque élément, conformité par niveau, détail par point de vente filtrable par élément.</p>
   <h3>Concurrence</h3>
-  <p><span class="ui">Évolution</span> : concurrence détectée, concurrents en activité, <strong>concurrents signalés</strong> par les merchandiseurs (noms regroupés malgré les variantes d’écriture), présence par SKU concurrent. <span class="ui">Récapitulatif</span> et <span class="ui">Visibilité</span> : visibilité extérieure / intérieure par marque.</p>
+  <p>Concurrence détectée, concurrents en activité, concurrents signalés par les merchandisers (noms regroupés malgré les variantes d’écriture), présence des références concurrentes, et la visibilité de chaque marque.</p>
   <h3>Produits</h3>
-  <p><span class="ui">Récapitulatif</span> par famille, <span class="ui">Inventaire SKU</span> (photographie des stocks à la dernière visite de chaque PDV : ruptures, stock bas, disponibilité), puis un onglet par catégorie <strong>active</strong> du catalogue (Disponibilités, Prix, Récapitulatif). Les produits retirés du formulaire restent affichés, marqués « (retiré) », pour l’historique.</p>
+  <p><span class="ui">Synthèse</span> par famille, puis <span class="ui">Disponibilité</span>, <span class="ui">Prix</span> et <span class="ui">Détail par visite</span> : la <strong>famille de produits</strong> (EVAP, IMP, SCM…) se choisit dans la liste en haut à droite de ces écrans. <span class="ui">Inventaire</span> photographie le stock à la dernière visite de chaque point de vente. Les produits retirés du formulaire restent visibles, marqués « (retirée) », pour l’historique.</p>
+  <figure class="ecran">
+    <img src="guides/source/captures/guide/produits.png" alt="Disponibilité d’une famille de produits">
+    <figcaption>La famille de produits est un filtre de la page, pas un onglet de plus.</figcaption>
+  </figure>
 </section>
 
 <section class="chapitre">
-  <h2>Actions</h2>
-  <p>Onglets : <span class="ui">Synthèse</span>, <span class="ui">Actions commerciales</span>, <span class="ui">Visites terrain</span>.</p>
-  <ul>
-    <li><strong>Synthèse</strong> : taux de réalisation des actions cochées pendant les visites (référencement, promo, prospection, FIFO, rangement, affiches, matériel de visibilité).</li>
-    <li><strong>Actions commerciales</strong> : suivi en lecture des actions décidées par les commerciaux sur le mobile (types livrés : Activation SSR, Activation SSM, Référencement produit). Filtres statut, merchandiseur, auteur, zone ; indicateurs Ouvertes, <strong>En retard</strong>, Faites ; <span class="ui">Export CSV</span>.</li>
-    <li><span class="ui">Prévenir les merchandiseurs par WhatsApp</span> : un bouton par merchandiseur ouvre un message listant ses actions ouvertes. Bouton inactif = téléphone manquant sur sa fiche utilisateur.</li>
-  </ul>
-  <p>Le merchandiseur assigné reçoit une <strong>notification push</strong> à la création ou à la réassignation d’une action (application Android 1.0.6 ou plus). Aucun réglage n’est nécessaire côté admin.</p>
-</section>
+  <h2>Paramètres</h2>
+  <p>Onglets : <span class="ui">Référentiels</span>, <span class="ui">Standards Perfect Store</span>, <span class="ui">Produits du formulaire</span>, <span class="ui">Utilisateurs</span>, <span class="ui">Équipes</span>, <span class="ui">Permissions</span>, <span class="ui">Versions de l’app</span>, <span class="ui">Import / Export</span>.</p>
 
-<section class="chapitre">
-  <h2>Gérer les utilisateurs</h2>
-  <p><span class="ui">Paramètres</span> → <span class="ui">Utilisateurs</span> (admin uniquement). Recherche, filtre par rôle, <span class="ui">Exporter</span>, <span class="ui">Importer CSV</span>, <span class="ui">Nouvel utilisateur</span>. Le menu de chaque ligne propose <span class="ui">Modifier</span>, <span class="ui">Réinitialiser le mot de passe</span>, <span class="ui">Désactiver</span> / <span class="ui">Activer</span>, <span class="ui">Supprimer</span>.</p>
-
-  <h3>Créer un utilisateur</h3>
-  <ol class="etapes">
-    <li><strong>Compte et accès</strong> : nom complet, e-mail (identifiant, non modifiable ensuite), mot de passe (8 caractères minimum), rôle, <strong>téléphone</strong> (indispensable pour WhatsApp), <strong>direction</strong> (vide = déduite des territoires ; Modern Trade à choisir) et, pour un merchandiseur, son <span class="ui">Commercial responsable</span> et son <span class="ui">Employeur (agence)</span>.</li>
-    <li><strong>Périmètre terrain</strong> : cochez les <span class="ui">Territoires assignés</span> puis, si besoin, les <span class="ui">Quartiers assignés</span> (vide = tous les quartiers des territoires). Région et sous-région servent seulement à filtrer la liste.</li>
-    <li><span class="ui">Créer l’utilisateur</span> : le compte est actif immédiatement, aucun e-mail n’est envoyé.</li>
-  </ol>
-  <div class="encadre encadre--attention">
-    <span class="encadre__titre">Premier mot de passe</span>
-    <p>Un compte créé par ce formulaire ou par import CSV <strong>n’est pas obligé</strong> de changer son mot de passe à la première connexion. Pour l’imposer, faites <span class="ui">Réinitialiser le mot de passe</span> juste après la création et remettez à l’utilisateur le mot de passe provisoire affiché.</p>
-  </div>
-
-  <h3>Réinitialiser un mot de passe</h3>
-  <ol class="etapes">
-    <li>Menu de la ligne → <span class="ui">Réinitialiser le mot de passe</span>.</li>
-    <li>Laissez le champ vide pour générer un mot de passe provisoire (format <code>BR-XXXX-XXXX</code>, sans caractères ambigus) ou saisissez-en un.</li>
-    <li>Le mot de passe s’affiche <strong>une seule fois</strong> : <span class="ui">Copier</span>, puis transmettez-le à l’utilisateur (de vive voix ou sur sa fiche de connexion).</li>
-    <li>À sa connexion suivante, l’utilisateur doit choisir son propre mot de passe.</li>
-  </ol>
-  <div class="encadre encadre--regle">
-    <span class="encadre__titre">Confidentialité des mots de passe</span>
-    <p>Les mots de passe sont stockés chiffrés de façon irréversible : <strong>personne, y compris l’admin, ne peut relire le mot de passe actuel</strong> d’un utilisateur. En cas d’oubli, la seule solution est la réinitialisation.</p>
-  </div>
-
-  <h3>Changer son propre mot de passe</h3>
-  <p>Menu utilisateur (en haut à droite) → <span class="ui">Changer mon mot de passe</span>. Saisissez le mot de passe actuel, puis le nouveau deux fois. Pour les comptes <strong>admin et superviseur</strong>, le mot de passe doit faire au moins <strong>12 caractères</strong>, mélanger au moins 3 types (minuscule, majuscule, chiffre, symbole) et ne contenir ni mot courant (admin, azerty, 123456…) ni votre identifiant. Astuce : trois mots sans rapport entre eux, séparés par des tirets, avec une majuscule et un chiffre, sont à la fois solides et faciles à retenir (n’utilisez jamais un exemple publié).</p>
-
-  <h3>Désactiver, supprimer, demandes de suppression</h3>
-  <ul>
-    <li><strong>Désactiver</strong> : l’utilisateur est déconnecté et ne peut plus se connecter ; il disparaît des listes. Réversible avec <span class="ui">Activer</span>.</li>
-    <li><strong>Supprimer</strong> : définitif. Compte, profil et positions GPS sont supprimés ; les visites sont conservées de façon anonyme.</li>
-    <li>Les <strong>demandes de suppression</strong> envoyées depuis l’application apparaissent dans un bandeau orange en haut de la page (e-mail, date, motif) et la ligne porte le badge <span class="ui">Suppression demandée</span>. À traiter sous 30 jours.</li>
-  </ul>
-
-  <h3>Import et export CSV</h3>
-  <p>Colonnes : <code>email, nom, role, telephone, is_active, zone_assignee, territoires_assignes, quartiers_assignes, commercial, sous_region, mot_de_passe</code>. Listes multiples séparées par <code>|</code> ; <code>commercial</code> = e-mail du commercial responsable. 500 lignes maximum.</p>
-  <ul>
-    <li><strong>E-mail connu</strong> : mise à jour des seules cellules remplies (une cellule vide n’efface rien ; e-mail et mot de passe jamais modifiés).</li>
-    <li><strong>E-mail inconnu</strong> : création ; <code>nom</code> et <code>mot_de_passe</code> (8 caractères minimum) à renseigner.</li>
-    <li>Les libellés de territoires et quartiers doivent être écrits <strong>exactement</strong> comme dans les PDV. Les libellés inconnus sont signalés dans la fiche utilisateur (<span class="ui">Territoires hors référentiel</span>) et se rattachent à un territoire réel avec <span class="ui">Appliquer à tous les profils</span>.</li>
-  </ul>
-</section>
-
-<section class="chapitre">
-  <h2>Équipes et permissions</h2>
-  <h3>Équipes</h3>
-  <ol class="etapes">
-    <li><span class="ui">Paramètres</span> → <span class="ui">Équipes</span> : choisissez un commercial dans la colonne de gauche.</li>
-    <li>Cochez ses merchandiseurs ; un badge orange signale ceux déjà rattachés à un autre commercial (<span class="ui">Masquer ceux d’une autre équipe</span> pour les cacher).</li>
-    <li><span class="ui">Enregistrer</span> : les merchandiseurs cochés sont rattachés, les décochés libérés.</li>
-  </ol>
-  <p>L’équipe alimente les filtres « Mon équipe », l’ordre de proposition des merchandiseurs dans les actions et les relances WhatsApp. Elle ne modifie pas le périmètre.</p>
-  <h3>Permissions</h3>
-  <p>Matrice section × rôle ; chaque case s’enregistre immédiatement. L’admin a toujours tout. Sections : Principal, Stats · PDV, Stats · Visites &amp; commerciaux, Stats · Perfect Store, Stats · Visibilité, Stats · Concurrence, Stats · Produits, Actions, Paramètres. Ouvrir <span class="ui">Paramètres</span> au superviseur lui permet de modifier les standards.</p>
-</section>
-
-<section class="chapitre">
-  <h2>Standards, produits et référentiels</h2>
-  <h3>Standards Perfect Store</h3>
-  <table>
-    <thead><tr><th>Onglet</th><th>Ce qu’on y règle</th></tr></thead>
-    <tbody>
-      <tr><td><span class="ui">Niveaux</span></td><td>Disponibilité, visibilité et promotion minimales par niveau.</td></tr>
-      <tr><td><span class="ui">Assortiment</span></td><td>SKU cibles, minimum présents, Hero SKU par segment et grade.</td></tr>
-      <tr><td><span class="ui">Disponibilité</span></td><td>Pondération des SKU (GT et MT) : le total par famille doit faire 100 %.</td></tr>
-      <tr><td><span class="ui">Visibilité</span></td><td>Matrice élément × niveau par segment, éléments optionnels.</td></tr>
-      <tr><td><span class="ui">Types de PDV</span></td><td>Rattachement de chaque type à sa matrice de visibilité, son segment et son grade.</td></tr>
-    </tbody>
-  </table>
-  <div class="encadre encadre--regle">
-    <span class="encadre__titre">Après toute modification</span>
-    <p>Cliquez sur <span class="ui">Recalculer toutes les visites</span> (traitement par lots avec compteur). Sans recalcul, les scores affichés reflètent les anciens standards.</p>
-  </div>
-  <h3>Produits du formulaire</h3>
-  <p><span class="ui">Paramètres</span> → <span class="ui">Produits du formulaire</span> : les produits relevés dans la visite, par catégorie. Pour chaque produit : <strong>libellé affiché</strong>, <strong>ordre</strong>, <strong>seuil « stock bas »</strong> (pastilles du téléphone, hors score) et <strong>présence dans le formulaire</strong>. Chaque changement est enregistré immédiatement ; les téléphones (1.0.12 et suivantes) le reçoivent à l’ouverture de l’application.</p>
-  <ul>
-    <li><strong>Ajouter un produit</strong> : saisissez son libellé et son seuil en bas de la catégorie. Sa clé est générée et <strong>figée</strong> : elle range les quantités dans les visites.</li>
-    <li><strong>Retirer un produit</strong> : décochez « Dans le formulaire ». Il n’est jamais supprimé : ses relevés passés restent dans les tableaux et l’export.</li>
-    <li>Un produit noté au Perfect Store ne peut pas être retiré tant que sa <span class="ui">Correspondance SKU</span> existe.</li>
-    <li>Un nouveau produit ne compte au Perfect Store qu’après une <span class="ui">Correspondance SKU</span> (Référentiels → Produits), suivie de <span class="ui">Recalculer</span>.</li>
-    <li>Une <strong>catégorie</strong> (EVAP, IMP…) s’ajoute, se renomme ou se retire dans <span class="ui">Référentiels</span> → <span class="ui">Catégories du relevé</span>, avec l’option <strong>facings en Modern Trade</strong>.</li>
-  </ul>
   <h3>Référentiels</h3>
-  <table>
-    <thead><tr><th>Rubrique</th><th>Référentiels</th></tr></thead>
-    <tbody>
-      <tr><td>Géographie</td><td>Régions, sous-régions, territoires, zones / areas, quartiers, <strong>alias de territoire</strong>.</td></tr>
-      <tr><td>Distribution</td><td>Distributeurs (option couverture nationale, <strong>renommage</strong> reporté sur les PDV et les règles), liens distributeur ↔ territoires et ↔ areas, <strong>Agences</strong>, <strong>SSF (vendeurs)</strong>, <strong>SSF ↔ Quartiers</strong>, <strong>Routing mensuel</strong>, <strong>alias d’import</strong> (noms des fichiers DMS et Atom → merchandiseur, distributeur ou SSF).</td></tr>
-      <tr><td>Points de vente</td><td>Catégories et types (avec leur <strong>libellé français</strong>), <strong>fréquence de visite</strong> (7 jours par défaut : au-delà, le PDV est « en retard »), <strong>fenêtre de suivi</strong>, segments.</td></tr>
-      <tr><td>Produits</td><td>Catégories, références, <strong>correspondance SKU</strong> (produit du formulaire ↔ référence Perfect Store), marques et <strong>SKU concurrents</strong>, <strong>catégories du relevé</strong>.</td></tr>
-      <tr><td>Perfect Store</td><td>Niveaux, poids SKU, seuils de disponibilité GT et MT (facings), assortiment, éléments et standards de visibilité.</td></tr>
-      <tr><td>Application mobile</td><td><strong>Paramètres terrain</strong>, <strong>Quotas</strong>, <strong>Canal des quotas</strong>, <strong>Objectifs de coaching</strong>, <strong>Grille coaching MT</strong>, types d’action commerciale, engins de vente, version minimale, versions installées, <strong>Publier une version</strong>, <strong>Maintenance</strong>.</td></tr>
-    </tbody>
-  </table>
-</section>
-
-<section class="chapitre">
-  <h2>L’application mobile depuis l’admin</h2>
-  <h3>Paramètres terrain</h3>
-  <p><span class="ui">Référentiels</span> → <span class="ui">Application mobile</span> → <span class="ui">Paramètres terrain</span>. Les téléphones (1.0.12 et suivantes) relisent ces valeurs à chaque ouverture, et les gardent hors ligne. Une valeur peut être commune ou propre aux merchandiseurs Friesland ou Atom.</p>
-  <table>
-    <thead><tr><th>Paramètre</th><th>Valeur de départ</th><th>Effet</th></tr></thead>
-    <tbody>
-      <tr><td>Rayon de geofence par défaut</td><td>300 m</td><td>Distance maximale pour démarrer et valider une visite (un PDV peut avoir son propre rayon).</td></tr>
-      <tr><td>Précision GPS exigée</td><td>10 m</td><td>Au-delà, la position est jugée trop imprécise ; la visite reste enregistrable mais « GPS non validé ».</td></tr>
-      <tr><td>Précision pour géolocaliser un PDV</td><td>30 m</td><td>Pour enregistrer depuis le terrain la position d’un PDV qui n’en a pas.</td></tr>
-      <tr><td>Précision des points de trajet</td><td>50 m</td><td>Les points de tournée moins précis sont ignorés.</td></tr>
-      <tr><td>Suivi de tournée</td><td>120 s, 15 m, envoi toutes les 300 s, 200 points</td><td>Finesse du trajet contre autonomie de la batterie ; appliqué au prochain démarrage de tournée.</td></tr>
-      <tr><td>Objectif de visites par jour</td><td>10 ; vide pour Atom BTL</td><td>Affiché sur l’accueil. Vide : le nombre de PDV de la tournée du jour (agences). Une valeur peut être propre à une agence.</td></tr>
-    </tbody>
-  </table>
-  <p>Les valeurs hors des bornes affichées sont refusées.</p>
-
-  <h3>Publier une version</h3>
-  <ol class="etapes">
-    <li><span class="ui">Publier une version</span> → choisissez le fichier APK signé produit par l’équipe technique. L’écran lit sa version et refuse un fichier plus ancien que la version en service.</li>
-    <li>Laissez <span class="ui">Rendre cette version obligatoire</span> décoché : les téléphones proposent la mise à jour par un bandeau, sans bloquer.</li>
-    <li>Une fois la version <strong>en ligne sur le Play Store</strong>, publiez à nouveau en cochant <span class="ui">Rendre cette version obligatoire</span> : les anciennes versions sont alors bloquées sur l’écran de mise à jour.</li>
-  </ol>
-  <p><span class="ui">Paramètres</span> → <span class="ui">Versions de l’app</span> montre qui a installé la version exigée, qui est bloqué et qui ne déclare rien. Le filtre <strong>direction</strong> (South, North, Modern Trade) répond à « à Abidjan, qui a installé et qui ne l’a pas encore fait » : la synthèse suit le filtre. L’encart <strong>Comptes par direction et par rôle</strong> fait l’inventaire des licences (comptes de test exclus, personnes à deux comptes signalées) ; <span class="ui">Exporter les comptes</span> produit le fichier. <span class="ui">Versions installées</span> (Référentiels) montre la version de chaque téléphone. La procédure complète (Play Store compris) est dans <code>docs/play-store/PUBLIER-MISE-A-JOUR.md</code>.</p>
-
-  <h3>Maintenance</h3>
+  <p>Toutes les listes de référence, dans une colonne à gauche, groupées par thème (géographie, distribution et vendeurs, points de vente, produits, Perfect Store, application mobile), avec une recherche <span class="ui">Rechercher une liste</span>. La liste choisie s’affiche à droite, avec une phrase qui explique à quoi elle sert, puis <span class="ui">Ajouter</span> et, sur chaque ligne, <span class="ui">Modifier</span> ou <span class="ui">Supprimer</span> (la suppression nomme l’élément avant de confirmer).</p>
+  <figure class="ecran">
+    <img src="guides/source/captures/guide/referentiels.png" alt="Les référentiels : la liste des listes à gauche, la liste choisie à droite">
+    <figcaption>Choisir une liste à gauche ; la modifier à droite.</figcaption>
+  </figure>
   <ul>
-    <li><span class="ui">Recalculer les tournées à venir</span> (une agence ou toutes) : refait les tournées futures qui n’ont pas commencé, après un changement de règle, de quotas ou de sous-zone. La tournée du jour n’est jamais modifiée.</li>
-    <li><span class="ui">Générer les tournées manquantes (7 jours)</span>.</li>
-    <li><span class="ui">Rafraîchir les statistiques maintenant</span> : les tableaux de bord sont à jour moins d’une minute plus tard.</li>
-    <li><span class="ui">Tâches planifiées</span> : état, dernier passage et horaire des tâches de nuit (génération des tournées, statistiques).</li>
+    <li><strong>Paramètres terrain</strong> (Application mobile) : rayon de visite par défaut (300 m), précision GPS exigée (10 m), suivi de tournée, objectif de visites par jour… Les téléphones relisent ces valeurs à chaque ouverture.</li>
+    <li><strong>Tâches automatiques</strong> : <span class="ui">Recalculer les tournées à venir</span>, <span class="ui">Générer les tournées manquantes</span>, <span class="ui">Rafraîchir les statistiques maintenant</span>, et l’état des tâches de nuit.</li>
   </ul>
-</section>
 
-<section class="chapitre">
-  <h2>Import / Export et guides de formation</h2>
+  <h3>Standards Perfect Store</h3>
+  <p>Une seule page, en cinq parties : seuils des niveaux, assortiment, poids des références dans la disponibilité, visibilité exigée, types de PDV. Sur grand écran, le sommaire « Sur cette page » mène à chaque partie.</p>
+  <div class="encadre encadre--regle">
+    <span class="encadre__titre">Après une modification : recalculer</span>
+    <p>Les scores des visites ne changent qu’après <span class="ui">Recalculer toutes les visites</span>. Un bandeau le rappelle tant que ce n’est pas fait. Le calcul prend plusieurs minutes : gardez la page ouverte.</p>
+  </div>
+
+  <h3>Produits du formulaire</h3>
+  <p>Les produits relevés pendant la visite, par famille : libellé, ordre, seuil « stock bas » et présence dans le formulaire. Chaque changement s’enregistre aussitôt et arrive sur les téléphones à l’ouverture de l’application. Un produit n’est jamais supprimé : on le retire du formulaire, ses relevés passés restent. Un nouveau produit ne compte au Perfect Store qu’après sa <span class="ui">Correspondance des références</span> (Référentiels) et un recalcul.</p>
+
+  <h3>Utilisateurs</h3>
+  <ol class="etapes">
+    <li><span class="ui">Nouvel utilisateur</span> : nom, e-mail (l’identifiant, qu’on ne change plus ensuite), mot de passe provisoire (8 caractères au moins), <strong>rôle</strong>, téléphone (indispensable pour WhatsApp), direction.</li>
+    <li>Pour un <strong>merchandiser</strong> : son commercial responsable et son employeur (agence). Pour un compte <strong>Agence</strong> : son agence (obligatoire ; le compte ne verra que les merchandisers de cette agence).</li>
+    <li><strong>Périmètre</strong> : cochez les territoires puis, si besoin, les quartiers (vide = tous les quartiers des territoires).</li>
+    <li>Enregistrez : le compte est actif tout de suite ; aucun e-mail n’est envoyé.</li>
+  </ol>
+  <figure class="ecran ecran--demi">
+    <img src="guides/source/captures/guide/utilisateur.png" alt="La fiche d’un utilisateur">
+    <figcaption>La fiche d’un utilisateur, rôle Agence.</figcaption>
+  </figure>
+  <ul>
+    <li><span class="ui">Réinitialiser le mot de passe</span> : laissez le champ vide pour générer un mot de passe provisoire, qui s’affiche <strong>une seule fois</strong>. L’utilisateur en choisira un nouveau à sa prochaine connexion. Personne, pas même l’administrateur, ne peut relire un mot de passe.</li>
+    <li><span class="ui">Désactiver</span> : l’utilisateur ne peut plus se connecter (réversible avec <span class="ui">Activer</span>). <span class="ui">Supprimer</span> : définitif ; ses visites restent, anonymes. Les deux demandent confirmation.</li>
+    <li>Les <strong>demandes de suppression</strong> envoyées depuis l’application apparaissent dans un bandeau en haut de la page ; elles sont à traiter sous 30 jours.</li>
+  </ul>
+
+  <h3>Équipes et permissions</h3>
+  <p><span class="ui">Équipes</span> : choisissez un commercial, cochez ses merchandisers, enregistrez. Cela alimente « Mon équipe » sur le mobile et les relances WhatsApp, sans changer le périmètre.</p>
+  <p><span class="ui">Permissions</span> : une case par rôle et par section ; chaque ligne liste les écrans qu’elle ouvre. Une case s’enregistre aussitôt, et le message qui s’affiche permet d’annuler. L’administrateur a toujours tout ; Utilisateurs et Permissions lui restent réservés.</p>
+
+  <h3>Versions de l’app</h3>
+  <ul>
+    <li>La <strong>version minimale exigée</strong> : en dessous, l’application affiche un écran de mise à jour obligatoire. <span class="ui">Modifier la version minimale</span> la change.</li>
+    <li>Le tableau montre qui est à jour, qui est bloqué et qui n’a rien déclaré, filtrable par direction, employeur et rôle ; <span class="ui">Exporter les comptes</span> fait l’inventaire des licences.</li>
+    <li><span class="ui">Publier une nouvelle version</span> (administrateur) : déposez le fichier APK fourni par l’équipe technique ; laissez d’abord la version facultative, puis rendez-la obligatoire une fois en ligne sur le Play Store.</li>
+  </ul>
+
   <h3>Import / Export</h3>
   <ul>
-    <li>Import des <span class="ui">Points de vente (PDV)</span> en <strong>CSV</strong> (mêmes colonnes que l’import de la liste PDV).</li>
-    <li>Export : visites (Excel, <strong>toutes</strong> les visites de la plage de dates, avec la quantité de chaque produit), PDV (Excel).</li>
+    <li><strong>Importer des points de vente</strong> (CSV) : l’écran montre un aperçu du fichier et le nombre de lignes, puis demande confirmation avant d’écrire.</li>
+    <li><strong>Exporter</strong> les visites (avec la quantité de chaque produit) ou les points de vente, sur une plage de dates.</li>
+    <li><strong>Imports terrain</strong> : clients du fichier du distributeur, affectation des merchandisers, visites Atom, routing mensuel des agences, routing des vendeurs. Chaque import se <span class="ui">Simule</span> d’abord (rien n’est écrit), se relit, puis s’<span class="ui">Applique</span> ; un lot appliqué peut être annulé depuis l’historique. Relancer le même fichier ne crée pas de doublons.</li>
   </ul>
-  <h3>Imports terrain (admin)</h3>
-  <p>Cinq traitements, sans passer par l’équipe technique : <span class="ui">Clients DMS → points de vente</span>, <span class="ui">Affectation des merchandisers (DMS)</span>, <span class="ui">Visites Atom (export Bonnet Rouge)</span>, <span class="ui">Routing mensuel des merchandisers (fichier de l’agence)</span>, <span class="ui">Routing des SSF (export DMS)</span>.</p>
-  <ol class="etapes">
-    <li>Choisissez le fichier Excel, puis <span class="ui">Simuler</span> : rien n’est écrit. Le résumé, le rapport et le fichier CSV des écarts s’affichent et se téléchargent.</li>
-    <li>Relisez le rapport (lignes écartées, noms inconnus). Un nom mal reconnu se corrige dans <span class="ui">Alias d’import</span>, puis on simule à nouveau.</li>
-    <li><span class="ui">Appliquer</span> écrit par lots, avec une barre de progression. Relancer le même fichier ne crée pas de doublons.</li>
-    <li>L’historique garde chaque lot. <span class="ui">Annuler le lot</span> défait ses écritures.</li>
-  </ol>
-  <p>Après un import important : <span class="ui">Maintenance</span> → <span class="ui">Rafraîchir les statistiques maintenant</span>, et pour les tournées <span class="ui">Recalculer les tournées à venir</span>.</p>
-  <h3>Remettre les guides aux utilisateurs</h3>
-  <p>Cinq guides génériques sont fournis : administrateur, <strong>administrateur Atom</strong> (routing mensuel de l’agence), commercial, merchandiseur, <strong>merchandiseur Atom</strong>. Un guide <strong>personnalisé</strong> par commercial et par merchandiseur (fiche de connexion avec nom, identifiant, territoires, équipe ou commercial responsable ; pour un merchandiseur Atom, sa page <strong>« Ma semaine »</strong> avec ses SSF, leurs téléphones et leurs quartiers) se génère depuis un poste disposant du fichier <code>.env</code> du projet :</p>
-  <p><code>node scripts/generer-guides-pdf.mjs --utilisateurs</code></p>
-  <p>Les PDF sont créés dans <code>docs/guides/utilisateurs/</code> (non versionné). Par défaut, la ligne « Mot de passe provisoire » est laissée vide, à compléter à la main.</p>
-  <p>Avec l’option <code>--avec-mots-de-passe</code>, le <strong>mot de passe par défaut</strong> des comptes initiaux est imprimé, uniquement pour les comptes qui ne l’ont pas encore remplacé. Il est <strong>présumé</strong> : un compte réinitialisé depuis l’admin a un autre mot de passe. Si la connexion échoue, réinitialisez le compte. Les comptes ayant déjà choisi leur mot de passe affichent « Personnel ».</p>
-  <div class="encadre encadre--attention">
-    <span class="encadre__titre">Diffusion</span>
-    <p>Un guide contenant un mot de passe se remet <strong>en main propre à son seul destinataire</strong>. Distribuez tous les guides le même jour et vérifiez que chacun se connecte et change son mot de passe rapidement.</p>
-  </div>
-
-  <div class="aide">
-    <h3>Check-list d’arrivée d’un nouvel utilisateur</h3>
-    <ol>
-      <li>Créer le compte avec rôle, téléphone, territoires (et quartiers).</li>
-      <li>Pour un merchandiseur : le rattacher à son commercial (<span class="ui">Équipes</span>) et lui planifier des tournées (règle récurrente).</li>
-      <li><span class="ui">Réinitialiser le mot de passe</span> pour imposer un mot de passe personnel à la première connexion ; noter le mot de passe provisoire sur sa fiche.</li>
-      <li>Remettre son guide personnalisé et vérifier sa première connexion (localisation et notifications autorisées).</li>
-    </ol>
-  </div>
 </section>
 
 <section class="chapitre">
-  <h2>Ce qui reste du ressort de l’équipe technique</h2>
-  <p>Toutes les données de l’application se gèrent dans l’admin. Restent dans le code, parce qu’ils changent la structure de l’application et non ses données :</p>
+  <h2>Questions fréquentes</h2>
+  <dl class="glossaire">
+    <dt>Je ne vois pas un menu ou un onglet</dt>
+    <dd>Votre rôle ne l’ouvre pas. Demandez à l’administrateur (Paramètres › Permissions).</dd>
+    <dt>« Vous n’avez pas accès à… »</dt>
+    <dd>Le lien menait à un écran fermé pour votre rôle : vous êtes revenu à votre première page.</dd>
+    <dt>Les scores n’ont pas bougé après un changement de standard</dt>
+    <dd>Lancez <span class="ui">Recalculer toutes les visites</span> (Standards Perfect Store).</dd>
+    <dt>Une personne n’a pas de tournée un jour</dt>
+    <dd>Aucune règle ne couvre ce jour, ou la règle est suspendue cette semaine-là (Planning › Règles récurrentes).</dd>
+    <dt>Une tournée d’agence sort du lieu du jour</dt>
+    <dd>Vérifiez la case du routing mensuel et l’alias du lieu, puis <span class="ui">Recalculer les tournées à venir</span>.</dd>
+    <dt>Un produit n’apparaît plus dans le formulaire</dt>
+    <dd>Il est retiré, ou sa famille l’est (Produits du formulaire, Référentiels › Catégories du relevé).</dd>
+    <dt>« Le serveur met trop de temps à répondre »</dt>
+    <dd>Attendez quelques instants puis réessayez. Si le message revient, prévenez l’administrateur technique.</dd>
+    <dt>« Cet écran n’est pas encore disponible sur le serveur »</dt>
+    <dd>Une mise à jour de la base manque. Prévenez l’administrateur technique.</dd>
+  </dl>
+</section>
+
+<section class="chapitre">
+  <h2>Glossaire</h2>
+  <dl class="glossaire">
+    <dt>Perfect Store</dt><dd>Le standard d’exécution en magasin de FrieslandCampina : disponibilité, assortiment, visibilité et promotion.</dd>
+    <dt>Niveau</dt><dd>Flagship, VIP, Core ou Basic : le plus haut niveau dont tous les critères sont remplis lors de la visite.</dd>
+    <dt>Présence</dt><dd>Au moins une unité du produit en rayon.</dd>
+    <dt>Disponibilité en rayon</dt><dd>La quantité minimale du standard est atteinte (et, en supermarché, le nombre de faces).</dd>
+    <dt>Référence (SKU)</dt><dd>Un produit précis (format, parfum). Les références prioritaires (hero SKU) sont exigées en priorité.</dd>
+    <dt>Famille de produits</dt><dd>EVAP, IMP, SCM, UHT… : regroupement des références relevées pendant la visite.</dd>
+    <dt>Boutiques (GT)</dt><dd>Le commerce traditionnel (general trade) : boutiques, kiosques, superettes de quartier.</dd>
+    <dt>Supermarchés (MT)</dt><dd>La grande distribution (modern trade).</dd>
+    <dt>Écarts au standard</dt><dd>Les critères qui manquent à un point de vente pour atteindre le niveau visé.</dd>
+    <dt>Vendeur du distributeur (SSF)</dt><dd>Il vend et livre les clients du distributeur ; il dépend, comme le merchandiser, du commercial.</dd>
+    <dt>Fichier du distributeur (DMS)</dt><dd>Le logiciel des distributeurs, d’où viennent les clients de chaque vendeur et les portefeuilles des merchandisers.</dd>
+    <dt>Portefeuille</dt><dd>Les points de vente confiés à un merchandiser (souvent ceux de son distributeur).</dd>
+    <dt>Routing mensuel</dt><dd>Le plan du mois d’une agence : pour chaque merchandiser, chaque jour de chaque semaine, un lieu et le vendeur qui l’accompagne.</dd>
+    <dt>Tournée / règle récurrente</dt><dd>La liste des points de vente d’une personne pour un jour ; une règle génère les tournées chaque semaine ou chaque mois.</dd>
+    <dt>Quotas</dt><dd>Le nombre de points de vente par canal et par jour des merchandisers d’agence.</dd>
+    <dt>Rayon de visite</dt><dd>La distance au point de vente dans laquelle une visite peut démarrer et être validée.</dd>
+    <dt>Direction</dt><dd>South (Abidjan), North (intérieur) ou Modern Trade.</dd>
+    <dt>Zone commerciale</dt><dd>Le découpage commercial sous le territoire (area), au-dessus du quartier.</dd>
+    <dt>Coaching terrain</dt><dd>L’évaluation d’un vendeur du distributeur par un commercial, sur le mobile.</dd>
+  </dl>
+</section>
+
+<section class="chapitre">
+  <h2>Ce qui reste à l’équipe technique</h2>
+  <p>Toutes les données de l’application se gèrent dans le back-office. Restent du ressort de l’équipe technique, parce qu’ils changent la structure de l’application :</p>
   <ul>
-    <li>la liste des <strong>rôles</strong> et des <strong>sections</strong> du menu (la matrice <span class="ui">Permissions</span>, elle, se règle dans l’admin) ;</li>
-    <li>les <strong>objectifs</strong> d’une étape de tournée (Stock, Encaissement, Photos, Merchandising, Prospection) ;</li>
-    <li>les <strong>questions du field coaching</strong> et les textes des <strong>notifications</strong> ;</li>
-    <li>les <strong>migrations</strong> de la base, appliquées dans l’éditeur SQL de Supabase, et la construction de l’application Android (APK et AAB pour le Play Store).</li>
+    <li>la liste des rôles et des écrans du menu (la matrice des Permissions, elle, se règle dans le back-office) ;</li>
+    <li>les objectifs d’une étape de tournée, les questions du coaching terrain et les textes des notifications ;</li>
+    <li>les mises à jour de la base de données et la construction de l’application Android (fichiers APK et AAB) ;</li>
+    <li>la génération des guides personnalisés (fiche de connexion de chaque utilisateur).</li>
   </ul>
   <div class="aide">
-    <h3>Dépannage rapide</h3>
-    <ul>
-      <li>Une tournée d’agence sort du lieu du jour : vérifiez la case (<span class="ui">Routing mensuel</span>) et l’alias du point de visite, les quartiers du SSF (<span class="ui">SSF ↔ Quartiers</span>), puis <span class="ui">Recalculer les tournées à venir</span>.</li>
-      <li>Un jour sans tournée : aucune règle ne couvre ce jour, ou la règle est suspendue.</li>
-      <li>Un produit absent du formulaire : il est retiré, ou sa catégorie l’est (<span class="ui">Produits du formulaire</span>, <span class="ui">Catégories du relevé</span>).</li>
-      <li>Les scores n’ont pas bougé après un changement de standard ou de correspondance : <span class="ui">Recalculer</span>.</li>
-    </ul>
+    <h3>Arrivée d’un nouvel utilisateur</h3>
+    <ol>
+      <li>Créer le compte : rôle, téléphone, territoires (et quartiers) ; agence pour un merchandiser ou un compte Agence.</li>
+      <li>Pour un merchandiser : le rattacher à son commercial (Équipes) et lui prévoir des tournées (règle récurrente ou routing mensuel).</li>
+      <li><span class="ui">Réinitialiser le mot de passe</span> pour lui imposer un mot de passe personnel ; noter le mot de passe provisoire sur sa fiche.</li>
+      <li>Lui remettre son guide et vérifier sa première connexion.</li>
+    </ol>
   </div>
 </section>

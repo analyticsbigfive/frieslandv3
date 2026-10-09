@@ -51,9 +51,9 @@ const VERSION_APP = JSON.parse(await readFile(join(RACINE, 'package.json'), 'utf
 const ROLES = {
   admin: {
     fichier: 'GUIDE-ADMIN',
-    titre: 'Guide de l’administrateur',
-    libelleRole: 'Administrateur · back-office web',
-    intro: 'Ce guide accompagne les administrateurs du back-office Perfect Store : suivi de la performance, gestion des utilisateurs et des équipes, référentiels, standards et actions commerciales.',
+    titre: 'Guide du back-office',
+    libelleRole: 'Administrateur, superviseur, commercial · back-office web',
+    intro: 'Ce guide accompagne les utilisateurs du back-office Perfect Store, sans connaissance technique : se repérer, suivre la performance des points de vente, préparer les tournées, analyser le marché et tenir les réglages à jour.',
   },
   commercial: {
     fichier: 'GUIDE-COMMERCIAL',
@@ -70,9 +70,9 @@ const ROLES = {
   admin_atom: {
     fichier: 'GUIDE-ADMIN-ATOM',
     source: 'admin-atom',
-    titre: 'Guide de l’administrateur Atom',
-    libelleRole: 'Agence Atom · routing mensuel',
-    intro: 'Ce guide accompagne le responsable du routing de l’agence Atom dans le back-office : les règles du client, le fichier du mois avec ses points GPS, l’import, les corrections en cours de mois et le contrôle des tournées.',
+    titre: 'Guide du compte agence',
+    libelleRole: 'Agence · routing mensuel des merchandisers',
+    intro: 'Ce guide accompagne le responsable du routing d’une agence (Atom BTL…) dans le back-office : ce que voit le compte agence, les règles du client, le fichier du mois avec ses points GPS, l’import, les corrections en cours de mois et le contrôle des tournées.',
   },
   merchandiser_atom: {
     fichier: 'GUIDE-MERCHANDISER-ATOM',

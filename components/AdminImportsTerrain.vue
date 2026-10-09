@@ -40,6 +40,15 @@
         </div>
         <div v-if="imp.type === 'routing-mensuel'" class="flex flex-wrap items-center gap-3 text-xs text-slate-700 dark:text-slate-300">
           <UCheckbox v-model="options.recalculerSsf" label="Recalculer les tournées des 7 prochains jours" />
+          <!-- Exemple fictif (merchandiser « EXEMPLE ») : le simuler n'écrit rien. -->
+          <a
+            href="/guides/exemple-routing-mensuel.csv"
+            download
+            class="inline-flex items-center gap-1 font-semibold text-brand-700 underline-offset-2 hover:underline focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-brand-300"
+          >
+            <UIcon name="i-heroicons-arrow-down-tray" class="h-4 w-4" aria-hidden="true" />
+            Télécharger un exemple de fichier
+          </a>
         </div>
         <UButton
           size="sm"
