@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">VISITES — ÉVOLUTION</h1>
+    <AdminPageHeader description="Le nombre de visites par jour, par semaine ou par mois sur la période choisie." />
 
     <DashboardFilters
       v-model="dashboard.filters.value"
@@ -8,23 +8,19 @@
       @filter="dashboard.fetchVisites()"
     />
 
-    <div v-if="dashboard.loading.value" class="flex items-center justify-center py-12">
-      <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-fc-blue" />
-    </div>
+    <ChargementContenu v-if="dashboard.loading.value" variante="cartes" :nombre="2" classe-carte="admin-surface" libelle="Chargement des visites…" />
 
     <template v-else>
-      <!-- KPI -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard title="Total visites" :value="String(dashboard.totalVisites.value)" icon="i-heroicons-clipboard-document-list" color="blue" />
-        <StatsCard title="GPS validé" :value="String(gpsOkCount)" icon="i-heroicons-map-pin" color="green" />
-        <StatsCard title="Commerciaux" :value="String(commerciauxCount)" icon="i-heroicons-users" color="purple" />
-        <StatsCard title="Période" :value="periodLabel" icon="i-heroicons-calendar" color="orange" />
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatsCard title="Visites" :value="dashboard.totalVisites.value" :subtitle="periodLabel" icon="i-heroicons-clipboard-document-list" color="red" />
+        <StatsCard title="Visites faites sur place" :value="gpsOkCount" subtitle="Démarrées dans le rayon de visite" icon="i-heroicons-map-pin" color="green" />
+        <StatsCard title="Merchandisers actifs" :value="commerciauxCount" subtitle="Au moins une visite sur la période" icon="i-heroicons-users" />
       </div>
 
-      <!-- Groupement -->
-      <div class="flex items-center gap-3">
-        <span class="text-sm text-gray-500 dark:text-gray-400">Grouper par :</span>
-        <USelectMenu
+      <div class="flex flex-wrap items-center justify-end gap-2">
+        <label for="regroupement-visites" class="text-sm text-slate-700 dark:text-slate-200">Regrouper</label>
+        <USelect
+          id="regroupement-visites"
           v-model="groupBy"
           :options="[
             { label: 'Par jour', value: 'day' },
@@ -34,44 +30,57 @@
           option-attribute="label"
           value-attribute="value"
           size="sm"
+          class="w-36"
         />
       </div>
 
-      <!-- Chart -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Nombre de visites par {{ groupByLabel }}</h3>
-        <ClientOnly>
-          <ChartsVisitesLineChart v-if="chartData.length" title="" :data="chartData" />
-        </ClientOnly>
-      </div>
+      <ClientOnly>
+        <ChartsMultiLineChart
+          :title="`Visites par ${groupByLabel}`"
+          :subtitle="groupBy === 'week' ? 'Semaines du lundi au dimanche.' : 'Sur la période et le périmètre choisis.'"
+          :labels="chartLabels"
+          :series="[{ label: 'Visites', data: chartValues }]"
+          empty-label="Aucune visite sur la période. Élargissez les dates ou retirez des filtres."
+        />
+      </ClientOnly>
 
-      <!-- Table summary -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-        <table class="w-full">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="text-left text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">Période</th>
-              <th class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">Nb visites</th>
-              <th class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">GPS validé</th>
-              <th class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">Commerciaux</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100">
-            <tr v-for="row in tableData" :key="row.period" class="hover:bg-gray-50 dark:hover:bg-gray-700">
-              <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">{{ row.period }}</td>
-              <td class="px-4 py-3 text-center text-sm text-fc-blue font-bold">{{ row.count }}</td>
-              <td class="px-4 py-3 text-center text-sm text-green-600">{{ row.gpsOk }}</td>
-              <td class="px-4 py-3 text-center text-sm text-gray-600">{{ row.commerciaux }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <section class="admin-surface overflow-hidden">
+        <div class="border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+          <h2 class="text-base font-semibold text-slate-900 dark:text-white">Détail par {{ groupByLabel }}</h2>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Période</th>
+                <th class="text-right">Visites</th>
+                <th class="text-right">Faites sur place</th>
+                <th class="text-right">Merchandisers actifs</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in tableData" :key="row.period">
+                <td class="font-medium text-slate-900 dark:text-white">{{ row.period }}</td>
+                <td class="text-right font-semibold tabular-nums text-slate-900 dark:text-white">{{ row.count.toLocaleString('fr-FR') }}</td>
+                <td class="text-right tabular-nums">{{ row.gpsOk.toLocaleString('fr-FR') }}</td>
+                <td class="text-right tabular-nums">{{ row.commerciaux.toLocaleString('fr-FR') }}</td>
+              </tr>
+              <tr v-if="!tableData.length">
+                <td colspan="4" class="py-8 text-center text-slate-600 dark:text-slate-300">
+                  Aucune visite sur la période. Élargissez les dates ou retirez des filtres.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
 import { agregerParPeriode, clePeriode, type Granularite } from '~/utils/agregation'
+import { libellePlage } from '~/utils/periode'
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const dashboard = useDashboardDirection()
@@ -91,7 +100,7 @@ const commerciauxCount = computed(() =>
 )
 const periodLabel = computed(() => {
   const f = dashboard.filters.value
-  return f.dateFrom && f.dateTo ? `${f.dateFrom} → ${f.dateTo}` : '—'
+  return f.dateFrom || f.dateTo ? `Période : ${libellePlage({ debut: f.dateFrom || '', fin: f.dateTo || '' })}` : 'Depuis le début'
 })
 
 // Regroupement par période : utils/agregation.ts (lot 5), même convention de
@@ -117,9 +126,10 @@ const tableData = computed(() => {
   }))
 })
 
-const chartData = computed(() =>
-  tableData.value.map(r => ({ date: r.period, count: r.count }))
-)
+// Courbe dans l'ordre chronologique de tableData (le tri par libellé de
+// VisitesLineChart mélangeait « S9 » et « S10 », « août » et « juillet »).
+const chartLabels = computed(() => tableData.value.map(r => r.period))
+const chartValues = computed(() => tableData.value.map(r => r.count))
 
 onMounted(() => {
   Promise.all([dashboard.fetchVisites()])

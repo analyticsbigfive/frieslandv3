@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">PDV — ÉVOLUTION AJOUTS</h1>
+    <AdminPageHeader description="Les points de vente créés sur la période choisie, semaine par semaine." />
 
     <DashboardFilters
       v-model="dashboard.filters.value"
@@ -9,57 +9,65 @@
       @filter="fetchPDV"
     />
 
-    <div v-if="loading" class="flex items-center justify-center py-12">
-      <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-fc-blue" />
+    <ChargementContenu v-if="loading" variante="cartes" :nombre="2" classe-carte="admin-surface" libelle="Chargement des points de vente…" />
+
+    <div v-else-if="erreur" class="admin-surface p-6 text-sm text-slate-700 dark:text-slate-200" role="alert">
+      <p class="font-semibold text-slate-900 dark:text-white">Les points de vente n’ont pas pu être chargés.</p>
+      <p class="mt-1">{{ erreur }}</p>
     </div>
 
     <template v-else>
-      <!-- KPI -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard title="PDV total" :value="String(totalPDV)" icon="i-heroicons-map-pin" color="blue" />
-        <StatsCard title="Ajoutés (période)" :value="String(addedCount)" icon="i-heroicons-plus-circle" color="green" />
-        <StatsCard title="Zones" :value="String(zonesCount)" icon="i-heroicons-globe-alt" color="purple" />
-        <StatsCard title="Canaux" :value="String(canauxCount)" icon="i-heroicons-building-storefront" color="orange" />
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatsCard title="Points de vente créés" :value="addedCount" :subtitle="libellePeriode" icon="i-heroicons-plus-circle" color="red" />
+        <StatsCard title="Territoires concernés" :value="zonesCount" icon="i-heroicons-map" />
+        <StatsCard title="Canaux" :value="canauxCount" icon="i-heroicons-building-storefront" />
       </div>
 
-      <!-- Evolution chart -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Évolution des ajouts de PDV par semaine</h3>
-        <ClientOnly>
-          <ChartsVisitesLineChart
-            v-if="evoData.length"
-            title=""
-            :data="evoData"
-          />
-        </ClientOnly>
-      </div>
+      <ClientOnly>
+        <ChartsMultiLineChart
+          title="Points de vente créés par semaine"
+          subtitle="Semaines du lundi au dimanche."
+          :labels="evoData.map(p => p.date)"
+          :series="[{ label: 'Points de vente créés', data: evoData.map(p => p.count) }]"
+          empty-label="Aucun point de vente créé sur la période. Élargissez les dates pour voir les ajouts."
+        />
+      </ClientOnly>
 
-      <!-- Répartition par canal -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-          <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Par canal</h3>
+      <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <section class="admin-surface p-5">
+          <h2 class="text-base font-semibold text-slate-900 dark:text-white">Par canal</h2>
           <ClientOnly>
             <ChartsPieChart
               v-if="canalBreakdown.labels.length"
+              class="mt-4"
+              bare
               :labels="canalBreakdown.labels"
               :values="canalBreakdown.values"
+              :colors="couleurs(canalBreakdown.labels)"
               height="md"
-              :show-percentages="true"
             />
           </ClientOnly>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-          <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Par catégorie</h3>
+          <p v-if="!canalBreakdown.labels.length" class="mt-4 flex h-40 items-center justify-center rounded-md bg-slate-50 px-4 text-center text-sm text-slate-600 dark:bg-slate-700/40 dark:text-slate-300">
+            Aucun point de vente créé sur la période.
+          </p>
+        </section>
+        <section class="admin-surface p-5">
+          <h2 class="text-base font-semibold text-slate-900 dark:text-white">Par catégorie</h2>
           <ClientOnly>
             <ChartsPieChart
               v-if="categorieBreakdown.labels.length"
+              class="mt-4"
+              bare
               :labels="categorieBreakdown.labels"
               :values="categorieBreakdown.values"
+              :colors="couleurs(categorieBreakdown.labels)"
               height="md"
-              :show-percentages="true"
             />
           </ClientOnly>
-        </div>
+          <p v-if="!categorieBreakdown.labels.length" class="mt-4 flex h-40 items-center justify-center rounded-md bg-slate-50 px-4 text-center text-sm text-slate-600 dark:bg-slate-700/40 dark:text-slate-300">
+            Aucun point de vente créé sur la période.
+          </p>
+        </section>
       </div>
     </template>
   </div>
@@ -67,15 +75,31 @@
 
 <script setup lang="ts">
 import { agregerParPeriode } from '~/utils/agregation'
+import { AUTRE, SERIES } from '~/utils/chartPalette'
+import { isModernTrade } from '~/utils/canal'
+import { libellePlage } from '~/utils/periode'
+import { messageUtilisateur } from '~/utils/supabaseErrors'
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const supabase = useSupabaseClient()
 const dashboard = useDashboardDirection()
+const { categoriePdvLabel, fetchTypePdvLabels } = useTypePdvLabels()
 
 const loading = ref(false)
+const erreur = ref('')
 const pdvList = ref<any[]>([])
 
-const totalPDV = computed(() => pdvList.value.length)
+const libellePeriode = computed(() => {
+  const f = dashboard.filters.value
+  return f.dateFrom || f.dateTo ? `Période : ${libellePlage({ debut: f.dateFrom || '', fin: f.dateTo || '' })}` : 'Depuis le début'
+})
+
+// Couleurs de la palette commune dans l'ordre ; « Non renseigné » en gris.
+function couleurs(labels: string[]): string[] {
+  let i = 0
+  return labels.map(l => (l === 'Non renseigné' ? AUTRE : SERIES[i++] ?? AUTRE))
+}
+
 const addedCount = computed(() => pdvList.value.filter(p => p.date_creation).length)
 const zonesCount = computed(() => new Set(pdvList.value.map(p => p.zone).filter(Boolean)).size)
 const canauxCount = computed(() => new Set(pdvList.value.map(p => p.canal).filter(Boolean)).size)
@@ -83,7 +107,7 @@ const canauxCount = computed(() => new Set(pdvList.value.map(p => p.canal).filte
 const canalBreakdown = computed(() => {
   const counts = new Map<string, number>()
   pdvList.value.forEach(p => {
-    const c = p.canal || 'Non défini'
+    const c = p.canal ? (isModernTrade(p.canal) ? 'Supermarchés (MT)' : 'Boutiques (GT)') : 'Non renseigné'
     counts.set(c, (counts.get(c) || 0) + 1)
   })
   const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1])
@@ -93,7 +117,7 @@ const canalBreakdown = computed(() => {
 const categorieBreakdown = computed(() => {
   const counts = new Map<string, number>()
   pdvList.value.forEach(p => {
-    const c = p.categorie_pdv || 'Non défini'
+    const c = p.categorie_pdv ? categoriePdvLabel(p.categorie_pdv) : 'Non renseigné'
     counts.set(c, (counts.get(c) || 0) + 1)
   })
   const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1])
@@ -120,14 +144,20 @@ async function fetchPDV() {
       query = query.lte('date_creation', dashboard.filters.value.dateTo)
     }
 
-    const { data } = await query
+    const { data, error } = await query
+    if (error) throw error
+    erreur.value = ''
     pdvList.value = data || []
+  } catch (err) {
+    console.error('Évolution des PDV : chargement impossible', err)
+    erreur.value = messageUtilisateur(err)
   } finally {
     loading.value = false
   }
 }
 
 onMounted(() => {
+  fetchTypePdvLabels()
   Promise.all([fetchPDV()])
 })
 </script>

@@ -1,90 +1,83 @@
 <template>
   <div class="space-y-6">
-    <header class="space-y-1">
-      <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-fc-red">Stats · Visites</p>
-      <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Performance des commerciaux</h1>
-      <p class="max-w-2xl text-sm text-slate-500 dark:text-slate-400">
-        Volume de visites par commercial, classé du plus actif au moins actif.
-      </p>
-    </header>
+    <!-- visites.commercial contient l'auteur de la visite : le merchandiser
+         (même libellé que le filtre de l'onglet « Toutes les visites »). -->
+    <AdminPageHeader description="Le volume de visites de chaque merchandiser sur la période, du plus actif au moins actif." />
 
     <!-- Filtre période (réunion 23/07) : suivre les commerciaux jour après jour,
          pas seulement en cumul depuis l'origine. -->
-    <div class="admin-surface p-4">
+    <div class="admin-toolbar">
       <PeriodFilter v-model="periode" />
     </div>
 
-    <div v-if="loading" class="flex items-center justify-center py-12">
-      <UIcon name="i-heroicons-arrow-path" class="h-8 w-8 animate-spin text-fc-red" />
-    </div>
+    <ChargementContenu v-if="loading" variante="cartes" :nombre="2" classe-carte="admin-surface" libelle="Chargement du classement…" />
 
     <template v-else>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div class="admin-metric-tile">
-          <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Commerciaux actifs</p>
-          <p class="mt-2 text-3xl font-bold tabular-nums text-slate-900 dark:text-white">{{ rows.length }}</p>
-        </div>
-        <div class="admin-metric-tile">
-          <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Visites · {{ periodeLabel }}</p>
-          <p class="mt-2 text-3xl font-bold tabular-nums text-fc-red">{{ totalVisites }}</p>
-        </div>
-        <div class="admin-metric-tile">
-          <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Visites / jour (moyenne)</p>
-          <p class="mt-2 text-3xl font-bold tabular-nums text-slate-900 dark:text-white">{{ moyenneParJour }}</p>
-        </div>
+        <StatsCard title="Merchandisers actifs" :value="rows.length" subtitle="Au moins une visite sur la période" icon="i-heroicons-users" />
+        <StatsCard title="Visites" :value="totalVisites" :subtitle="periodeLabel" icon="i-heroicons-clipboard-document-list" color="red" />
+        <StatsCard title="Visites par jour (moyenne)" :value="moyenneParJour" subtitle="Sur les jours avec au moins une visite" icon="i-heroicons-calendar-days" format="none" />
       </div>
 
       <section class="admin-surface overflow-hidden">
-        <div class="flex items-center justify-between px-5 py-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-700">
           <h2 class="text-base font-semibold text-slate-900 dark:text-white">Classement · {{ periodeLabel }}</h2>
-          <div class="flex items-center gap-3">
-            <UInput v-model="search" placeholder="Rechercher…" size="sm" icon="i-heroicons-magnifying-glass" />
-            <UButton size="xs" variant="ghost" icon="i-heroicons-arrow-down-tray" @click="exportCsv">CSV</UButton>
+          <div class="flex flex-wrap items-center gap-2">
+            <UInput
+              v-model="search"
+              placeholder="Nom ou e-mail…"
+              aria-label="Rechercher un merchandiser dans le classement"
+              size="sm"
+              icon="i-heroicons-magnifying-glass"
+            />
+            <UButton size="sm" variant="outline" icon="i-heroicons-arrow-down-tray" :disabled="!filteredRows.length" @click="exportCsv">Exporter (CSV)</UButton>
           </div>
         </div>
-        <div class="overflow-x-auto">
-          <table class="admin-table w-full">
+        <div v-if="filteredRows.length" class="overflow-x-auto">
+          <table class="admin-table">
             <thead>
               <tr>
-                <th class="w-10 text-center">#</th>
-                <th>Commercial</th>
-                <th class="text-center">Visites</th>
-                <th class="text-center">PDV distincts</th>
-                <th class="text-center">Visites / jour</th>
-                <th class="text-center">Dernière visite</th>
-                <th>Volume relatif</th>
-                <th class="text-right">Visites</th>
+                <th class="w-14 text-right">Rang</th>
+                <th>Merchandiser</th>
+                <th class="text-right">Visites sur la période</th>
+                <th class="text-right">Points de vente distincts</th>
+                <th class="text-right">Visites par jour</th>
+                <th class="text-right">Dernière visite</th>
+                <th>Part du plus actif</th>
+                <th class="text-right"><span class="sr-only">Lien vers ses visites</span></th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="(com, idx) in filteredRows" :key="com.commercial">
-                <td class="text-center text-sm tabular-nums text-slate-400">{{ idx + 1 }}</td>
+                <td class="text-right tabular-nums text-slate-600 dark:text-slate-300">{{ rangDe(com, idx) }}</td>
                 <td>
                   <div class="flex items-center gap-3">
-                    <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-xs font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-200">
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-slate-100 text-xs font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200" aria-hidden="true">
                       {{ com.commercial?.substring(0, 2).toUpperCase() }}
                     </div>
                     <div>
-                      <p class="font-medium text-slate-900 dark:text-white">{{ com.commercial }}</p>
-                      <p class="text-xs text-slate-400">{{ com.email }}</p>
+                      <p class="font-medium text-slate-900 dark:text-white">{{ com.commercial || '—' }}</p>
+                      <p class="text-xs text-slate-500 dark:text-slate-400">{{ com.email }}</p>
                     </div>
                   </div>
                 </td>
-                <td class="text-center font-semibold tabular-nums text-fc-red">{{ com.nb_visites }}</td>
-                <td class="text-center font-semibold tabular-nums">{{ com.nb_pdv }}</td>
-                <td class="text-center tabular-nums">{{ com.visites_par_jour ?? '—' }}</td>
-                <td class="text-center text-sm tabular-nums">{{ formatDate(derniereVisite(com)) }}</td>
+                <td class="text-right font-semibold tabular-nums text-slate-900 dark:text-white">{{ com.nb_visites.toLocaleString('fr-FR') }}</td>
+                <td class="text-right tabular-nums">{{ com.nb_pdv.toLocaleString('fr-FR') }}</td>
+                <td class="text-right tabular-nums">{{ com.visites_par_jour ?? '—' }}</td>
+                <td class="whitespace-nowrap text-right tabular-nums">{{ formatDate(derniereVisite(com)) }}</td>
                 <td>
-                  <div class="h-1.5 w-28 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
-                    <div class="h-full rounded-full bg-fc-red transition-all" :style="{ width: barWidth(com) }" />
+                  <div class="h-1.5 w-28 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700" :title="`${barWidth(com)} du volume du merchandiser le plus actif`" aria-hidden="true">
+                    <div class="h-full rounded-full" :style="{ width: barWidth(com), backgroundColor: SERIES[0] }" />
                   </div>
                 </td>
                 <td class="text-right">
                   <UButton
                     size="xs"
+                    color="gray"
                     variant="ghost"
-                    icon="i-heroicons-arrow-top-right-on-square"
+                    trailing-icon="i-heroicons-arrow-right"
                     :to="{ path: '/admin/visites', query: { commercial: com.commercial || com.email } }"
+                    :aria-label="`Voir les visites de ${com.commercial || com.email}`"
                   >
                     Voir les visites
                   </UButton>
@@ -93,9 +86,16 @@
             </tbody>
           </table>
         </div>
-        <div v-if="!filteredRows.length" class="px-6 py-14 text-center">
-          <UIcon name="i-heroicons-clipboard-document-list" class="mx-auto h-9 w-9 text-slate-300" />
-          <p class="mt-3 text-sm font-medium text-slate-500">Aucune activité sur cette période</p>
+        <div v-else class="px-6 py-14 text-center">
+          <UIcon name="i-heroicons-clipboard-document-list" class="mx-auto h-9 w-9 text-slate-300 dark:text-slate-600" aria-hidden="true" />
+          <template v-if="search && rows.length">
+            <p class="mt-3 text-sm font-medium text-slate-900 dark:text-white">Aucun merchandiser ne correspond à « {{ search }} »</p>
+            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Vérifiez l’orthographe ou effacez la recherche.</p>
+          </template>
+          <template v-else>
+            <p class="mt-3 text-sm font-medium text-slate-900 dark:text-white">Aucune visite sur cette période</p>
+            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Choisissez une période plus longue, par exemple « 30 jours » ou « Trimestre ».</p>
+          </template>
         </div>
       </section>
     </template>
@@ -105,6 +105,7 @@
 <script setup lang="ts">
 import type { PeriodeValue } from '~/components/PeriodFilter.vue'
 import { plageDePeriode, libellePlage } from '~/utils/periode'
+import { SERIES } from '~/utils/chartPalette'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
@@ -137,6 +138,12 @@ const derniereVisite = (com: CommercialRow): string | null =>
     (max, p) => (p.derniere_visite && (!max || p.derniere_visite > max) ? p.derniere_visite : max),
     null,
   )
+
+// Le rang reste celui du classement complet, même quand la recherche filtre.
+function rangDe(com: CommercialRow, idx: number): number {
+  const i = rows.value.indexOf(com)
+  return (i >= 0 ? i : idx) + 1
+}
 
 const filteredRows = computed(() => {
   const q = search.value.trim().toLowerCase()

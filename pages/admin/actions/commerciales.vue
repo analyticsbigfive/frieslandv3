@@ -1,77 +1,124 @@
 <template>
   <div class="space-y-6">
-    <AdminPageHeader title="Actions commerciales" />
+    <AdminPageHeader description="Les actions décidées par les commerciaux et confiées aux merchandiseurs : suivi, retards et relance." />
 
-    <AdminListToolbar :result-count="filtrees.length" result-label="action(s)" :chips="chips" @reset="resetFilters" @remove-chip="removeChip">
+    <AdminListToolbar :result-count="loading ? undefined : filtrees.length" result-label="action(s)" :chips="chips" @reset="resetFilters" @remove-chip="removeChip">
       <template #filters>
-        <UFormGroup label="Statut" class="min-w-40">
+        <UFormGroup label="Statut" class="w-full min-w-40 sm:w-44">
           <USelectMenu v-model="filtreStatut" :options="statutOptions" value-attribute="value" option-attribute="label" placeholder="Tous" size="sm" />
         </UFormGroup>
-        <UFormGroup label="Merchandiseur" class="min-w-56">
-          <USelectMenu v-model="filtreAssigne" :options="assigneOptions" value-attribute="value" option-attribute="label" placeholder="Tous" size="sm" searchable />
+        <UFormGroup label="Merchandiser" class="w-full min-w-48 sm:w-56">
+          <USelectMenu v-model="filtreAssigne" :options="assigneOptions" value-attribute="value" option-attribute="label" placeholder="Tous" size="sm" searchable searchable-placeholder="Rechercher un merchandiseur…" />
         </UFormGroup>
-        <UFormGroup label="Décidée par" class="min-w-52">
-          <USelectMenu v-model="filtreAuteur" :options="auteurOptions" value-attribute="value" option-attribute="label" placeholder="Tous" size="sm" searchable />
+        <UFormGroup label="Décidée par" class="w-full min-w-48 sm:w-52">
+          <USelectMenu v-model="filtreAuteur" :options="auteurOptions" value-attribute="value" option-attribute="label" placeholder="Tous" size="sm" searchable searchable-placeholder="Rechercher un commercial…" />
         </UFormGroup>
-        <UFormGroup label="Zone" class="min-w-44">
-          <USelectMenu v-model="filtreZone" :options="zoneOptions" placeholder="Toutes" size="sm" searchable />
+        <UFormGroup label="Territoire" class="w-full min-w-44 sm:w-48">
+          <USelectMenu v-model="filtreZone" :options="zoneOptions" placeholder="Tous" size="sm" searchable searchable-placeholder="Rechercher un territoire…" />
         </UFormGroup>
       </template>
       <template #actions>
-        <UButton size="sm" variant="outline" icon="i-heroicons-arrow-down-tray" @click="exporter">Export CSV</UButton>
+        <UButton size="sm" variant="outline" icon="i-heroicons-arrow-down-tray" :disabled="!filtrees.length" @click="exporter">Exporter (CSV)</UButton>
       </template>
     </AdminListToolbar>
 
-    <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
-      <div v-for="k in kpis" :key="k.label" class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-        <p class="text-xs uppercase tracking-wide text-gray-500">{{ k.label }}</p>
-        <p class="mt-1 text-2xl font-bold" :class="k.class">{{ k.value }}</p>
-      </div>
+    <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <StatsCard title="Actions" :value="loading ? '—' : kpis.total" icon="i-heroicons-clipboard-document-check" />
+      <StatsCard title="Ouvertes" :value="loading ? '—' : kpis.ouvertes" icon="i-heroicons-clock" color="orange" />
+      <StatsCard title="En retard" :value="loading ? '—' : kpis.retard" subtitle="Ouvertes, échéance dépassée" icon="i-heroicons-exclamation-triangle" color="red" />
+      <StatsCard title="Faites" :value="loading ? '—' : kpis.faites" icon="i-heroicons-check-circle" color="green" />
     </div>
 
-    <!-- Relance WhatsApp : un bouton par merchandiseur ayant des actions ouvertes -->
-    <div v-if="envois.length" class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-      <p class="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">Prévenir les merchandiseurs par WhatsApp</p>
-      <p class="mb-3 text-xs text-gray-500">Le message liste les actions ouvertes du merchandiseur. Le numéro vient de sa fiche utilisateur.</p>
-      <div class="flex flex-wrap gap-2">
-        <a
-          v-for="e in envois"
-          :key="e.id"
-          :href="e.lien || undefined"
-          target="_blank"
-          rel="noopener"
-          class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold"
-          :class="e.lien ? 'bg-green-600 text-white hover:bg-green-700' : 'cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-gray-700'"
-          :title="e.lien ? `${e.nb} action(s) ouverte(s)` : 'Numéro de téléphone manquant sur la fiche utilisateur'"
-        >
-          <UIcon name="i-simple-icons-whatsapp" class="h-4 w-4" />{{ e.nom }} · {{ e.nb }}
-        </a>
-      </div>
-    </div>
+    <!-- Relance WhatsApp : un lien par merchandiseur ayant des actions ouvertes -->
+    <section v-if="envois.length" class="admin-surface p-5">
+      <h2 class="text-base font-semibold text-slate-900 dark:text-white">Prévenir les merchandiseurs par WhatsApp</h2>
+      <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">Le message liste les actions ouvertes du merchandiseur. Le numéro vient de sa fiche utilisateur.</p>
+      <ul class="mt-3 flex flex-wrap gap-2">
+        <li v-for="e in envois" :key="e.id">
+          <a
+            v-if="e.lien"
+            :href="e.lien"
+            target="_blank"
+            rel="noopener"
+            class="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+          >
+            <UIcon name="i-simple-icons-whatsapp" class="h-4 w-4 text-emerald-700 dark:text-emerald-400" aria-hidden="true" />
+            {{ e.nom }}
+            <span class="tabular-nums text-slate-600 dark:text-slate-300">· {{ e.nb }} action(s)</span>
+            <span class="sr-only">(ouvre WhatsApp dans un nouvel onglet)</span>
+          </a>
+          <span
+            v-else
+            class="inline-flex cursor-not-allowed items-center gap-1.5 rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-1.5 text-sm text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
+            title="Ajoutez son numéro de téléphone sur sa fiche utilisateur pour pouvoir le prévenir."
+          >
+            <UIcon name="i-heroicons-phone-x-mark" class="h-4 w-4" aria-hidden="true" />
+            {{ e.nom }} · numéro manquant
+          </span>
+        </li>
+      </ul>
+    </section>
 
-    <div class="overflow-x-auto rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-      <table class="admin-table w-full">
-        <thead>
-          <tr><th>Créée le</th><th>PDV</th><th>Zone</th><th>Type</th><th>Décidée par</th><th>Merchandiseur</th><th>Échéance</th><th>Statut</th><th>Commentaire</th></tr>
-        </thead>
-        <tbody>
-          <tr v-if="loading"><td colspan="9" class="py-8 text-center text-gray-400">Chargement…</td></tr>
-          <tr v-else-if="!pagines.length"><td colspan="9" class="py-8 text-center text-gray-400">Aucune action commerciale.</td></tr>
-          <tr v-for="a in pagines" :key="a.id">
-            <td>{{ formatDate(a.created_at) }}</td>
-            <td class="font-medium">{{ a.pdv?.nom_pdv || a.pdv_id }}</td>
-            <td>{{ a.pdv?.zone || '—' }}</td>
-            <td>{{ a.type?.libelle || a.type_code }}</td>
-            <td>{{ a.auteur?.nom || '—' }}</td>
-            <td>{{ a.assigne?.nom || '—' }}</td>
-            <td :class="estEnRetard(a) ? 'font-semibold text-red-600' : ''">{{ a.echeance ? formatDate(a.echeance) : '—' }}</td>
-            <td><UBadge :color="statutActionColor(a.statut)" variant="subtle">{{ statutActionLabel(a.statut) }}</UBadge></td>
-            <td class="max-w-xs truncate" :title="a.commentaire || ''">{{ a.commentaire || '—' }}</td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="admin-surface overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Créée le</th>
+              <th>Point de vente</th>
+              <th>Type</th>
+              <th>Décidée par</th>
+              <th>Merchandiser</th>
+              <th>Échéance</th>
+              <th>Statut</th>
+              <th>Commentaire</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="loading">
+              <td colspan="8"><ChargementContenu variante="compact" libelle="Chargement des actions…" /></td>
+            </tr>
+            <tr v-else-if="erreur">
+              <td colspan="8" class="py-8 text-center text-slate-700 dark:text-slate-200" role="alert">
+                Les actions n’ont pas pu être chargées. {{ erreur }}
+              </td>
+            </tr>
+            <tr v-else-if="!pagines.length">
+              <td colspan="8" class="py-8 text-center text-slate-600 dark:text-slate-300">
+                {{ rows.length ? 'Aucune action ne correspond aux filtres. Retirez un filtre pour en voir plus.' : 'Aucune action commerciale pour le moment. Elles apparaissent ici dès qu’un commercial en décide une sur le terrain.' }}
+              </td>
+            </tr>
+            <tr v-for="a in pagines" :key="a.id">
+              <td class="whitespace-nowrap tabular-nums">{{ formatDate(a.created_at) }}</td>
+              <td>
+                <p class="font-medium text-slate-900 dark:text-white">{{ a.pdv?.nom_pdv || 'Point de vente sans nom' }}</p>
+                <p v-if="a.pdv?.zone" class="text-xs text-slate-500 dark:text-slate-400">{{ a.pdv.zone }}</p>
+              </td>
+              <td>{{ a.type?.libelle || a.type_code }}</td>
+              <td>{{ a.auteur?.nom || '—' }}</td>
+              <td>{{ a.assigne?.nom || '—' }}</td>
+              <td class="whitespace-nowrap">
+                <span class="tabular-nums" :class="estEnRetard(a) ? 'font-semibold text-red-700 dark:text-red-300' : ''">{{ a.echeance ? formatDate(a.echeance) : '—' }}</span>
+                <span v-if="estEnRetard(a)" class="mt-0.5 flex items-center gap-1 text-xs font-medium text-red-700 dark:text-red-300">
+                  <UIcon name="i-heroicons-exclamation-triangle" class="h-3.5 w-3.5" aria-hidden="true" />
+                  En retard
+                </span>
+              </td>
+              <td><UBadge :color="statutActionColor(a.statut)" variant="subtle">{{ statutActionLabel(a.statut) }}</UBadge></td>
+              <td class="max-w-xs truncate" :title="a.commentaire || ''">{{ a.commentaire || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <AdminPagination
+        v-if="!loading && filtrees.length"
+        :total="filtrees.length"
+        :page="page"
+        :page-size="perPage"
+        item-label="action(s)"
+        @update:page="(p) => page = p"
+      />
     </div>
-    <AdminPagination v-model:page="page" :total="filtrees.length" :per-page="perPage" />
   </div>
 </template>
 
@@ -80,6 +127,7 @@
 // suivi, retards, relance WhatsApp par merchandiseur.
 import type { ActionCommerciale } from '~/types'
 import { STATUTS_ACTION, estEnRetard, estOuverte, lienWhatsApp, messageActionsPourMerchandiser, statutActionColor, statutActionLabel } from '~/utils/actionsCommerciales'
+import { messageUtilisateur } from '~/utils/supabaseErrors'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
@@ -88,6 +136,7 @@ const { listerMesActions, chargerTypes } = useActionsCommerciales()
 const { exportToCsv } = useCsvExport()
 
 const loading = ref(true)
+const erreur = ref('')
 const rows = ref<ActionCommerciale[]>([])
 const filtreStatut = ref('')
 const filtreAssigne = ref('')
@@ -119,9 +168,9 @@ const pagines = computed(() => filtrees.value.slice((page.value - 1) * perPage, 
 
 const chips = computed(() => [
   ...(filtreStatut.value ? [{ key: 'statut', label: `Statut : ${statutOptions.find(o => o.value === filtreStatut.value)?.label}` }] : []),
-  ...(filtreAssigne.value ? [{ key: 'assigne', label: `Merchandiseur : ${assigneOptions.value.find(o => o.value === filtreAssigne.value)?.label}` }] : []),
+  ...(filtreAssigne.value ? [{ key: 'assigne', label: `Merchandiser : ${assigneOptions.value.find(o => o.value === filtreAssigne.value)?.label}` }] : []),
   ...(filtreAuteur.value ? [{ key: 'auteur', label: `Décidée par : ${auteurOptions.value.find(o => o.value === filtreAuteur.value)?.label}` }] : []),
-  ...(filtreZone.value ? [{ key: 'zone', label: `Zone : ${filtreZone.value}` }] : []),
+  ...(filtreZone.value ? [{ key: 'zone', label: `Territoire : ${filtreZone.value}` }] : []),
 ])
 function removeChip(key: string) {
   if (key === 'statut') filtreStatut.value = ''
@@ -134,12 +183,12 @@ function resetFilters() { filtreStatut.value = ''; filtreAssigne.value = ''; fil
 const kpis = computed(() => {
   const ouvertes = rows.value.filter(estOuverte)
   const retard = ouvertes.filter(a => estEnRetard(a))
-  return [
-    { label: 'Actions', value: rows.value.length, class: '' },
-    { label: 'Ouvertes', value: ouvertes.length, class: 'text-orange-600' },
-    { label: 'En retard', value: retard.length, class: retard.length ? 'text-red-600' : '' },
-    { label: 'Faites', value: rows.value.filter(a => a.statut === 'faite').length, class: 'text-green-600' },
-  ]
+  return {
+    total: rows.value.length,
+    ouvertes: ouvertes.length,
+    retard: retard.length,
+    faites: rows.value.filter(a => a.statut === 'faite').length,
+  }
 })
 
 const envois = computed(() => {
@@ -149,7 +198,7 @@ const envois = computed(() => {
     parAssigne.set(a.assigne_a, [...(parAssigne.get(a.assigne_a) || []), a])
   }
   return [...parAssigne.entries()].map(([id, liste]) => {
-    const nom = liste[0].assigne?.nom || 'Merchandiseur'
+    const nom = liste[0].assigne?.nom || 'Merchandiser'
     const msg = messageActionsPourMerchandiser(nom.split(' ')[0], liste, authStore.profile?.nom)
     return { id, nom, nb: liste.length, lien: lienWhatsApp(liste[0].assigne?.telephone, msg) }
   }).sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
@@ -169,7 +218,10 @@ watch([filtreStatut, filtreAssigne, filtreAuteur, filtreZone], () => { page.valu
 onMounted(async () => {
   void chargerTypes()
   try { rows.value = await listerMesActions(2000) }
-  catch (err) { console.warn('Actions commerciales : chargement impossible', err) }
+  catch (err) {
+    console.warn('Actions commerciales : chargement impossible', err)
+    erreur.value = messageUtilisateur(err)
+  }
   finally { loading.value = false }
 })
 </script>

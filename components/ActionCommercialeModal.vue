@@ -20,7 +20,7 @@
           />
         </UFormGroup>
 
-        <UFormGroup label="Merchandiseur assigné">
+        <UFormGroup label="Merchandiser assigné">
           <USelectMenu
             v-model="form.assigne_a"
             :options="merchandiseurs"

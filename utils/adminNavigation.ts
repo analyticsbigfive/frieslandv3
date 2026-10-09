@@ -144,7 +144,7 @@ export const ADMIN_DOMAINS: AdminDomain[] = [
       { id: 'visites.toutes', label: 'Toutes les visites', title: 'Visites', path: '/admin/visites', access: 'visites', aide: 'Chaque visite enregistrée sur le terrain, avec son détail.' },
       { id: 'visites.evolution', label: 'Évolution', title: 'Évolution des visites', path: '/admin/visites/evolution', access: 'visites' },
       { id: 'visites.categories', label: 'Par catégorie', title: 'Visites par catégorie de point de vente', path: '/admin/visites/categories', access: 'visites' },
-      { id: 'visites.commerciaux', label: 'Par commercial', title: 'Visites par commercial', path: '/admin/visites/commerciaux', access: 'visites' },
+      { id: 'visites.commerciaux', label: 'Par merchandiser', title: 'Visites par merchandiser', path: '/admin/visites/commerciaux', access: 'visites' },
       { id: 'visites.coaching', label: 'Coaching terrain', path: '/admin/visites/coaching', access: 'visites' },
     ],
   },

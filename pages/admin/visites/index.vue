@@ -1,11 +1,9 @@
 <template>
   <div class="space-y-6">
-    <AdminPageHeader
-      title="Visites"
-    />
+    <AdminPageHeader />
 
     <AdminListToolbar
-      :result-count="total"
+      :result-count="loading && !total ? undefined : total"
       result-label="visite(s)"
       :chips="filterChips"
       @reset="resetFilters"
@@ -14,9 +12,10 @@
       <template #filters>
         <!-- Jour / semaine / mois : suivre les merchandisers au quotidien
              (réunion du 23 juillet, tâches 2.3 et 6). Le mode « Personnalisé »
-             réaffiche les deux bornes libres. -->
+             réaffiche les deux bornes libres. La liste se met à jour seule. -->
         <PeriodFilter v-model="periode" />
-        <UFormGroup label="Commercial" class="min-w-64 flex-1">
+        <!-- visites.commercial contient l'auteur de la visite : le merchandiser. -->
+        <UFormGroup label="Merchandiser" class="w-full min-w-56 flex-1 sm:max-w-sm">
           <USelectMenu
             v-model="filters.commercial"
             :options="commercialOptions"
@@ -24,7 +23,7 @@
             size="sm"
             class="w-full"
             searchable
-            searchable-placeholder="Rechercher un commercial…"
+            searchable-placeholder="Rechercher un merchandiser…"
             :search-attributes="['label']"
             :loading="usersLoading"
             value-attribute="value"
@@ -33,31 +32,30 @@
         </UFormGroup>
       </template>
       <template #actions>
-        <UButton size="sm" icon="i-heroicons-magnifying-glass" @click="filterVisites">Filtrer</UButton>
-        <UButton size="sm" variant="outline" icon="i-heroicons-arrow-down-tray" @click="handleExport">Export</UButton>
+        <UButton size="sm" color="gray" variant="ghost" icon="i-heroicons-arrow-path" :loading="visitesStore.loading" @click="filterVisites">Actualiser</UButton>
+        <UButton size="sm" variant="outline" icon="i-heroicons-arrow-down-tray" @click="handleExport">Exporter</UButton>
       </template>
     </AdminListToolbar>
 
     <div class="admin-surface overflow-hidden">
-      <div class="border-b border-slate-100 px-5 py-4 dark:border-slate-700">
-        <h2 class="font-semibold text-slate-900 dark:text-white">Visites et résultats Perfect Store</h2>
+      <div class="border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+        <h2 class="text-base font-semibold text-slate-900 dark:text-white">Visites et résultats Perfect Store</h2>
+        <p class="mt-0.5 text-xs text-slate-600 dark:text-slate-300">Cliquez sur une ligne pour voir le détail : produits, prix, visibilité et photos.</p>
       </div>
 
-      <div class="overflow-x-auto">
+      <div v-if="visites.length" class="overflow-x-auto">
         <table class="admin-table">
           <thead>
             <tr>
               <th>Date</th>
-              <th>Commercial</th>
+              <th>Merchandiser</th>
               <th>Point de vente</th>
-              <th>Canal</th>
               <th>Distributeur</th>
-              <th class="text-center">Niveau</th>
-              <th class="text-center">Score</th>
-              <th v-for="category in tableProductCategories" :key="category.key" class="text-center">{{ category.label }}</th>
-              <th class="text-center">GPS</th>
-              <th class="text-center">Photos</th>
-              <th class="text-center">Actions</th>
+              <th class="whitespace-nowrap">Perfect Store</th>
+              <th class="whitespace-nowrap text-right" title="Familles de produits présentes en rayon, sur les familles suivies">Familles présentes</th>
+              <th class="whitespace-nowrap" title="Visite démarrée dans le rayon de visite du point de vente">Sur place</th>
+              <th class="text-right">Photos</th>
+              <th class="text-right"><span class="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody>
@@ -69,62 +67,65 @@
               @click="viewVisite(visite)"
               @keydown.enter="viewVisite(visite)"
             >
-              <td class="whitespace-nowrap">{{ formatDate(visite.date_visite) }}</td>
-              <td class="font-medium text-slate-900 dark:text-white">{{ visite.commercial }}</td>
+              <td class="whitespace-nowrap tabular-nums">{{ formatDate(visite.date_visite) }}</td>
+              <td class="font-medium text-slate-900 dark:text-white">{{ visite.commercial || '—' }}</td>
               <td>
                 <div class="min-w-40">
-                  <p class="font-medium text-slate-900 dark:text-white">{{ visite.pdv?.nom_pdv || visite.pdv_id?.substring(0, 8) }}</p>
-                  <p class="mt-0.5 text-xs text-slate-400">{{ typePdvLabel(visite.pdv?.sous_categorie_pdv) || 'Type non renseigné' }}</p>
+                  <p class="font-medium text-slate-900 dark:text-white">{{ nomPdv(visite) }}</p>
+                  <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                    {{ [typePdvLabel(visite.pdv?.sous_categorie_pdv) || 'Type non renseigné', libelleCanal(visite.pdv?.canal)].filter(Boolean).join(' · ') }}
+                  </p>
                 </div>
               </td>
-              <td>
-                <UBadge v-if="visite.pdv?.canal" :color="canalColor(visite.pdv.canal)" variant="soft" size="xs">
-                  {{ visite.pdv.canal }}
-                </UBadge>
-                <span v-else class="text-xs text-slate-400">—</span>
+              <td>{{ visite.pdv?.distributor_name || '—' }}</td>
+              <td class="whitespace-nowrap">
+                <div class="flex items-center gap-2">
+                  <UBadge v-if="scoreFor(visite)?.tierAtteint" color="green" variant="soft" size="xs">
+                    {{ libelleNiveau(scoreFor(visite)?.tierAtteint) }}
+                  </UBadge>
+                  <span v-else class="text-slate-600 dark:text-slate-300">Non conforme</span>
+                  <span class="font-semibold tabular-nums text-slate-900 dark:text-white">{{ ratio(scoreFor(visite)?.scoreGlobal) }}</span>
+                </div>
               </td>
-              <td class="text-sm text-slate-600 dark:text-slate-300">{{ visite.pdv?.distributor_name || '—' }}</td>
-              <td class="text-center">
-                <UBadge
-                  v-if="scoreFor(visite)?.tierAtteint"
-                  :color="tierColor(scoreFor(visite)?.tierAtteint)"
-                  variant="soft"
-                  size="xs"
-                >
-                  {{ shortTier(scoreFor(visite)?.tierAtteint) }}
-                </UBadge>
-                <span v-else class="text-xs text-slate-400">Non conforme</span>
+              <td class="text-right tabular-nums" :title="detailFamilles(visite)">
+                {{ famillesPresentes(visite) }} / {{ tableProductCategories.length }}
+                <span class="sr-only">. {{ detailFamilles(visite) }}</span>
               </td>
-              <td class="text-center font-semibold tabular-nums">{{ ratio(scoreFor(visite)?.scoreGlobal) }}</td>
-              <td v-for="category in tableProductCategories" :key="category.key" class="text-center">
-                <UIcon
-                  :name="productPresent(visite, category.key) ? 'i-heroicons-check-circle-solid' : 'i-heroicons-minus-circle-solid'"
-                  class="h-5 w-5"
-                  :class="productPresent(visite, category.key) ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600'""
-                />
+              <td class="whitespace-nowrap">
+                <span class="inline-flex items-center gap-1">
+                  <UIcon
+                    :name="visite.geofence_validated ? 'i-heroicons-check-circle-solid' : 'i-heroicons-x-circle'"
+                    class="h-4 w-4"
+                    :class="visite.geofence_validated ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500'"
+                    aria-hidden="true"
+                  />
+                  {{ visite.geofence_validated ? 'Oui' : 'Non' }}
+                </span>
               </td>
-              <td class="text-center">
-                <UIcon
-                  :name="visite.geofence_validated ? 'i-heroicons-check-circle-solid' : 'i-heroicons-x-circle'"
-                  class="h-5 w-5"
-                  :class="visite.geofence_validated ? 'text-emerald-500' : 'text-slate-300'"
-                />
-              </td>
-              <td class="text-center">
-                <button
+              <td class="text-right">
+                <UButton
                   v-if="photosAffichables(visite.image_urls).length"
-                  type="button"
-                  class="rounded-lg px-2 py-1 text-xs font-semibold text-cyan-600 transition hover:bg-cyan-50 dark:hover:bg-cyan-950/30"
+                  size="xs"
+                  color="gray"
+                  variant="ghost"
+                  icon="i-heroicons-photo"
+                  :aria-label="`Voir les ${photosAffichables(visite.image_urls).length} photo(s) de la visite chez ${nomPdv(visite)}`"
                   @click.stop="openPhotoGallery(visite)"
                 >
-                  {{ photosAffichables(visite.image_urls).length }} photo(s)
-                </button>
-                <span v-else class="text-slate-300">—</span>
+                  <span class="tabular-nums">{{ photosAffichables(visite.image_urls).length }}</span>
+                </UButton>
+                <span v-else class="text-slate-500">—</span>
               </td>
-              <td class="text-center">
+              <td class="text-right">
                 <div @click.stop>
                   <UDropdown :items="getVisiteActions(visite)" :popper="{ placement: 'bottom-end' }">
-                    <UButton variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" />
+                    <UButton
+                      color="gray"
+                      variant="ghost"
+                      size="xs"
+                      icon="i-heroicons-ellipsis-vertical"
+                      :aria-label="`Actions pour la visite du ${formatDate(visite.date_visite)} chez ${nomPdv(visite)}`"
+                    />
                   </UDropdown>
                 </div>
               </td>
@@ -133,20 +134,21 @@
         </table>
       </div>
 
-      <div v-if="!loading && !visites.length" class="px-6 py-14 text-center">
-        <UIcon name="i-heroicons-clipboard-document-list" class="mx-auto h-10 w-10 text-slate-300" />
-        <p class="mt-3 text-sm font-medium text-slate-500">Aucune visite trouvée</p>
-        <p class="mt-1 text-xs text-slate-400">Modifiez les critères ou réinitialisez les filtres.</p>
+      <ChargementContenu v-if="loading" variante="lignes" :nombre="6" libelle="Chargement des visites…" class="p-5" />
+
+      <div v-else-if="!visites.length" class="px-6 py-14 text-center">
+        <UIcon name="i-heroicons-clipboard-document-list" class="mx-auto h-10 w-10 text-slate-300 dark:text-slate-600" aria-hidden="true" />
+        <p class="mt-3 text-sm font-medium text-slate-900 dark:text-white">Aucune visite sur cette période</p>
+        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+          {{ filters.commercial ? 'Élargissez la période ou retirez le filtre Merchandiser.' : 'Élargissez la période pour voir plus de visites.' }}
+        </p>
         <UButton class="mt-4" size="xs" variant="outline" icon="i-heroicons-arrow-path" @click="resetFilters">
-          Réinitialiser
+          Réinitialiser les filtres
         </UButton>
       </div>
 
-      <div v-if="loading" class="space-y-2 px-5 py-6">
-        <div v-for="i in 5" :key="i" class="h-12 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-700/50" />
-      </div>
-
       <AdminPagination
+        v-if="total || !loading"
         :total="total"
         :page="filters.page"
         :page-size="filters.perPage"
@@ -160,28 +162,31 @@
       v-model="showDetail"
       :visite="selectedVisite"
       :perfect-store="selectedPerfectStore"
-      can-delete
+      :can-delete="peutSupprimer"
       @delete="handleDelete"
     />
 
     <UModal v-model="showPhotoGallery" :ui="{ width: 'max-w-2xl' }">
       <div v-if="galleryVisite" class="p-6">
-        <div class="mb-4 flex items-center justify-between gap-4">
+        <div class="mb-4 flex items-start justify-between gap-4">
           <div>
-            <p class="text-xs font-semibold uppercase tracking-wide text-cyan-600">Photos de visite</p>
-            <h3 class="mt-1 text-lg font-semibold text-slate-900 dark:text-white">{{ galleryVisite.pdv?.nom_pdv || galleryVisite.commercial }}</h3>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Photos de la visite</h2>
+            <p class="mt-0.5 text-sm text-slate-600 dark:text-slate-300">
+              {{ nomPdv(galleryVisite) }} · {{ formatDate(galleryVisite.date_visite) }}<template v-if="galleryVisite.commercial"> · {{ galleryVisite.commercial }}</template>
+            </p>
           </div>
-          <UButton aria-label="Fermer" variant="ghost" size="xs" icon="i-heroicons-x-mark" @click="showPhotoGallery = false" />
+          <UButton aria-label="Fermer" color="gray" variant="ghost" size="xs" icon="i-heroicons-x-mark" @click="showPhotoGallery = false" />
         </div>
         <div class="grid grid-cols-2 gap-3">
           <button
             v-for="(url, index) in galleryPhotos"
             :key="url"
             type="button"
-            class="group relative overflow-hidden rounded-xl"
+            class="overflow-hidden rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+            :aria-label="`Agrandir la photo ${index + 1}`"
             @click="zoomedPhoto = url"
           >
-            <img :src="url" :alt="`Photo ${index + 1}`" class="h-48 w-full object-cover transition duration-300 group-hover:scale-[1.02]" />
+            <img :src="url" :alt="`Photo ${index + 1} de la visite chez ${nomPdv(galleryVisite)}`" class="h-48 w-full object-cover" />
           </button>
         </div>
       </div>
@@ -190,7 +195,7 @@
     <UModal v-model="showZoomedPhoto" :ui="{ width: 'max-w-4xl' }">
       <div class="p-2">
         <div class="mb-1 flex justify-end">
-          <UButton aria-label="Fermer" variant="ghost" size="xs" icon="i-heroicons-x-mark" @click="showZoomedPhoto = false" />
+          <UButton aria-label="Fermer" color="gray" variant="ghost" size="xs" icon="i-heroicons-x-mark" @click="showZoomedPhoto = false" />
         </div>
         <img v-if="zoomedPhoto" :src="zoomedPhoto" alt="Photo agrandie" class="max-h-[80vh] w-full rounded-lg object-contain" />
       </div>
@@ -205,10 +210,16 @@ import type { PerfectStoreResultB } from '~/utils/perfectStore'
 import { plageDePeriode } from '~/utils/periode'
 import { photosAffichables } from '~/utils/visitePhotos'
 import { catalogueProduits, categoriesProduitsActives, getCategoryDef } from '~/utils/products'
+import { isModernTrade } from '~/utils/canal'
+import { messageUtilisateur } from '~/utils/supabaseErrors'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const visitesStore = useVisitesStore()
+const authStore = useAuthStore()
+// La suppression d'une visite est définitive (delete en base) : réservée à
+// l'administrateur et au superviseur.
+const peutSupprimer = computed(() => authStore.isSuperviseur)
 const toast = useToast()
 const { exportVisitesToExcel } = useCsvExport()
 const { users: cachedUsers, fetchUsers: fetchCachedUsers, loading: usersLoading } = useUsersCache()
@@ -279,26 +290,41 @@ function productPresent(visite: Visite, category: string): boolean {
   return !!(visite.data?.produits as any)?.[category]?.present
 }
 
+// Familles de produits : une seule colonne (présentes / suivies), le détail
+// en info-bulle et dans la fiche de la visite.
+function famillesPresentes(visite: Visite): number {
+  return tableProductCategories.value.filter(c => productPresent(visite, c.key)).length
+}
+
+function detailFamilles(visite: Visite): string {
+  const presentes = tableProductCategories.value.filter(c => productPresent(visite, c.key)).map(c => c.label)
+  const absentes = tableProductCategories.value.filter(c => !productPresent(visite, c.key)).map(c => c.label)
+  return [
+    `Présentes : ${presentes.length ? presentes.join(', ') : 'aucune'}`,
+    absentes.length ? `Absentes : ${absentes.join(', ')}` : '',
+  ].filter(Boolean).join('. ')
+}
+
 function ratio(value: number | null | undefined): string {
-  return value == null ? '—' : `${Math.round(value * 100)}%`
+  return value == null ? '—' : `${Math.round(value * 100)} %`
 }
 
-function shortTier(value: string | null | undefined): string {
-  if (!value) return '—'
-  return value.replace(' PERFECT STORE', '').replace(' STORE', '')
+// Niveau Perfect Store en casse normale (« VIP », « Flagship »…).
+function libelleNiveau(value: string | null | undefined): string {
+  const court = String(value || '').replace(/\s*PERFECT STORE\s*$/i, '').replace(/\s*STORE\s*$/i, '').trim()
+  if (!court) return '—'
+  if (court.toUpperCase() === 'VIP') return 'VIP'
+  return court.charAt(0).toUpperCase() + court.slice(1).toLowerCase()
 }
 
-function tierColor(value: string | null | undefined): any {
-  if (value?.startsWith('FLAGSHIP')) return 'purple'
-  if (value?.startsWith('VIP')) return 'green'
-  if (value?.startsWith('CORE')) return 'blue'
-  return 'orange'
+// Affichage seulement : la valeur de base reste General trade / Modern trade.
+function libelleCanal(value: string | null | undefined): string {
+  if (!value) return ''
+  return isModernTrade(value) ? 'Supermarchés (MT)' : 'Boutiques (GT)'
 }
 
-function canalColor(value: string | null | undefined): any {
-  const v = value?.toUpperCase() || ''
-  if (v.startsWith('MT') || v.includes('MODERN')) return 'violet'
-  return 'sky'
+function nomPdv(visite: Visite): string {
+  return visite.pdv?.nom_pdv || 'Point de vente sans nom'
 }
 
 function formatDate(value: string): string {
@@ -322,28 +348,46 @@ function openPhotoGallery(visite: Visite) {
 }
 
 function getVisiteActions(visite: Visite) {
-  return [[
+  const groupes: { label: string; icon: string; click: () => void }[][] = [[
     { label: 'Voir le détail', icon: 'i-heroicons-eye', click: () => viewVisite(visite) },
-    { label: 'Supprimer', icon: 'i-heroicons-trash', click: () => handleDelete(visite) },
   ]]
+  if (peutSupprimer.value) {
+    groupes.push([{ label: 'Supprimer la visite', icon: 'i-heroicons-trash', click: () => handleDelete(visite) }])
+  }
+  return groupes
 }
 
 async function handleDelete(visite: Visite) {
-  if (!confirm('Supprimer cette visite ?')) return
-  await visitesStore.deleteVisite(visite.visite_id)
-  showDetail.value = false
-  await loadVisites()
+  if (!peutSupprimer.value) return
+  const quand = formatDateFr(visite.date_visite, { day: '2-digit', month: 'long', year: 'numeric' })
+  if (!confirm(`Supprimer la visite du ${quand} chez « ${nomPdv(visite)} » ?\n\nCette suppression est définitive : la visite et ses relevés ne pourront pas être récupérés.`)) return
+  try {
+    await visitesStore.deleteVisite(visite.visite_id)
+    showDetail.value = false
+    toast.add({ title: 'Visite supprimée', description: `Visite du ${quand} chez « ${nomPdv(visite)} ».`, color: 'green' })
+    await loadVisites()
+  }
+  catch (err) {
+    console.error('Suppression de la visite impossible', err)
+    toast.add({ title: 'Suppression impossible', description: messageUtilisateur(err), color: 'red' })
+  }
 }
 
 async function handleExport() {
-  // Toutes les visites de la période filtrée, pas seulement la page affichée.
-  const { rows, tronque } = await visitesStore.fetchVisitesForExport()
-  await exportVisitesToExcel(rows)
-  toast.add({
-    title: `${rows.length} visite(s) exportée(s)`,
-    description: tronque ? 'Plafond de 5000 lignes atteint : réduisez la période pour tout obtenir.' : undefined,
-    color: tronque ? 'amber' : 'green',
-  })
+  try {
+    // Toutes les visites de la période filtrée, pas seulement la page affichée.
+    const { rows, tronque } = await visitesStore.fetchVisitesForExport()
+    await exportVisitesToExcel(rows)
+    toast.add({
+      title: `${rows.length.toLocaleString('fr-FR')} visite(s) exportée(s)`,
+      description: tronque ? 'Plafond de 5 000 lignes atteint : réduisez la période pour tout obtenir.' : undefined,
+      color: tronque ? 'amber' : 'green',
+    })
+  }
+  catch (err) {
+    console.error('Export des visites impossible', err)
+    toast.add({ title: 'Export impossible', description: messageUtilisateur(err), color: 'red' })
+  }
 }
 
 function resetFilters() {
@@ -362,7 +406,7 @@ const filterChips = computed(() => {
   const chips: { key: string; label: string }[] = []
   if (filters.commercial) {
     const opt = commercialOptions.value.find(o => o.value === filters.commercial)
-    chips.push({ key: 'commercial', label: `Commercial : ${opt?.label || filters.commercial}` })
+    chips.push({ key: 'commercial', label: `Merchandiser : ${opt?.label || filters.commercial}` })
   }
   return chips
 })

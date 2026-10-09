@@ -1,8 +1,6 @@
 <template>
   <div class="space-y-6">
-    <AdminPageHeader
-      title="Historique d'un point de vente"
-    />
+    <AdminPageHeader description="Les résultats Perfect Store d’un point de vente, visite après visite, et la comparaison de deux périodes." />
 
     <!-- Choix du PDV : recherche par nom, PDV du périmètre actif -->
     <div class="admin-toolbar">
@@ -12,14 +10,15 @@
             <UInput
               v-model="recherche"
               icon="i-heroicons-magnifying-glass"
-              placeholder="Nom du PDV…"
+              placeholder="Tapez au moins deux lettres du nom…"
               size="sm"
+              autocomplete="off"
               @focus="ouvert = true"
               @blur="fermerPlusTard"
             />
             <ul
               v-if="ouvert && suggestions.length"
-              class="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-slate-200 bg-white text-sm shadow-lg dark:border-slate-700 dark:bg-slate-800"
+              class="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-slate-200 bg-white text-sm shadow-lg dark:border-slate-700 dark:bg-slate-800"
             >
               <li
                 v-for="p in suggestions"
@@ -27,25 +26,27 @@
                 class="cursor-pointer px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700"
                 @mousedown.prevent="choisir(p)"
               >
-                <span class="font-medium text-slate-900 dark:text-white">{{ p.nom_pdv }}</span>
-                <span class="ml-2 text-xs text-slate-400">{{ [p.zone, p.quartier, p.sous_categorie_pdv].filter(Boolean).join(' · ') }}</span>
+                <span class="font-medium text-slate-900 dark:text-white">{{ p.nom_pdv || 'Point de vente sans nom' }}</span>
+                <span class="ml-2 text-xs text-slate-500 dark:text-slate-400">{{ [p.zone, p.quartier, typePdvLabel(p.sous_categorie_pdv)].filter(Boolean).join(' · ') }}</span>
               </li>
             </ul>
           </div>
         </UFormGroup>
-        <UFormGroup label="Comparer avec un second PDV (optionnel)" size="sm">
+        <UFormGroup label="Comparer avec un autre point de vente (facultatif)" size="sm">
           <div class="relative">
             <UInput
               v-model="recherche2"
               icon="i-heroicons-plus-circle"
-              placeholder="Nom du PDV…"
+              placeholder="Nom du second point de vente…"
               size="sm"
+              autocomplete="off"
+              :disabled="!pdv"
               @focus="ouvert2 = true"
               @blur="fermerPlusTard"
             />
             <ul
               v-if="ouvert2 && suggestions2.length"
-              class="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-slate-200 bg-white text-sm shadow-lg dark:border-slate-700 dark:bg-slate-800"
+              class="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-slate-200 bg-white text-sm shadow-lg dark:border-slate-700 dark:bg-slate-800"
             >
               <li
                 v-for="p in suggestions2"
@@ -53,130 +54,167 @@
                 class="cursor-pointer px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700"
                 @mousedown.prevent="choisir2(p)"
               >
-                <span class="font-medium text-slate-900 dark:text-white">{{ p.nom_pdv }}</span>
-                <span class="ml-2 text-xs text-slate-400">{{ [p.zone, p.quartier].filter(Boolean).join(' · ') }}</span>
+                <span class="font-medium text-slate-900 dark:text-white">{{ p.nom_pdv || 'Point de vente sans nom' }}</span>
+                <span class="ml-2 text-xs text-slate-500 dark:text-slate-400">{{ [p.zone, p.quartier].filter(Boolean).join(' · ') }}</span>
               </li>
             </ul>
           </div>
         </UFormGroup>
       </div>
-      <div v-if="pdv" class="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-        <span class="rounded-full bg-fc-red/10 px-2 py-1 font-semibold text-fc-red">{{ pdv.nom_pdv }}</span>
-        <span>{{ [pdv.zone, pdv.quartier, pdv.sous_categorie_pdv, pdv.distributor_name].filter(Boolean).join(' · ') }}</span>
-        <span v-if="pdv2" class="ml-2 rounded-full bg-blue-600/10 px-2 py-1 font-semibold text-blue-700">vs {{ pdv2.nom_pdv }}</span>
-        <UButton v-if="pdv2" size="2xs" variant="ghost" icon="i-heroicons-x-mark" @click="retirerPdv2" />
+      <div v-if="pdv" class="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+        <span class="rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-900 dark:bg-slate-700 dark:text-white">{{ pdv.nom_pdv }}</span>
+        <span>{{ [pdv.zone, pdv.quartier, typePdvLabel(pdv.sous_categorie_pdv), pdv.distributor_name].filter(Boolean).join(' · ') }}</span>
+        <template v-if="pdv2">
+          <span class="ml-2">comparé à</span>
+          <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 py-1 pl-2.5 pr-1 font-semibold text-slate-900 dark:bg-slate-700 dark:text-white">
+            {{ pdv2.nom_pdv }}
+            <button
+              type="button"
+              class="rounded-full p-0.5 text-slate-600 hover:bg-slate-200 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-600"
+              :aria-label="`Retirer la comparaison avec ${pdv2.nom_pdv}`"
+              @click="retirerPdv2"
+            >
+              <UIcon name="i-heroicons-x-mark" class="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          </span>
+        </template>
       </div>
     </div>
 
-    <div v-if="!pdv" class="admin-surface p-10 text-center text-sm text-slate-400">
-      Recherchez un point de vente pour afficher son historique visite par visite.
+    <div v-if="!pdv" class="admin-surface px-6 py-12 text-center">
+      <UIcon name="i-heroicons-magnifying-glass" class="mx-auto h-9 w-9 text-slate-300 dark:text-slate-600" aria-hidden="true" />
+      <p class="mt-3 text-sm font-medium text-slate-900 dark:text-white">Choisissez un point de vente</p>
+      <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Tapez son nom dans le champ ci-dessus pour afficher son historique visite par visite.</p>
     </div>
 
-    <div v-else-if="loading" class="admin-surface h-72 animate-pulse bg-slate-100 dark:bg-slate-800" />
+    <ChargementContenu v-else-if="loading" variante="cartes" :nombre="2" classe-carte="admin-surface" libelle="Chargement de l’historique…" />
 
     <template v-else>
       <!-- Compteurs sur tout l'historique -->
       <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatsCard title="Visites enregistrées" :value="String(historique.length)" icon="i-heroicons-clipboard-document-list" color="blue" />
+        <StatsCard title="Visites enregistrées" :value="historique.length" icon="i-heroicons-clipboard-document-list" />
         <StatsCard title="Dernière visite" :value="derniere ? formatDateFr(derniere.date_visite, { day: '2-digit', month: 'short', year: 'numeric' }) : '—'" :subtitle="derniere?.commercial || ''" icon="i-heroicons-calendar" color="orange" />
-        <StatsCard title="Dernier niveau" :value="derniere?.niveau ? derniere.niveau.toUpperCase() : 'Non conforme'" icon="i-heroicons-trophy" :color="derniere?.niveau ? 'green' : 'red'" />
-        <StatsCard title="Dernier score" :value="derniere?.score_global == null ? '—' : `${Math.round(derniere.score_global)} %`" icon="i-heroicons-chart-bar" color="purple" />
+        <StatsCard title="Dernier niveau" :value="derniere ? (libelleNiveau(derniere.niveau) || 'Non conforme') : '—'" icon="i-heroicons-trophy" :color="derniere?.niveau ? 'green' : 'red'" />
+        <StatsCard title="Dernier score" :value="derniere?.score_global == null ? '—' : `${Math.round(derniere.score_global)} %`" icon="i-heroicons-chart-bar" />
       </div>
 
       <!-- Courbes : les 4 métriques du PDV, ou le score de deux PDV côte à côte -->
       <ClientOnly>
         <ChartsMultiLineChart
-          :title="pdv2 ? 'Score global : comparaison de deux PDV' : 'Évolution visite par visite'"
-          :subtitle="pdv2 ? `${pdv.nom_pdv} vs ${pdv2.nom_pdv}, sur l'union des dates de visite.` : 'Disponibilité, visibilité, promotion et score global à chaque visite.'"
+          :title="pdv2 ? 'Score global : comparaison de deux points de vente' : 'Évolution visite par visite'"
+          :subtitle="pdv2 ? `${pdv.nom_pdv} comparé à ${pdv2.nom_pdv}, aux dates de visite de l’un ou de l’autre.` : 'Disponibilité, visibilité, promotion et score global à chaque visite.'"
           :labels="labels"
           :series="series"
           unit=" %"
           :max="100"
           height="lg"
+          empty-label="Aucune visite évaluée pour ce point de vente."
         />
       </ClientOnly>
 
       <!-- Comparaison de deux périodes -->
-      <div class="admin-surface p-5">
+      <section class="admin-surface p-5">
         <div class="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h2 class="font-bold text-slate-900 dark:text-white">Comparer deux périodes</h2>
-            <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Moyennes des visites de {{ pdv.nom_pdv }} sur chaque période (RPC serveur).</p>
+            <h2 class="text-base font-semibold text-slate-900 dark:text-white">Comparer deux périodes</h2>
+            <p class="mt-0.5 text-xs text-slate-600 dark:text-slate-300">Moyennes des visites de {{ pdv.nom_pdv }} sur chaque période.</p>
           </div>
           <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <UFormGroup label="Période 1 — du" size="xs"><UInput v-model="p1.debut" type="date" size="xs" /></UFormGroup>
+            <UFormGroup label="Période 1 : du" size="xs"><UInput v-model="p1.debut" type="date" size="xs" /></UFormGroup>
             <UFormGroup label="au" size="xs"><UInput v-model="p1.fin" type="date" size="xs" /></UFormGroup>
-            <UFormGroup label="Période 2 — du" size="xs"><UInput v-model="p2.debut" type="date" size="xs" /></UFormGroup>
+            <UFormGroup label="Période 2 : du" size="xs"><UInput v-model="p2.debut" type="date" size="xs" /></UFormGroup>
             <UFormGroup label="au" size="xs"><UInput v-model="p2.fin" type="date" size="xs" /></UFormGroup>
           </div>
         </div>
         <div v-if="comparaison" class="mt-4 overflow-x-auto">
           <table class="admin-table">
-            <thead class="bg-slate-50 dark:bg-slate-700/50">
+            <thead>
               <tr>
-                <th class="th-l">Indicateur</th>
-                <th class="th-c">Période 1<br><span class="font-normal text-slate-400">{{ p1.debut }} → {{ p1.fin }}</span></th>
-                <th class="th-c">Période 2<br><span class="font-normal text-slate-400">{{ p2.debut }} → {{ p2.fin }}</span></th>
-                <th class="th-c">Écart</th>
+                <th>Indicateur</th>
+                <th class="text-right">
+                  Période 1
+                  <span class="block font-normal text-slate-500 dark:text-slate-400">{{ plageCourte(p1) }}</span>
+                </th>
+                <th class="text-right">
+                  Période 2
+                  <span class="block font-normal text-slate-500 dark:text-slate-400">{{ plageCourte(p2) }}</span>
+                </th>
+                <th class="text-right">Écart</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
-              <tr v-for="ligne in lignesComparaison" :key="ligne.label" class="row">
-                <td class="px-4 py-2 text-sm text-slate-700 dark:text-slate-200">{{ ligne.label }}</td>
-                <td class="px-4 py-2 text-center text-sm tabular-nums">{{ ligne.v1 }}</td>
-                <td class="px-4 py-2 text-center text-sm tabular-nums">{{ ligne.v2 }}</td>
-                <td class="px-4 py-2 text-center text-sm font-semibold tabular-nums" :class="ligne.ecart == null ? 'text-slate-400' : ligne.ecart > 0 ? 'text-emerald-600' : ligne.ecart < 0 ? 'text-fc-red' : 'text-slate-500'">
+            <tbody>
+              <tr v-for="ligne in lignesComparaison" :key="ligne.label">
+                <td>{{ ligne.label }}</td>
+                <td class="text-right tabular-nums">{{ ligne.v1 }}</td>
+                <td class="text-right tabular-nums">{{ ligne.v2 }}</td>
+                <td class="text-right font-semibold tabular-nums" :class="ligne.ecart == null ? 'text-slate-500' : ligne.ecart > 0 ? 'text-emerald-700 dark:text-emerald-300' : ligne.ecart < 0 ? 'text-red-700 dark:text-red-300' : 'text-slate-700 dark:text-slate-200'">
                   {{ ligne.ecart == null ? '—' : (ligne.ecart > 0 ? '+' : '') + ligne.ecart + ligne.unit }}
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
-      </div>
+        <p v-else class="mt-4 text-sm text-slate-600 dark:text-slate-300">
+          {{ p1.debut && p1.fin && p2.debut && p2.fin
+            ? 'La comparaison n’est pas disponible pour le moment. Réessayez plus tard ; si cela continue, prévenez l’administrateur.'
+            : 'Choisissez les dates de début et de fin des deux périodes pour comparer les moyennes.' }}
+        </p>
+      </section>
 
       <!-- Tableau des visites -->
-      <div class="admin-surface overflow-hidden">
-        <div class="border-b border-slate-100 px-5 py-3 dark:border-slate-700">
-          <h2 class="font-bold text-slate-900 dark:text-white">Visites</h2>
+      <section class="admin-surface overflow-hidden">
+        <div class="border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+          <h2 class="text-base font-semibold text-slate-900 dark:text-white">Visites</h2>
         </div>
         <div class="overflow-x-auto">
           <table class="admin-table">
-            <thead class="bg-slate-50 dark:bg-slate-700/50">
+            <thead>
               <tr>
-                <th class="th-l">Date</th>
-                <th class="th-l">Merchandiseur</th>
-                <th class="th-c">Niveau</th>
-                <th class="th-c">Score</th>
-                <th class="th-c">Dispo</th>
-                <th class="th-c">Visibilité</th>
-                <th class="th-c">Promotion</th>
-                <th class="th-c">Assortiment</th>
-                <th class="th-c"></th>
+                <th>Date</th>
+                <th>Merchandiser</th>
+                <th>Niveau</th>
+                <th class="text-right">Score</th>
+                <th class="text-right">Disponibilité</th>
+                <th class="text-right">Visibilité</th>
+                <th class="text-right">Promotion</th>
+                <th class="text-right">Assortiment</th>
+                <th class="text-right"><span class="sr-only">Détail</span></th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
-              <tr v-for="h in [...historique].reverse()" :key="h.visite_id" class="row">
-                <td class="px-4 py-2 text-sm">{{ formatDateFr(h.date_visite, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }}</td>
-                <td class="px-4 py-2 text-sm text-slate-500">{{ h.commercial || '—' }}</td>
-                <td class="px-4 py-2 text-center text-sm">
-                  <UBadge :color="h.niveau ? 'green' : 'gray'" variant="soft" size="xs">{{ h.niveau ? h.niveau.toUpperCase() : 'Non conforme' }}</UBadge>
+            <tbody>
+              <tr v-for="h in [...historique].reverse()" :key="h.visite_id">
+                <td class="whitespace-nowrap tabular-nums">{{ formatDateFr(h.date_visite, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }}</td>
+                <td>{{ h.commercial || '—' }}</td>
+                <td>
+                  <UBadge v-if="h.niveau" color="green" variant="soft" size="xs">{{ libelleNiveau(h.niveau) }}</UBadge>
+                  <span v-else class="text-slate-600 dark:text-slate-300">Non conforme</span>
                 </td>
-                <td class="px-4 py-2 text-center text-sm tabular-nums">{{ pct(h.score_global) }}</td>
-                <td class="px-4 py-2 text-center text-sm tabular-nums">{{ pct(h.dispo_rayon) }}</td>
-                <td class="px-4 py-2 text-center text-sm tabular-nums">{{ pct(h.visibilite) }}</td>
-                <td class="px-4 py-2 text-center text-sm tabular-nums">{{ pct(h.promotion) }}</td>
-                <td class="px-4 py-2 text-center text-sm tabular-nums">{{ pct(h.assortiment) }}</td>
-                <td class="px-4 py-2 text-center">
-                  <UButton size="2xs" variant="ghost" icon="i-heroicons-eye" @click="ouvrirVisite(h.visite_id)" />
+                <td class="text-right tabular-nums">{{ pct(h.score_global) }}</td>
+                <td class="text-right tabular-nums">{{ pct(h.dispo_rayon) }}</td>
+                <td class="text-right tabular-nums">{{ pct(h.visibilite) }}</td>
+                <td class="text-right tabular-nums">{{ pct(h.promotion) }}</td>
+                <td class="text-right tabular-nums">{{ pct(h.assortiment) }}</td>
+                <td class="text-right">
+                  <UButton
+                    size="xs"
+                    color="gray"
+                    variant="ghost"
+                    icon="i-heroicons-eye"
+                    :aria-label="`Voir la visite du ${formatDateFr(h.date_visite, { day: '2-digit', month: 'long', year: 'numeric' })}`"
+                    title="Voir le détail"
+                    @click="ouvrirVisite(h.visite_id)"
+                  />
                 </td>
               </tr>
               <tr v-if="!historique.length">
-                <td colspan="9" class="px-4 py-8 text-center text-sm text-slate-400">Aucune visite enregistrée pour ce PDV.</td>
+                <td colspan="9" class="py-8 text-center text-slate-600 dark:text-slate-300">
+                  Aucune visite enregistrée pour ce point de vente. Elles apparaîtront ici après le premier passage d’un merchandiseur.
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
     </template>
 
     <VisitDetailModal v-model="visiteOuverte" :visite="visiteDetail" />
@@ -201,6 +239,7 @@ const route = useRoute()
 const router = useRouter()
 const { fetchPdvHistorique, fetchPdvComparaison } = usePerfectStore()
 const visitesStore = useVisitesStore()
+const { typePdvLabel, fetchTypePdvLabels } = useTypePdvLabels()
 
 const recherche = ref('')
 const recherche2 = ref('')
@@ -246,7 +285,9 @@ async function choisir(p: PdvLite) {
   recherche.value = p.nom_pdv
   suggestions.value = []
   ouvert.value = false
-  router.replace({ query: { ...route.query, pdv_id: p.pdv_id } })
+  // L'ancien paramètre `pdv` (lien entrant) est remplacé par `pdv_id`.
+  const { pdv: _lienEntrant, ...autres } = route.query
+  router.replace({ query: { ...autres, pdv_id: p.pdv_id } })
   await charger()
 }
 async function choisir2(p: PdvLite) {
@@ -314,6 +355,20 @@ const series = computed(() => {
 
 function pct(v: number | null | undefined) { return v == null ? '—' : `${Math.round(Number(v))} %` }
 
+// Niveau Perfect Store en casse normale (« VIP », « Flagship »…).
+function libelleNiveau(niveau?: string | null): string {
+  const court = String(niveau || '').replace(/\s*PERFECT STORE\s*$/i, '').replace(/\s*STORE\s*$/i, '').trim()
+  if (!court) return ''
+  if (court.toUpperCase() === 'VIP') return 'VIP'
+  return court.charAt(0).toUpperCase() + court.slice(1).toLowerCase()
+}
+
+// « 09/09/2026 au 08/10/2026 » : en-têtes du tableau de comparaison.
+function plageCourte(p: { debut: string; fin: string }) {
+  const jour = (d: string) => formatDateFr(`${d}T00:00:00`, { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return p.debut && p.fin ? `${jour(p.debut)} au ${jour(p.fin)}` : '—'
+}
+
 const lignesComparaison = computed(() => {
   const c = comparaison.value
   if (!c) return []
@@ -346,7 +401,10 @@ async function ouvrirVisite(id: string) {
 }
 
 onMounted(async () => {
-  const id = route.query.pdv_id as string | undefined
+  fetchTypePdvLabels()
+  // `pdv_id` (cette page, Perfect Store › Zones) ou `pdv` (Perfect Store › Écarts au standard).
+  const brut = route.query.pdv_id ?? route.query.pdv
+  const id = typeof brut === 'string' && brut ? brut : undefined
   if (!id) return
   const { data } = await supabase.from('pdv').select(SELECT).eq('pdv_id', id).maybeSingle()
   if (data) await choisir(data as PdvLite)

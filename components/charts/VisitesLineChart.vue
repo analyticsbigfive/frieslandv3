@@ -7,8 +7,8 @@
     <div v-if="chartData" class="h-72">
       <Line v-if="chartData" :data="chartData" :options="chartOptions" />
     </div>
-    <div v-else class="flex h-72 items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-400 dark:bg-slate-700/40">
-      Aucune visite sur la période
+    <div v-else class="flex h-72 items-center justify-center rounded-lg bg-slate-50 px-4 text-center text-sm text-slate-600 dark:bg-slate-700/40 dark:text-slate-300">
+      Aucune visite sur la période. Élargissez les dates ou retirez un filtre.
     </div>
   </div>
 </template>
@@ -32,7 +32,12 @@ const props = withDefaults(defineProps<{
 const chartData = computed(() => {
   if (!props.data?.length) return null
 
-  const sorted = [...props.data].sort((a, b) => a.date.localeCompare(b.date))
+  // Seules les dates ISO se trient comme du texte. Les libellés déjà formatés
+  // (« S9 - 2026 », « juillet 2026 ») arrivent dans l'ordre chronologique :
+  // un tri alphabétique mettrait S10 avant S9 et août avant juillet.
+  const sorted = props.data.every(d => isIsoDate(d.date))
+    ? [...props.data].sort((a, b) => a.date.localeCompare(b.date))
+    : props.data
 
   return {
     labels: sorted.map(d =>

@@ -1,176 +1,181 @@
 <template>
   <div class="space-y-5">
-    <AdminPageHeader
-      title="Points de vente"
-    />
+    <!-- Actions de page dans l'en-tête : la barre de filtres garde la place
+         pour la recherche et les trois filtres sur une ligne à 1440 px. -->
+    <AdminPageHeader>
+      <template #actions>
+        <UButton variant="outline" icon="i-heroicons-arrow-down-tray" title="Exporte les points de vente de la liste, filtres compris" @click="handleExport">
+          Exporter
+        </UButton>
+        <UButton v-if="peutEcrire" variant="outline" icon="i-heroicons-arrow-up-tray" @click="showImport = true">
+          Importer (CSV)
+        </UButton>
+        <UButton v-if="peutEcrire" icon="i-heroicons-plus" @click="openCreatePDV">
+          Nouveau point de vente
+        </UButton>
+      </template>
+    </AdminPageHeader>
 
     <AdminListToolbar
       :search="searchQuery"
-      search-placeholder="Nom, code ou adressage…"
+      search-placeholder="Nom, code client ou adresse…"
+      search-label="Rechercher un point de vente"
       result-label="PDV"
-      :result-count="total"
+      :result-count="loading && !total ? undefined : total"
       :chips="filterChips"
       @update:search="updateSearch"
       @reset="resetListFilters"
       @remove-chip="removeFilterChip"
     >
       <template #filters>
-        <USelectMenu
-          v-model="selectedZone"
-          :options="zoneOptions"
-          placeholder="Territoire"
-          size="sm"
-          class="w-40"
-          searchable
-          searchable-placeholder="Rechercher…"
-          :loading="!refsLoaded"
-          @update:model-value="applyListScope"
-        />
-        <USelectMenu
-          v-model="selectedRegion"
-          :options="regionOptions"
-          placeholder="Sous-région"
-          size="sm"
-          class="w-40"
-          searchable
-          searchable-placeholder="Rechercher…"
-          :loading="!refsLoaded"
-          @update:model-value="applyListScope"
-        />
-        <USelect
-          v-model="selectedGps"
-          :options="gpsOptions"
-          size="sm"
-          class="w-36"
-          aria-label="Filtrer par GPS"
-          @update:model-value="applyListScope"
-        />
+        <UFormGroup label="Territoire" size="sm" class="w-full min-w-40 sm:w-44">
+          <USelectMenu
+            v-model="selectedZone"
+            :options="zoneOptions"
+            placeholder="Tous"
+            size="sm"
+            class="w-full"
+            searchable
+            searchable-placeholder="Rechercher un territoire…"
+            :loading="!refsLoaded"
+            @update:model-value="applyListScope"
+          />
+        </UFormGroup>
+        <UFormGroup label="Sous-région" size="sm" class="w-full min-w-40 sm:w-44">
+          <USelectMenu
+            v-model="selectedRegion"
+            :options="regionOptions"
+            placeholder="Toutes"
+            size="sm"
+            class="w-full"
+            searchable
+            searchable-placeholder="Rechercher une sous-région…"
+            :loading="!refsLoaded"
+            @update:model-value="applyListScope"
+          />
+        </UFormGroup>
+        <UFormGroup label="Position GPS" size="sm" class="w-full min-w-40 sm:w-32 sm:min-w-32">
+          <USelect
+            v-model="selectedGps"
+            :options="gpsOptions"
+            size="sm"
+            class="w-full"
+            @update:model-value="applyListScope"
+          />
+        </UFormGroup>
       </template>
 
       <template #actions>
-        <UButton
-          v-if="pdvStore.nbSansGps"
-          size="sm"
-          color="red"
-          variant="soft"
-          icon="i-heroicons-exclamation-triangle"
-          :title="`${pdvStore.nbSansGps} PDV actifs sans coordonnées : ni géofence ni ordre de tournée. Cliquer pour les afficher.`"
+        <!-- Raccourci vers le filtre « Sans GPS ». Rouge 700 sur voile rouge :
+             contraste 5,6:1 (le rouge 500 du variant soft restait à 3,4:1). -->
+        <button
+          v-if="pdvStore.nbSansGps && selectedGps !== 'sans'"
+          type="button"
+          class="inline-flex h-8 items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-2.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200 dark:hover:bg-red-950/60"
+          :title="`${pdvStore.nbSansGps.toLocaleString('fr-FR')} points de vente actifs sans coordonnées : pas de rayon de visite ni d'ordre de tournée. Cliquez pour les afficher.`"
           @click="voirSansGps"
         >
+          <UIcon name="i-heroicons-exclamation-triangle" class="h-4 w-4" aria-hidden="true" />
           {{ pdvStore.nbSansGps.toLocaleString('fr-FR') }} PDV sans GPS
-        </UButton>
-        <UButton size="sm" variant="outline" @click="handleExport" icon="i-heroicons-arrow-down-tray">
-          Export
-        </UButton>
-        <UButton v-if="peutEcrire" size="sm" variant="outline" @click="showImport = true" icon="i-heroicons-arrow-up-tray">
-          Import CSV
-        </UButton>
-        <UButton v-if="peutEcrire" size="sm" @click="openCreatePDV" icon="i-heroicons-plus" class="bg-fc-blue">
-          Nouveau PDV
-        </UButton>
+        </button>
       </template>
     </AdminListToolbar>
 
-    <!-- PDV Table -->
+    <!-- Liste : l'essentiel par colonne ; le canal, la sous-région et la zone
+         commerciale passent en texte secondaire sous la valeur principale. -->
     <div class="admin-surface overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="admin-table w-full">
+        <table class="admin-table">
           <thead>
             <tr>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Nom</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Canal</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Catégorie</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Sous-région</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Territoire</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Code area</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Quartier</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Distributeur</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Perfect Store</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap">Actions</th>
+              <th>Point de vente</th>
+              <th class="whitespace-nowrap">Sous-catégorie</th>
+              <th>Territoire</th>
+              <th>Quartier</th>
+              <th>Distributeur</th>
+              <th class="whitespace-nowrap">Perfect Store</th>
+              <th class="text-right"><span class="sr-only">Actions</span></th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100">
-            <tr
-              v-for="pdv in pdvList"
-              :key="pdv.pdv_id"
-              class="hover:bg-gray-50 dark:hover:bg-gray-700"
-            >
-              <td class="px-4 py-3">
-                <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 rounded-lg bg-fc-blue-50 flex items-center justify-center">
-                    <MapPin class="w-4 h-4 text-fc-blue" />
+          <tbody>
+            <tr v-for="pdv in pdvList" :key="pdv.pdv_id">
+              <td>
+                <div class="min-w-48">
+                  <div class="flex items-center gap-1">
+                    <p class="font-medium text-slate-900 dark:text-white">{{ pdv.nom_pdv || 'Point de vente sans nom' }}</p>
+                    <PDVPhotoModal :image-url="pdv.image_url" :pdv-id="pdv.pdv_id" :pdv-name="pdv.nom_pdv" />
                   </div>
-                  <div>
-                    <div class="flex items-center gap-1">
-                      <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ pdv.nom_pdv }}</p>
-                      <PDVPhotoModal :image-url="pdv.image_url" :pdv-id="pdv.pdv_id" :pdv-name="pdv.nom_pdv" />
-                    </div>
-                    <p class="text-xs text-gray-400">
-                      {{ pdv.pdv_id }}<span v-if="pdv.mdm" title="Code client DMS"> · DMS {{ pdv.mdm }}</span>
-                    </p>
-                    <span
-                      v-if="!hasCoordinates(pdv)"
-                      class="mt-1 inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300"
-                      :title="motifSansGps(pdv)"
-                    >
-                      <UIcon name="i-heroicons-map-pin" class="h-3 w-3" />
-                      Sans GPS
-                    </span>
-                    <span
-                      v-else-if="gpsInfoByPdv[pdv.pdv_id]?.gps_source === 'terrain'"
-                      class="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-                      :title="libelleGpsTerrain(pdv)"
-                    >
-                      <UIcon name="i-heroicons-map-pin-solid" class="h-3 w-3" />
-                      GPS terrain
-                    </span>
-                  </div>
+                  <p v-if="pdv.mdm" class="text-xs text-slate-500 dark:text-slate-400">
+                    Code client : <span class="tabular-nums">{{ pdv.mdm }}</span>
+                  </p>
+                  <span
+                    v-if="!hasCoordinates(pdv)"
+                    class="mt-1 inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300"
+                    :title="motifSansGps(pdv)"
+                  >
+                    <UIcon name="i-heroicons-map-pin" class="h-3.5 w-3.5" aria-hidden="true" />
+                    Sans GPS
+                  </span>
+                  <span
+                    v-else-if="gpsInfoByPdv[pdv.pdv_id]?.gps_source === 'terrain'"
+                    class="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                    :title="libelleGpsTerrain(pdv)"
+                  >
+                    <UIcon name="i-heroicons-map-pin-solid" class="h-3.5 w-3.5" aria-hidden="true" />
+                    GPS relevé sur le terrain
+                  </span>
                 </div>
               </td>
-              <td class="px-4 py-3 text-sm text-gray-600">{{ pdv.canal }}</td>
-              <td class="px-4 py-3 text-sm text-gray-600">{{ typePdvLabel(pdv.sous_categorie_pdv) }}</td>
-              <td class="px-4 py-3 text-sm text-gray-600">{{ pdv.region }}</td>
-              <td class="px-4 py-3 text-sm text-gray-600">{{ pdv.zone }}</td>
-              <td class="px-4 py-3 font-mono text-xs text-gray-500">{{ pdv.area_code || '—' }}</td>
-              <td class="px-4 py-3 text-sm text-gray-600">{{ pdv.quartier }}</td>
-              <td class="px-4 py-3 text-sm text-gray-600">{{ pdv.distributor_name || '—' }}</td>
-              <td class="px-4 py-3 text-center">
-                <div v-if="perfectStoreByPdv[pdv.pdv_id]" class="flex items-center justify-center gap-1.5">
-                  <span class="h-2 w-2 rounded-full" :class="tierDotClass(perfectStoreByPdv[pdv.pdv_id].niveau)" />
-                  <span class="text-xs font-medium text-gray-700 dark:text-gray-300">{{ perfectStoreByPdv[pdv.pdv_id].niveau }}</span>
-                  <span class="text-xs text-gray-400">({{ perfectStoreByPdv[pdv.pdv_id].score_global }}%)</span>
-                </div>
-                <span v-else class="text-xs text-gray-300">—</span>
+              <td class="min-w-36">
+                <p>{{ typePdvLabel(pdv.sous_categorie_pdv) || 'Non renseignée' }}</p>
+                <p v-if="pdv.canal" class="text-xs text-slate-500 dark:text-slate-400">{{ libelleCanal(pdv.canal) }}</p>
               </td>
-              <td class="px-4 py-3 text-center">
-                <div class="flex items-center justify-center gap-1">
+              <td>
+                <p>{{ pdv.zone || 'Sans territoire' }}</p>
+                <p v-if="pdv.region" class="text-xs text-slate-500 dark:text-slate-400">{{ pdv.region }}</p>
+              </td>
+              <td>
+                <p>{{ pdv.quartier || '—' }}</p>
+                <p v-if="pdv.area_code" class="text-xs text-slate-500 dark:text-slate-400">Zone commerciale {{ pdv.area_code }}</p>
+              </td>
+              <td>{{ pdv.distributor_name || '—' }}</td>
+              <td class="whitespace-nowrap">
+                <div v-if="perfectStoreByPdv[pdv.pdv_id]" class="flex items-center gap-1.5">
+                  <span class="h-2 w-2 shrink-0 rounded-full" :class="tierDotClass(perfectStoreByPdv[pdv.pdv_id].niveau)" aria-hidden="true" />
+                  <span class="font-medium text-slate-900 dark:text-white">{{ libelleNiveau(perfectStoreByPdv[pdv.pdv_id].niveau) }}</span>
+                  <span v-if="perfectStoreByPdv[pdv.pdv_id].score_global != null" class="text-xs tabular-nums text-slate-500 dark:text-slate-400">{{ perfectStoreByPdv[pdv.pdv_id].score_global }} %</span>
+                </div>
+                <span v-else class="text-slate-500" title="Pas encore de visite évaluée">—</span>
+              </td>
+              <td>
+                <div class="flex items-center justify-end gap-1">
                   <UButton
                     v-if="peutEcrire"
+                    color="gray"
                     variant="ghost"
                     size="xs"
                     icon="i-heroicons-pencil"
-                    class="text-slate-500 hover:bg-slate-100 hover:text-fc-blue dark:hover:bg-slate-800"
-                    aria-label="Modifier"
+                    :aria-label="`Modifier ${pdv.nom_pdv || 'ce point de vente'}`"
                     title="Modifier"
                     @click="editPDV(pdv)"
                   />
                   <UButton
+                    color="gray"
                     variant="ghost"
                     size="xs"
                     icon="i-heroicons-map-pin"
-                    class="text-slate-500 hover:bg-slate-100 hover:text-fc-blue disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-slate-800"
                     :disabled="!hasCoordinates(pdv)"
-                    aria-label="Voir sur la carte"
-                    :title="hasCoordinates(pdv) ? 'Voir sur la carte' : 'Coordonnées manquantes'"
+                    :aria-label="`Voir ${pdv.nom_pdv || 'ce point de vente'} sur la carte`"
+                    :title="hasCoordinates(pdv) ? 'Voir sur la carte' : 'Coordonnées GPS manquantes'"
                     @click="openPDVOnMap(pdv)"
                   />
                   <UButton
                     v-if="peutEcrire"
+                    color="red"
                     variant="ghost"
                     size="xs"
                     icon="i-heroicons-trash"
-                    class="text-red-500 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/30"
-                    aria-label="Supprimer"
+                    :aria-label="`Supprimer ${pdv.nom_pdv || 'ce point de vente'}`"
                     title="Supprimer"
                     @click="deletePDV(pdv)"
                   />
@@ -183,16 +188,17 @@
 
       <ChargementContenu v-if="loading" variante="lignes" :nombre="6" libelle="Chargement des points de vente…" class="p-5" />
 
-      <div v-if="!loading && !pdvList.length" class="p-12 text-center text-gray-400">
-        <MapPin class="w-12 h-12 mx-auto mb-3 opacity-50" />
-        <p class="font-medium">Aucun PDV trouvé</p>
-        <p class="mt-1 text-sm text-slate-400">Modifiez la recherche ou réinitialisez les filtres.</p>
+      <div v-if="!loading && !pdvList.length" class="px-6 py-12 text-center">
+        <UIcon name="i-heroicons-map-pin" class="mx-auto h-10 w-10 text-slate-300 dark:text-slate-600" aria-hidden="true" />
+        <p class="mt-3 text-sm font-medium text-slate-900 dark:text-white">Aucun point de vente ne correspond</p>
+        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Modifiez la recherche ou réinitialisez les filtres.</p>
         <UButton class="mt-4" size="xs" variant="outline" icon="i-heroicons-arrow-path" @click="resetListFilters">
-          Réinitialiser
+          Réinitialiser les filtres
         </UButton>
       </div>
 
       <AdminPagination
+        v-if="total || !loading"
         :total="total"
         :page="pdvStore.filters.page"
         :page-size="pdvStore.filters.perPage"
@@ -206,7 +212,7 @@
     <AdminFormModal
       v-model="showCreate"
       :title="editingPDV ? 'Modifier le point de vente' : 'Nouveau point de vente'"
-      description="Renseignez l’identité, la zone commerciale et les coordonnées du PDV."
+      description="Renseignez l’identité, la zone commerciale et les coordonnées du point de vente."
       icon="i-heroicons-map-pin"
       width="sm:max-w-3xl"
       body-class="space-y-8"
@@ -223,32 +229,32 @@
                   <h4 id="pdv-identite-title" class="text-sm font-semibold text-slate-900 dark:text-white">
                     Identité commerciale
                   </h4>
-                  <p class="text-xs text-slate-500 dark:text-slate-400">Informations utilisées dans les listes et les rapports.</p>
+                  <p class="text-xs text-slate-600 dark:text-slate-300">Informations utilisées dans les listes et les rapports.</p>
                 </div>
               </div>
 
               <div class="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2">
-                <UFormGroup label="Nom du PDV" required size="md">
+                <UFormGroup label="Nom du point de vente" required size="md">
                   <UInput v-model="pdvForm.nom_pdv" placeholder="Ex. Pharmacie du Marché" size="md" class="w-full" />
                 </UFormGroup>
-                <UFormGroup label="Canal" size="md" help="Déduit de la catégorie choisie">
-                  <UInput :model-value="derivedCanal" disabled size="md" class="w-full" />
+                <UFormGroup label="Canal" size="md" help="Déduit de la catégorie choisie.">
+                  <UInput :model-value="libelleCanal(derivedCanal)" disabled size="md" class="w-full" />
                 </UFormGroup>
-                <UFormGroup label="Catégorie" help="Groupe de niveau 3 du référentiel." size="md">
+                <UFormGroup label="Catégorie" help="Grande famille de commerce ; elle détermine le canal." size="md">
                   <USelectMenu
                     v-model="pdvForm.categorie_pdv"
                     :options="categorieOptions"
                     value-attribute="value"
                     option-attribute="label"
                     searchable
-                    searchable-placeholder="Rechercher une catégorie..."
+                    searchable-placeholder="Rechercher une catégorie…"
                     placeholder="Sélectionner une catégorie"
                     size="md"
                     class="w-full"
                     @update:model-value="onCategorieChange"
                   />
                 </UFormGroup>
-                <UFormGroup label="Sous-catégorie" help="Type de PDV utilisé pour le scoring Perfect Store." size="md">
+                <UFormGroup label="Sous-catégorie" help="Type de point de vente : il fixe les critères Perfect Store appliqués." size="md">
                   <USelectMenu
                     v-model="pdvForm.sous_categorie_pdv"
                     :options="sousCategorieOptions"
@@ -256,8 +262,8 @@
                     option-attribute="label"
                     :disabled="!pdvForm.categorie_pdv"
                     searchable
-                    searchable-placeholder="Rechercher un type..."
-                    placeholder="Sélectionner un type de PDV"
+                    searchable-placeholder="Rechercher une sous-catégorie…"
+                    placeholder="Sélectionner une sous-catégorie"
                     size="md"
                     class="w-full"
                   />
@@ -274,18 +280,18 @@
                   <h4 id="pdv-zone-title" class="text-sm font-semibold text-slate-900 dark:text-white">
                     Zone commerciale
                   </h4>
-                  <p class="text-xs text-slate-500 dark:text-slate-400">Sélectionnez les niveaux dans l’ordre : région, territoire, puis quartier.</p>
+                  <p class="text-xs text-slate-600 dark:text-slate-300">Choisissez dans l’ordre : direction, sous-région, territoire, zone commerciale, puis quartier.</p>
                 </div>
               </div>
 
               <div class="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2">
-                <UFormGroup label="Division" size="md">
+                <UFormGroup label="Direction" size="md">
                   <USelectMenu
                     v-model="pdvForm.region_code"
                     :options="regionCascadeOptions"
                     option-attribute="label"
                     value-attribute="value"
-                    placeholder="Sélectionner une division"
+                    placeholder="Sélectionner une direction"
                     searchable
                     searchable-placeholder="Rechercher..."
                     size="md"
@@ -323,14 +329,14 @@
                     @update:model-value="onTerritoryChange"
                   />
                 </UFormGroup>
-                <UFormGroup label="Code area" size="md">
+                <UFormGroup label="Zone commerciale" size="md">
                   <USelectMenu
                     v-model="pdvForm.area_code"
                     :options="areaCascadeOptions"
                     option-attribute="label"
                     value-attribute="value"
                     :disabled="!pdvForm.territory_code"
-                    placeholder="Sélectionner une area"
+                    placeholder="Sélectionner une zone commerciale"
                     searchable
                     searchable-placeholder="Rechercher..."
                     size="md"
@@ -352,7 +358,7 @@
                     class="w-full"
                   />
                 </UFormGroup>
-                <UFormGroup label="Distributeur" help="Distributeurs nationaux et liés au territoire." size="md">
+                <UFormGroup label="Distributeur" help="Distributeurs nationaux et ceux liés au territoire ou à la zone commerciale." size="md">
                   <USelectMenu
                     v-model="pdvForm.distributor_name"
                     :options="distributorOptions"
@@ -377,12 +383,12 @@
                   <h4 id="pdv-details-title" class="text-sm font-semibold text-slate-900 dark:text-white">
                     Détails et coordonnées
                   </h4>
-                  <p class="text-xs text-slate-500 dark:text-slate-400">Adresse terrain, objectif commercial et position GPS.</p>
+                  <p class="text-xs text-slate-600 dark:text-slate-300">Adresse, objectif Perfect Store et position GPS.</p>
                 </div>
               </div>
 
               <div class="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2">
-                <UFormGroup label="Objectif Perfect Store" size="md">
+                <UFormGroup label="Objectif Perfect Store" help="Niveau visé pour ce point de vente." size="md">
                   <USelectMenu
                     v-model="pdvForm.objectif_perfect_store"
                     :options="['', 'FLAGSHIP', 'VIP', 'CORE', 'BASIC']"
@@ -391,19 +397,19 @@
                     class="w-full"
                   />
                 </UFormGroup>
-                <UFormGroup label="Adressage" size="md">
+                <UFormGroup label="Adresse" size="md">
                   <UInput v-model="pdvForm.adressage" placeholder="Ex. Rue du Commerce, près du marché" size="md" class="w-full" />
                 </UFormGroup>
-                <UFormGroup label="Code client DMS" size="md" help="customer_code de l’export DMS : sert à rapprocher les imports.">
+                <UFormGroup label="Code client du distributeur" size="md" help="Code client du fichier du distributeur (DMS) : il sert à rapprocher les imports.">
                   <UInput v-model="pdvForm.mdm" placeholder="Ex. 150009895" size="md" class="w-full" />
                 </UFormGroup>
-                <UFormGroup label="Rayon de geofence (m)" size="md" help="Distance maximale pour démarrer une visite ici. Vide : rayon par défaut (Paramètres terrain).">
+                <UFormGroup label="Rayon de visite (m)" size="md" help="Distance maximale pour démarrer une visite ici. Laissé vide : rayon par défaut des paramètres terrain.">
                   <UInput v-model.number="pdvForm.rayon_geofence" type="number" min="20" max="2000" placeholder="Par défaut" size="md" class="w-full" />
                 </UFormGroup>
-                <UFormGroup label="Latitude" size="md">
+                <UFormGroup label="Latitude (GPS)" size="md" help="En degrés décimaux, entre 4 et 11 en Côte d’Ivoire. Laissée vide : relevée à la première visite.">
                   <UInput v-model="pdvForm.geolocation_lat" type="number" step="any" placeholder="Ex. 5.3472" size="md" class="w-full" />
                 </UFormGroup>
-                <UFormGroup label="Longitude" size="md">
+                <UFormGroup label="Longitude (GPS)" size="md" help="En degrés décimaux, négative en Côte d’Ivoire (entre -9 et -2).">
                   <UInput v-model="pdvForm.geolocation_lng" type="number" step="any" placeholder="Ex. -4.0268" size="md" class="w-full" />
                 </UFormGroup>
               </div>
@@ -413,13 +419,8 @@
         <UButton type="button" color="gray" variant="ghost" @click="showCreate = false">
           Annuler
         </UButton>
-        <UButton
-          type="submit"
-          icon="i-heroicons-check"
-          class="bg-fc-blue text-white hover:bg-fc-blue-600 disabled:bg-fc-blue-300 aria-disabled:bg-fc-blue-300 focus-visible:outline-fc-blue-500 dark:bg-fc-blue dark:text-white dark:hover:bg-fc-blue-600 dark:disabled:bg-fc-blue-700 dark:aria-disabled:bg-fc-blue-700 dark:focus-visible:outline-fc-blue-400"
-          :loading="saving"
-        >
-          {{ editingPDV ? 'Mettre à jour' : 'Créer le PDV' }}
+        <UButton type="submit" icon="i-heroicons-check" :loading="saving">
+          {{ editingPDV ? 'Enregistrer les modifications' : 'Créer le point de vente' }}
         </UButton>
       </template>
     </AdminFormModal>
@@ -427,14 +428,24 @@
     <!-- Import Modal -->
     <UModal v-model="showImport">
       <div class="p-6">
-        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Import CSV PDV</h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          Colonnes : PDV ID, Nom du PDV, Canal, Catégorie de PDV, Région, Zone, Quartier, Geolocation, Adressage…
-          <br>Référentiels (optionnel) : <strong>Territoire</strong> (code), <strong>Area</strong> (code), <strong>Distributeur</strong>, <strong>Objectif Perfect Store</strong> (FLAGSHIP/VIP/CORE/BASIC).
-          <br>Astuce : exporte d'abord (bouton Export) pour récupérer le modèle avec les bons en-têtes.
-        </p>
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Importer des points de vente (CSV)</h2>
+        <div class="mt-2 space-y-2 text-sm text-slate-600 dark:text-slate-300">
+          <p>
+            Le plus simple : exportez d’abord la liste (bouton « Exporter ») pour obtenir un modèle avec les bons en-têtes,
+            complétez-le, puis importez-le ici.
+          </p>
+          <p>
+            Colonnes attendues : PDV ID, Nom du PDV, Canal, Catégorie de PDV, Région, Zone, Quartier, Geolocation, Adressage…
+          </p>
+          <p>
+            Colonnes facultatives : <strong class="font-semibold text-slate-900 dark:text-white">Territoire</strong> (code),
+            <strong class="font-semibold text-slate-900 dark:text-white">Area</strong> (code de la zone commerciale),
+            <strong class="font-semibold text-slate-900 dark:text-white">Distributeur</strong>,
+            <strong class="font-semibold text-slate-900 dark:text-white">Objectif Perfect Store</strong> (FLAGSHIP, VIP, CORE ou BASIC).
+          </p>
+        </div>
 
-        <div class="border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-lg p-8 text-center mb-4">
+        <div class="my-4 rounded-lg border-2 border-dashed border-slate-300 p-8 text-center dark:border-slate-600">
           <input
             ref="fileInput"
             type="file"
@@ -442,16 +453,17 @@
             class="hidden"
             @change="handleFileSelect"
           />
-          <UButton variant="outline" @click="($refs.fileInput as HTMLInputElement)?.click()">
+          <UButton variant="outline" icon="i-heroicons-document-arrow-up" @click="($refs.fileInput as HTMLInputElement)?.click()">
             Choisir un fichier CSV
           </UButton>
-          <p v-if="importFile" class="text-sm text-gray-600 mt-2">{{ importFile.name }}</p>
+          <p v-if="importFile" class="mt-2 text-sm text-slate-700 dark:text-slate-200">{{ importFile.name }}</p>
+          <p v-else class="mt-2 text-xs text-slate-600 dark:text-slate-300">Aucun fichier choisi.</p>
         </div>
 
         <div class="flex justify-end gap-2">
-          <UButton variant="ghost" @click="showImport = false">Annuler</UButton>
+          <UButton color="gray" variant="ghost" @click="showImport = false">Annuler</UButton>
           <UButton
-            class="bg-fc-blue"
+            icon="i-heroicons-arrow-up-tray"
             :disabled="!importFile"
             :loading="importing"
             @click="handleImport"
@@ -465,10 +477,11 @@
 </template>
 
 <script setup lang="ts">
-import { MapPin } from 'lucide-vue-next'
 import type { PDV } from '~/types'
 import { SANS_ZONE, type FiltreGps } from '~/stores/pdv'
 import { canWriteTerrain } from '~/utils/roles'
+import { isModernTrade } from '~/utils/canal'
+import { messageUtilisateur } from '~/utils/supabaseErrors'
 
 definePageMeta({
   middleware: ['auth', 'admin'],
@@ -555,9 +568,23 @@ async function loadGpsInfoForList() {
 function motifSansGps(pdv: PDV): string {
   const source = gpsInfoByPdv.value[pdv.pdv_id]?.gps_source
   const suite = 'Le merchandiser enregistre la position à sa première visite.'
-  if (source === 'dms-depot') return `Point GPS du DMS partagé par de nombreux clients (dépôt du distributeur), écarté. ${suite}`
-  if (source === 'dms-absent') return `Coordonnées absentes du fichier DMS. ${suite}`
-  return `Coordonnées manquantes : ni géofence ni ordre de tournée. ${suite}`
+  if (source === 'dms-depot') return `Le point GPS du fichier du distributeur (DMS) est partagé par de nombreux clients (dépôt du distributeur) : il a été écarté. ${suite}`
+  if (source === 'dms-absent') return `Coordonnées absentes du fichier du distributeur (DMS). ${suite}`
+  return `Coordonnées manquantes : pas de rayon de visite ni d’ordre de tournée. ${suite}`
+}
+
+// Affichage seulement : pdv.canal garde sa valeur de base (General trade / Modern trade).
+function libelleCanal(canal?: string | null): string {
+  if (!canal) return ''
+  return isModernTrade(canal) ? 'Supermarchés (MT)' : 'Boutiques (GT)'
+}
+
+// Niveau Perfect Store en casse normale (« VIP », « Flagship »…), sans le suffixe « PERFECT STORE ».
+function libelleNiveau(niveau?: string | null): string {
+  const court = String(niveau || '').replace(/\s*PERFECT STORE\s*$/i, '').replace(/\s*STORE\s*$/i, '').trim()
+  if (!court) return ''
+  if (court.toUpperCase() === 'VIP') return 'VIP'
+  return court.charAt(0).toUpperCase() + court.slice(1).toLowerCase()
 }
 
 function libelleGpsTerrain(pdv: PDV): string {
@@ -705,7 +732,7 @@ const areaDistributors = computed(() => {
 // Portée locale = area si elle a des distributeurs propres, sinon repli territoire.
 const localDistributors = computed(() =>
   areaDistributors.value.length ? areaDistributors.value : territoryDistributors.value)
-const distributorScopeLabel = computed(() => areaDistributors.value.length ? 'Area' : 'Territoire')
+const distributorScopeLabel = computed(() => areaDistributors.value.length ? 'Zone commerciale' : 'Territoire')
 const distributorOptions = computed(() => {
   const seen = new Set<string>()
   const out: { value: string; label: string }[] = [{ value: '', label: '—' }]
@@ -787,11 +814,20 @@ function openPDVOnMap(pdv: PDV) {
   navigateTo(`/admin/map?lat=${pdv.geolocation_lat}&lng=${pdv.geolocation_lng}`)
 }
 
+// Le store désactive le PDV (is_active = false) et ses lignes de tournée sont
+// retirées : la confirmation le dit avec le nom du point de vente.
 async function deletePDV(pdv: PDV) {
-  if (!confirm('Supprimer ce PDV ?')) return
-  await pdvStore.deletePDV(pdv.pdv_id)
-  toast.add({ title: 'PDV supprimé' })
-  loadPDV()
+  const nom = pdv.nom_pdv || 'ce point de vente'
+  if (!confirm(`Supprimer « ${nom} » ?\n\nIl n’apparaîtra plus dans les listes ni dans les tournées.`)) return
+  try {
+    await pdvStore.deletePDV(pdv.pdv_id)
+    toast.add({ title: 'Point de vente supprimé', description: `« ${nom} » n’apparaît plus dans les listes ni dans les tournées.`, color: 'green' })
+    loadPDV()
+  }
+  catch (err) {
+    console.error('Suppression du PDV impossible', err)
+    toast.add({ title: 'Suppression impossible', description: messageUtilisateur(err), color: 'red' })
+  }
 }
 
 function openCreatePDV() {
@@ -847,18 +883,19 @@ async function handleSavePDV() {
 
     if (editingPDV.value) {
       await pdvStore.updatePDV(editingPDV.value.pdv_id, payload)
-      toast.add({ title: 'PDV mis à jour' })
+      toast.add({ title: 'Point de vente mis à jour', color: 'green' })
     }
     else {
       await pdvStore.createPDV(payload)
-      toast.add({ title: 'PDV créé' })
+      toast.add({ title: 'Point de vente créé', color: 'green' })
     }
     showCreate.value = false
     editingPDV.value = null
     loadPDV()
   }
-  catch (err: any) {
-    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+  catch (err) {
+    console.error('Enregistrement du PDV impossible', err)
+    toast.add({ title: 'Enregistrement impossible', description: messageUtilisateur(err), color: 'red' })
   }
   finally {
     saving.value = false
@@ -868,8 +905,14 @@ async function handleSavePDV() {
 // Exporte la sélection affichée (filtres compris) : « Sans GPS » + Export =
 // la liste à transmettre pour relever les coordonnées.
 async function handleExport() {
-  const all = await pdvStore.fetchAllPDV(true)
-  await exportPDVToExcel(all)
+  try {
+    const all = await pdvStore.fetchAllPDV(true)
+    await exportPDVToExcel(all)
+  }
+  catch (err) {
+    console.error('Export des PDV impossible', err)
+    toast.add({ title: 'Export impossible', description: messageUtilisateur(err), color: 'red' })
+  }
 }
 
 function handleFileSelect(e: Event) {
@@ -885,13 +928,14 @@ async function handleImport() {
     const text = await importFile.value.text()
     const records = parseCsv(text)
     const count = await pdvStore.importPDVFromCSV(records)
-    toast.add({ title: `${count} PDV importés avec succès` })
+    toast.add({ title: `${count} points de vente importés`, color: 'green' })
     showImport.value = false
     importFile.value = null
     loadPDV()
   }
-  catch (err: any) {
-    toast.add({ title: 'Erreur d\'import', description: err.message, color: 'red' })
+  catch (err) {
+    console.error('Import CSV des PDV impossible', err)
+    toast.add({ title: 'Import impossible', description: messageUtilisateur(err), color: 'red' })
   }
   finally {
     importing.value = false
