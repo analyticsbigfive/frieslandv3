@@ -1,11 +1,11 @@
 <template>
-  <div id="dashboard-print-area" class="space-y-8">
-    <div v-if="loadingDashboard" class="space-y-6" aria-label="Chargement du tableau de bord">
-      <div class="h-9 w-72 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700" />
+  <div id="dashboard-print-area" class="space-y-6">
+    <div v-if="loadingDashboard" class="space-y-6" role="status" aria-label="Chargement du tableau de bord">
+      <div class="h-9 w-72 max-w-full animate-pulse rounded-md bg-slate-200 dark:bg-slate-700" />
       <div class="grid gap-5 lg:grid-cols-12">
-        <div class="h-64 animate-pulse rounded-3xl bg-white dark:bg-slate-800 lg:col-span-7" />
+        <div class="admin-surface h-56 animate-pulse lg:col-span-7" />
         <div class="grid grid-cols-2 gap-4 lg:col-span-5">
-          <div v-for="i in 4" :key="i" class="h-28 animate-pulse rounded-2xl bg-white dark:bg-slate-800" />
+          <div v-for="i in 4" :key="i" class="admin-surface h-28 animate-pulse" />
         </div>
       </div>
     </div>
@@ -16,7 +16,7 @@
           <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">{{ lastRefreshLabel }}</p>
         </template>
         <template #actions>
-          <UButton size="sm" variant="ghost" icon="i-heroicons-printer" @click="handlePrint">Imprimer</UButton>
+          <UButton size="sm" color="gray" variant="ghost" icon="i-heroicons-printer" @click="handlePrint">Imprimer</UButton>
           <UDropdown :items="exportMenuItems">
             <UButton size="sm" variant="outline" icon="i-heroicons-arrow-down-tray" trailing-icon="i-heroicons-chevron-down">
               Exporter
@@ -25,120 +25,140 @@
         </template>
       </AdminPageHeader>
 
-      <!-- Une seule vue : indicateurs, puis l'activité récente (plus d'onglets). -->
-          <div class="space-y-8">
+      <!-- Une seule vue : ce qui est à traiter, les indicateurs, puis l'activité récente. -->
       <section v-if="dashboardAlerts.length" class="admin-surface overflow-hidden" aria-labelledby="dashboard-alerts-heading">
-        <div class="flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-4 dark:border-slate-700 sm:px-6">
-          <div>
-            <h2 id="dashboard-alerts-heading" class="text-lg font-semibold tracking-tight text-slate-950 dark:text-white">À traiter maintenant</h2>
-            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Les points qui nécessitent une action ou une vérification.</p>
-          </div>
-          <UIcon name="i-heroicons-exclamation-triangle" class="h-5 w-5 text-amber-500" aria-hidden="true" />
+        <div class="border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+          <h2 id="dashboard-alerts-heading" class="text-lg font-semibold text-slate-900 dark:text-white">À traiter maintenant</h2>
+          <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Les points qui demandent une action ou une vérification.</p>
         </div>
-        <div class="grid gap-3 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-4">
-          <NuxtLink
-            v-for="alert in dashboardAlerts"
-            :key="alert.key"
-            :to="alert.to"
-            class="group rounded-xl border px-4 py-3 transition hover:-translate-y-0.5"
-            :class="alert.level === 'critical'
-              ? 'border-red-200 bg-red-50/70 hover:border-red-300 dark:border-red-900/60 dark:bg-red-950/25'
-              : 'border-amber-200 bg-amber-50/70 hover:border-amber-300 dark:border-amber-900/60 dark:bg-amber-950/25'"
-          >
-            <div class="flex items-center justify-between gap-3">
-              <span class="text-xs font-semibold uppercase tracking-wide" :class="alert.level === 'critical' ? 'text-red-700 dark:text-red-300' : 'text-amber-700 dark:text-amber-300'">{{ alert.title }}</span>
-              <span class="text-lg font-semibold tabular-nums text-slate-950 dark:text-white">{{ alert.value }}</span>
-            </div>
-            <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">{{ alert.description }}</p>
-            <span class="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-fc-red">Ouvrir <UIcon name="i-heroicons-arrow-up-right" class="h-3.5 w-3.5 transition group-hover:translate-x-0.5" /></span>
-          </NuxtLink>
-        </div>
+        <ul class="divide-y divide-slate-200 dark:divide-slate-700">
+          <li v-for="alert in dashboardAlerts" :key="alert.key">
+            <component
+              :is="peutOuvrir(alert.to) ? LienNuxt : 'div'"
+              :to="peutOuvrir(alert.to) ? alert.to : undefined"
+              class="group flex items-center gap-3 px-5 py-3"
+              :class="peutOuvrir(alert.to) ? 'transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 dark:hover:bg-slate-700/40 dark:focus-visible:bg-slate-700/40' : ''"
+            >
+              <UIcon
+                :name="alert.level === 'critical' ? 'i-heroicons-exclamation-circle' : 'i-heroicons-exclamation-triangle'"
+                class="h-5 w-5 shrink-0"
+                :class="alert.level === 'critical' ? 'text-red-700 dark:text-red-300' : 'text-amber-700 dark:text-amber-300'"
+                aria-hidden="true"
+              />
+              <span class="min-w-0 flex-1">
+                <span class="flex flex-wrap items-center gap-2">
+                  <span class="text-sm font-semibold text-slate-900 dark:text-white">{{ alert.title }}</span>
+                  <span
+                    class="rounded-full px-2 py-0.5 text-xs font-semibold"
+                    :class="alert.level === 'critical' ? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-200' : 'bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200'"
+                  >{{ alert.level === 'critical' ? 'Critique' : 'À surveiller' }}</span>
+                </span>
+                <span class="mt-0.5 block text-sm text-slate-600 dark:text-slate-300">{{ alert.description }}</span>
+              </span>
+              <span class="shrink-0 text-lg font-semibold tabular-nums text-slate-900 dark:text-white">{{ alert.value }}</span>
+              <span v-if="peutOuvrir(alert.to)" class="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-fc-red">
+                Ouvrir
+                <UIcon name="i-heroicons-arrow-right" class="h-4 w-4" aria-hidden="true" />
+              </span>
+            </component>
+          </li>
+        </ul>
       </section>
 
       <section v-if="psGlobal" aria-labelledby="performance-heading" class="grid gap-5 lg:grid-cols-12">
         <NuxtLink
           to="/admin"
-          class="group relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_45px_-32px_rgba(15,23,42,0.45)] transition duration-300 hover:-translate-y-0.5 hover:border-red-200 dark:border-slate-700 dark:bg-slate-800 lg:col-span-7"
+          class="admin-surface group flex flex-col justify-between gap-6 p-5 transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 dark:hover:bg-slate-700/40 lg:col-span-7"
         >
-          <div class="absolute inset-y-0 left-0 w-1.5 bg-fc-red" />
-          <div class="flex h-full flex-col justify-between gap-8 pl-2">
-            <div class="flex items-start justify-between gap-4">
-              <div>
-                <p id="performance-heading" class="text-sm font-semibold text-slate-500 dark:text-slate-400">Performance Perfect Store</p>
-                <div class="mt-3 flex items-end gap-3">
-                  <span class="text-6xl font-semibold tracking-[-0.06em] text-slate-950 dark:text-white">
-                    {{ formatPercent(psGlobal.perfect_store_pct) }}
-                  </span>
-                  <span class="mb-2 rounded-lg bg-red-50 px-2.5 py-1 text-xs font-semibold text-fc-red dark:bg-red-950/40">
-                    {{ psGlobal.perfect_stores }} conformes
-                  </span>
-                </div>
-              </div>
-              <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-fc-red transition group-hover:scale-105 dark:bg-red-950/40">
-                <Trophy class="h-6 w-6" />
-              </div>
-            </div>
+          <div class="flex items-start justify-between gap-4">
             <div>
-              <div class="mb-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                <span>{{ psGlobal.perfect_stores }} visites conformes</span>
-                <span>{{ psGlobal.visites_scorees }} évaluées</span>
-              </div>
-              <div class="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
-                <div class="h-full rounded-full bg-fc-red transition-all duration-700" :style="{ width: perfectStoreProgress }" />
-              </div>
-              <p class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-fc-red">
-                Ouvrir l’analyse détaillée
-                <UIcon name="i-heroicons-arrow-right" class="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              <h2 id="performance-heading" class="text-base font-semibold text-slate-900 dark:text-white">Performance Perfect Store</h2>
+              <p class="mt-3 text-3xl font-bold leading-none tabular-nums text-slate-900 dark:text-white">
+                {{ formatPercent(psGlobal.perfect_store_pct) }}
               </p>
+              <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">des visites évaluées sont au standard</p>
             </div>
+            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300" aria-hidden="true">
+              <Trophy class="h-4 w-4" />
+            </div>
+          </div>
+          <div>
+            <div class="mb-2 flex flex-wrap items-center justify-between gap-2 text-sm text-slate-600 dark:text-slate-300">
+              <span><strong class="font-semibold tabular-nums text-slate-900 dark:text-white">{{ numberFormatter.format(psGlobal.perfect_stores ?? 0) }}</strong> visites conformes</span>
+              <span><strong class="font-semibold tabular-nums text-slate-900 dark:text-white">{{ numberFormatter.format(psGlobal.visites_scorees ?? 0) }}</strong> évaluées</span>
+            </div>
+            <div class="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700" aria-hidden="true">
+              <div class="h-full rounded-full bg-slate-700 transition-all duration-700 dark:bg-slate-200" :style="{ width: perfectStoreProgress }" />
+            </div>
+            <p class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-fc-red">
+              Ouvrir l'analyse détaillée
+              <UIcon name="i-heroicons-arrow-right" class="h-4 w-4" aria-hidden="true" />
+            </p>
           </div>
         </NuxtLink>
 
         <div class="grid grid-cols-2 gap-4 lg:col-span-5">
-          <NuxtLink v-for="metric in activityMetrics" :key="metric.label" :to="metric.to" class="admin-metric-tile group transition hover:-translate-y-0.5 hover:border-slate-300 dark:hover:border-slate-600">
+          <component
+            :is="peutOuvrir(metric.to) ? LienNuxt : 'div'"
+            v-for="metric in activityMetrics"
+            :key="metric.label"
+            :to="peutOuvrir(metric.to) ? metric.to : undefined"
+            class="admin-metric-tile"
+            :class="peutOuvrir(metric.to) ? 'transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 dark:hover:bg-slate-700/40' : ''"
+          >
             <div class="flex items-start justify-between gap-3">
-              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">{{ metric.label }}</p>
-              <component :is="metric.icon" class="h-4 w-4 text-slate-400 transition group-hover:text-fc-red" />
+              <p class="text-xs font-semibold text-slate-600 dark:text-slate-300">{{ metric.label }}</p>
+              <component :is="metric.icon" class="h-4 w-4 shrink-0 text-slate-600 dark:text-slate-300" aria-hidden="true" />
             </div>
-            <p class="mt-3 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">{{ metric.value }}</p>
-            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">{{ metric.hint }}</p>
-          </NuxtLink>
+            <p class="mt-3 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{{ metric.value }}</p>
+            <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">{{ metric.hint }}</p>
+          </component>
         </div>
       </section>
 
       <section v-if="psGlobal" aria-labelledby="pillars-heading">
-        <div class="mb-4 flex items-end justify-between gap-4">
+        <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h3 id="pillars-heading" class="text-lg font-semibold tracking-tight text-slate-950 dark:text-white">Santé des piliers</h3>
-            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Les composantes qui déterminent la conformité Perfect Store.</p>
+            <h2 id="pillars-heading" class="text-lg font-semibold text-slate-900 dark:text-white">Santé des piliers</h2>
+            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Les composantes qui déterminent la conformité Perfect Store.</p>
           </div>
-          <NuxtLink to="/admin/perfect-store/standards" class="text-sm font-semibold text-fc-red hover:underline">Voir les standards</NuxtLink>
+          <NuxtLink
+            v-if="peutOuvrir('/admin/perfect-store/standards')"
+            to="/admin/perfect-store/standards"
+            class="text-sm font-semibold text-fc-red underline-offset-4 hover:underline"
+          >
+            Voir les standards
+          </NuxtLink>
         </div>
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatsCard title="OSA pondérée" :value="psGlobal.osa_moyen_pct ?? 0" format="percent" subtitle="Disponibilité au seuil" :icon="Package" color="green" />
-          <StatsCard title="Assortiment" :value="psGlobal.assortiment_moyen_pct ?? 0" format="percent" subtitle="Minimum SKU et Hero" :icon="ListChecks" color="purple" />
-          <StatsCard title="Visibilité" :value="psGlobal.visibilite_moyenne_pct ?? 0" format="percent" subtitle="PLV requise présente" :icon="Eye" color="orange" />
-          <StatsCard title="Promotion" :value="psGlobal.promotion_moyenne_pct ?? 0" format="percent" subtitle="Si une promotion est active" :icon="BadgePercent" color="red" />
+          <StatsCard title="Disponibilité en rayon (pondérée)" :value="formatPercent(psGlobal.osa_moyen_pct ?? 0)" format="none" subtitle="Quantité au moins égale au seuil" :icon="Package" color="green" />
+          <StatsCard title="Assortiment" :value="formatPercent(psGlobal.assortiment_moyen_pct ?? 0)" format="none" subtitle="Références minimum et prioritaires" :icon="ListChecks" color="blue" />
+          <StatsCard title="Visibilité" :value="formatPercent(psGlobal.visibilite_moyenne_pct ?? 0)" format="none" subtitle="PLV requise présente" :icon="Eye" color="orange" />
+          <StatsCard title="Promotion" :value="formatPercent(psGlobal.promotion_moyenne_pct ?? 0)" format="none" subtitle="Quand une promotion est en cours" :icon="BadgePercent" color="red" />
         </div>
       </section>
 
       <section class="grid gap-6 xl:grid-cols-12">
-        <article class="admin-surface p-6 xl:col-span-5">
-          <div class="mb-6">
-            <h3 class="text-lg font-semibold tracking-tight text-slate-950 dark:text-white">Disponibilité par catégorie</h3>
-            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Part des visites où la catégorie est présente.</p>
+        <article class="admin-surface p-6 xl:col-span-5" aria-labelledby="dispo-categorie-heading">
+          <div class="mb-5">
+            <h3 id="dispo-categorie-heading" class="text-base font-semibold text-slate-900 dark:text-white">Disponibilité par catégorie</h3>
+            <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">Part des visites où la catégorie est présente. Seuil d'alerte : 40 %.</p>
           </div>
-          <div class="space-y-5">
-            <div v-for="cat in productCategories" :key="cat.key">
-              <div class="mb-2 flex items-center justify-between">
-                <span class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ cat.label }}</span>
-                <span class="text-sm font-semibold tabular-nums" :class="getPercentColor(cat.value)">{{ cat.value }}%</span>
+          <ul v-if="productCategories.length" class="space-y-5">
+            <li v-for="cat in productCategories" :key="cat.key">
+              <div class="mb-2 flex items-center justify-between gap-3">
+                <span class="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+                  {{ cat.label }}
+                  <span v-if="Number(cat.value) < 40" class="rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-200">Sous le seuil</span>
+                </span>
+                <span class="text-sm font-semibold tabular-nums text-slate-900 dark:text-white">{{ formatPercent(cat.value) }}</span>
               </div>
-              <div class="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
-                <div class="h-full rounded-full transition-all duration-700" :class="getPercentBarColor(cat.value)" :style="{ width: `${Math.min(100, Math.max(0, cat.value))}%` }" />
+              <div class="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700" aria-hidden="true">
+                <div class="h-full rounded-full transition-all duration-700" :style="{ width: `${Math.min(100, Math.max(0, cat.value))}%`, backgroundColor: couleurFamille(cat.key) }" />
               </div>
-            </div>
-          </div>
+            </li>
+          </ul>
+          <p v-else class="text-sm text-slate-600 dark:text-slate-300">Aucune catégorie de relevé active. Elles se règlent dans les référentiels.</p>
         </article>
 
         <div class="xl:col-span-7">
@@ -155,113 +175,111 @@
           </ClientOnly>
         </div>
 
-        <article class="admin-surface overflow-hidden xl:col-span-7">
-          <div class="flex items-center justify-between border-b border-slate-100 px-6 py-5 dark:border-slate-700">
+        <article class="admin-surface overflow-hidden xl:col-span-7" aria-labelledby="activite-commerciaux-heading">
+          <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-6 py-5 dark:border-slate-700">
             <div>
-              <h3 class="font-semibold text-slate-950 dark:text-white">Activité des commerciaux</h3>
-              <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Classement selon le volume total de visites.</p>
+              <h3 id="activite-commerciaux-heading" class="text-base font-semibold text-slate-900 dark:text-white">Activité des commerciaux</h3>
+              <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">Classement selon le volume total de visites.</p>
             </div>
-            <UButton size="xs" variant="ghost" icon="i-heroicons-arrow-down-tray" class="print:hidden" @click="exportPerformance">CSV</UButton>
+            <UButton size="xs" variant="outline" icon="i-heroicons-arrow-down-tray" class="print:hidden" :disabled="!stats?.performance_commerciaux?.length" @click="exportPerformance">Exporter (CSV)</UButton>
           </div>
-          <div class="overflow-x-auto">
-            <table class="admin-table w-full">
+          <div v-if="stats?.performance_commerciaux?.length" class="overflow-x-auto">
+            <table class="admin-table">
               <thead>
                 <tr>
                   <th>Commercial</th>
-                  <th class="text-center">Total</th>
-                  <th class="text-center">Ce mois</th>
+                  <th class="text-right">Total</th>
+                  <th class="text-right">Ce mois</th>
                   <th>Volume relatif</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="com in stats?.performance_commerciaux?.slice(0, 8)" :key="com.email">
+                <tr v-for="com in stats.performance_commerciaux.slice(0, 8)" :key="com.email">
                   <td>
                     <div class="flex items-center gap-3">
-                      <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-xs font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-200">
+                      <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200" aria-hidden="true">
                         {{ com.nom?.substring(0, 2).toUpperCase() }}
                       </div>
-                      <div>
+                      <div class="min-w-0">
                         <p class="font-medium text-slate-900 dark:text-white">{{ com.nom }}</p>
-                        <p class="text-xs text-slate-400">{{ com.email }}</p>
+                        <p class="truncate text-xs text-slate-600 dark:text-slate-300">{{ com.email }}</p>
                       </div>
                     </div>
                   </td>
-                  <td class="text-center font-semibold tabular-nums">{{ com.total_visites }}</td>
-                  <td class="text-center font-semibold tabular-nums text-fc-red">{{ com.visites_mois }}</td>
+                  <td class="text-right font-semibold tabular-nums text-slate-900 dark:text-white">{{ numberFormatter.format(com.total_visites ?? 0) }}</td>
+                  <td class="text-right tabular-nums">{{ numberFormatter.format(com.visites_mois ?? 0) }}</td>
                   <td>
-                    <div class="h-1.5 w-28 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
-                      <div class="h-full rounded-full bg-fc-red transition-all" :style="{ width: getProgressWidth(com) }" />
+                    <div class="h-1.5 w-28 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700" aria-hidden="true">
+                      <div class="h-full rounded-full bg-slate-600 transition-all dark:bg-slate-300" :style="{ width: getProgressWidth(com) }" />
                     </div>
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
-          <div v-if="!stats?.performance_commerciaux?.length" class="px-6 py-14 text-center">
-            <ClipboardList class="mx-auto h-9 w-9 text-slate-300" />
-            <p class="mt-3 text-sm font-medium text-slate-500">Aucune activité disponible</p>
+          <div v-else class="px-6 py-14 text-center">
+            <ClipboardList class="mx-auto h-9 w-9 text-slate-300 dark:text-slate-600" aria-hidden="true" />
+            <p class="mt-3 text-sm font-semibold text-slate-700 dark:text-slate-200">Aucune visite enregistrée pour l'instant</p>
+            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Les commerciaux apparaîtront ici dès leurs premières visites.</p>
           </div>
         </article>
       </section>
-            <CommerciauxEnTournee class="print:hidden" />
 
-            <section aria-labelledby="recent-visits-heading">
-              <article class="admin-surface overflow-hidden" aria-labelledby="recent-visits-heading">
-                <div class="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-700 sm:px-6">
-                  <div>
-                    <h2 id="recent-visits-heading" class="text-lg font-semibold tracking-tight text-slate-950 dark:text-white">Dernières informations</h2>
-                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Les visites terrain les plus récentes.</p>
-                  </div>
-                  <button
-                    type="button"
-                    class="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-fc-red disabled:cursor-wait disabled:opacity-50 dark:hover:bg-slate-800"
-                    :disabled="loadingRecentVisits"
-                    aria-label="Actualiser les dernières visites"
-                    @click="fetchRecentVisits"
-                  >
-                    <UIcon name="i-heroicons-arrow-path" class="h-4 w-4" :class="loadingRecentVisits ? 'animate-spin' : ''" aria-hidden="true" />
-                  </button>
-                </div>
-                <div v-if="loadingRecentVisits" class="space-y-3 px-5 py-5 sm:px-6" aria-label="Chargement des dernières visites">
-                  <div v-for="i in 3" :key="i" class="h-10 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
-                </div>
-                <div v-else-if="recentVisits.length" class="divide-y divide-slate-100 dark:divide-slate-700">
-                  <NuxtLink
-                    v-for="visit in recentVisits"
-                    :key="visit.id"
-                    to="/admin/visites"
-                    class="flex items-center gap-3 px-5 py-3 transition hover:bg-slate-50 dark:hover:bg-slate-800/70 sm:px-6"
-                  >
-                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-50 text-fc-red dark:bg-red-950/30">
-                      <UIcon name="i-heroicons-clipboard-document-check" class="h-4 w-4" aria-hidden="true" />
-                    </span>
-                    <span class="min-w-0 flex-1">
-                      <span class="block truncate text-sm font-medium text-slate-800 dark:text-slate-100">{{ visit.pdv?.nom_pdv || 'Point de vente' }}</span>
-                      <span class="mt-0.5 block truncate text-xs text-slate-500 dark:text-slate-400">{{ visit.commercial || 'Commercial non renseigné' }}</span>
-                    </span>
-                    <time class="shrink-0 text-xs tabular-nums text-slate-400" :datetime="visit.date_visite">{{ formatRecentDate(visit.date_visite) }}</time>
-                  </NuxtLink>
-                </div>
-                <div v-else class="px-5 py-8 text-center sm:px-6">
-                  <UIcon name="i-heroicons-inbox" class="mx-auto h-7 w-7 text-slate-300 dark:text-slate-600" aria-hidden="true" />
-                  <p class="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">Aucune visite récente</p>
-                  <p class="mt-1 text-xs text-slate-400">Les nouvelles visites apparaîtront ici.</p>
-                </div>
-                <div class="border-t border-slate-100 px-5 py-3 dark:border-slate-700 sm:px-6">
-                  <NuxtLink to="/admin/visites" class="inline-flex items-center gap-1 text-xs font-semibold text-fc-red hover:underline">
-                    Voir toutes les visites
-                    <UIcon name="i-heroicons-arrow-right" class="h-3.5 w-3.5" aria-hidden="true" />
-                  </NuxtLink>
-                </div>
-              </article>
-            </section>
+      <CommerciauxEnTournee class="print:hidden" />
+
+      <section class="admin-surface overflow-hidden" aria-labelledby="recent-visits-heading">
+        <div class="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-700 sm:px-6">
+          <div>
+            <h2 id="recent-visits-heading" class="text-lg font-semibold text-slate-900 dark:text-white">Dernières visites</h2>
+            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Les visites terrain les plus récentes.</p>
           </div>
+          <UButton
+            size="xs"
+            color="gray"
+            variant="ghost"
+            icon="i-heroicons-arrow-path"
+            :loading="loadingRecentVisits"
+            aria-label="Actualiser les dernières visites"
+            @click="fetchRecentVisits"
+          />
+        </div>
+        <ChargementContenu v-if="loadingRecentVisits" variante="lignes" :nombre="3" libelle="Chargement des dernières visites…" class="px-5 py-5 sm:px-6" />
+        <div v-else-if="recentVisits.length" class="divide-y divide-slate-200 dark:divide-slate-700">
+          <NuxtLink
+            v-for="visit in recentVisits"
+            :key="visit.id"
+            to="/admin/visites"
+            class="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 dark:hover:bg-slate-800/70 sm:px-6"
+          >
+            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200" aria-hidden="true">
+              <UIcon name="i-heroicons-clipboard-document-check" class="h-4 w-4" />
+            </span>
+            <span class="min-w-0 flex-1">
+              <span class="block truncate text-sm font-medium text-slate-900 dark:text-white">{{ visit.pdv?.nom_pdv || 'Point de vente sans nom' }}</span>
+              <span class="mt-0.5 block truncate text-xs text-slate-600 dark:text-slate-300">{{ visit.commercial || 'Commercial non renseigné' }}</span>
+            </span>
+            <time class="shrink-0 text-xs tabular-nums text-slate-600 dark:text-slate-300" :datetime="visit.date_visite">{{ formatRecentDate(visit.date_visite) }}</time>
+          </NuxtLink>
+        </div>
+        <div v-else class="px-5 py-8 text-center sm:px-6">
+          <UIcon name="i-heroicons-inbox" class="mx-auto h-7 w-7 text-slate-300 dark:text-slate-600" aria-hidden="true" />
+          <p class="mt-2 text-sm font-semibold text-slate-700 dark:text-slate-200">Aucune visite récente</p>
+          <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Les nouvelles visites apparaîtront ici dès leur envoi depuis le terrain.</p>
+        </div>
+        <div class="border-t border-slate-200 px-5 py-3 dark:border-slate-700 sm:px-6">
+          <NuxtLink to="/admin/visites" class="inline-flex items-center gap-1 text-sm font-semibold text-fc-red underline-offset-4 hover:underline">
+            Voir toutes les visites
+            <UIcon name="i-heroicons-arrow-right" class="h-4 w-4" aria-hidden="true" />
+          </NuxtLink>
+        </div>
+      </section>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ClipboardList, Calendar, MapPin, Users, Trophy, Package, Eye, BadgePercent, ListChecks } from 'lucide-vue-next'
+import { couleurFamille } from '~/utils/chartPalette'
 
 definePageMeta({
   middleware: ['auth', 'admin'],
@@ -273,6 +291,9 @@ const authStore = useAuthStore()
 const { exportToCsv } = useCsvExport()
 const { fetchGlobalKpi, fetchCoverage } = usePerfectStore()
 const toast = useToast()
+const { peutOuvrir } = useAdminNavigation()
+// Lien seulement vers un écran que le compte peut ouvrir (sinon simple tuile).
+const LienNuxt = resolveComponent('NuxtLink')
 
 const loadingDashboard = ref(true)
 const stats = computed(() => visitesStore.stats)
@@ -332,10 +353,10 @@ function formatRecentDate(value: string) {
 const activityMetrics = computed(() => [
   {
     label: 'Couverture du mois',
-    value: `${numberFormatter.format(coverage.value?.pdv_vus ?? 0)}/${numberFormatter.format(coverage.value?.pdv_total ?? 0)}`,
+    value: `${numberFormatter.format(coverage.value?.pdv_vus ?? 0)} / ${numberFormatter.format(coverage.value?.pdv_total ?? 0)}`,
     hint: coverage.value?.couverture_pct != null
-      ? `${coverage.value.couverture_pct} % du parc visités`
-      : 'PDV visités / parc actif',
+      ? `${formatPercent(coverage.value.couverture_pct)} du parc visité`
+      : 'points de vente visités sur le parc actif',
     icon: MapPin,
     to: '/admin/pdv',
   },
@@ -373,24 +394,12 @@ const productCategories = computed(() => filtrerCategoriesReleve([
   { key: 'imp', label: 'IMP', value: stats.value?.taux_imp ?? 0 },
   { key: 'scm', label: 'SCM', value: stats.value?.taux_scm ?? 0 },
   { key: 'uht', label: 'UHT', value: stats.value?.taux_uht ?? 0 },
-  { key: 'yaourt', label: 'YAOURT', value: stats.value?.taux_yaourt ?? 0 },
+  { key: 'yaourt', label: 'Yaourt', value: stats.value?.taux_yaourt ?? 0 },
 ], c => c.key))
-
-function getPercentColor(val: number) {
-  if (val >= 70) return 'text-emerald-600'
-  if (val >= 40) return 'text-amber-600'
-  return 'text-red-600'
-}
-
-function getPercentBarColor(val: number) {
-  if (val >= 70) return 'bg-emerald-500'
-  if (val >= 40) return 'bg-amber-500'
-  return 'bg-fc-red'
-}
 
 function formatPercent(value: number | null | undefined) {
   if (value == null) return '—'
-  return `${Number(value).toLocaleString('fr-FR', { maximumFractionDigits: 1 })}%`
+  return `${Number(value).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`
 }
 
 function getProgressWidth(com: any) {
@@ -401,12 +410,12 @@ function getProgressWidth(com: any) {
 // ---- Export Functions ----
 const exportMenuItems = computed(() => [[
   {
-    label: 'KPIs & Taux (CSV)',
+    label: 'Indicateurs et taux (CSV)',
     icon: 'i-heroicons-chart-bar',
     click: () => exportKPIs(),
   },
   {
-    label: 'Performance Commerciaux (CSV)',
+    label: 'Activité des commerciaux (CSV)',
     icon: 'i-heroicons-users',
     click: () => exportPerformance(),
   },
@@ -416,7 +425,7 @@ const exportMenuItems = computed(() => [[
     click: () => exportVisitesParJour(),
   },
   {
-    label: 'Distribution PDV (CSV)',
+    label: 'Répartition des points de vente (CSV)',
     icon: 'i-heroicons-map-pin',
     click: () => exportDistribution(),
   },
@@ -446,7 +455,7 @@ function exportKPIs() {
     'Prix SCM respectés (%)': stats.value.taux_prix_scm,
   }]
   exportToCsv(data, `dashboard-kpis-${new Date().toISOString().slice(0, 10)}.csv`)
-  toast.add({ title: 'KPIs exportés', color: 'green' })
+  toast.add({ title: 'Indicateurs exportés', color: 'green' })
 }
 
 function exportPerformance() {
@@ -459,7 +468,7 @@ function exportPerformance() {
     'Taux Complétion (%)': c.taux_completion,
   }))
   exportToCsv(data, `performance-commerciaux-${new Date().toISOString().slice(0, 10)}.csv`)
-  toast.add({ title: 'Performance exportée', color: 'green' })
+  toast.add({ title: 'Activité des commerciaux exportée', color: 'green' })
 }
 
 function exportVisitesParJour() {
@@ -479,7 +488,7 @@ function exportDistribution() {
     'Nombre': d.count,
   }))
   exportToCsv(data, `distribution-pdv-${new Date().toISOString().slice(0, 10)}.csv`)
-  toast.add({ title: 'Distribution exportée', color: 'green' })
+  toast.add({ title: 'Répartition exportée', color: 'green' })
 }
 
 function exportAll() {
@@ -518,7 +527,7 @@ onMounted(async () => {
   catch {
     toast.add({
       title: 'Erreur de chargement',
-      description: 'Impossible de charger les statistiques du dashboard.',
+      description: 'Les statistiques n\'ont pas pu être chargées. Rechargez la page dans quelques instants.',
       color: 'red',
       icon: 'i-heroicons-exclamation-triangle',
     })
@@ -552,7 +561,7 @@ onMounted(async () => {
   }
   /* Improve table print styling */
   table {
-    font-size: 11px;
+    font-size: 12px;
   }
   /* Force background colors for print */
   .bg-white {
@@ -560,8 +569,8 @@ onMounted(async () => {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  .bg-gray-50 {
-    background-color: #f9fafb !important;
+  .bg-slate-50 {
+    background-color: #f8fafc !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }

@@ -69,3 +69,21 @@ export const AXES = {
 /** Couples de statut prêts à l'emploi pour les camemberts à deux parts. */
 export const COULEURS_PRESENCE = [STATUT.critique, STATUT.bon] as const // [rupture, présent]
 export const COULEURS_RESPECT = [STATUT.critique, STATUT.bon] as const // [non respecté, respecté]
+
+// Niveaux Perfect Store : échelle ORDONNÉE, donc une seule teinte, du plus
+// foncé (Flagship) au plus clair (Basic) ; slate pour « Non conforme ».
+// Toujours affichés avec le mot, jamais par la couleur seule.
+export const NIVEAUX_PS = [
+  { cle: 'FLAGSHIP', court: 'Flagship', long: 'Flagship Store', couleur: '#104281' },
+  { cle: 'VIP', court: 'VIP', long: 'VIP Perfect Store', couleur: '#256abf' },
+  { cle: 'CORE', court: 'Core', long: 'Core Perfect Store', couleur: '#5598e7' },
+  { cle: 'BASIC', court: 'Basic', long: 'Basic Perfect Store', couleur: '#9ec5f4' },
+] as const
+export const COULEUR_NON_CONFORME = '#CBD5E1'
+
+/** Niveau d'un code de base (« VIP PERFECT STORE »…), ou null (non conforme, inconnu). */
+export function niveauPerfectStore(code: string | null | undefined) {
+  const c = String(code || '').trim().toUpperCase()
+  if (!c || c.startsWith('NON')) return null
+  return NIVEAUX_PS.find(n => c.startsWith(n.cle)) ?? null
+}

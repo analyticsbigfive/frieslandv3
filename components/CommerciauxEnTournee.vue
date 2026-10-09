@@ -1,42 +1,49 @@
 <template>
   <section
     v-if="!hidden"
-    aria-label="Commerciaux en tournée"
-    class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800"
+    aria-labelledby="en-tournee-heading"
+    class="admin-surface p-5"
   >
-    <div class="flex items-center justify-between gap-3">
+    <div class="flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-3">
-        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-900/30">
-          <UIcon name="i-heroicons-signal" class="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-50 dark:bg-emerald-900/30" aria-hidden="true">
+          <UIcon name="i-heroicons-signal" class="h-4 w-4 text-emerald-700 dark:text-emerald-300" />
         </div>
         <div>
-          <p class="text-xs font-medium uppercase tracking-wide text-slate-400">En tournée maintenant</p>
-          <p class="text-2xl font-bold text-slate-900 dark:text-white">
-            {{ actifs.length }}
-            <span class="text-sm font-normal text-slate-400">commercial(aux)</span>
+          <h2 id="en-tournee-heading" class="text-base font-semibold text-slate-900 dark:text-white">En tournée maintenant</h2>
+          <p class="text-sm text-slate-600 dark:text-slate-300">
+            <strong class="text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{{ actifs.length }}</strong>
+            en tournée (position reçue il y a moins de {{ WINDOW_MIN }} min)
           </p>
         </div>
       </div>
-      <UButton to="/admin/trajets" size="xs" variant="ghost" trailing-icon="i-heroicons-arrow-right">
-        Voir les trajets
+      <UButton
+        v-if="peutOuvrir('/admin/trajets')"
+        to="/admin/trajets"
+        size="xs"
+        color="gray"
+        variant="ghost"
+        trailing-icon="i-heroicons-arrow-right"
+      >
+        Voir le suivi des équipes
       </UButton>
     </div>
 
     <ChargementContenu v-if="!charge" variante="compact" libelle="Recherche des commerciaux en tournée…" class="mt-3" />
-    <ul v-else-if="actifs.length" class="mt-4 divide-y divide-slate-100 dark:divide-slate-700">
+    <ul v-else-if="actifs.length" class="mt-4 divide-y divide-slate-200 dark:divide-slate-700">
       <li v-for="actif in actifs" :key="actif.userId" class="flex items-center justify-between gap-2 py-2">
         <div class="flex min-w-0 items-center gap-2">
-          <span class="relative flex h-2.5 w-2.5 shrink-0">
-            <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-            <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+          <span class="relative flex h-2.5 w-2.5 shrink-0" aria-hidden="true">
+            <span class="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60 motion-safe:animate-ping" />
+            <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-600" />
           </span>
           <span class="truncate text-sm font-medium text-slate-700 dark:text-slate-200">{{ actif.nom }}</span>
         </div>
-        <span class="shrink-0 text-xs text-slate-400">{{ actif.freshness }}</span>
+        <span class="shrink-0 text-xs text-slate-600 dark:text-slate-300">{{ actif.freshness }}</span>
       </li>
     </ul>
-    <p v-else class="mt-3 text-sm text-slate-400">
-      Aucune position reçue depuis {{ WINDOW_MIN }} min — personne en tournée.
+    <p v-else class="mt-3 text-sm text-slate-600 dark:text-slate-300">
+      Personne n'a envoyé de position depuis {{ WINDOW_MIN }} min : aucune tournée en cours.
     </p>
   </section>
 </template>
@@ -56,6 +63,7 @@ interface Actif {
 }
 
 const supabase = useSupabaseClient()
+const { peutOuvrir } = useAdminNavigation()
 
 const actifs = ref<Actif[]>([])
 const hidden = ref(false)

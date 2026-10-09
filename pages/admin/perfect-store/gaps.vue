@@ -1,35 +1,33 @@
 <template>
   <div class="space-y-6">
-    <AdminPageHeader
-      title="Analyse des gaps"
-    />
+    <AdminPageHeader />
 
     <!-- Période + périmètre, mêmes axes que la synthèse par zone : tout passe
          par la RPC, qui compte des PDV distincts et non des visites. -->
     <div class="admin-toolbar">
-      <div class="mb-3 border-b border-slate-100 pb-3 dark:border-slate-700">
+      <div class="mb-3 border-b border-slate-200 pb-3 dark:border-slate-700">
         <PeriodFilter v-model="periode" />
       </div>
       <div class="grid grid-cols-2 gap-2 sm:grid-cols-5">
-        <UFormGroup label="Division (North/South)" size="xs">
-          <USelectMenu v-model="fDivision" :options="divisionOptions" placeholder="Toutes" size="xs" searchable />
+        <UFormGroup label="Direction" size="xs">
+          <USelectMenu v-model="fDivision" :options="divisionOptions" placeholder="Toutes" size="xs" searchable searchable-placeholder="Rechercher…" />
         </UFormGroup>
         <UFormGroup label="Territoire" size="xs">
-          <USelectMenu v-model="fTerritoire" :options="territoireOptions" placeholder="Tous" size="xs" searchable />
+          <USelectMenu v-model="fTerritoire" :options="territoireOptions" placeholder="Tous" size="xs" searchable searchable-placeholder="Rechercher…" />
         </UFormGroup>
         <UFormGroup label="Quartier" size="xs">
-          <USelectMenu v-model="fArea" :options="quartierOptions" placeholder="Tous" size="xs" searchable />
+          <USelectMenu v-model="fArea" :options="quartierOptions" placeholder="Tous" size="xs" searchable searchable-placeholder="Rechercher…" />
         </UFormGroup>
         <UFormGroup label="Distributeur" size="xs">
-          <USelectMenu v-model="fDistrib" :options="distribOptions" placeholder="Tous" size="xs" searchable />
+          <USelectMenu v-model="fDistrib" :options="distribOptions" placeholder="Tous" size="xs" searchable searchable-placeholder="Rechercher…" />
         </UFormGroup>
         <div class="flex items-end">
-          <UButton v-if="aDesFiltres" size="xs" variant="ghost" @click="reinitialiser">Réinitialiser</UButton>
+          <UButton v-if="aDesFiltres" size="xs" color="gray" variant="ghost" @click="reinitialiser">Réinitialiser</UButton>
         </div>
       </div>
     </div>
 
-    <div v-if="loading" class="grid gap-4 sm:grid-cols-4">
+    <div v-if="loading" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" role="status" aria-label="Chargement des écarts au standard">
       <div v-for="i in 4" :key="i" class="admin-surface h-24 animate-pulse bg-slate-100 dark:bg-slate-800" />
     </div>
 
@@ -39,9 +37,9 @@
            sous-titre le dit, pour qu'aucun chiffre ne soit lu de travers. -->
       <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatsCard
-          title="PDV analysés"
+          title="Points de vente analysés"
           :value="String(manques.length)"
-          :subtitle="`les moins conformes${tronque ? ` (${LIMITE} max)` : ''}`"
+          :subtitle="`les moins conformes${tronque ? ` (${LIMITE} au plus)` : ''}`"
           icon="i-heroicons-building-storefront"
           color="blue"
         />
@@ -55,7 +53,7 @@
         <StatsCard
           title="Assortiment incomplet"
           :value="String(compte.assortiment)"
-          subtitle="nombre de SKU sous la cible"
+          subtitle="références attendues manquantes"
           icon="i-heroicons-squares-2x2"
           color="orange"
         />
@@ -64,124 +62,154 @@
           :value="String(compte.visibilitePromo)"
           subtitle="au moins un élément manquant"
           icon="i-heroicons-eye"
-          color="purple"
+          color="blue"
         />
       </div>
 
       <!-- Éléments de visibilité et de promotion les plus souvent manquants :
            ce sur quoi une action de terrain rapporte le plus. -->
-      <div v-if="topManques.length" class="admin-surface p-5">
-        <h2 class="font-bold text-slate-900 dark:text-white">Ce qui manque le plus souvent</h2>
-        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-          Éléments à corriger en priorité, tous PDV analysés confondus.
+      <section v-if="topManques.length" class="admin-surface p-5" aria-labelledby="top-manques-heading">
+        <h2 id="top-manques-heading" class="text-lg font-semibold text-slate-900 dark:text-white">Ce qui manque le plus souvent</h2>
+        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+          Éléments à corriger en priorité, tous points de vente analysés confondus, avec le nombre de points de vente concernés.
         </p>
-        <div class="mt-3 flex flex-wrap gap-2">
-          <span
+        <ul class="mt-3 flex flex-wrap gap-2">
+          <li
             v-for="m in topManques"
             :key="m.libelle"
-            class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+            class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200"
           >
             {{ m.libelle }}
-            <span class="rounded-full bg-fc-red px-1.5 text-[10px] text-white">{{ m.nb }}</span>
-          </span>
-        </div>
-      </div>
+            <span class="font-bold tabular-nums text-slate-900 dark:text-white">{{ m.nb }}</span>
+          </li>
+        </ul>
+      </section>
 
-      <div class="admin-surface overflow-hidden">
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-3 dark:border-slate-700">
+      <section class="admin-surface overflow-hidden" aria-labelledby="ecarts-heading">
+        <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-700">
           <div>
-            <h2 class="font-bold text-slate-900 dark:text-white">Écart au niveau supérieur</h2>
-            <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-              Dernière visite de chaque PDV. Les moins conformes d'abord.
+            <h2 id="ecarts-heading" class="text-lg font-semibold text-slate-900 dark:text-white">Écart au niveau supérieur</h2>
+            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+              Dernière visite de chaque point de vente, les moins conformes d'abord.
             </p>
           </div>
           <UButton size="xs" variant="outline" icon="i-heroicons-arrow-down-tray" :disabled="!manques.length" @click="exporter">
-            Exporter CSV
+            Exporter (CSV)
           </UButton>
         </div>
 
         <div v-if="!manques.length" class="px-5 py-14 text-center">
           <p class="font-semibold text-slate-700 dark:text-slate-200">Aucun écart sur ce périmètre</p>
-          <p class="mx-auto mt-1 max-w-md text-sm text-slate-500 dark:text-slate-400">
-            Soit tous les PDV visités atteignent leur niveau cible, soit aucune visite n'a été
-            enregistrée sur la période choisie.
+          <p class="mx-auto mt-1 max-w-md text-sm text-slate-600 dark:text-slate-300">
+            Soit tous les points de vente visités atteignent leur niveau visé, soit aucune visite n'a été
+            enregistrée sur la période choisie. Élargissez la période ou retirez un filtre pour vérifier.
           </p>
         </div>
 
         <div v-else class="overflow-x-auto">
-          <table class="admin-table w-full">
+          <table class="admin-table">
             <thead>
               <tr>
-                <th>PDV</th>
+                <th>Point de vente</th>
                 <th>Territoire</th>
                 <th>Type</th>
-                <th>Niveau actuel</th>
-                <th>Niveau visé</th>
-                <th class="th-c">Dispo</th>
-                <th class="th-c">Assortiment</th>
-                <th>Visibilité manquante</th>
-                <th>Promotion manquante</th>
+                <th>Niveau</th>
+                <th class="text-right">Disponibilité</th>
+                <th>Assortiment</th>
+                <th>Éléments manquants</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="m in pageCourante" :key="m.visite_id">
                 <td>
-                  <NuxtLink :to="`/admin/pdv/historique?pdv=${m.pdv_id}`" class="font-semibold text-fc-blue hover:underline">
-                    {{ m.nom_pdv }}
+                  <NuxtLink
+                    :to="`/admin/pdv/historique?pdv_id=${m.pdv_id}`"
+                    class="font-semibold text-slate-900 underline decoration-slate-300 underline-offset-4 hover:text-fc-red hover:decoration-current dark:text-white dark:decoration-slate-600"
+                  >
+                    {{ m.nom_pdv || 'Point de vente sans nom' }}
                   </NuxtLink>
-                  <span v-if="m.distributor_name" class="block text-xs text-slate-400">{{ m.distributor_name }}</span>
+                  <span v-if="m.distributor_name" class="block text-xs text-slate-600 dark:text-slate-300">{{ m.distributor_name }}</span>
                 </td>
-                <td class="text-sm">
-                  {{ m.zone || '—' }}
-                  <span v-if="m.quartier" class="block text-xs text-slate-400">{{ m.quartier }}</span>
-                </td>
-                <td class="text-sm">{{ m.type_pdv || '—' }}</td>
                 <td>
-                  <UBadge :color="m.niveau_actuel ? 'blue' : 'red'" variant="subtle" size="xs">
-                    {{ m.niveau_actuel || 'Non conforme' }}
-                  </UBadge>
+                  {{ m.zone || '—' }}
+                  <span v-if="m.quartier" class="block text-xs text-slate-600 dark:text-slate-300">{{ m.quartier }}</span>
                 </td>
-                <td class="text-sm">{{ m.niveau_cible }}</td>
-                <td class="px-4 py-2 text-center text-sm tabular-nums">
-                  <span v-if="m.dispo_rayon == null" class="text-slate-400">—</span>
-                  <span v-else :class="m.dispo_manque ? 'font-semibold text-fc-red' : 'text-slate-500'">
-                    {{ Number(m.dispo_rayon).toFixed(0) }} / {{ m.dispo_rayon_min }} %
+                <td>{{ m.type_pdv || '—' }}</td>
+                <td class="whitespace-nowrap">
+                  <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+                    <span class="h-2 w-2 shrink-0 rounded-full" :style="{ backgroundColor: couleurNiveau(m.niveau_actuel) }" aria-hidden="true" />
+                    {{ niveauCourt(m.niveau_actuel) }}
+                  </span>
+                  <span class="mt-1 block text-xs text-slate-600 dark:text-slate-300">vise {{ niveauCourt(m.niveau_cible) }}</span>
+                </td>
+                <td class="whitespace-nowrap text-right tabular-nums">
+                  <span v-if="m.dispo_rayon == null" class="text-slate-600 dark:text-slate-300">Non relevée</span>
+                  <template v-else>
+                    <span
+                      class="inline-flex items-center justify-end gap-1"
+                      :class="m.dispo_manque ? 'font-semibold text-red-700 dark:text-red-300' : 'text-slate-700 dark:text-slate-200'"
+                    >
+                      <UIcon v-if="m.dispo_manque" name="i-heroicons-exclamation-circle" class="h-4 w-4 shrink-0" aria-hidden="true" />
+                      {{ Number(m.dispo_rayon).toFixed(0) }} %
+                      <span v-if="m.dispo_manque" class="sr-only">, insuffisante</span>
+                    </span>
+                    <span class="block text-xs text-slate-600 dark:text-slate-300">minimum {{ m.dispo_rayon_min }} %</span>
+                  </template>
+                </td>
+                <td class="whitespace-nowrap">
+                  <!-- Sans relevé produit (disponibilité inconnue), « complet » serait trompeur. -->
+                  <span v-if="m.dispo_rayon == null && !m.assortiment_manque" class="text-slate-600 dark:text-slate-300">Non relevé</span>
+                  <span
+                    v-else
+                    class="inline-flex items-center gap-1.5"
+                    :class="m.assortiment_manque ? 'font-semibold text-red-700 dark:text-red-300' : 'text-emerald-700 dark:text-emerald-300'"
+                  >
+                    <UIcon
+                      :name="m.assortiment_manque ? 'i-heroicons-x-circle' : 'i-heroicons-check-circle'"
+                      class="h-4 w-4 shrink-0"
+                      aria-hidden="true"
+                    />
+                    {{ m.assortiment_manque ? 'Incomplet' : 'Complet' }}
                   </span>
                 </td>
-                <td class="px-4 py-2 text-center">
-                  <UIcon
-                    :name="m.assortiment_manque ? 'i-heroicons-x-circle' : 'i-heroicons-check-circle'"
-                    class="h-4 w-4"
-                    :class="m.assortiment_manque ? 'text-fc-red' : 'text-emerald-500'"
-                  />
+                <td class="min-w-56 text-sm">
+                  <template v-if="(m.visibilite_manques || []).length || (m.promotion_manques || []).length">
+                    <p v-if="(m.visibilite_manques || []).length">
+                      <span class="text-slate-600 dark:text-slate-300">Visibilité :</span> {{ m.visibilite_manques.join(', ') }}
+                    </p>
+                    <p v-if="(m.promotion_manques || []).length" :class="(m.visibilite_manques || []).length ? 'mt-1' : ''">
+                      <span class="text-slate-600 dark:text-slate-300">Promotion :</span> {{ m.promotion_manques.join(', ') }}
+                    </p>
+                  </template>
+                  <span v-else class="text-slate-600 dark:text-slate-300">Aucun</span>
                 </td>
-                <td class="text-xs">{{ (m.visibilite_manques || []).join(', ') || '—' }}</td>
-                <td class="text-xs">{{ (m.promotion_manques || []).join(', ') || '—' }}</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <AdminPagination
-          v-if="manques.length > PAR_PAGE"
-          :total="manques.length"
-          :page="pageNo"
-          :page-size="PAR_PAGE"
-          item-label="PDV"
-          @update:page="pageNo = $event"
-        />
-      </div>
+        <div v-if="manques.length > PAR_PAGE" class="border-t border-slate-200 px-5 py-3 dark:border-slate-700">
+          <AdminPagination
+            :total="manques.length"
+            :page="pageNo"
+            :page-size="PAR_PAGE"
+            item-label="point(s) de vente"
+            @update:page="pageNo = $event"
+          />
+        </div>
+      </section>
 
-      <p v-if="tronque" class="text-xs text-slate-500 dark:text-slate-400">
-        Affichage limité aux {{ LIMITE }} PDV les moins conformes. Resserrez le périmètre
-        (territoire, quartier, distributeur) pour une analyse exhaustive.
+      <p v-if="tronque" class="text-sm text-slate-600 dark:text-slate-300">
+        Affichage limité aux {{ LIMITE }} points de vente les moins conformes. Resserrez le périmètre
+        (territoire, quartier, distributeur) pour une analyse complète.
       </p>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-// Analyse des gaps — « identification des gaps » demandée pour les commerciaux.
+import { NIVEAUX_PS as NIVEAUX, COULEUR_NON_CONFORME, niveauPerfectStore as niveauDe } from '~/utils/chartPalette'
+// Écarts au standard (« analyse des gaps ») — identification demandée pour les commerciaux.
 //
 // Le moteur existe depuis juillet et n'était exposé que dans un encart de
 // pages/admin/index.vue : la vue `v_perfect_store_manques` (en-tête « gap to
@@ -202,6 +230,15 @@ definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 const { fetchPerfectStoreManques } = usePerfectStore()
 const { regions, territories, quartiers, distributeurs, fetchReferentiels } = useReferentiels()
 const { exportToCsv } = useCsvExport()
+
+function niveauCourt(code: string | null | undefined): string {
+  const c = String(code || '').trim()
+  if (!c || c.toUpperCase().startsWith('NON')) return 'Non conforme'
+  return niveauDe(c)?.court ?? c.charAt(0).toUpperCase() + c.slice(1).toLowerCase()
+}
+function couleurNiveau(code: string | null | undefined): string {
+  return niveauDe(code)?.couleur ?? COULEUR_NON_CONFORME
+}
 
 // Les moins conformes d'abord (tri fait en SQL) : au-delà, on n'apprend plus
 // rien, et la RPC rendrait des milliers de lignes à un navigateur.
@@ -286,16 +323,16 @@ function exporter() {
       Quartier: m.quartier ?? '',
       Distributeur: m.distributor_name ?? '',
       Type: m.type_pdv ?? '',
-      'Niveau actuel': m.niveau_actuel || 'Non conforme',
-      'Niveau visé': m.niveau_cible,
-      'Dispo %': m.dispo_rayon ?? '',
-      'Dispo minimum %': m.dispo_rayon_min ?? '',
-      'Dispo insuffisante': m.dispo_manque ? 'oui' : 'non',
+      'Niveau actuel': niveauCourt(m.niveau_actuel),
+      'Niveau visé': niveauCourt(m.niveau_cible),
+      'Disponibilité %': m.dispo_rayon ?? '',
+      'Disponibilité minimum %': m.dispo_rayon_min ?? '',
+      'Disponibilité insuffisante': m.dispo_manque ? 'oui' : 'non',
       'Assortiment incomplet': m.assortiment_manque ? 'oui' : 'non',
       'Visibilité manquante': (m.visibilite_manques || []).join(' / '),
       'Promotion manquante': (m.promotion_manques || []).join(' / '),
     })),
-    `gaps-${periode.value.debut || 'tout'}-${periode.value.fin || 'tout'}.csv`,
+    `ecarts-au-standard-${periode.value.debut || 'tout'}-${periode.value.fin || 'tout'}.csv`,
   )
 }
 

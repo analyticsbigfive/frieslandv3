@@ -1,263 +1,310 @@
 <template>
-  <div class="flex flex-col gap-3 lg:flex-row" style="height: calc(100vh - 180px);">
-    <!-- Panneau latéral : commerciaux + KPI + alertes -->
-    <aside class="flex w-full shrink-0 flex-col rounded-xl border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 lg:w-80">
-      <div class="flex items-center justify-between gap-2 border-b border-gray-100 p-3 dark:border-gray-700">
-        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Commerciaux</h3>
-        <UInput v-model="selectedDate" type="date" size="xs" class="w-32" @update:model-value="loadPositions" />
-      </div>
+  <div class="space-y-6">
+    <AdminPageHeader />
 
-      <!-- Jours réellement tracés : évite de chercher une tournée un jour sans données. -->
-      <div v-if="activityDates.length" class="border-b border-gray-100 p-3 dark:border-gray-700">
-        <p class="mb-1.5 text-[11px] text-gray-400">
-          {{ selectedUser ? 'Jours tracés pour ce commercial' : 'Jours tracés (30 derniers jours)' }}
-        </p>
-        <div class="flex flex-wrap gap-1">
-          <button
-            v-for="day in activityDates"
-            :key="day.date"
-            class="rounded px-1.5 py-0.5 text-[11px] font-medium transition-colors"
-            :class="day.date === selectedDate
-              ? 'bg-fc-red text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'"
-            @click="goToDate(day.date)"
+    <!-- Hauteur sur grand écran : en-tête (56 px) + marges du contenu + onglets
+         (41 px + 24 px) + titre de page et sa phrase d'aide + espacement ≈ 260 px.
+         Sur petit écran, liste puis carte, chacune à sa hauteur. -->
+    <div class="flex flex-col gap-4 lg:h-[calc(100dvh-260px)] lg:min-h-[560px] lg:flex-row">
+      <!-- Panneau latéral : commerciaux + indicateurs + alertes -->
+      <aside class="admin-surface flex max-h-[70dvh] w-full shrink-0 flex-col overflow-hidden lg:max-h-none lg:w-80" aria-labelledby="equipe-heading">
+        <div class="flex items-center justify-between gap-2 border-b border-slate-200 p-3 dark:border-slate-700">
+          <h2 id="equipe-heading" class="text-base font-semibold text-slate-900 dark:text-white">Équipe</h2>
+          <UInput v-model="selectedDate" type="date" size="xs" class="w-36" aria-label="Jour affiché" @update:model-value="loadPositions" />
+        </div>
+
+        <!-- Jours réellement tracés : évite de chercher une tournée un jour sans données. -->
+        <div v-if="activityDates.length" class="border-b border-slate-200 p-3 dark:border-slate-700">
+          <p class="mb-1.5 text-xs text-slate-600 dark:text-slate-300">
+            {{ selectedUser ? 'Jours avec des positions pour cette personne' : 'Jours avec des positions (30 derniers jours)' }}
+          </p>
+          <div class="flex flex-wrap gap-1">
+            <button
+              v-for="day in activityDates"
+              :key="day.date"
+              type="button"
+              class="rounded px-2 py-0.5 text-xs font-medium transition-colors"
+              :class="day.date === selectedDate
+                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600'"
+              :aria-pressed="day.date === selectedDate"
+              @click="goToDate(day.date)"
+            >
+              {{ day.label }}
+            </button>
+          </div>
+        </div>
+
+        <div class="border-b border-slate-200 p-3 dark:border-slate-700">
+          <USelectMenu
+            :model-value="selectedUser"
+            :options="repOptions"
+            value-attribute="value"
+            option-attribute="label"
+            searchable
+            searchable-placeholder="Rechercher une personne…"
+            placeholder="Toute l'équipe"
+            size="sm"
+            class="w-full"
+            aria-label="Personne affichée"
+            @update:model-value="selectRep($event || '')"
           >
-            {{ day.label }}
-          </button>
+            <template #option="{ option }">
+              <span class="flex w-full items-center gap-2">
+                <span class="h-2 w-2 shrink-0 rounded-full" :class="option.dot" aria-hidden="true" />
+                <span class="truncate">{{ option.label }}</span>
+                <span class="ml-auto shrink-0 text-xs text-slate-600 dark:text-slate-300">{{ option.meta }}</span>
+              </span>
+            </template>
+          </USelectMenu>
+          <p class="mt-1.5 text-xs text-slate-600 dark:text-slate-300">{{ reps.filter(r => r.pointCount > 0).length }} avec positions GPS · {{ reps.filter(r => r.live).length }} en tournée</p>
         </div>
-      </div>
 
-      <div class="border-b border-gray-100 p-3 dark:border-gray-700">
-        <USelectMenu
-          :model-value="selectedUser"
-          :options="repOptions"
-          value-attribute="value"
-          option-attribute="label"
-          searchable
-          searchable-placeholder="Rechercher un commercial…"
-          placeholder="Tous les commerciaux"
-          size="sm"
-          class="w-full"
-          @update:model-value="selectRep($event || '')"
-        >
-          <template #option="{ option }">
-            <span class="flex w-full items-center gap-2">
-              <span class="h-2 w-2 shrink-0 rounded-full" :class="option.dot" />
-              <span class="truncate">{{ option.label }}</span>
-              <span class="ml-auto shrink-0 text-[10px] text-gray-400">{{ option.meta }}</span>
-            </span>
-          </template>
-        </USelectMenu>
-        <p class="mt-1.5 text-[11px] text-gray-400">{{ reps.filter(r => r.pointCount > 0).length }} avec GPS · {{ reps.filter(r => r.live).length }} en tournée</p>
-      </div>
-
-      <ChargementContenu v-if="loading" variante="lignes" :nombre="6" libelle="Chargement des commerciaux…" class="p-4" />
-      <ul v-else class="flex-1 divide-y divide-gray-100 overflow-auto dark:divide-gray-700">
-        <li
-          v-for="rep in repsAffiches"
-          :key="rep.userId"
-          class="cursor-pointer p-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
-          :class="{ 'bg-red-50 dark:bg-red-900/20': selectedUser === rep.userId }"
-          @click="selectRep(rep.userId)"
-        >
-          <div class="flex items-center justify-between gap-2">
-            <div class="flex min-w-0 items-center gap-2">
-              <span class="h-2.5 w-2.5 shrink-0 rounded-full" :class="statusDotClass(rep)" />
-              <span class="truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ rep.nom }}</span>
-            </div>
-            <span class="shrink-0 text-[11px] text-gray-400">{{ rep.statusLabel }}</span>
-          </div>
-
-          <div v-if="rep.pointCount > 0" class="mt-1.5 grid grid-cols-3 gap-1 text-center">
-            <div><p class="text-sm font-semibold text-gray-800 dark:text-gray-100">{{ rep.km.toFixed(1) }}</p><p class="text-[10px] text-gray-400">km</p></div>
-            <div><p class="text-sm font-semibold text-gray-800 dark:text-gray-100">{{ rep.durationLabel }}</p><p class="text-[10px] text-gray-400">durée</p></div>
-            <div><p class="text-sm font-semibold text-gray-800 dark:text-gray-100">{{ rep.visitCount }}</p><p class="text-[10px] text-gray-400">PDV</p></div>
-          </div>
-
-          <div v-if="rep.alerts.length" class="mt-1.5 flex flex-wrap gap-1">
-            <span
-              v-for="alert in rep.alerts"
-              :key="alert.kind"
-              class="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-              :class="alert.class"
+        <ChargementContenu v-if="loading" variante="lignes" :nombre="6" libelle="Chargement de l'équipe…" class="p-4" />
+        <ul v-else class="flex-1 divide-y divide-slate-200 overflow-auto dark:divide-slate-700">
+          <li v-for="rep in repsAffiches" :key="rep.userId">
+            <button
+              type="button"
+              class="w-full p-3 text-left transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 dark:hover:bg-slate-700/50 dark:focus-visible:bg-slate-700/50"
+              :class="{ 'bg-brand-50 hover:bg-brand-50 dark:bg-brand-950/30': selectedUser === rep.userId }"
+              :aria-pressed="selectedUser === rep.userId"
+              @click="selectRep(rep.userId)"
             >
-              <UIcon :name="alert.icon" class="h-3 w-3" />{{ alert.label }}
-            </span>
-          </div>
-        </li>
-        <li v-if="reps.length === 0" class="p-4 text-sm text-gray-400">Aucun commercial actif.</li>
-      </ul>
-    </aside>
+              <span class="flex items-center justify-between gap-2">
+                <span class="flex min-w-0 items-center gap-2">
+                  <span class="h-2.5 w-2.5 shrink-0 rounded-full" :class="statusDotClass(rep)" aria-hidden="true" />
+                  <span class="truncate text-sm font-medium text-slate-900 dark:text-white">{{ rep.nom }}</span>
+                </span>
+                <span class="shrink-0 text-xs text-slate-600 dark:text-slate-300">{{ rep.statusLabel }}</span>
+              </span>
 
-    <!-- Carte + rejeu -->
-    <div class="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800">
-      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 p-3 dark:border-gray-700">
-        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Suivi commerciaux — déplacements</h3>
-        <div class="flex flex-wrap items-center gap-2">
-          <span class="text-xs text-gray-400" :title="lissageInfo.detail">{{ tournees.length }} tournée(s) · {{ lissageInfo.retenus }} pt retenus / {{ filteredPoints.length }} bruts</span>
-          <UButton size="2xs" :variant="showRaw ? 'solid' : 'ghost'" color="gray" icon="i-heroicons-eye" @click="showRaw = !showRaw; drawTrails()">Points bruts</UButton>
-          <UButton v-if="selectedUser" size="2xs" variant="ghost" icon="i-heroicons-x-mark" @click="selectRep('')">Tous</UButton>
-        </div>
-      </div>
+              <span v-if="rep.pointCount > 0" class="mt-1.5 grid grid-cols-3 gap-1 text-center">
+                <span><span class="block text-sm font-semibold tabular-nums text-slate-900 dark:text-white">{{ rep.km.toFixed(1) }}</span><span class="block text-xs text-slate-600 dark:text-slate-300">km</span></span>
+                <span><span class="block text-sm font-semibold tabular-nums text-slate-900 dark:text-white">{{ rep.durationLabel }}</span><span class="block text-xs text-slate-600 dark:text-slate-300">durée</span></span>
+                <span><span class="block text-sm font-semibold tabular-nums text-slate-900 dark:text-white">{{ rep.visitCount }}</span><span class="block text-xs text-slate-600 dark:text-slate-300">visites</span></span>
+              </span>
 
-      <!-- Recherche position à une heure donnée -->
-      <div class="flex flex-wrap items-center gap-2 border-b border-gray-100 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800/50">
-        <UIcon name="i-heroicons-magnifying-glass" class="h-4 w-4 text-gray-400" />
-        <USelectMenu
-          v-model="searchUser"
-          :options="searchUserOptions"
-          value-attribute="value"
-          option-attribute="label"
-          placeholder="Commercial"
-          size="xs"
-          class="w-44"
-        />
-        <UInput v-model="searchTime" type="time" size="xs" class="w-28" />
-        <USelect
-          v-model.number="searchRadius"
-          :options="radiusOptions"
-          value-attribute="value"
-          option-attribute="label"
-          size="xs"
-          class="w-28"
-        />
-        <UButton size="xs" color="red" icon="i-heroicons-map-pin" :disabled="!searchUser || !searchTime" @click="locateAtTime">
-          Localiser
-        </UButton>
-        <UButton v-if="searchInfo" size="xs" variant="ghost" icon="i-heroicons-x-mark" @click="clearSearch">Effacer</UButton>
-        <span v-if="searchInfo" class="text-xs" :class="searchFound ? 'text-gray-600 dark:text-gray-300' : 'text-amber-600'">{{ searchInfo }}</span>
-      </div>
+              <span v-if="rep.alerts.length" class="mt-1.5 flex flex-wrap gap-1">
+                <span
+                  v-for="alert in rep.alerts"
+                  :key="alert.kind"
+                  class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
+                  :class="alert.class"
+                >
+                  <UIcon :name="alert.icon" class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />{{ alert.label }}
+                </span>
+              </span>
+            </button>
+          </li>
+          <li v-if="reps.length === 0" class="p-4 text-sm text-slate-600 dark:text-slate-300">
+            Aucun commercial, merchandiser ou superviseur actif pour l'instant.
+          </li>
+        </ul>
+      </aside>
 
-      <!-- Fiche journée du commercial sélectionné -->
-      <div v-if="dayFiche" class="flex flex-wrap items-stretch gap-2 border-b border-gray-100 p-2 dark:border-gray-700">
-        <div class="flex flex-col justify-center pr-2">
-          <span class="text-sm font-semibold text-gray-800 dark:text-gray-100">{{ dayFiche.nom }}</span>
-          <span class="text-[11px] text-gray-400">{{ formatDay(selectedDate) }}</span>
-        </div>
-        <div v-if="dayFiche.noGps" class="flex items-center gap-1.5 rounded-lg bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-700 dark:bg-orange-900/20 dark:text-orange-300">
-          <UIcon name="i-heroicons-signal-slash" class="h-4 w-4" />Suivi GPS non démarré ce jour
-        </div>
-        <template v-else>
-          <div class="rounded-lg bg-gray-50 px-2.5 py-1 text-center dark:bg-gray-700/50">
-            <p class="text-sm font-semibold tabular-nums text-gray-800 dark:text-gray-100">{{ dayFiche.firstLabel }} → {{ dayFiche.lastLabel }}</p>
-            <p class="text-[10px] text-gray-400">amplitude</p>
-          </div>
-          <div class="rounded-lg bg-gray-50 px-2.5 py-1 text-center dark:bg-gray-700/50">
-            <p class="text-sm font-semibold tabular-nums text-gray-800 dark:text-gray-100">{{ dayFiche.durationLabel }}</p>
-            <p class="text-[10px] text-gray-400">terrain</p>
-          </div>
-          <div class="rounded-lg bg-gray-50 px-2.5 py-1 text-center dark:bg-gray-700/50">
-            <p class="text-sm font-semibold tabular-nums text-gray-800 dark:text-gray-100">{{ dayFiche.km }} km</p>
-            <p class="text-[10px] text-gray-400">distance</p>
-          </div>
-        </template>
-        <div class="rounded-lg bg-blue-50 px-2.5 py-1 text-center dark:bg-blue-900/20">
-          <p class="text-sm font-semibold tabular-nums text-blue-700 dark:text-blue-300">{{ dayFiche.validated }}<span v-if="dayFiche.offGeofence" class="text-amber-600 dark:text-amber-400">+{{ dayFiche.offGeofence }}</span> / {{ dayFiche.visitCount }}</p>
-          <p class="text-[10px] text-gray-400">visites{{ dayFiche.offGeofence ? ' · hors géof.' : '' }}</p>
-        </div>
-      </div>
-
-      <div class="relative min-h-0 flex-1">
-        <ClientOnly>
-          <div ref="mapContainer" class="h-full w-full" />
-        </ClientOnly>
-
-        <!-- Légende : rend la carte lisible sans deviner les codes couleur. -->
-        <div
-          v-if="!emptyState"
-          class="pointer-events-none absolute bottom-3 left-3 z-[500] rounded-lg border border-gray-200 bg-white/90 px-2.5 py-2 text-[11px] shadow backdrop-blur dark:border-gray-600 dark:bg-gray-800/90"
-        >
-          <div class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full" style="background:#0E9F6E" />Départ</div>
-          <div class="mt-1 flex items-center gap-1.5"><span class="h-0.5 w-3.5" style="background:#C8102E" />Trajet GPS (lissé)</div>
-          <div class="mt-1 flex items-center gap-1.5"><span class="h-3 w-3 rounded-full border-2 border-white" style="background:#C8102E;box-shadow:0 0 0 2px #C8102E" />Arrêt (≥ 5 min)</div>
-          <div class="mt-1 flex items-center gap-1.5"><span class="h-2.5 w-2.5" style="background:#003DA5;transform:rotate(45deg)" />Visite PDV</div>
-          <div class="mt-1 flex items-center gap-1.5"><span class="h-2.5 w-2.5" style="background:#D97706;transform:rotate(45deg)" />Visite hors géofence</div>
-        </div>
-
-        <!-- Navigation jour précédent / suivant + pagination des jours tracés. -->
-        <div
-          v-if="activityDays.length"
-          class="absolute bottom-3 left-1/2 z-[500] flex -translate-x-1/2 items-center gap-1 rounded-full border border-gray-200 bg-white/95 p-1 shadow-lg backdrop-blur dark:border-gray-600 dark:bg-gray-800/95"
-        >
-          <UButton
-            icon="i-heroicons-chevron-left"
-            size="xs"
-            color="gray"
-            variant="ghost"
-            :disabled="!hasPrevDay"
-            aria-label="Jour précédent"
-            @click="stepDay(-1)"
-          />
-          <div class="min-w-[104px] px-1 text-center">
-            <p class="text-xs font-semibold tabular-nums text-gray-800 dark:text-gray-100">{{ formatDay(selectedDate) }}</p>
-            <p class="text-[10px] text-gray-400">
-              <template v-if="activityIndex >= 0">jour {{ activityDays.length - activityIndex }} / {{ activityDays.length }}</template>
-              <template v-else>hors jours tracés</template>
-            </p>
-          </div>
-          <UButton
-            icon="i-heroicons-chevron-right"
-            size="xs"
-            color="gray"
-            variant="ghost"
-            :disabled="!hasNextDay"
-            aria-label="Jour suivant"
-            @click="stepDay(1)"
-          />
-        </div>
-
-        <!-- Chargement des positions : la carte seule ne montre rien de l'attente. -->
-        <div v-if="loading" class="pointer-events-none absolute inset-0 z-[500] flex items-center justify-center p-4">
-          <div class="rounded-xl border border-gray-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur dark:border-gray-600 dark:bg-gray-800/95">
-            <ChargementContenu variante="compact" libelle="Chargement des positions GPS…" />
-          </div>
-        </div>
-
-        <!-- Sans données, la carte reste figée sur la vue précédente : on le dit explicitement. -->
-        <div
-          v-if="emptyState"
-          class="pointer-events-none absolute inset-0 z-[500] flex items-center justify-center p-4"
-        >
-          <div class="pointer-events-auto max-w-sm rounded-xl border border-gray-200 bg-white/95 p-4 text-center shadow-lg backdrop-blur dark:border-gray-600 dark:bg-gray-800/95">
-            <UIcon :name="emptyState.icon" class="mx-auto h-8 w-8 text-gray-300 dark:text-gray-500" />
-            <p class="mt-2 text-sm font-semibold text-gray-700 dark:text-gray-200">{{ emptyState.title }}</p>
-            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ emptyState.detail }}</p>
+      <!-- Carte + rejeu -->
+      <section class="admin-surface flex h-[75dvh] min-h-[480px] w-full min-w-0 flex-col overflow-hidden lg:h-auto lg:min-h-0 lg:flex-1" aria-label="Carte des trajets">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 p-3 dark:border-slate-700">
+          <p class="text-sm text-slate-600 dark:text-slate-300" :title="lissageInfo.detail">
+            <strong class="font-semibold tabular-nums text-slate-900 dark:text-white">{{ tournees.length }}</strong> tournée(s) ·
+            <strong class="font-semibold tabular-nums text-slate-900 dark:text-white">{{ lissageInfo.retenus }}</strong> points GPS gardés sur {{ filteredPoints.length }} reçus
+          </p>
+          <div class="flex flex-wrap items-center gap-2">
             <UButton
-              v-if="emptyState.suggestDate"
               size="xs"
-              color="red"
-              variant="soft"
-              class="mt-3"
-              @click="goToDate(emptyState.suggestDate)"
+              color="gray"
+              :variant="showRaw ? 'solid' : 'ghost'"
+              :icon="showRaw ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'"
+              :aria-pressed="showRaw"
+              @click="showRaw = !showRaw; drawTrails()"
             >
-              Voir le {{ formatDay(emptyState.suggestDate) }}
+              {{ showRaw ? 'Masquer les points reçus' : 'Afficher tous les points reçus' }}
             </UButton>
+            <UButton v-if="selectedUser" size="xs" color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="selectRep('')">Toute l'équipe</UButton>
           </div>
         </div>
-      </div>
 
-      <VisitDetailModal v-model="showVisitModal" :visite="visitDetail" />
+        <!-- Recherche position à une heure donnée -->
+        <div class="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50">
+          <span class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-300">
+            <UIcon name="i-heroicons-magnifying-glass" class="h-4 w-4" aria-hidden="true" />
+            Où était
+          </span>
+          <USelectMenu
+            v-model="searchUser"
+            :options="searchUserOptions"
+            value-attribute="value"
+            option-attribute="label"
+            placeholder="Personne"
+            searchable
+            searchable-placeholder="Rechercher…"
+            size="xs"
+            class="w-full sm:w-44"
+            aria-label="Personne à localiser"
+          />
+          <span class="text-xs text-slate-600 dark:text-slate-300">à</span>
+          <UInput v-model="searchTime" type="time" size="xs" class="w-28" aria-label="Heure" />
+          <USelect
+            v-model.number="searchRadius"
+            :options="radiusOptions"
+            value-attribute="value"
+            option-attribute="label"
+            size="xs"
+            class="w-32"
+            aria-label="Rayon de recherche des points de vente"
+          />
+          <UButton size="xs" icon="i-heroicons-map-pin" :disabled="!searchUser || !searchTime" @click="locateAtTime">
+            Localiser
+          </UButton>
+          <UButton v-if="searchInfo" size="xs" color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="clearSearch">Effacer</UButton>
+          <p v-if="searchInfo" class="w-full text-xs sm:w-auto" :class="searchFound ? 'text-slate-700 dark:text-slate-200' : 'font-medium text-amber-800 dark:text-amber-200'" aria-live="polite">{{ searchInfo }}</p>
+        </div>
 
-      <!-- Barre de rejeu temporel -->
-      <div v-if="timeRange" class="flex items-center gap-3 border-t border-gray-100 p-3 dark:border-gray-700">
-        <UButton :icon="playing ? 'i-heroicons-pause' : 'i-heroicons-play'" size="xs" color="red" variant="soft" @click="togglePlay" />
-        <input
-          v-model.number="cursorTime"
-          type="range"
-          :min="timeRange.min"
-          :max="timeRange.max"
-          step="1000"
-          class="flex-1 accent-fc-red"
-          @input="onScrub"
-        >
-        <span class="w-14 shrink-0 text-right text-xs tabular-nums text-gray-500">{{ cursorLabel }}</span>
-      </div>
+        <!-- Fiche journée de la personne sélectionnée -->
+        <div v-if="dayFiche" class="flex flex-wrap items-stretch gap-2 border-b border-slate-200 p-3 dark:border-slate-700">
+          <div class="flex flex-col justify-center pr-2">
+            <span class="text-sm font-semibold text-slate-900 dark:text-white">{{ dayFiche.nom }}</span>
+            <span class="text-xs text-slate-600 dark:text-slate-300">{{ formatDay(selectedDate) }}</span>
+          </div>
+          <div v-if="dayFiche.noGps" class="flex items-center gap-1.5 rounded-md bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+            <UIcon name="i-heroicons-signal-slash" class="h-4 w-4 shrink-0" aria-hidden="true" />Suivi GPS non démarré ce jour
+          </div>
+          <template v-else>
+            <div class="rounded-md bg-slate-50 px-2.5 py-1 text-center dark:bg-slate-700/50">
+              <p class="text-sm font-semibold tabular-nums text-slate-900 dark:text-white">{{ dayFiche.firstLabel }} – {{ dayFiche.lastLabel }}</p>
+              <p class="text-xs text-slate-600 dark:text-slate-300">première et dernière position</p>
+            </div>
+            <div class="rounded-md bg-slate-50 px-2.5 py-1 text-center dark:bg-slate-700/50">
+              <p class="text-sm font-semibold tabular-nums text-slate-900 dark:text-white">{{ dayFiche.durationLabel }}</p>
+              <p class="text-xs text-slate-600 dark:text-slate-300">sur le terrain</p>
+            </div>
+            <div class="rounded-md bg-slate-50 px-2.5 py-1 text-center dark:bg-slate-700/50">
+              <p class="text-sm font-semibold tabular-nums text-slate-900 dark:text-white">{{ dayFiche.km }} km</p>
+              <p class="text-xs text-slate-600 dark:text-slate-300">distance</p>
+            </div>
+          </template>
+          <div class="rounded-md bg-slate-50 px-2.5 py-1 text-center dark:bg-slate-700/50">
+            <p class="text-sm font-semibold tabular-nums text-slate-900 dark:text-white">{{ dayFiche.visitCount }}</p>
+            <p class="text-xs text-slate-600 dark:text-slate-300">visite(s)</p>
+          </div>
+          <div v-if="dayFiche.offGeofence" class="flex items-center gap-1.5 rounded-md bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+            <UIcon name="i-heroicons-exclamation-triangle" class="h-4 w-4 shrink-0" aria-hidden="true" />
+            {{ dayFiche.offGeofence }} hors du rayon de visite
+          </div>
+        </div>
+
+        <div class="relative min-h-0 flex-1">
+          <ClientOnly>
+            <div ref="mapContainer" class="h-full w-full" />
+          </ClientOnly>
+
+          <!-- Légende : rend la carte lisible sans deviner les codes couleur. -->
+          <div
+            v-if="!emptyState"
+            class="pointer-events-none absolute right-3 top-3 z-[500] rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+          >
+            <p class="mb-1 font-semibold text-slate-900 dark:text-white">Légende</p>
+            <div class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="{ background: COULEURS_CARTE.depart }" aria-hidden="true" />Départ</div>
+            <div class="mt-1 flex items-center gap-1.5"><span class="h-0.5 w-3.5 shrink-0" :style="{ background: SERIES[0] }" aria-hidden="true" />Trajet (une couleur par personne)</div>
+            <div class="mt-1 flex items-center gap-1.5"><span class="h-3 w-3 shrink-0 rounded-full border-2 border-white" :style="{ background: SERIES[0], boxShadow: `0 0 0 2px ${SERIES[0]}` }" aria-hidden="true" />Arrêt de 5 min ou plus</div>
+            <div class="mt-1 flex items-center gap-1.5"><span class="h-2.5 w-2.5 shrink-0 rotate-45" :style="{ background: COULEURS_CARTE.visite }" aria-hidden="true" />Visite</div>
+            <div class="mt-1 flex items-center gap-1.5"><span class="h-2.5 w-2.5 shrink-0 rotate-45" :style="{ background: COULEURS_CARTE.horsRayon }" aria-hidden="true" />Visite hors du rayon de visite</div>
+          </div>
+
+          <!-- Navigation jour précédent / suivant parmi les jours tracés. -->
+          <div
+            v-if="activityDays.length"
+            class="absolute bottom-3 left-1/2 z-[500] flex -translate-x-1/2 items-center gap-1 rounded-md border border-slate-200 bg-white p-1 dark:border-slate-600 dark:bg-slate-800"
+          >
+            <UButton
+              icon="i-heroicons-chevron-left"
+              size="xs"
+              color="gray"
+              variant="ghost"
+              :disabled="!hasPrevDay"
+              aria-label="Jour précédent avec des positions"
+              @click="stepDay(-1)"
+            />
+            <div class="min-w-[120px] px-1 text-center">
+              <p class="text-xs font-semibold tabular-nums text-slate-900 dark:text-white">{{ formatDay(selectedDate) }}</p>
+              <p class="text-xs text-slate-600 dark:text-slate-300">
+                <template v-if="activityIndex >= 0">jour {{ activityDays.length - activityIndex }} sur {{ activityDays.length }}</template>
+                <template v-else>aucune position ce jour</template>
+              </p>
+            </div>
+            <UButton
+              icon="i-heroicons-chevron-right"
+              size="xs"
+              color="gray"
+              variant="ghost"
+              :disabled="!hasNextDay"
+              aria-label="Jour suivant avec des positions"
+              @click="stepDay(1)"
+            />
+          </div>
+
+          <!-- Chargement des positions : la carte seule ne montre rien de l'attente. -->
+          <div v-if="loading" class="pointer-events-none absolute inset-0 z-[500] flex items-center justify-center p-4">
+            <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 dark:border-slate-600 dark:bg-slate-800">
+              <ChargementContenu variante="compact" libelle="Chargement des positions GPS…" />
+            </div>
+          </div>
+
+          <!-- Sans données, la carte reste figée sur la vue précédente : on le dit explicitement. -->
+          <div
+            v-if="emptyState"
+            class="pointer-events-none absolute inset-0 z-[500] flex items-center justify-center p-4"
+          >
+            <div class="pointer-events-auto max-w-sm rounded-lg border border-slate-200 bg-white p-4 text-center dark:border-slate-600 dark:bg-slate-800">
+              <UIcon :name="emptyState.icon" class="mx-auto h-7 w-7 text-slate-400 dark:text-slate-500" aria-hidden="true" />
+              <p class="mt-2 text-sm font-semibold text-slate-900 dark:text-white">{{ emptyState.title }}</p>
+              <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">{{ emptyState.detail }}</p>
+              <UButton
+                v-if="emptyState.suggestDate"
+                size="xs"
+                variant="outline"
+                class="mt-3"
+                @click="goToDate(emptyState.suggestDate)"
+              >
+                Voir le {{ formatDay(emptyState.suggestDate) }}
+              </UButton>
+            </div>
+          </div>
+        </div>
+
+        <VisitDetailModal v-model="showVisitModal" :visite="visitDetail" />
+
+        <!-- Barre de rejeu temporel -->
+        <div v-if="timeRange" class="flex items-center gap-3 border-t border-slate-200 p-3 dark:border-slate-700">
+          <UButton
+            :icon="playing ? 'i-heroicons-pause' : 'i-heroicons-play'"
+            size="xs"
+            color="gray"
+            variant="outline"
+            :aria-label="playing ? 'Mettre le rejeu en pause' : 'Rejouer le trajet de la journée'"
+            @click="togglePlay"
+          />
+          <input
+            v-model.number="cursorTime"
+            type="range"
+            :min="timeRange.min"
+            :max="timeRange.max"
+            step="1000"
+            class="flex-1 accent-fc-red"
+            aria-label="Heure du trajet affichée"
+            :aria-valuetext="cursorLabel"
+            @input="onScrub"
+          >
+          <span class="w-14 shrink-0 text-right text-xs tabular-nums text-slate-600 dark:text-slate-300">{{ cursorLabel }}</span>
+        </div>
+      </section>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { haversine, lisserTrajet, libelleDuree } from '~/utils/trajets'
+import { SERIES, STATUT } from '~/utils/chartPalette'
 definePageMeta({
   middleware: ['auth', 'admin'],
   layout: 'admin',
@@ -338,7 +385,13 @@ let map: any = null
 let trailGroup: any = null
 let searchGroup: any = null
 
-const PALETTE = ['#C8102E', '#003DA5', '#0E9F6E', '#7C3AED', '#D97706', '#DB2777', '#0891B2', '#4D7C0F']
+// Couleurs de la carte : palette commune (utils/chartPalette). Un trajet par
+// personne en SERIES ; départ et visites en couleurs de statut.
+const COULEURS_CARTE = {
+  depart: STATUT.bon,
+  visite: SERIES[1],
+  horsRayon: STATUT.serieux,
+} as const
 const LIVE_WINDOW_MS = 15 * 60_000
 const STALE_MS = 30 * 60_000
 
@@ -376,6 +429,12 @@ const cursorLabel = computed(() => {
   return new Date(t).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 })
 
+// Les noms (points de vente, personnes) viennent du terrain : échappés avant
+// d'entrer dans le HTML des info-bulles et popups Leaflet.
+function echapperHtml(texte: unknown): string {
+  return String(texte ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;' }[c] as string))
+}
+
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 }
@@ -398,16 +457,16 @@ const lissageInfo = computed(() => {
     precision += r.rejetes.precision
     vitesse += r.rejetes.vitesse
   }
-  return { retenus, detail: `${precision} point(s) rejeté(s) pour précision > 50 m, ${vitesse} pour saut impossible` }
+  return { retenus, detail: `${precision} position(s) écartée(s) car trop imprécises (plus de 50 m), ${vitesse} car le déplacement était impossible` }
 })
 
 // Options de la combobox : même ordre que la liste (en tournée d'abord).
 const repOptions = computed(() => [
-  { value: '', label: 'Tous les commerciaux', dot: 'bg-gray-300', meta: `${reps.value.length}` },
+  { value: '', label: 'Toute l\'équipe', dot: 'bg-slate-300', meta: `${reps.value.length}` },
   ...reps.value.map(r => ({
     value: r.userId,
     label: r.nom,
-    dot: r.live ? 'bg-emerald-500' : r.pointCount > 0 ? 'bg-gray-400' : 'bg-gray-200',
+    dot: r.live ? 'bg-emerald-600' : r.pointCount > 0 ? 'bg-slate-500' : 'bg-slate-300',
     meta: r.pointCount > 0 ? `${r.km.toFixed(1)} km · ${r.visitCount} PDV` : r.statusLabel,
   })),
 ])
@@ -452,7 +511,7 @@ const reps = computed<RepSummary[]>(() => {
     const points = (byUser.get(profile.id) ?? []).slice().sort(
       (a, b) => new Date(a.captured_at).getTime() - new Date(b.captured_at).getTime(),
     )
-    const nom = profile.nom || profile.email || profile.id.slice(0, 8)
+    const nom = profile.nom || profile.email || 'Compte sans nom'
     const alerts: RepSummary['alerts'] = []
 
     const visitCount = visitCountByUser.value[profile.id] ?? 0
@@ -461,10 +520,10 @@ const reps = computed<RepSummary[]>(() => {
       // Visites saisies mais zéro point GPS = suivi jamais démarré sur le
       // téléphone (permission « toujours » refusée), pas une absence terrain.
       if (visitCount > 0) {
-        alerts.push({ kind: 'no-gps', label: 'GPS non démarré', icon: 'i-heroicons-signal-slash', class: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' })
+        alerts.push({ kind: 'no-gps', label: 'GPS non démarré', icon: 'i-heroicons-signal-slash', class: 'bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200' })
       }
       else if (isToday.value) {
-        alerts.push({ kind: 'no-tournee', label: 'Pas de tournée', icon: 'i-heroicons-no-symbol', class: 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300' })
+        alerts.push({ kind: 'no-tournee', label: 'Pas de tournée', icon: 'i-heroicons-no-symbol', class: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200' })
       }
       return { userId: profile.id, nom, pointCount: 0, km: 0, durationLabel: '—', visitCount, lastAtMs: null, statusLabel: visitCount > 0 ? `${visitCount} visite(s), sans GPS` : (isToday.value ? 'inactif' : '—'), live: false, alerts }
     }
@@ -478,10 +537,10 @@ const reps = computed<RepSummary[]>(() => {
     // Immobile : derniers points regroupés (< 40 m) sur > 30 min.
     const recent = points.filter(p => lastAtMs - new Date(p.captured_at).getTime() < STALE_MS)
     if (live && recent.length >= 3 && trailDistance(recent) < 40) {
-      alerts.push({ kind: 'immobile', label: 'Immobile', icon: 'i-heroicons-pause-circle', class: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' })
+      alerts.push({ kind: 'immobile', label: 'Immobile', icon: 'i-heroicons-pause-circle', class: 'bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200' })
     }
     if (isToday.value && !live && Date.now() - lastAtMs > STALE_MS) {
-      alerts.push({ kind: 'stale', label: 'Sans signal', icon: 'i-heroicons-signal-slash', class: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' })
+      alerts.push({ kind: 'stale', label: 'Sans signal', icon: 'i-heroicons-signal-slash', class: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-200' })
     }
 
     return {
@@ -537,7 +596,7 @@ const dayFiche = computed(() => {
 })
 
 const searchUserOptions = computed(() =>
-  commerciaux.value.map(c => ({ value: c.id, label: c.nom || c.email || c.id.slice(0, 8) })),
+  commerciaux.value.map(c => ({ value: c.id, label: c.nom || c.email || 'Compte sans nom' })),
 )
 
 function formatDay(iso: string): string {
@@ -574,7 +633,7 @@ function stepDay(dir: -1 | 1) {
 const selectedRepName = computed(() => {
   if (!selectedUser.value) return ''
   const rep = commerciaux.value.find(c => c.id === selectedUser.value)
-  return rep?.nom || rep?.email || 'ce commercial'
+  return rep?.nom || rep?.email || 'cette personne'
 })
 
 // Distingue « rien ce jour-là » de « rien du tout » : sans ça, la carte reste
@@ -590,8 +649,8 @@ const emptyState = computed(() => {
       icon: 'i-heroicons-map',
       title: `Aucune position pour ${selectedRepName.value}`,
       detail: days.length
-        ? `Rien d'enregistré le ${formatDay(selectedDate.value)}. Jours tracés : ${days.map(d => d.label).join(', ')}.`
-        : `Aucun point GPS sur les 30 derniers jours — le suivi de tournée n'a probablement jamais démarré sur son téléphone.`,
+        ? `Rien d'enregistré le ${formatDay(selectedDate.value)} ; jours avec des positions : ${days.map(d => d.label).join(', ')}`
+        : 'Aucune position GPS sur les 30 derniers jours : le suivi de tournée n\'a probablement jamais été démarré sur son téléphone.',
       suggestDate,
     }
   }
@@ -600,22 +659,22 @@ const emptyState = computed(() => {
     icon: 'i-heroicons-signal-slash',
     title: 'Aucune tournée ce jour',
     detail: days.length
-      ? `Aucun point GPS le ${formatDay(selectedDate.value)}. Jours tracés : ${days.map(d => d.label).join(', ')}.`
-      : 'Aucun point GPS sur les 30 derniers jours.',
+      ? `Aucune position GPS le ${formatDay(selectedDate.value)} ; jours avec des positions : ${days.map(d => d.label).join(', ')}`
+      : 'Aucune position GPS sur les 30 derniers jours. Les trajets apparaîtront dès qu\'une personne aura démarré sa tournée dans l\'application.',
     suggestDate,
   }
 })
 
 function statusDotClass(rep: RepSummary): string {
-  if (rep.live) return 'bg-emerald-500 animate-pulse'
-  if (rep.pointCount > 0) return 'bg-gray-400'
-  return 'bg-gray-200 dark:bg-gray-600'
+  if (rep.live) return 'bg-emerald-600 motion-safe:animate-pulse'
+  if (rep.pointCount > 0) return 'bg-slate-500'
+  return 'bg-slate-300 dark:bg-slate-600'
 }
 
 function statusColorForUser(userId: string): string {
   // Couleur stable indépendante du filtre (index dans la liste commerciaux).
   const idx = commerciaux.value.findIndex(c => c.id === userId)
-  return PALETTE[(idx < 0 ? 0 : idx) % PALETTE.length]
+  return SERIES[(idx < 0 ? 0 : idx) % SERIES.length]
 }
 
 // Jours ayant au moins un point sur 30 jours : alimente les raccourcis et
@@ -678,7 +737,7 @@ async function loadPositions() {
           visite_id: row.visite_id,
           user_id: row.user_id,
           pdv_id: row.pdv_id,
-          nom_pdv: pdvNameById.get(row.pdv_id) || row.pdv_id || 'PDV',
+          nom_pdv: pdvNameById.get(row.pdv_id) || 'Point de vente sans nom',
           lat: row.geolocation_lat,
           lng: row.geolocation_lng,
           date_visite: row.date_visite,
@@ -748,7 +807,7 @@ function locateAtTime() {
 
   if (userPoints.length === 0) {
     searchFound.value = false
-    searchInfo.value = 'Aucune position ce jour pour ce commercial.'
+    searchInfo.value = 'Aucune position ce jour pour cette personne.'
     return
   }
 
@@ -759,13 +818,13 @@ function locateAtTime() {
 
   // Marqueur position + cercle de rayon.
   const posMarker = L.circleMarker([nearest.lat, nearest.lng], {
-    radius: 9, fillColor: '#C8102E', color: '#fff', weight: 3, fillOpacity: 1,
+    radius: 9, fillColor: SERIES[0], color: '#fff', weight: 3, fillOpacity: 1,
   }).bindPopup(
-    `<b>${nearest.profiles?.nom || 'Commercial'}</b><br>Position à ${formatTime(nearest.captured_at)}<br>${nearest.lat.toFixed(5)}, ${nearest.lng.toFixed(5)}`,
+    `<b>${echapperHtml(nearest.profiles?.nom || 'Commercial')}</b><br>Position à ${formatTime(nearest.captured_at)}<br>Précision ± ${Math.round(nearest.accuracy ?? 0)} m`,
   )
   searchGroup.addLayer(posMarker)
   searchGroup.addLayer(L.circle([nearest.lat, nearest.lng], {
-    radius: searchRadius.value, color: '#C8102E', weight: 1, fillOpacity: 0.06,
+    radius: searchRadius.value, color: SERIES[0], weight: 1, fillOpacity: 0.06,
   }))
 
   // PDV dans le rayon.
@@ -776,14 +835,14 @@ function locateAtTime() {
       nearby++
       searchGroup.addLayer(
         L.circleMarker([pdv.lat, pdv.lng], {
-          radius: 5, fillColor: '#003DA5', color: '#fff', weight: 1, fillOpacity: 0.9,
-        }).bindTooltip(`${pdv.nom_pdv} · ${Math.round(d)} m`, { direction: 'top' }),
+          radius: 5, fillColor: COULEURS_CARTE.visite, color: '#fff', weight: 1, fillOpacity: 0.9,
+        }).bindTooltip(`${echapperHtml(pdv.nom_pdv || 'Point de vente sans nom')} · ${Math.round(d)} m`, { direction: 'top' }),
       )
     }
   }
 
   searchFound.value = true
-  searchInfo.value = `Position à ${formatTime(nearest.captured_at)} (±${gapMin} min) · ${nearby} PDV à ≤ ${searchRadius.value >= 1000 ? searchRadius.value / 1000 + ' km' : searchRadius.value + ' m'}`
+  searchInfo.value = `Position à ${formatTime(nearest.captured_at)} (à ${gapMin} min près) · ${nearby} point(s) de vente à moins de ${searchRadius.value >= 1000 ? searchRadius.value / 1000 + ' km' : searchRadius.value + ' m'}`
 
   map.setView([nearest.lat, nearest.lng], searchRadius.value <= 500 ? 16 : 15)
 }
@@ -836,12 +895,12 @@ function drawTrails() {
     const el = document.createElement('div')
     el.className = 'text-sm'
     const nameP = document.createElement('p')
-    nameP.className = 'font-bold'
+    nameP.className = 'font-semibold text-slate-900'
     nameP.textContent = first.profiles?.nom || first.profiles?.email || 'Commercial'
     el.appendChild(nameP)
     const infoP = document.createElement('p')
-    infoP.className = 'text-gray-500 text-xs'
-    infoP.textContent = `${formatTime(first.captured_at)} → ${formatTime(last.captured_at)} · ${retenus.length} pts retenus / ${points.length} · ${(distance / 1000).toFixed(1)} km · ${lisse.arrets.length} arrêt(s)`
+    infoP.className = 'text-xs text-slate-600'
+    infoP.textContent = `${formatTime(first.captured_at)} – ${formatTime(last.captured_at)} · ${(distance / 1000).toFixed(1)} km · ${lisse.arrets.length} arrêt(s) · ${retenus.length} points GPS gardés sur ${points.length} reçus`
     el.appendChild(infoP)
 
     if (retenus.length > 1) {
@@ -855,7 +914,7 @@ function drawTrails() {
       points.forEach((point) => {
         trailGroup.addLayer(L.circleMarker([point.lat, point.lng], {
           radius: 2.5, fillColor: color, color: color, weight: 0, fillOpacity: 0.35,
-        }).bindTooltip(`Brut · ${formatTime(point.captured_at)} · ±${Math.round(point.accuracy ?? 0)} m`, { direction: 'top' }))
+        }).bindTooltip(`Position reçue · ${formatTime(point.captured_at)} · précision ± ${Math.round(point.accuracy ?? 0)} m`, { direction: 'top' }))
       })
     }
 
@@ -867,17 +926,17 @@ function drawTrails() {
       const isArret = lisse.arrets.some(a => a.point === point)
       const dot = L.circleMarker([point.lat, point.lng], {
         radius: isArret ? 8 : isStart || isEnd ? 7 : 4,
-        fillColor: isStart ? '#0E9F6E' : color,
+        fillColor: isStart ? COULEURS_CARTE.depart : color,
         color: '#fff',
         weight: isStart || isEnd || isArret ? 2 : 1,
         fillOpacity: 1,
       })
-      const label = isStart ? 'Départ' : isEnd ? 'Dernière position' : isArret ? 'Arrêt' : `Point ${i + 1}`
+      const label = isStart ? 'Départ' : isEnd ? 'Dernière position' : isArret ? 'Arrêt' : `Position ${i + 1}`
       const heure = dureeMs > 60_000
-        ? `${formatTime(point.captured_at)} → ${formatTime(r.finArret)} (${libelleDuree(dureeMs)})`
+        ? `de ${formatTime(point.captured_at)} à ${formatTime(r.finArret)} (${libelleDuree(dureeMs)})`
         : formatTime(point.captured_at)
       dot.bindTooltip(
-        `<b>${label}</b> · ${formatDay(selectedDate.value)}<br>${heure}<br>±${Math.round(point.accuracy ?? 0)} m · ${r.absorbes} pt(s) absorbé(s)`,
+        `<b>${label}</b> · ${formatDay(selectedDate.value)}<br>${heure}<br>précision ± ${Math.round(point.accuracy ?? 0)} m · ${r.absorbes} position(s) regroupée(s)`,
         { direction: 'top', offset: [0, -4] },
       )
       dot.bindPopup(el)
@@ -886,27 +945,27 @@ function drawTrails() {
   })
 
   // Marqueurs de visite PDV : donne le sens métier au trajet (« pourquoi il
-  // était là »). Étoile = visite validée par géofence, sinon losange ambre.
+  // était là »). Losange bleu = visite dans le rayon de visite, orange = hors du rayon.
   filteredVisits.value
     .filter(v => new Date(v.date_visite).getTime() <= cursor)
     .forEach((visit) => {
       const validated = visit.geofence_validated !== false
-      const color = validated ? '#003DA5' : '#D97706'
+      const color = validated ? COULEURS_CARTE.visite : COULEURS_CARTE.horsRayon
       const icon = L.divIcon({
         className: 'trajet-visit-marker',
-        html: `<div style="width:16px;height:16px;border-radius:4px;transform:rotate(45deg);background:${color};border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div>`,
+        html: `<div style="width:16px;height:16px;transform:rotate(45deg);background:${color};border:2px solid #fff"></div>`,
         iconSize: [16, 16],
         iconAnchor: [8, 8],
       })
       const dateLabel = new Date(visit.date_visite).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
       const marker = L.marker([visit.lat, visit.lng], { icon })
         .bindTooltip(
-          `<b>${visit.nom_pdv}</b><br>Visite le ${dateLabel} à ${formatTime(visit.date_visite)}${validated ? '' : '<br><span style="color:#D97706">hors géofence</span>'}`,
+          `<b>${echapperHtml(visit.nom_pdv)}</b><br>Visite le ${dateLabel} à ${formatTime(visit.date_visite)}${validated ? '' : '<br><span class="font-semibold text-amber-800">Hors du rayon de visite</span>'}`,
           { direction: 'top', offset: [0, -6] },
         )
       const pop = document.createElement('div')
       pop.className = 'text-sm'
-      pop.innerHTML = `<p class="font-bold">${visit.nom_pdv}</p><p class="text-xs text-gray-500">${dateLabel} · ${formatTime(visit.date_visite)}${validated ? '' : ' · <span style="color:#D97706">hors géofence</span>'}</p>`
+      pop.innerHTML = `<p class="font-semibold text-slate-900">${echapperHtml(visit.nom_pdv)}</p><p class="text-xs text-slate-600">${dateLabel} · ${formatTime(visit.date_visite)}${validated ? '' : ' · <span class="font-semibold text-amber-800">hors du rayon de visite</span>'}</p>`
       const btn = document.createElement('button')
       btn.type = 'button'
       btn.className = 'mt-2 rounded-md bg-fc-red px-2.5 py-1 text-xs font-semibold text-white'
