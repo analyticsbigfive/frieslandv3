@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-09T21:30:00Z",
+  "title": "Design System: Bonnet Rouge — back-office",
+  "extensions": {
+    "colorMeta": {
+      "bonnet-rouge": { "role": "primary", "displayName": "Rouge Bonnet Rouge", "canonical": "#C8102E", "tonalRamp": ["#140305", "#41060F", "#6E0919", "#9B0D23", "#C8102E", "#F0516F", "#FAC5CF", "#FDE8EC"] },
+      "encre": { "role": "neutral", "displayName": "Encre", "canonical": "#0F172A", "tonalRamp": ["#020617", "#0F172A", "#1E293B", "#334155", "#64748B", "#CBD5E1", "#E2E8F0", "#F8FAFC"] },
+      "succes": { "role": "tertiary", "displayName": "Succès", "canonical": "#047857", "tonalRamp": ["#022C22", "#064E3B", "#065F46", "#047857", "#10B981", "#6EE7B7", "#D1FAE5", "#ECFDF5"] },
+      "alerte": { "role": "tertiary", "displayName": "Alerte", "canonical": "#B45309", "tonalRamp": ["#451A03", "#78350F", "#92400E", "#B45309", "#F59E0B", "#FCD34D", "#FEF3C7", "#FFFBEB"] },
+      "erreur": { "role": "tertiary", "displayName": "Erreur", "canonical": "#DC2626", "tonalRamp": ["#450A0A", "#7F1D1D", "#991B1B", "#DC2626", "#EF4444", "#FCA5A5", "#FEE2E2", "#FEF2F2"] }
+    },
+    "typographyMeta": {
+      "titre-page": { "displayName": "Titre de page", "purpose": "Unique h1 de chaque page, rendu par AdminPageHeader." },
+      "titre-section": { "displayName": "Titre de section", "purpose": "h2 des blocs d'une page." },
+      "titre-carte": { "displayName": "Titre de carte", "purpose": "Titre d'un graphique, d'un tableau, d'une carte." },
+      "texte": { "displayName": "Texte", "purpose": "Texte courant et cellules de tableau." },
+      "etiquette": { "displayName": "Étiquette", "purpose": "Libellés de champ, en-têtes de colonne, pastilles. Jamais sous 12 px." },
+      "chiffre": { "displayName": "Chiffre", "purpose": "Valeur d'un indicateur, chiffres tabulaires." }
+    },
+    "shadows": [
+      { "name": "couche-flottante", "value": "0 10px 30px -12px rgba(15, 23, 42, 0.25)", "purpose": "Modales, menus déroulants, notifications. Aucune autre surface n'a d'ombre." }
+    ],
+    "motion": [
+      { "name": "transition-etat", "value": "150ms cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Changements de couleur au survol et au focus. Aucun déplacement." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Bouton principal",
+      "kind": "button",
+      "refersTo": "bouton-principal",
+      "description": "Action principale d'une zone d'écran ; un seul par zone.",
+      "html": "<button class=\"ds-btn-primary\">Nouveau PDV</button>",
+      "css": ".ds-btn-primary { background: #C8102E; color: #FFFFFF; font: 600 14px/20px 'Nunito Sans Variable', system-ui, sans-serif; padding: 8px 14px; height: 36px; border: 0; border-radius: 6px; cursor: pointer; transition: background-color 150ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-primary:hover { background: #9B0D23; } .ds-btn-primary:focus-visible { outline: 2px solid #C8102E; outline-offset: 2px; }"
+    },
+    {
+      "name": "Bouton secondaire",
+      "kind": "button",
+      "refersTo": "bouton-secondaire",
+      "description": "Actions de second rang : exporter, importer, annuler.",
+      "html": "<button class=\"ds-btn-secondary\">Exporter</button>",
+      "css": ".ds-btn-secondary { background: #FFFFFF; color: #334155; font: 600 14px/20px 'Nunito Sans Variable', system-ui, sans-serif; padding: 8px 14px; height: 36px; border: 1px solid #CBD5E1; border-radius: 6px; cursor: pointer; transition: background-color 150ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-secondary:hover { background: #F8FAFC; } .ds-btn-secondary:focus-visible { outline: 2px solid #C8102E; outline-offset: 2px; }"
+    },
+    {
+      "name": "Champ de recherche",
+      "kind": "input",
+      "refersTo": "champ",
+      "description": "Champ texte standard avec libellé au-dessus.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Rechercher</span><input class=\"ds-input\" placeholder=\"Nom du PDV\"></label>",
+      "css": ".ds-field { display: grid; gap: 6px; font-family: 'Nunito Sans Variable', system-ui, sans-serif; } .ds-field-label { font: 600 12px/16px inherit; color: #334155; } .ds-input { height: 36px; padding: 8px 12px; border: 1px solid #CBD5E1; border-radius: 6px; background: #FFFFFF; color: #0F172A; font: 400 14px/20px inherit; } .ds-input:focus { outline: none; border-color: #C8102E; box-shadow: 0 0 0 2px rgba(200,16,46,0.35); }"
+    },
+    {
+      "name": "Entrée de menu latéral",
+      "kind": "nav",
+      "refersTo": "menu-entree-active",
+      "description": "Entrée du menu latéral (domaine) ; l'active porte le voile rouge et un trait de 3 px.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-item\">Perfect Store</a><a class=\"ds-nav-item ds-nav-item--active\" aria-current=\"page\">Points de vente</a><a class=\"ds-nav-item\">Visites</a></nav>",
+      "css": ".ds-nav { display: grid; gap: 2px; width: 224px; font-family: 'Nunito Sans Variable', system-ui, sans-serif; } .ds-nav-item { position: relative; display: block; padding: 8px 12px; border-radius: 6px; color: #334155; font: 500 14px/20px inherit; text-decoration: none; cursor: pointer; } .ds-nav-item:hover { background: #F1F5F9; } .ds-nav-item--active { background: #FDE8EC; color: #9B0D23; font-weight: 600; } .ds-nav-item--active::before { content: ''; position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px; border-radius: 0 3px 3px 0; background: #C8102E; } .ds-nav-item:focus-visible { outline: 2px solid #C8102E; outline-offset: 2px; }"
+    },
+    {
+      "name": "Barre d'onglets",
+      "kind": "nav",
+      "refersTo": "onglet-actif",
+      "description": "Vues d'un domaine ; l'onglet actif est souligné de rouge.",
+      "html": "<div class=\"ds-tabs\"><a class=\"ds-tab ds-tab--active\" aria-current=\"page\">Liste</a><a class=\"ds-tab\">Répartition</a><a class=\"ds-tab\">Évolution</a></div>",
+      "css": ".ds-tabs { display: flex; gap: 4px; border-bottom: 1px solid #E2E8F0; font-family: 'Nunito Sans Variable', system-ui, sans-serif; } .ds-tab { padding: 10px 12px; margin-bottom: -1px; border-bottom: 2px solid transparent; color: #475569; font: 500 14px/20px inherit; text-decoration: none; cursor: pointer; } .ds-tab:hover { color: #0F172A; border-bottom-color: #CBD5E1; } .ds-tab--active { color: #C8102E; border-bottom-color: #C8102E; font-weight: 600; } .ds-tab:focus-visible { outline: 2px solid #C8102E; outline-offset: 2px; }"
+    },
+    {
+      "name": "Indicateur",
+      "kind": "card",
+      "refersTo": "carte",
+      "description": "Carte d'indicateur : libellé, valeur, évolution ; quatre au plus par écran.",
+      "html": "<div class=\"ds-kpi\"><p class=\"ds-kpi-label\">PDV au niveau</p><p class=\"ds-kpi-value\">1 240</p><span class=\"ds-kpi-delta\">+4 % sur 30 jours</span></div>",
+      "css": ".ds-kpi { width: 220px; padding: 20px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; font-family: 'Nunito Sans Variable', system-ui, sans-serif; } .ds-kpi-label { margin: 0; font: 600 12px/16px inherit; color: #64748B; } .ds-kpi-value { margin: 6px 0 8px; font: 700 24px/29px inherit; font-variant-numeric: tabular-nums; color: #0F172A; } .ds-kpi-delta { display: inline-block; padding: 2px 10px; border-radius: 9999px; background: #ECFDF5; color: #047857; font: 600 12px/16px inherit; }"
+    },
+    {
+      "name": "Pastille de filtre",
+      "kind": "chip",
+      "refersTo": "pastille",
+      "description": "Filtre actif, retirable.",
+      "html": "<span class=\"ds-chip\">Direction : South <button class=\"ds-chip-x\" aria-label=\"Retirer le filtre\">×</button></span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 4px 2px 10px; border-radius: 9999px; background: #F1F5F9; color: #334155; font: 500 12px/20px 'Nunito Sans Variable', system-ui, sans-serif; } .ds-chip-x { border: 0; background: transparent; color: #64748B; cursor: pointer; border-radius: 9999px; width: 20px; height: 20px; } .ds-chip-x:hover { background: #E2E8F0; color: #0F172A; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Le registre du chef de secteur",
+    "overview": "Le back-office est l'outil de bureau de ceux qui pilotent le terrain : responsables trade marketing, superviseurs, commerciaux, responsables d'agence. Ils l'ouvrent entre deux réunions pour répondre à une question précise puis le referment. Le système se comporte comme un registre bien tenu : des colonnes nettes, des chiffres alignés, des titres qui disent ce qu'on regarde, et une seule couleur qui appelle l'action. La marque vit dans le rouge Bonnet Rouge et dans la précision des détails, pas dans la décoration.",
+    "keyCharacteristics": [
+      "Une seule couleur d'action, le rouge Bonnet Rouge (#C8102E), sur fond slate froid.",
+      "Surfaces blanches plates, trait de 1 px (#E2E8F0), aucune ombre hors des couches flottantes.",
+      "Navigation à deux niveaux : un domaine dans le menu latéral, une vue dans la barre d'onglets.",
+      "Une seule famille, Nunito Sans, en échelle fixe ; chiffres tabulaires.",
+      "Français simple partout ; le détail technique reste dans la console."
+    ],
+    "rules": [
+      { "name": "The Red Means Act Rule", "body": "Le rouge Bonnet Rouge signale une action ou la position courante, rien d'autre. Un seul bouton rouge plein par zone d'écran ; pas de rouge décoratif, pas de grand aplat rouge.", "section": "colors" },
+      { "name": "The No Default Green Rule", "body": "Nuxt UI prend primary = brand et gray = slate dans app.config.ts. Aucun composant ne doit retomber sur le vert par défaut.", "section": "colors" },
+      { "name": "The One Gray Rule", "body": "Une seule famille de gris : slate. gray-* n'est plus employé dans le back-office.", "section": "colors" },
+      { "name": "The 12-Pixel Floor Rule", "body": "Aucun texte sous 12 px.", "section": "typography" },
+      { "name": "The No Shouting Rule", "body": "Pas de titres ni d'en-têtes de colonne en capitales ; pas de sur-titre au-dessus du titre de page.", "section": "typography" },
+      { "name": "The Fixed Scale Rule", "body": "Échelle fixe en rem : pas de clamp() sur les titres du back-office.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "Cartes, tableaux, indicateurs, menu et en-tête n'ont aucune ombre et ne bougent pas au survol.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do réserver le rouge Bonnet Rouge (#C8102E) aux actions principales, à la position courante et au focus.",
+      "Do passer par AdminPageHeader pour l'unique h1 de chaque page, en casse normale.",
+      "Do utiliser .admin-surface pour toute carte et .admin-table pour tout tableau.",
+      "Do traduire chaque erreur technique en une phrase claire avec messageUtilisateur() et garder le détail dans la console.",
+      "Do nommer ce qui sera supprimé dans toute confirmation destructive.",
+      "Do donner à chaque graphique et à chaque tableau un état vide qui explique quoi faire."
+    ],
+    "donts": [
+      "Don't laisser un composant Nuxt UI sans couleur retomber sur le vert par défaut.",
+      "Don't ajouter un troisième niveau de navigation (onglets dans des onglets, pastilles de section au-dessus d'onglets).",
+      "Don't utiliser d'emoji ni de caractère Unicode (✓, ▲, ⌕) comme icône : Heroicons, avec un texte pour lecteur d'écran.",
+      "Don't afficher un identifiant interne, un code de migration, un nom de table ou un message brut de la base.",
+      "Don't mettre d'ombre ou de déplacement au survol sur une carte.",
+      "Don't écrire sous 12 px ni en capitales pour les titres et en-têtes."
+    ]
+  }
+}
