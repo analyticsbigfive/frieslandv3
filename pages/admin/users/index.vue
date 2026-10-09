@@ -17,10 +17,12 @@
         />
         <USelectMenu
           v-model="roleFilter"
-          :options="['', 'admin', 'superviseur', 'merchandiser', 'commercial']"
+          :options="[{ value: '', label: 'Tous les rôles' }, ...ROLE_OPTIONS]"
+          option-attribute="label"
+          value-attribute="value"
           placeholder="Rôle"
           size="sm"
-          class="w-full sm:w-40"
+          class="w-full sm:w-48"
         />
       </div>
       <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -101,12 +103,14 @@
                   class="text-xs font-medium px-2.5 py-1 rounded-full"
                   :class="getRoleBadge(user.role)"
                 >
-                  {{ user.role }}
+                  {{ libelleRole(user.role) }}
                 </span>
                 <span
-                  v-if="user.role === 'merchandiser' && estMerchandiserProgramme(user.employeur, agences)"
+                  v-if="(user.role === 'merchandiser' && estMerchandiserProgramme(user.employeur, agences)) || user.role === 'agence'"
                   class="ml-1 rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-800 dark:bg-violet-900/40 dark:text-violet-200"
-                  :title="`Merchandiser ${nomAgenceDe(user.employeur)} : tournée par quotas`"
+                  :title="user.role === 'agence'
+                    ? `Compte agence ${nomAgenceDe(user.employeur)} : ne voit que les merchandisers de son agence`
+                    : `Merchandiser ${nomAgenceDe(user.employeur)} : tournée par quotas`"
                 >{{ nomAgenceDe(user.employeur) }}</span>
                 <span
                   v-if="user.direction"
@@ -183,10 +187,16 @@
           <UFormGroup v-if="!editingUser" label="Mot de passe" required help="8 caractères minimum." size="md">
             <UInput v-model="userForm.password" type="password" placeholder="Saisir un mot de passe" minlength="8" size="md" class="w-full" />
           </UFormGroup>
-          <UFormGroup label="Rôle" size="md">
+          <UFormGroup
+            label="Rôle"
+            :help="userForm.role === 'agence' ? 'Responsable du routing d\'une agence : ne voit et ne charge que les merchandisers de son agence.' : undefined"
+            size="md"
+          >
             <USelectMenu
               v-model="userForm.role"
-              :options="['admin', 'superviseur', 'merchandiser', 'commercial']"
+              :options="ROLE_OPTIONS"
+              option-attribute="label"
+              value-attribute="value"
               size="md"
               class="w-full"
             />
@@ -218,14 +228,17 @@
                agence « programme » (Atom BTL, agence North…) = quotas journaliers par canal,
                chaque PDV une fois par mois. Agences : Référentiels › Agences. -->
           <UFormGroup
-            v-if="userForm.role === 'merchandiser'"
-            label="Employeur (agence)"
-            help="Agence « programme » (Atom BTL, agence North…) : tournée par quotas depuis son portefeuille. FrieslandCampina : tout son périmètre chaque jour."
+            v-if="userForm.role === 'merchandiser' || userForm.role === 'agence'"
+            :label="userForm.role === 'agence' ? 'Agence' : 'Employeur (agence)'"
+            :required="userForm.role === 'agence'"
+            :help="userForm.role === 'agence'
+              ? 'Le compte ne verra que les merchandisers de cette agence.'
+              : 'Agence « programme » (Atom BTL, agence North…) : tournée par quotas depuis son portefeuille. FrieslandCampina : tout son périmètre chaque jour.'"
             size="md"
           >
             <USelectMenu
               v-model="userForm.employeur"
-              :options="employeurOptions"
+              :options="userForm.role === 'agence' ? agencesHorsFriesland : employeurOptions"
               option-attribute="label"
               value-attribute="value"
               size="md"
@@ -552,6 +565,21 @@ const searchQuery = ref('')
 const roleFilter = ref('')
 // Agences : table agence (Référentiels › Agences).
 const { agences, options: employeurOptions, nom: nomAgenceDe, charger: chargerAgences } = useAgences()
+// Un compte agence est toujours rattaché à une agence autre que FrieslandCampina
+// (contrainte profiles_agence_rattachee).
+const agencesHorsFriesland = computed(() => employeurOptions.value.filter(o => o.value !== 'friesland'))
+
+const ROLE_OPTIONS: { value: UserRole, label: string }[] = [
+  { value: 'admin', label: 'Administrateur' },
+  { value: 'superviseur', label: 'Superviseur' },
+  { value: 'commercial', label: 'Commercial' },
+  { value: 'merchandiser', label: 'Merchandiser' },
+  { value: 'agence', label: 'Agence' },
+]
+const libelleRole = (role: string) => ROLE_OPTIONS.find(r => r.value === role)?.label || role
+/** Employeur enregistré : l'agence pour un merchandiser ou un compte agence, FrieslandCampina sinon. */
+const employeurAEnregistrer = () =>
+  userForm.value.role === 'merchandiser' || userForm.value.role === 'agence' ? userForm.value.employeur : 'friesland'
 const directionOptions = [{ value: '', label: 'Déduite des territoires' }, ...DIRECTIONS.map(d => ({ value: d.value, label: d.label }))]
 const showCreate = ref(false)
 const editingUser = ref<Profile | null>(null)
@@ -574,6 +602,13 @@ const userForm = ref({
   region_code: '',
   sub_region_code: '',
   territory_codes: [] as string[],
+})
+
+// Passage au rôle agence : FrieslandCampina n'est pas une agence possible.
+watch(() => userForm.value.role, (role) => {
+  if (role === 'agence' && (!userForm.value.employeur || userForm.value.employeur === 'friesland')) {
+    userForm.value.employeur = agencesHorsFriesland.value[0]?.value || ''
+  }
 })
 
 // Cascade géo Division → Sous-région → Territoire → Quartiers, alignée sur la
@@ -784,6 +819,7 @@ function getRoleBg(role: string) {
     superviseur: 'bg-fc-red',
     merchandiser: 'bg-emerald-600',
     commercial: 'bg-amber-600',
+    agence: 'bg-violet-600',
   }
   return map[role] || 'bg-gray-600'
 }
@@ -794,6 +830,7 @@ function getRoleBadge(role: string) {
     superviseur: 'bg-red-50 text-red-700',
     merchandiser: 'bg-emerald-50 text-emerald-700',
     commercial: 'bg-amber-50 text-amber-700',
+    agence: 'bg-violet-50 text-violet-700',
   }
   return map[role] || 'bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300'
 }
@@ -953,6 +990,10 @@ async function importUsers() {
 }
 
 async function handleSaveUser() {
+  if (userForm.value.role === 'agence' && (!userForm.value.employeur || userForm.value.employeur === 'friesland')) {
+    toast.add({ title: 'Choisissez l\'agence de ce compte', description: 'Un compte agence ne voit que les merchandisers de son agence.', color: 'red' })
+    return
+  }
   saving.value = true
   try {
     // Dérive territoires (noms) depuis les codes cochés ; zone_assignee = 1er (compat legacy).
@@ -994,7 +1035,7 @@ async function handleSaveUser() {
           quartiers_assignes: quartiers,
           telephone: userForm.value.telephone,
           commercial_id: userForm.value.role === 'merchandiser' ? (userForm.value.commercial_id || null) : null,
-          employeur: userForm.value.role === 'merchandiser' ? userForm.value.employeur : 'friesland',
+          employeur: employeurAEnregistrer(),
           direction: userForm.value.direction || null,
         })
         .eq('id', editingUser.value.id)
@@ -1012,7 +1053,7 @@ async function handleSaveUser() {
         role: userForm.value.role,
         telephone: userForm.value.telephone,
         commercial_id: userForm.value.role === 'merchandiser' ? (userForm.value.commercial_id || null) : null,
-        employeur: userForm.value.role === 'merchandiser' ? userForm.value.employeur : 'friesland',
+        employeur: employeurAEnregistrer(),
         direction: userForm.value.direction || null,
         zone_assignee: zoneAssignee,
         territoires_assignes: terrs,
