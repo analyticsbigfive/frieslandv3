@@ -72,9 +72,14 @@ Ordre :
 3. Fusionner la PR.
 4. Imports terrain › Routing mensuel avec le CSV corrigé : simuler, relire, appliquer.
 
-## Soir du 09/10 (suite) : un point GPS par case, sans complément par le portefeuille
+## Soir du 09/10 (suite) : un point GPS par case, quota atteint au plus près
 
-- **Complément par le portefeuille retiré** (migration `20261009140000`). La PR #15 l'avait mis dans `etapes_quota_du_jour`, puis il avait été appliqué en production. Or ce n'est pas une règle du client, qui a dit « il ne doit pas sortir de sa zone » (06/10) : un canal en déficit se complète avec des boutiques du même lieu, sinon la tournée est plus courte. À coller tout de suite : `~/Downloads/tournees-sans-complement-2026-10-09.sql` (avec le recalcul des tournées Atom).
+- **Quota atteint au plus près** (migration `20261009140000`).
+  - Le NB du client sur la diapositive « Objectifs quantitatifs » dit : « atteindre le quota journalier au moins ; s'il n'y a pas de superette (aboki, pushcart, porridge), remplacer par boutiques ».
+  - Une journée dont le lieu a trop peu de PDV est donc complétée par les PDV du portefeuille du merchandiser **les plus proches du lieu** : il ne sort pas de sa zone.
+  - La production avait déjà le complément (PR #15), classé « même zone d'abord » ; la migration le classe par distance.
+  - La version « sans complément », envisagée un moment, est abandonnée.
+  - Tournées du samedi 10/10 vérifiées : 10 PDV par merchandiser, selon la grille.
 - **Positions des lieux.** Analyse dans `~/Downloads/analyse-quartiers-2026-10-09/` : les 204 lieux d'Elias ont une position, dont 160 validées contre nos PDV.
   - Sources : Fable, les coordonnées complémentaires, les corrections de Paillet et de HMA.
   - Il reste 44 lieux à confirmer par Elias (`3f-a-confirmer-elias.csv`), dont 15 hors du portefeuille DMS du merchandiser.
@@ -85,8 +90,8 @@ Ordre :
 - **Application 1.0.12** (code 15) compilée le 09/10 et signée (SHA-1 13b21bc5…), dans `dist-apk/`. L'APK publié le 06/10 était en réalité la 1.0.11 : la 1.0.12 n'avait jamais été compilée.
 
 Ordre :
-1. Le SQL sans complément.
-2. Les migrations `20261009130000` (si ce n'est pas fait), `150000` et `160000`.
+1. Les migrations `140000` (complément au plus près), `150000` et `160000`. Aucune ne recalcule les tournées déjà générées.
+2. `20261009130000`, si ce n'est pas fait (aucun effet en production).
 3. Fusionner la PR.
 4. Imports terrain › Routing mensuel avec le CSV GPS.
 5. Admin › Publier une version : l'APK 1.0.12, version minimale 1.0.12.

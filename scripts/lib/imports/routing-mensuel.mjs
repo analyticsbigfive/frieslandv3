@@ -748,7 +748,7 @@ export function simulerRoutingMensuel(lignes, donnees, options = {}) {
   md.push(`- Merchandisers reconnus : ${resume.merchandisers} (${resume.cases} cases, dont ${resume.casesSansSsf} sans SSF) ; non reconnus : ${resume.merchandisersInconnus}.`)
   md.push(`- Lieux, toujours cherchés dans la commune de la ligne et le portefeuille du merchandiser : ${resume.lieuxExacts} reconnus tels quels, ${resume.lieuxAlias} par un alias validé, ${resume.lieuxApproches} approchés (à relire ci-dessous), ${resume.lieuxCommune} traités au niveau de la commune, ${resume.lieuxIntrouvables} sans commune reconnue.`)
   md.push(`- Cases : ${resume.casesPoint} par point GPS (portefeuille du merchandiser dans le rayon) ; ${resume.casesCommune} au niveau de la commune (portefeuille du merchandiser dans la commune) ; ${resume.casesSansLieu} sans point, lieu ni commune (portefeuille entier ce jour-là).`)
-  md.push(`- Règles de tournée créées : ${resume.regles}. La règle de portefeuille de chaque merchandiser passe en « repli » : elle ne sert que les jours sans case (5e semaine, case vide). Une case qui a peu de PDV donne une tournée plus courte (règle du client : il ne sort pas de sa zone).`)
+  md.push(`- Règles de tournée créées : ${resume.regles}. La règle de portefeuille de chaque merchandiser passe en « repli » : elle fait la tournée des jours sans case (5e semaine, case vide). Une case qui a peu de PDV est complétée au plus près : les PDV de son portefeuille les plus proches du lieu (NB du client : atteindre le quota du jour).`)
   md.push(`- SSF : ${resume.ssfACreer} à créer, ${resume.ssfARelier} à relier (orthographe proche d’un SSF existant : ajouter un alias, puis relancer la simulation).`)
   if (sansRegleDePortefeuille.length) md.push(`- Sans règle de portefeuille (aucune tournée les jours sans case) : ${sansRegleDePortefeuille.join(', ')}.`)
   if (merchInconnus.size) {
@@ -784,7 +784,7 @@ export function simulerRoutingMensuel(lignes, donnees, options = {}) {
   const pointsMaigres = plannings.flatMap(p => p.liste.filter(l => l.parPoint && l.pdvPoint < 10).map(l => `${p.profil.nom} — ${JOURS[l.jour_semaine]} S${l.semaine_du_mois} — ${l.point_visite} : ${l.pdvPoint} PDV`))
   if (pointsMaigres.length) {
     md.push('', '## Points GPS avec peu de PDV du portefeuille (moins de 10 dans le rayon)', '')
-    md.push('La tournée de ces jours sera courte : vérifier le point, élargir le rayon (colonne « Rayon », 100 à 3 000 m) ou confirmer avec l’agence.', '')
+    md.push('Ces jours-là, la tournée sera complétée par les PDV de son portefeuille les plus proches : vérifier le point, élargir le rayon (colonne « Rayon », 100 à 3 000 m) ou confirmer avec l’agence.', '')
     md.push(...pointsMaigres.map(x => `- ${x}`))
   }
   md.push('', '## Lieux à rattacher', '')
