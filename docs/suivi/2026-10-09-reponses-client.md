@@ -71,3 +71,22 @@ Ordre :
 2. Les migrations `20261009110000` (déjà en production), `20261009120000` et `20261009130000`.
 3. Fusionner la PR.
 4. Imports terrain › Routing mensuel avec le CSV corrigé : simuler, relire, appliquer.
+
+## Soir du 09/10 (suite) : un point GPS par case, sans complément par le portefeuille
+
+- **Complément par le portefeuille retiré** (migration `20261009140000`). La PR #15 l'avait mis dans `etapes_quota_du_jour`, puis il avait été appliqué en production. Or ce n'est pas une règle du client, qui a dit « il ne doit pas sortir de sa zone » (06/10) : un canal en déficit se complète avec des boutiques du même lieu, sinon la tournée est plus courte. À coller tout de suite : `~/Downloads/tournees-sans-complement-2026-10-09.sql` (avec le recalcul des tournées Atom).
+- **Positions des lieux.** Analyse dans `~/Downloads/analyse-quartiers-2026-10-09/` : les 204 lieux d'Elias ont une position, dont 160 validées contre nos PDV.
+  - Sources : Fable, les coordonnées complémentaires, les corrections de Paillet et de HMA.
+  - Il reste 44 lieux à confirmer par Elias (`3f-a-confirmer-elias.csv`), dont 15 hors du portefeuille DMS du merchandiser.
+- **Point GPS par case** (migration `20261009160000`). Le fichier de l'agence peut porter Latitude, Longitude et Rayon. La tournée prend alors les PDV du portefeuille du merchandiser dans le rayon (500 m par défaut).
+  - Fichier prêt : `~/Downloads/Routing_mensuel_merchandisers_avec_gps_2026-10-09.csv`, avec 164 cases à point.
+  - Simulation sur la production : 164 cases par point, 17 au niveau de la commune, aucune sans lieu, aucun PDV hors d'Abidjan.
+- **Alias « Quartier rouge »** (migration `20261009150000`) vers RENAULT, FORUM et MARCHE GOURO. Les 153 PDV d'Adjamé sans quartier restent tels quels, en attendant Elias.
+- **Application 1.0.12** (code 15) compilée le 09/10 et signée (SHA-1 13b21bc5…), dans `dist-apk/`. L'APK publié le 06/10 était en réalité la 1.0.11 : la 1.0.12 n'avait jamais été compilée.
+
+Ordre :
+1. Le SQL sans complément.
+2. Les migrations `20261009130000` (si ce n'est pas fait), `150000` et `160000`.
+3. Fusionner la PR.
+4. Imports terrain › Routing mensuel avec le CSV GPS.
+5. Admin › Publier une version : l'APK 1.0.12, version minimale 1.0.12.

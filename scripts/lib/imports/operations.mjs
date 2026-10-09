@@ -93,6 +93,9 @@ const VALIDATEURS = {
       for (const k of ['secteur', 'commune', 'point_visite', 'zone', 'ssf_texte', 'type_engin', 'distributeur', 'source']) exiger(texteOuNul(l[k], 200), `case : ${k} invalide`)
       exiger(estListeTextes(l.quartiers || [], 50, 200), 'case : quartiers invalides')
       exiger(estListeTextes(l.lieux || [], 50, 300) && (l.lieux || []).every(x => x.includes('›')), 'case : lieux « ZONE›QUARTIER » invalides')
+      const avecPoint = l.latitude != null || l.longitude != null
+      exiger(!avecPoint || (Number.isFinite(l.latitude) && Number.isFinite(l.longitude) && Math.abs(l.latitude) <= 90 && Math.abs(l.longitude) <= 180), 'case : point GPS invalide')
+      exiger(l.rayon_m == null || (Number.isInteger(l.rayon_m) && l.rayon_m >= 100 && l.rayon_m <= 3000), 'case : rayon 100 à 3 000 m')
     }
   },
   'regles_mensuelles.remplacer'(op) {
@@ -292,7 +295,9 @@ const EXECUTEURS = {
       lignes.push({
         merchandiser_id: op.user_id, jour_semaine: l.jour_semaine, semaine_du_mois: l.semaine_du_mois,
         secteur: l.secteur || null, commune: l.commune || null, point_visite: l.point_visite || null, zone: l.zone || null,
-        quartiers: [...new Set(l.quartiers || [])], lieux: [...new Set(l.lieux || [])], ssf_id: l.ssf ? await idSsf(sb, l.ssf) : null,
+        quartiers: [...new Set(l.quartiers || [])], lieux: [...new Set(l.lieux || [])],
+        latitude: l.latitude ?? null, longitude: l.longitude ?? null, rayon_m: l.latitude != null ? (l.rayon_m ?? null) : null,
+        ssf_id: l.ssf ? await idSsf(sb, l.ssf) : null,
         ssf_texte: l.ssf_texte || null, type_engin: l.type_engin || null, commercial_id: l.commercial_id || null,
         distributeur: l.distributeur || null, source: l.source || op.source || 'import', actif: true,
       })

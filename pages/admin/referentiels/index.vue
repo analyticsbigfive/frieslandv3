@@ -216,6 +216,14 @@ async function appliquerRoutingMensuel(userId: string) {
   await $fetch('/api/admin/imports/routing-mensuel/appliquer', { method: 'POST', body: { operations } })
 }
 const LIEU_SEP = /[|;\n]+/
+// « 5.3673, -4.0217 » (copié de Google Maps) → [lat, lng] ; null si illisible.
+function lirePoint(texte: unknown): [number, number] | null {
+  const m = String(texte || '').trim().match(/^(-?\d+(?:[.,]\d+)?)\s*[,; ]\s*(-?\d+(?:[.,]\d+)?)$/)
+  if (!m) return null
+  const lat = Number(m[1].replace(',', '.'))
+  const lng = Number(m[2].replace(',', '.'))
+  return Math.abs(lat) <= 90 && Math.abs(lng) <= 180 && (lat !== 0 || lng !== 0) ? [lat, lng] : null
+}
 
 // -- Enumérations métier (Système B) --------------------------------------
 const CANAUX = ['GT', 'MT']
@@ -1243,15 +1251,16 @@ const defs: Def[] = [
   },
   {
     id: 'routing_mensuel', section: 'distrib', label: 'Routing mensuel', table: 'routing_mensuel',
-    select: 'id, merchandiser_id, jour_semaine, semaine_du_mois, secteur, commune, point_visite, zone, quartiers, lieux, ssf_id, ssf_texte, type_engin, source, actif',
+    select: 'id, merchandiser_id, jour_semaine, semaine_du_mois, secteur, commune, point_visite, zone, quartiers, lieux, latitude, longitude, rayon_m, ssf_id, ssf_texte, type_engin, source, actif',
     order: q => q.order('merchandiser_id').order('jour_semaine').order('semaine_du_mois'),
-    aide: 'Routing mensuel de l’agence : pour chaque merchandiser, jour et semaine du mois, le point de visite, ses quartiers (dans sa commune) et le SSF du jour (binôme sans lien hiérarchique : tous deux dépendent du commercial). Alimenté par Import / Export › Imports terrain › Routing mensuel ; une correction ici vaut jusqu’au prochain import. Sans quartier, la tournée prend le portefeuille du merchandiser dans la commune ; sans commune, tout le portefeuille. Enregistrer refait aussitôt les règles du merchandiser et ses tournées des 7 jours à venir (celle du jour ne change pas).',
+    aide: 'Routing mensuel de l’agence : pour chaque merchandiser, jour et semaine du mois, le point de visite, ses quartiers (dans sa commune) et le SSF du jour (binôme sans lien hiérarchique : tous deux dépendent du commercial). Alimenté par Import / Export › Imports terrain › Routing mensuel ; une correction ici vaut jusqu’au prochain import. Avec un point GPS, la tournée prend les PDV de son portefeuille dans le rayon (500 m par défaut) ; sinon ceux des quartiers ; sans quartier, son portefeuille dans la commune ; sans commune, tout le portefeuille. Enregistrer refait aussitôt les règles du merchandiser et ses tournées des 7 jours à venir (celle du jour ne change pas).',
     columns: [
       { label: 'Merchandiser', cell: r => nomUtilisateur(r.merchandiser_id) },
       { label: 'Jour', cell: r => JOURS_SEMAINE[r.jour_semaine] },
       { label: 'Semaine', cell: r => `S${r.semaine_du_mois}`, align: 'c' },
       { label: 'Commune', cell: r => r.commune || '—' },
       { label: 'Point de visite', cell: r => r.point_visite || '—' },
+      { label: 'Point GPS', cell: r => (r.latitude != null ? `${r.latitude}, ${r.longitude} (${r.rayon_m || 500} m)` : '—'), kind: 'mono' },
       { label: 'Quartiers', cell: r => (r.lieux || []).join(', ') || (r.commune ? `Commune de ${r.commune} (portefeuille)` : 'Portefeuille'), muted: true },
       { label: 'SSF', cell: r => (r.ssf_id ? ssfNomOf(r.ssf_id) : r.ssf_texte ? `${r.ssf_texte} (non relié)` : 'Aucun SSF') },
       { label: 'Origine', cell: r => ORIGINES_BINOME(r.source).label, kind: 'badge', color: r => ORIGINES_BINOME(r.source).color },
@@ -1263,22 +1272,29 @@ const defs: Def[] = [
       { key: 'semaine_du_mois', label: 'Semaine du mois', type: 'select', opts: () => [1, 2, 3, 4].map(s => ({ value: s, label: `Semaine ${s}` })), required: true, lockEdit: true },
       { key: 'point_visite', label: 'Point de visite', type: 'text' },
       { key: 'commune', label: 'Commune', type: 'text', hint: 'Commune du fichier de l’agence (ex. Abobo). Sans quartier : portefeuille du merchandiser dans cette commune.' },
-      { key: 'lieux', label: 'Quartiers', type: 'text', hint: 'ZONE›QUARTIER tels que dans les PDV, séparés par « | » (ex. ABOBO 1›SAMAKE | ABOBO 1›BC). Vide : la commune, sinon tout le portefeuille.' },
+      { key: 'point', label: 'Point GPS', type: 'text', hint: 'Latitude, longitude (copiées de Google Maps, ex. 5.3673, -4.0217). La tournée prend alors les PDV de son portefeuille dans le rayon.' },
+      { key: 'rayon_m', label: 'Rayon (m)', type: 'num', min: 100, max: 3000, step: 50, hint: '500 m si vide.' },
+      { key: 'lieux', label: 'Quartiers', type: 'text', hint: 'ZONE›QUARTIER tels que dans les PDV, séparés par « | » (ex. ABOBO 1›SAMAKE | ABOBO 1›BC). Sert sans point GPS. Vide : la commune, sinon tout le portefeuille.' },
       { key: 'ssf_id', label: 'SSF', type: 'select', opts: () => [{ value: 0, label: 'Aucun SSF' }, ...ssfOpts()] },
       { key: 'type_engin', label: 'Engin du SSF', type: 'text', hint: 'Mini van, Moto, Grossiste…' },
       { key: 'actif', label: 'Actif', type: 'bool' },
     ],
-    blank: () => ({ merchandiser_id: null, jour_semaine: 1, semaine_du_mois: 1, point_visite: '', commune: '', lieux: '', ssf_id: 0, type_engin: '', actif: true }),
-    fill: r => ({ ...r, commune: r.commune || '', lieux: (r.lieux || []).join(' | '), ssf_id: r.ssf_id || 0 }),
+    blank: () => ({ merchandiser_id: null, jour_semaine: 1, semaine_du_mois: 1, point_visite: '', commune: '', point: '', rayon_m: null, lieux: '', ssf_id: 0, type_engin: '', actif: true }),
+    fill: r => ({ ...r, commune: r.commune || '', point: r.latitude != null ? `${r.latitude}, ${r.longitude}` : '', lieux: (r.lieux || []).join(' | '), ssf_id: r.ssf_id || 0 }),
     rowKey: r => r.id,
     search: r => `${nomUtilisateur(r.merchandiser_id)} ${r.ssf_id ? ssfNomOf(r.ssf_id) : r.ssf_texte || ''} ${JOURS_SEMAINE[r.jour_semaine]} ${r.commune || ''} ${r.point_visite || ''} ${(r.lieux || []).join(' ')}`.toLowerCase(),
     valid: f => !!f.merchandiser_id && f.jour_semaine != null && !!f.semaine_du_mois
-      && String(f.lieux || '').split(LIEU_SEP).map((x: string) => x.trim()).filter(Boolean).every((x: string) => x.includes('›')),
+      && String(f.lieux || '').split(LIEU_SEP).map((x: string) => x.trim()).filter(Boolean).every((x: string) => x.includes('›'))
+      && (!String(f.point || '').trim() || !!lirePoint(f.point)),
     save: async (f, e) => {
       const lieux = [...new Set(String(f.lieux || '').split(LIEU_SEP).map((x: string) => x.split('›').map(t => t.trim()).join('›')).filter(Boolean))]
+      const point = lirePoint(f.point)
       const rec = {
         point_visite: String(f.point_visite || '').trim() || null,
         commune: String(f.commune || '').trim() || null,
+        latitude: point?.[0] ?? null,
+        longitude: point?.[1] ?? null,
+        rayon_m: point && f.rayon_m ? Math.min(3000, Math.max(100, Math.round(Number(f.rayon_m)))) : null,
         lieux,
         zone: lieux[0]?.split('›')[0] || null,
         quartiers: [...new Set(lieux.map(x => x.split('›')[1]).filter(Boolean))],

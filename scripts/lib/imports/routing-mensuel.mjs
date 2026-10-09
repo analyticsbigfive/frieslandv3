@@ -28,7 +28,12 @@
  *   - merchandiser, SSF, commercial : trouverPersonne (nom exact dans
  *     n'importe quel ordre, alias, puis nom tolérant) ; SSF cherché d'abord
  *     parmi ceux du distributeur de la ligne ;
- *   - point de visite → quartier(s) des PDV, TOUJOURS dans le territoire de
+ *   - point GPS de la case (colonnes facultatives « Latitude », « Longitude »,
+ *     « Rayon ») : la tournée prend les PDV du PORTEFEUILLE du merchandiser
+ *     (son distributeur DMS, celui du SSF) à moins du rayon (500 m par
+ *     défaut). Décision du 09/10 : 93 % des PDV n'ont pas d'area et les
+ *     quartiers sont écrits autrement par l'agence ; le point évite ces trous ;
+ *   - sans point : point de visite → quartier(s) des PDV, TOUJOURS dans le territoire de
  *     la ligne : zones de sa commune (colonne « Commune » ; à défaut, du
  *     secteur) et zones principales du portefeuille du merchandiser. Jamais
  *     ailleurs (09/10 : « Kennedy 2 » d'Abobo était parti à Daloa). Dans
@@ -44,7 +49,7 @@
  */
 import {
   chargerAlias, cleNom, csvTexte, distributeurCanonique, feuillesDepuisClasseur, feuillesDepuisCsv, motsPersonne, motsProches,
-  norm, ordreGps, resoudreAlias, toutesLesLignes, trouverPersonne, uniques,
+  aGps, haversine, norm, ordreGps, resoudreAlias, toutesLesLignes, trouverPersonne, uniques,
 } from '../commun.mjs'
 import { lireJours } from './ssf-sous-zones.mjs'
 
@@ -62,6 +67,12 @@ const entreParentheses = (s) => [...String(s || '').matchAll(/\(([^)]*)\)/g)].ma
 // affectations DMS traînent un PDV isolé à Bouaké ou Aboisso).
 const MIN_PDV_ZONE_PORTEFEUILLE = 10
 const MAX_QUARTIERS_APPROCHES = 4
+const RAYON_DEFAUT_M = 500
+const RAYON_MIN_M = 100
+const RAYON_MAX_M = 3000
+/** Nombre d'une cellule (« 5,3673 » ou « 5.3673 ») ; null si vide ou illisible. */
+const nombre = (v) => { const n = Number(String(v ?? '').trim().replace(',', '.')); return String(v ?? '').trim() && Number.isFinite(n) ? n : null }
+const rayonDe = (v) => { const n = nombre(v); return n == null ? null : Math.min(RAYON_MAX_M, Math.max(RAYON_MIN_M, Math.round(n))) }
 // Deux mots de lieu voisins : une faute, une lettre doublée (« APOLLO » /
 // « APPOLO »), un mot qui commence l'autre, ou six lettres de tête communes
 // (« LUBAFRIK » / « LUBAFRIQUE »).
@@ -102,6 +113,9 @@ export function lireRoutingMensuel(feuilles) {
           else if (/^(SSF|VENDEUR|SALESMAN)/.test(h) && !idx.ssf) idx.ssf = i
           else if (/^(OCCURR?ENCE|SEMAINE|OCC)/.test(h) && !idx.semaine) idx.semaine = i
           else if (/^JOUR/.test(h) && !idx.jour) idx.jour = i
+          else if (/^(LATITUDE|LAT)$/.test(h) && !idx.lat) idx.lat = i
+          else if (/^(LONGITUDE|LONG|LNG|LON)$/.test(h) && !idx.lng) idx.lng = i
+          else if (/^RAYON/.test(h) && !idx.rayon) idx.rayon = i
           else if (/^COMMUNE/.test(h) && !idx.commune) idx.commune = i
           else if (/^QUARTIER/.test(h) && !idx.quartier) idx.quartier = i
           else if (/^(POINT|LIEU|SOUS ?ZONE)/.test(h) && !idx.point) idx.point = i
@@ -115,6 +129,9 @@ export function lireRoutingMensuel(feuilles) {
       if (!merch) continue
       const ssfBrut = v(cols.ssf)
       const ssfCle = cleTexte(ssfBrut)
+      const lat = cols.lat ? nombre(v(cols.lat)) : null
+      const lng = cols.lng ? nombre(v(cols.lng)) : null
+      const point = lat != null && lng != null && aGps(lat, lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180
       lignes.push({
         feuille: f.nom, ligne: n,
         secteur: v(cols.secteur), commune: v(cols.commune), merch, distributeur: v(cols.distributeur), salesRep: v(cols.salesRep),
@@ -126,6 +143,7 @@ export function lireRoutingMensuel(feuilles) {
         ssfTexte: ssfBrut && !SANS_SSF.has(ssfCle) ? ssfBrut : null,
         ssfAPreciser: SSF_A_PRECISER.has(ssfCle),
         typeSsf: ['', '-'].includes(v(cols.typeSsf)) ? null : v(cols.typeSsf),
+        latitude: point ? lat : null, longitude: point ? lng : null, rayon: point ? (rayonDe(v(cols.rayon)) ?? RAYON_DEFAUT_M) : null,
       })
     }
   }
@@ -231,11 +249,21 @@ export function approcherLieu(texte, admissibles, index) {
 }
 
 /**
- * PDV d'une case : ceux de ses lieux « ZONE›QUARTIER » ; sans lieu mais avec
- * une commune, ceux du portefeuille dans la commune (à défaut, les PDV de la
- * commune dans les territoires du compte).
+ * PDV d'une case :
+ *   - avec un point GPS : ceux du portefeuille du merchandiser à moins du rayon ;
+ *     aucun dans le rayon → on retombe sur les lieux ou la commune ;
+ *   - sinon ceux de ses lieux « ZONE›QUARTIER » ; sans lieu mais avec une
+ *     commune, ceux du portefeuille dans la commune (à défaut, les PDV de la
+ *     commune dans les territoires du compte).
  */
 export function pdvsDeCase(c, { index, portefeuille = [], zonesPortefeuille = [], territoires = [] }) {
+  if (c.latitude != null && c.longitude != null) {
+    const rayon = c.rayon_m || RAYON_DEFAUT_M
+    const pdvs = portefeuille.map(id => index.parId.get(id))
+      .filter(p => p && p.is_active !== false && aGps(p.geolocation_lat, p.geolocation_lng)
+        && haversine(c.latitude, c.longitude, p.geolocation_lat, p.geolocation_lng) <= rayon)
+    if (pdvs.length) return { mode: 'point', cle: `point:${(+c.latitude).toFixed(5)},${(+c.longitude).toFixed(5)},${rayon}`, pdvs, rayon }
+  }
   const lieux = uniques((c.lieux || []).map(cleLieu))
   if (lieux.length) {
     return { mode: 'lieu', cle: lieux.sort().join(','), pdvs: lieux.flatMap(k => index.quartiers.get(k)?.pdvs || []) }
@@ -259,7 +287,7 @@ export function pdvsDeCase(c, { index, portefeuille = [], zonesPortefeuille = []
  * Règles de tournée du routing mensuel d'un merchandiser : une par (jour,
  * lieu ou commune, SSF), avec ses semaines. Sert à l'import et à la
  * correction d'une case dans Référentiels › Routing mensuel.
- * cases : { jour_semaine, semaine_du_mois, point_visite, secteur, commune, lieux, ssf, distributeur }.
+ * cases : { jour_semaine, semaine_du_mois, point_visite, secteur, commune, lieux, latitude, longitude, rayon_m, ssf, distributeur }.
  */
 export function reglesDuRouting(cases, ctx) {
   const { debut = null, origine = 'routing mensuel de l’agence' } = ctx
@@ -273,13 +301,15 @@ export function reglesDuRouting(cases, ctx) {
   }
   return [...groupes.values()].map(({ c, res, semaines }) => {
     const sems = uniques(semaines).sort((a, b) => a - b)
-    const lieux = res.mode === 'commune'
-      ? `${c.commune} (quartier non trouvé : portefeuille dans la commune)`
-      : uniques(res.pdvs.map(p => `${p.zone} › ${p.quartier}`)).join(', ')
+    const lieux = res.mode === 'point'
+      ? `portefeuille à moins de ${res.rayon} m du point ${(+c.latitude).toFixed(5)}, ${(+c.longitude).toFixed(5)} (${res.pdvs.length} PDV)`
+      : res.mode === 'commune'
+        ? `${c.commune} (quartier non trouvé : portefeuille dans la commune)`
+        : uniques(res.pdvs.map(p => `${p.zone} › ${p.quartier}`)).join(', ')
     return {
       label: `${PREFIXE_REGLE}${JOURS[c.jour_semaine]} S${sems.join('+')} — ${c.point_visite || c.commune || c.zone || '—'}`.slice(0, 200),
       ssf: c.ssf || null, days_of_week: [c.jour_semaine], semaines_du_mois: sems,
-      territoire: res.mode === 'commune' ? (c.commune || null) : (c.zone || res.pdvs[0]?.zone || null),
+      territoire: res.mode === 'commune' ? (c.commune || null) : (c.zone || res.pdvs[0]?.zone || c.commune || null),
       distributeur: c.distributeur || null, date_debut: debut,
       notes: `Routing mensuel (${origine}) : ${c.point_visite || '—'}${c.ssf ? ` avec ${c.ssf.nom || 'SSF'}` : ', sans SSF'} — ${lieux}.`.slice(0, 4000),
       pdv_ids: ordreGps(uniques(res.pdvs.map(p => p.pdv_id)).map(id => ctx.index.parId.get(id))).map(p => p.pdv_id),
@@ -296,7 +326,7 @@ export async function operationsDepuisRouting(sb, userId, { toutes = toutesLesLi
   const lire = async (q, quoi) => { const { data, error } = await q; if (error) throw new Error(`${quoi} : ${error.message}`); return data }
   const [profil, cases, regles, pdvs] = await Promise.all([
     lire(sb.from('profiles').select('id,territoires_assignes,zone_assignee').eq('id', userId).single(), 'merchandiser'),
-    toutes(() => sb.from('routing_mensuel').select('jour_semaine,semaine_du_mois,secteur,commune,point_visite,zone,lieux,ssf_id,distributeur')
+    toutes(() => sb.from('routing_mensuel').select('jour_semaine,semaine_du_mois,secteur,commune,point_visite,zone,lieux,latitude,longitude,rayon_m,ssf_id,distributeur')
       .eq('merchandiser_id', userId).eq('actif', true).order('id')),
     toutes(() => sb.from('routing_templates').select('id,user_id,label,is_active,ssf_id').eq('user_id', userId).order('id')),
     toutes(() => sb.from('pdv').select('pdv_id,zone,quartier,is_active,geolocation_lat,geolocation_lng').order('pdv_id')),
@@ -382,7 +412,7 @@ export async function chargerDonneesRoutingMensuel(sb, { onEtape, toutes = toute
   let routingAvant = []
   try {
     routingAvant = await toutes(() => sb.from('routing_mensuel')
-      .select('merchandiser_id,jour_semaine,semaine_du_mois,secteur,commune,point_visite,zone,quartiers,lieux,ssf_id,ssf_texte,type_engin,commercial_id,distributeur,source')
+      .select('merchandiser_id,jour_semaine,semaine_du_mois,secteur,commune,point_visite,zone,quartiers,lieux,latitude,longitude,rayon_m,ssf_id,ssf_texte,type_engin,commercial_id,distributeur,source')
       .eq('actif', true).order('id'))
   }
   catch { migrationAppliquee = false }
@@ -402,7 +432,7 @@ export function simulerRoutingMensuel(lignes, donnees, options = {}) {
   const debut = options.debut || aujourdhui
   const { profils, commerciaux, distributeurs, aliasImport, ssfs, pdvs, regles, reglesPdv, routingAvant, ssfQuartiers } = donnees
   const bloquants = donnees.migrationAppliquee === false
-    ? ['Les migrations du routing mensuel (20261008130000, 20261009120000) ne sont pas toutes appliquées.']
+    ? ['Les migrations du routing mensuel (20261008130000, 20261009120000, 20261009160000) ne sont pas toutes appliquées.']
     : []
   const avertissements = []
 
@@ -580,6 +610,7 @@ export function simulerRoutingMensuel(lignes, donnees, options = {}) {
         secteur: c.secteur || null, commune: c.commune || null, point_visite: c.point || null,
         zone: q[0]?.zone || null, quartiers: uniques(q.map(x => x.quartier)),
         lieux: uniques(q.map(x => `${x.zone}›${x.quartier}`)),
+        latitude: c.latitude ?? null, longitude: c.longitude ?? null, rayon_m: c.latitude != null ? c.rayon : null,
         ssf: ref, ssf_texte: c.ssfTexte || null, type_engin: c.typeSsf || null,
         commercial_id: c.com.trouve?.id || null, distributeur: c.dist?.nom || c.distributeur || null,
         _case: c,
@@ -591,6 +622,7 @@ export function simulerRoutingMensuel(lignes, donnees, options = {}) {
       lignes: routingAvant.filter(r => r.merchandiser_id === userId).map(r => ({
         jour_semaine: r.jour_semaine, semaine_du_mois: r.semaine_du_mois, secteur: r.secteur, point_visite: r.point_visite,
         commune: r.commune || null, zone: r.zone, quartiers: r.quartiers || [], lieux: r.lieux || [],
+        latitude: r.latitude ?? null, longitude: r.longitude ?? null, rayon_m: r.rayon_m ?? null,
         ssf: r.ssf_id ? { id: r.ssf_id, nom: ssfParId.get(r.ssf_id)?.nom } : null,
         ssf_texte: r.ssf_texte, type_engin: r.type_engin, commercial_id: r.commercial_id, distributeur: r.distributeur, source: r.source,
       })),
@@ -599,7 +631,12 @@ export function simulerRoutingMensuel(lignes, donnees, options = {}) {
     // Règles : une par (jour, lieu ou commune, SSF), avec ses semaines ; case sans lieu ni commune → repli.
     const ctxPf = portefeuilleCtx(profil)
     const reglesNouvelles = reglesDuRouting(lignesRm, { ...ctxPf, debut, origine: fichier })
-    for (const l of lignesRm) l.parCommune = !l.lieux.length && pdvsDeCase(l, ctxPf).mode === 'commune'
+    for (const l of lignesRm) {
+      const r = pdvsDeCase(l, ctxPf)
+      l.parPoint = r.mode === 'point'
+      l.pdvPoint = r.mode === 'point' ? r.pdvs.length : null
+      l.parCommune = !l.parPoint && !l.lieux.length && r.mode === 'commune'
+    }
     regleOps.push({ type: 'regles_mensuelles.remplacer', user_id: userId, created_by: options.auteurId || null, regles: reglesNouvelles })
     const avant = regles.filter(r => r.user_id === userId && /^(SSF — |Routing mensuel — )/.test(r.label || ''))
     retour.push({
@@ -690,7 +727,8 @@ export function simulerRoutingMensuel(lignes, donnees, options = {}) {
     merchandisersInconnus: merchInconnus.size,
     cases: nbCases,
     casesSansSsf: plannings.reduce((n, p) => n + p.liste.filter(l => !l.ssf).length, 0),
-    casesSansLieu: plannings.reduce((n, p) => n + p.liste.filter(l => !l.lieux.length && !l.parCommune).length, 0),
+    casesPoint: plannings.reduce((n, p) => n + p.liste.filter(l => l.parPoint).length, 0),
+    casesSansLieu: plannings.reduce((n, p) => n + p.liste.filter(l => !l.parPoint && !l.lieux.length && !l.parCommune).length, 0),
     casesCommune: plannings.reduce((n, p) => n + p.liste.filter(l => l.parCommune).length, 0),
     regles: plannings.reduce((n, p) => n + p.regles.length, 0),
     lieuxExacts: nbLieux('exact'),
@@ -709,8 +747,8 @@ export function simulerRoutingMensuel(lignes, donnees, options = {}) {
   md.push('', '## Résumé', '')
   md.push(`- Merchandisers reconnus : ${resume.merchandisers} (${resume.cases} cases, dont ${resume.casesSansSsf} sans SSF) ; non reconnus : ${resume.merchandisersInconnus}.`)
   md.push(`- Lieux, toujours cherchés dans la commune de la ligne et le portefeuille du merchandiser : ${resume.lieuxExacts} reconnus tels quels, ${resume.lieuxAlias} par un alias validé, ${resume.lieuxApproches} approchés (à relire ci-dessous), ${resume.lieuxCommune} traités au niveau de la commune, ${resume.lieuxIntrouvables} sans commune reconnue.`)
-  md.push(`- Cases : ${resume.casesCommune} au niveau de la commune (portefeuille du merchandiser dans la commune) ; ${resume.casesSansLieu} sans lieu ni commune (portefeuille entier ce jour-là).`)
-  md.push(`- Règles de tournée créées : ${resume.regles}. La règle de portefeuille de chaque merchandiser passe en « repli » (jours sans case : 5e semaine, case vide) ; elle complète aussi une journée dont la case ne suffit pas.`)
+  md.push(`- Cases : ${resume.casesPoint} par point GPS (portefeuille du merchandiser dans le rayon) ; ${resume.casesCommune} au niveau de la commune (portefeuille du merchandiser dans la commune) ; ${resume.casesSansLieu} sans point, lieu ni commune (portefeuille entier ce jour-là).`)
+  md.push(`- Règles de tournée créées : ${resume.regles}. La règle de portefeuille de chaque merchandiser passe en « repli » : elle ne sert que les jours sans case (5e semaine, case vide). Une case qui a peu de PDV donne une tournée plus courte (règle du client : il ne sort pas de sa zone).`)
   md.push(`- SSF : ${resume.ssfACreer} à créer, ${resume.ssfARelier} à relier (orthographe proche d’un SSF existant : ajouter un alias, puis relancer la simulation).`)
   if (sansRegleDePortefeuille.length) md.push(`- Sans règle de portefeuille (aucune tournée les jours sans case) : ${sansRegleDePortefeuille.join(', ')}.`)
   if (merchInconnus.size) {
@@ -743,6 +781,12 @@ export function simulerRoutingMensuel(lignes, donnees, options = {}) {
     md.push('', '## Alias hors de la commune (appliqués, à vérifier)', '')
     for (const r of horsTerr) md.push(`- ${r.point} (${r.commune || r.secteur || '—'}) → ${qListe(r.horsTerritoire)}.`)
   }
+  const pointsMaigres = plannings.flatMap(p => p.liste.filter(l => l.parPoint && l.pdvPoint < 10).map(l => `${p.profil.nom} — ${JOURS[l.jour_semaine]} S${l.semaine_du_mois} — ${l.point_visite} : ${l.pdvPoint} PDV`))
+  if (pointsMaigres.length) {
+    md.push('', '## Points GPS avec peu de PDV du portefeuille (moins de 10 dans le rayon)', '')
+    md.push('La tournée de ces jours sera courte : vérifier le point, élargir le rayon (colonne « Rayon », 100 à 3 000 m) ou confirmer avec l’agence.', '')
+    md.push(...pointsMaigres.map(x => `- ${x}`))
+  }
   md.push('', '## Lieux à rattacher', '')
   md.push('Quartier absent de la commune : la case vaut pour la commune (portefeuille du merchandiser dans la commune). Pour viser un quartier, ajouter un alias de type « quartier » (Référentiels › Alias d’import ; cible « ZONE›QUARTIER », plusieurs séparées par « | »). Les propositions ne sont jamais appliquées seules.')
   md.push('', '| Secteur | Commune | Point de visite | Traitement | Propositions |', '|---|---|---|---|---|')
@@ -760,12 +804,12 @@ export function simulerRoutingMensuel(lignes, donnees, options = {}) {
       const cel = (s) => {
         const l = p.liste.find(x => x.jour_semaine === j && x.semaine_du_mois === s)
         if (!l) return '—'
-        const marque = l.lieux.length ? (l._case.lieu.statut === 'approche' ? ' ≈' : '') : l.parCommune ? ' ◌' : ' ⚠'
+        const marque = l.parPoint ? ` ⊙${l.pdvPoint}` : l.lieux.length ? (l._case.lieu.statut === 'approche' ? ' ≈' : '') : l.parCommune ? ' ◌' : ' ⚠'
         return `${l.point_visite || '?'}${marque}${l.ssf ? ` · ${l.ssf.nom}` : ''}`
       }
       md.push(`| ${JOURS[j]} | ${cel(1)} | ${cel(2)} | ${cel(3)} | ${cel(4)} |`)
     }
-    md.push('', '≈ = quartier approché ; ◌ = quartier non trouvé, portefeuille dans la commune ; ⚠ = ni lieu ni commune (portefeuille entier ce jour-là).', '')
+    md.push('', '⊙n = point GPS, n PDV du portefeuille dans le rayon ; ≈ = quartier approché ; ◌ = quartier non trouvé, portefeuille dans la commune ; ⚠ = ni point, ni lieu, ni commune (portefeuille entier ce jour-là).', '')
   }
   if (doublons.length) md.push('', '## Cases en double dans le fichier', '', ...doublons.map(d => `- ${d}`))
   if (avertissements.length) md.push('', '## Avertissements', '', ...avertissements.map(a => `- ${a}`))
@@ -774,7 +818,7 @@ export function simulerRoutingMensuel(lignes, donnees, options = {}) {
   const csv = {
     'routing-mensuel.csv': csvTexte(['Merchandiser', 'Email', 'Jour', 'Semaine', 'Secteur', 'Commune', 'Point de visite', 'Rattachement', 'Quartiers retenus', 'SSF', 'Engin', 'Commercial', 'Distributeur'],
       plannings.flatMap(p => p.liste.map(l => [p.profil.nom, p.profil.email, JOURS[l.jour_semaine], l.semaine_du_mois, l.secteur || '', l.commune || '', l.point_visite || '',
-        l.lieux.length ? l._case.lieu.statut : l.parCommune ? 'commune' : 'portefeuille', l.lieux.join(' | '), l.ssf?.nom || l.ssf_texte || '', l.type_engin || '', commerciaux.find(c => c.id === l.commercial_id)?.nom || '', l.distributeur || '']))),
+        l.parPoint ? `point (${l.pdvPoint} PDV à ${l.rayon_m} m)` : l.lieux.length ? l._case.lieu.statut : l.parCommune ? 'commune' : 'portefeuille', l.lieux.join(' | '), l.ssf?.nom || l.ssf_texte || '', l.type_engin || '', commerciaux.find(c => c.id === l.commercial_id)?.nom || '', l.distributeur || '']))),
     'lieux-a-rattacher.csv': csvTexte(['Secteur', 'Commune', 'Point de visite', 'Traitement', 'Propositions', 'Quartier confirmé (ZONE›QUARTIER)'],
       lieux.map(([, r]) => r).filter(r => ['commune', 'introuvable'].includes(r.statut))
         .map(r => [r.secteur || '', r.commune || '', r.point, r.statut === 'commune' ? 'commune' : 'portefeuille', (r.propositions || []).map(x => `${x.zone}›${x.quartier}`).join(' | '), ''])),
