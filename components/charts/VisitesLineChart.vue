@@ -1,8 +1,8 @@
 <template>
   <div class="admin-surface h-full p-6">
     <div class="mb-5">
-      <h3 class="font-semibold text-slate-950 dark:text-white">{{ title }}</h3>
-      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ subtitle }}</p>
+      <h3 class="text-base font-semibold text-slate-900 dark:text-white">{{ title }}</h3>
+      <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">{{ subtitle }}</p>
     </div>
     <div v-if="chartData" class="h-72">
       <Line v-if="chartData" :data="chartData" :options="chartOptions" />
@@ -14,6 +14,7 @@
 </template>
 
 <script setup lang="ts">
+import { AXES, REMPLISSAGE_PRINCIPAL, SERIES } from '~/utils/chartPalette'
 import { Line } from 'vue-chartjs'
 
 const props = withDefaults(defineProps<{
@@ -44,13 +45,13 @@ const chartData = computed(() => {
     datasets: [{
       label: props.seriesLabel,
       data: sorted.map(d => d.count),
-      borderColor: '#C8102E',
-      backgroundColor: 'rgba(200, 16, 46, 0.08)',
+      borderColor: SERIES[0],
+      backgroundColor: REMPLISSAGE_PRINCIPAL,
       fill: true,
       tension: 0.4,
       pointRadius: 3,
       pointHoverRadius: 6,
-      pointBackgroundColor: '#C8102E',
+      pointBackgroundColor: SERIES[0],
     }],
   }
 })
@@ -61,7 +62,7 @@ const chartOptions = {
   plugins: {
     legend: { display: false },
     tooltip: {
-      backgroundColor: '#1f2937',
+      backgroundColor: AXES.infobulleFond,
       titleFont: { size: 12 },
       bodyFont: { size: 12 },
       padding: 10,
@@ -71,12 +72,12 @@ const chartOptions = {
   scales: {
     x: {
       grid: { display: false },
-      ticks: { font: { size: 10 }, color: '#9ca3af' },
+      ticks: { font: { size: AXES.taillePolice }, color: AXES.texte },
     },
     y: {
       beginAtZero: true,
-      grid: { color: '#f3f4f6' },
-      ticks: { font: { size: 10 }, color: '#9ca3af' },
+      grid: { color: AXES.grille },
+      ticks: { font: { size: AXES.taillePolice }, color: AXES.texte },
     },
   },
 }

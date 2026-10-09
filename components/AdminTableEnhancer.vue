@@ -141,16 +141,34 @@ const resetTable = (state: TableState) => {
   applyFilters(state)
 }
 
-const createButton = (label: string, icon: string) => {
+// Icônes Heroicons (20 solid), dessinées en SVG : pas de caractères Unicode.
+const ICONES = {
+  filtre: '<path fill-rule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 0 1 .628.74v2.288a2.25 2.25 0 0 1-.659 1.59l-4.682 4.683a2.25 2.25 0 0 0-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 0 1 8 18.25v-5.757a2.25 2.25 0 0 0-.659-1.591L2.659 6.22A2.25 2.25 0 0 1 2 4.629V2.34a.75.75 0 0 1 .628-.74Z" clip-rule="evenodd" />',
+  reinitialiser: '<path fill-rule="evenodd" d="M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.433a.75.75 0 0 0 0-1.5H3.989a.75.75 0 0 0-.75.75v4.242a.75.75 0 0 0 1.5 0v-2.43l.31.31a7 7 0 0 0 11.712-3.138.75.75 0 0 0-1.449-.39Zm1.23-3.723a.75.75 0 0 0 .219-.53V2.929a.75.75 0 0 0-1.5 0V5.36l-.31-.31A7 7 0 0 0 3.239 8.188a.75.75 0 1 0 1.448.389A5.5 5.5 0 0 1 13.89 6.11l.311.31h-2.432a.75.75 0 0 0 0 1.5h4.243a.75.75 0 0 0 .53-.219Z" clip-rule="evenodd" />',
+  deplier: '<path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />',
+}
+const svg = (chemin: string) => `<svg class="admin-table-tool__icone" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">${chemin}</svg>`
+
+const createButton = (label: string, icone: keyof typeof ICONES) => {
   const button = document.createElement('button')
   button.type = 'button'
   button.className = 'admin-table-tool'
-  button.innerHTML = `<span aria-hidden="true">${icon}</span><span>${label}</span>`
+  button.innerHTML = `${svg(ICONES[icone])}<span>${label}</span>`
   return button
+}
+
+// Barre « Trier et filtrer » seulement pour les tableaux assez longs pour en
+// avoir besoin ; le tri par en-tête reste disponible partout.
+const MIN_LIGNES_OUTILS = 12
+const majVisibiliteOutils = (state: TableState) => {
+  state.toolbar.hidden = state.originalRows.length < MIN_LIGNES_OUTILS
 }
 
 const enhanceTable = (table: HTMLTableElement) => {
   if (states.has(table) || table.dataset.noColumnTools !== undefined) return
+  // Tableau de saisie (champs dans les lignes) : on ne réordonne pas des
+  // lignes que Vue gère et que l'utilisateur est en train de remplir.
+  if (table.tBodies[0]?.querySelector('input, select, textarea')) return
   const head = table.tHead
   const headerRow = head?.rows[0]
   const body = table.tBodies[0]
@@ -182,7 +200,7 @@ const enhanceTable = (table: HTMLTableElement) => {
     toggle.tabIndex = -1
     toggle.className = 'admin-column-combo__toggle'
     toggle.setAttribute('aria-label', 'Voir les valeurs')
-    toggle.innerHTML = '<span aria-hidden="true">▾</span>'
+    toggle.innerHTML = svg(ICONES.deplier)
     const panel = document.createElement('ul')
     panel.className = 'admin-column-combo__panel'
     panel.hidden = true
@@ -204,11 +222,11 @@ const enhanceTable = (table: HTMLTableElement) => {
   toolbar.className = 'admin-table-tools'
   const toolbarLabel = document.createElement('span')
   toolbarLabel.className = 'admin-table-tools__label'
-  toolbarLabel.textContent = 'Colonnes : tri et filtres'
-  const filterButton = createButton('Filtrer les colonnes', '⌕')
+  toolbarLabel.textContent = 'Cliquez sur un en-tête pour trier'
+  const filterButton = createButton('Filtrer par colonne', 'filtre')
   filterButton.dataset.filterToggle = ''
   filterButton.setAttribute('aria-expanded', 'false')
-  const resetButton = createButton('Réinitialiser', '↺')
+  const resetButton = createButton('Réinitialiser', 'reinitialiser')
   resetButton.dataset.resetTable = ''
   toolbar.append(toolbarLabel, filterButton, resetButton)
   table.parentElement?.insertBefore(toolbar, table)
@@ -224,6 +242,7 @@ const enhanceTable = (table: HTMLTableElement) => {
     sortDirection: 'asc',
   }
   states.set(table, state)
+  majVisibiliteOutils(state)
 
   filterButton.addEventListener('click', () => {
     filterRow.hidden = !filterRow.hidden
@@ -266,6 +285,7 @@ const refreshTables = () => {
       || currentRows.some(row => !state.originalRows.includes(row))
     if (hasChanged) {
       state.originalRows = currentRows
+      majVisibiliteOutils(state)
       if (state.sortColumn !== null) sortTable(state, state.sortColumn, false)
       else applyFilters(state)
     }
@@ -308,34 +328,49 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid rgb(226 232 240 / 0.8);
+  border-bottom: 1px solid #E2E8F0;
 }
+
+.admin-table-tools[hidden] { display: none; }
 
 .admin-table-tools__label {
   margin-right: auto;
-  color: rgb(100 116 139);
+  color: #64748B;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .admin-table-tool {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  border: 1px solid rgb(203 213 225);
-  border-radius: 0.6rem;
-  padding: 0.4rem 0.65rem;
+  min-height: 2rem;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  padding: 0.35rem 0.65rem;
   background: white;
-  color: rgb(51 65 85);
+  color: #334155;
   font-size: 0.75rem;
   font-weight: 600;
-  transition: border-color 150ms, background-color 150ms, color 150ms;
+  transition: background-color 150ms, color 150ms;
 }
 
 .admin-table-tool:hover {
-  border-color: rgb(148 163 184);
-  background: rgb(248 250 252);
-  color: rgb(15 23 42);
+  background: #F8FAFC;
+  color: #0F172A;
+}
+
+.admin-table-tool:focus-visible,
+.admin-sortable-header:focus-visible,
+.admin-column-combo__toggle:focus-visible,
+.admin-column-combo__option:focus-visible {
+  outline: 2px solid #C8102E;
+  outline-offset: 2px;
+}
+
+.admin-table-tool__icone {
+  width: 0.9rem;
+  height: 0.9rem;
 }
 
 .admin-sortable-header {
@@ -345,27 +380,34 @@ onBeforeUnmount(() => {
   user-select: none;
 }
 
+/* Indicateur de tri dessiné (chevrons Heroicons en masque), pas de glyphe. */
 .admin-sortable-header::after {
   position: absolute;
-  right: 0.6rem;
-  content: '↕';
-  color: rgb(148 163 184);
-  font-size: 0.7rem;
+  top: 50%;
+  right: 0.55rem;
+  width: 0.85rem;
+  height: 0.85rem;
+  margin-top: -0.425rem;
+  content: '';
+  background-color: #94A3B8;
+  -webkit-mask: var(--admin-tri-icone) center / contain no-repeat;
+  mask: var(--admin-tri-icone) center / contain no-repeat;
+  --admin-tri-icone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath fill-rule='evenodd' d='M10.53 3.47a.75.75 0 0 0-1.06 0L6.22 6.72a.75.75 0 0 0 1.06 1.06L10 5.06l2.72 2.72a.75.75 0 1 0 1.06-1.06l-3.25-3.25Zm-4.31 9.81 3.25 3.25a.75.75 0 0 0 1.06 0l3.25-3.25a.75.75 0 1 0-1.06-1.06L10 14.94l-2.72-2.72a.75.75 0 0 0-1.06 1.06Z' clip-rule='evenodd'/%3E%3C/svg%3E");
 }
 
 .admin-sortable-header[data-sort-direction='asc']::after {
-  content: '↑';
-  color: rgb(220 38 38);
+  background-color: #C8102E;
+  --admin-tri-icone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath fill-rule='evenodd' d='M14.78 11.78a.75.75 0 0 1-1.06 0L10 8.06l-3.72 3.72a.75.75 0 1 1-1.06-1.06l4.25-4.25a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06Z' clip-rule='evenodd'/%3E%3C/svg%3E");
 }
 
 .admin-sortable-header[data-sort-direction='desc']::after {
-  content: '↓';
-  color: rgb(220 38 38);
+  background-color: #C8102E;
+  --admin-tri-icone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath fill-rule='evenodd' d='M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z' clip-rule='evenodd'/%3E%3C/svg%3E");
 }
 
 .admin-column-filter-row th {
   padding: 0.5rem !important;
-  background: rgb(248 250 252);
+  background: #F8FAFC;
 }
 
 .admin-column-combo {
@@ -377,19 +419,19 @@ onBeforeUnmount(() => {
 .admin-column-filter {
   width: 100%;
   min-width: 7rem;
-  border: 1px solid rgb(203 213 225);
-  border-radius: 0.5rem;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
   padding: 0.4rem 1.6rem 0.4rem 0.55rem;
   background: white;
-  color: rgb(15 23 42);
+  color: #0F172A;
   font-size: 0.75rem;
   font-weight: 400;
   outline: none;
 }
 
 .admin-column-filter:focus {
-  border-color: rgb(220 38 38);
-  box-shadow: 0 0 0 2px rgb(254 226 226);
+  border-color: #C8102E;
+  box-shadow: 0 0 0 2px rgb(200 16 46 / 0.25);
 }
 
 .admin-column-combo__toggle {
@@ -400,12 +442,12 @@ onBeforeUnmount(() => {
   justify-content: center;
   width: 1.1rem;
   height: 1.1rem;
-  color: rgb(100 116 139);
-  font-size: 0.7rem;
-  line-height: 1;
+  color: #64748B;
 }
 
-.admin-column-combo__toggle:hover { color: rgb(220 38 38); }
+.admin-column-combo__toggle .admin-table-tool__icone { width: 1rem; height: 1rem; }
+
+.admin-column-combo__toggle:hover { color: #C8102E; }
 
 .admin-column-combo__panel {
   position: absolute;
@@ -418,10 +460,10 @@ onBeforeUnmount(() => {
   margin: 0;
   padding: 0.25rem;
   list-style: none;
-  border: 1px solid rgb(203 213 225);
-  border-radius: 0.5rem;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
   background: white;
-  box-shadow: 0 10px 25px -5px rgb(15 23 42 / 0.15);
+  box-shadow: 0 10px 30px -12px rgb(15 23 42 / 0.25);
 }
 
 .admin-column-combo__option {
@@ -447,7 +489,7 @@ onBeforeUnmount(() => {
 .dark .admin-table-tool:hover { background: rgb(51 65 85); color: white; }
 .dark .admin-column-filter-row th { background: rgb(15 23 42); }
 .dark .admin-column-filter { border-color: rgb(71 85 105); background: rgb(30 41 59); color: white; }
-.dark .admin-column-filter:focus { border-color: rgb(248 113 113); box-shadow: 0 0 0 2px rgb(127 29 29 / 0.45); }
+.dark .admin-column-filter:focus { border-color: #D92040; box-shadow: 0 0 0 2px rgb(200 16 46 / 0.35); }
 .dark .admin-column-combo__toggle { color: rgb(148 163 184); }
 .dark .admin-column-combo__panel { border-color: rgb(71 85 105); background: rgb(30 41 59); box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.5); }
 .dark .admin-column-combo__option { color: rgb(203 213 225); }

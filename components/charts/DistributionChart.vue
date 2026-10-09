@@ -1,8 +1,8 @@
 <template>
   <div class="admin-surface h-full p-6">
     <div class="mb-5">
-      <h3 class="font-semibold text-slate-950 dark:text-white">{{ title }}</h3>
-      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Composition du parc par format de magasin.</p>
+      <h3 class="text-base font-semibold text-slate-900 dark:text-white">{{ title }}</h3>
+      <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">Composition du parc par format de magasin.</p>
     </div>
     <div v-if="chartData" class="h-72">
       <Doughnut v-if="chartData" :data="chartData" :options="chartOptions" />
@@ -14,6 +14,7 @@
 </template>
 
 <script setup lang="ts">
+import { AXES, AUTRE, SERIES } from '~/utils/chartPalette'
 import { Doughnut } from 'vue-chartjs'
 
 const props = defineProps<{
@@ -21,10 +22,7 @@ const props = defineProps<{
   data: { type: string; count: number }[]
 }>()
 
-const colors = [
-  '#C8102E', '#334155', '#64748B', '#94A3B8', '#CBD5E1',
-  '#9B0D23', '#475569', '#7F1D1D', '#A8A29E', '#D6D3D1',
-]
+const colors = [...SERIES, AUTRE]
 
 const chartData = computed(() => {
   if (!props.data?.length) return null
@@ -49,12 +47,12 @@ const chartOptions = {
       labels: {
         usePointStyle: true,
         pointStyle: 'circle',
-        font: { size: 11 },
+        font: { size: AXES.taillePolice },
         padding: 15,
       },
     },
     tooltip: {
-      backgroundColor: '#1f2937',
+      backgroundColor: AXES.infobulleFond,
       padding: 10,
       cornerRadius: 8,
     },

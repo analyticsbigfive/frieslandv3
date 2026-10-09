@@ -1,6 +1,6 @@
 <template>
   <div :class="bare ? '' : 'admin-surface p-6'">
-    <h3 v-if="title" class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 text-center">{{ title }}</h3>
+    <h3 v-if="title" class="mb-4 text-center text-base font-semibold text-slate-900 dark:text-white">{{ title }}</h3>
     <div :class="heightClass">
       <Doughnut v-if="chartData" :data="chartData" :options="mergedOptions" />
     </div>
@@ -8,6 +8,7 @@
 </template>
 
 <script setup lang="ts">
+import { AXES, AUTRE, COULEURS_PRESENCE, SERIES } from '~/utils/chartPalette'
 import { Doughnut } from 'vue-chartjs'
 
 const props = withDefaults(defineProps<{
@@ -27,9 +28,11 @@ const props = withDefaults(defineProps<{
   cutout: '55%',
 })
 
-const defaultColors = ['#F59E0B', '#FB923C', '#3B82F6', '#EF4444', '#10B981', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16', '#6366F1']
+// Palette commune (utils/chartPalette.ts) : séries dans un ordre fixe, puis « Autre ».
+const defaultColors = [...SERIES, AUTRE]
 // Couleurs Présent/Absent standard
-const presenceColors = ['#F59E0B', '#FB923C'] // Jaune/Orange comme dans Looker Studio
+// Deux parts « absent / présent » : couleurs de statut (rupture, présent).
+const presenceColors = [...COULEURS_PRESENCE]
 
 const heightClass = computed(() => {
   const map = { xs: 'h-24', sm: 'h-40', md: 'h-56', lg: 'h-72' }
@@ -66,12 +69,12 @@ const mergedOptions = computed(() => ({
       labels: {
         usePointStyle: true,
         pointStyle: 'circle',
-        font: { size: 10 },
+        font: { size: AXES.taillePolice },
         padding: 12,
       },
     },
     tooltip: {
-      backgroundColor: '#1f2937',
+      backgroundColor: AXES.infobulleFond,
       padding: 10,
       cornerRadius: 8,
       callbacks: {

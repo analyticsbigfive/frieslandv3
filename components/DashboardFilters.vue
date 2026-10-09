@@ -3,8 +3,8 @@
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <p class="text-sm font-semibold text-slate-900 dark:text-white">Filtres</p>
-        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-          {{ activeFilterCount ? `${activeFilterCount} filtre(s) actif(s)` : 'Aucun filtre supplémentaire' }}
+        <p class="mt-0.5 text-xs text-slate-600 dark:text-slate-300">
+          {{ activeFilterCount ? `${activeFilterCount} filtre(s) actif(s) · les résultats se mettent à jour seuls` : 'Les résultats se mettent à jour dès qu’un filtre change' }}
         </p>
       </div>
       <button
@@ -29,17 +29,17 @@
 
     <div class="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
       <UFormGroup v-if="showCanal" label="Canal" size="sm">
-        <USelectMenu v-model="model.canal" :options="['', 'General trade', 'Modern trade']" placeholder="Tous" size="sm" />
+        <USelectMenu v-model="model.canal" :options="OPTIONS_CANAL" value-attribute="value" option-attribute="label" placeholder="Tous" size="sm" />
       </UFormGroup>
 
-      <UFormGroup v-if="showCommercial" label="Commercial" size="sm">
+      <UFormGroup v-if="showCommercial" label="Personne" help="Auteur de la visite" size="sm">
         <USelectMenu
           v-model="model.commercial"
           :options="commercialOptions"
           placeholder="Tous"
           size="sm"
           searchable
-          searchable-placeholder="Rechercher..."
+          searchable-placeholder="Rechercher…"
           :search-attributes="['label']"
           :loading="usersLoading"
           value-attribute="value"
@@ -60,12 +60,12 @@
       </UFormGroup>
 
       <div class="flex items-end gap-2">
-        <UButton size="sm" icon="i-heroicons-magnifying-glass" @click="emitFilter">Filtrer</UButton>
+        <UButton size="sm" variant="outline" icon="i-heroicons-arrow-path" @click="emitFilter">Actualiser</UButton>
         <UButton size="sm" variant="ghost" @click="reset">Réinitialiser</UButton>
       </div>
     </div>
 
-    <div v-show="advancedOpen" class="mt-3 border-t border-slate-100 pt-3 dark:border-slate-700">
+    <div v-show="advancedOpen" class="mt-3 border-t border-slate-200 pt-3 dark:border-slate-700">
       <div class="grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-7">
         <UFormGroup v-if="showCategorie" label="Catégorie de PDV" size="sm">
           <USelectMenu v-model="model.categorie" :options="categorieRefOptions" value-attribute="value" option-attribute="label" placeholder="Toutes" size="sm" searchable searchable-placeholder="Rechercher…" :loading="!refsLoaded" />
@@ -75,9 +75,9 @@
           <USelectMenu v-model="model.sousCategorie" :options="sousCategorieRefOptions" value-attribute="value" option-attribute="label" placeholder="Toutes" size="sm" searchable searchable-placeholder="Rechercher…" :loading="!refsLoaded" />
         </UFormGroup>
 
-        <!-- Cascade géographique : Division > Sous-région > Territoire > Area > Quartier.
+        <!-- Cascade géographique : Direction > Sous-région > Territoire > Zone > Quartier.
              Chaque niveau restreint les options du suivant. -->
-        <UFormGroup v-if="showRegion" label="Division (North/South)" size="sm">
+        <UFormGroup v-if="showRegion" label="Direction (South / North)" size="sm">
           <USelectMenu v-model="model.division" :options="divisionOptions" placeholder="Toutes" size="sm" :loading="!refsLoaded" />
         </UFormGroup>
 
@@ -89,7 +89,7 @@
           <USelectMenu v-model="model.zone" :options="territoireOptions" placeholder="Tous" size="sm" searchable searchable-placeholder="Rechercher…" :loading="!refsLoaded" />
         </UFormGroup>
 
-        <UFormGroup v-if="showArea" label="Area" size="sm">
+        <UFormGroup v-if="showArea" label="Zone commerciale" size="sm">
           <USelectMenu v-model="model.area" :options="areaOptions" value-attribute="value" option-attribute="label" placeholder="Toutes" size="sm" searchable searchable-placeholder="Rechercher…" :loading="!refsLoaded" />
         </UFormGroup>
 
@@ -110,7 +110,7 @@
         @click="removeChip(chip.key)"
       >
         <span>{{ chip.label }}</span>
-        <UIcon name="i-heroicons-x-mark" class="h-3.5 w-3.5" />
+        <UIcon name="i-heroicons-x-mark" class="h-3.5 w-3.5" aria-hidden="true" />
       </button>
     </div>
   </div>
@@ -299,6 +299,13 @@ watch(advancedActiveCount, (count) => {
   if (count > 0) advancedOpen.value = true
 }, { immediate: true })
 
+// Canal : valeurs de la base, libellés en clair avec le sigle d'usage.
+const OPTIONS_CANAL = [
+  { value: '', label: 'Tous' },
+  { value: 'General trade', label: 'Boutiques (GT)' },
+  { value: 'Modern trade', label: 'Supermarchés (MT)' },
+]
+
 const commercialOptions = computed(() => [
   { value: '', label: 'Tous' },
   ...cachedUsers.value
@@ -313,14 +320,14 @@ const filterChips = computed(() => {
   const m = model.value
   if (m.dateFrom) chips.push({ key: 'dateFrom', label: `Début : ${m.dateFrom}` })
   if (m.dateTo) chips.push({ key: 'dateTo', label: `Fin : ${m.dateTo}` })
-  if (m.canal) chips.push({ key: 'canal', label: `Canal : ${m.canal}` })
-  if (m.commercial) chips.push({ key: 'commercial', label: `Commercial : ${m.commercial}` })
+  if (m.canal) chips.push({ key: 'canal', label: `Canal : ${OPTIONS_CANAL.find(o => o.value === m.canal)?.label || m.canal}` })
+  if (m.commercial) chips.push({ key: 'commercial', label: `Personne : ${m.commercial}` })
   if (m.categorie) chips.push({ key: 'categorie', label: `Catégorie : ${categorieRefOptions.value.find(o => o.value === m.categorie)?.label || m.categorie}` })
   if (m.sousCategorie) chips.push({ key: 'sousCategorie', label: `Sous-catégorie : ${sousCategorieRefOptions.value.find(o => o.value === m.sousCategorie)?.label || m.sousCategorie}` })
-  if (m.division) chips.push({ key: 'division', label: `Division : ${m.division}` })
+  if (m.division) chips.push({ key: 'division', label: `Direction : ${m.division}` })
   if (m.region) chips.push({ key: 'region', label: `Sous-région : ${m.region}` })
   if (m.zone) chips.push({ key: 'zone', label: `Territoire : ${m.zone}` })
-  if (m.area && props.showArea) chips.push({ key: 'area', label: `Area : ${areaLabelOf(m.area)}` })
+  if (m.area && props.showArea) chips.push({ key: 'area', label: `Zone : ${areaLabelOf(m.area)}` })
   if (m.quartier && props.showQuartier) chips.push({ key: 'quartier', label: `Quartier : ${m.quartier}` })
   if (m.nomPdv) chips.push({ key: 'nomPdv', label: `PDV : ${m.nomPdv}` })
   return chips

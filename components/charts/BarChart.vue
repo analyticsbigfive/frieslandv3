@@ -1,6 +1,6 @@
 <template>
   <div class="admin-surface p-6">
-    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">{{ title }}</h3>
+    <h3 class="mb-4 text-base font-semibold text-slate-900 dark:text-white">{{ title }}</h3>
     <div class="h-64">
       <Bar v-if="chartData" :data="chartData" :options="chartOptions" />
     </div>
@@ -8,6 +8,7 @@
 </template>
 
 <script setup lang="ts">
+import { AXES, SERIES } from '~/utils/chartPalette'
 import { Bar } from 'vue-chartjs'
 
 const props = defineProps<{
@@ -25,7 +26,7 @@ const chartData = computed(() => {
     datasets: [{
       label: props.title,
       data: props.values,
-      backgroundColor: props.color || '#003DA5',
+      backgroundColor: props.color || SERIES[0],
       borderRadius: 6,
       maxBarThickness: 40,
     }],
@@ -38,7 +39,7 @@ const chartOptions = {
   plugins: {
     legend: { display: false },
     tooltip: {
-      backgroundColor: '#1f2937',
+      backgroundColor: AXES.infobulleFond,
       padding: 10,
       cornerRadius: 8,
     },
@@ -46,12 +47,12 @@ const chartOptions = {
   scales: {
     x: {
       grid: { display: false },
-      ticks: { font: { size: 10 }, color: '#9ca3af' },
+      ticks: { font: { size: AXES.taillePolice }, color: AXES.texte },
     },
     y: {
       beginAtZero: true,
-      grid: { color: '#f3f4f6' },
-      ticks: { font: { size: 10 }, color: '#9ca3af' },
+      grid: { color: AXES.grille },
+      ticks: { font: { size: AXES.taillePolice }, color: AXES.texte },
     },
   },
 }
