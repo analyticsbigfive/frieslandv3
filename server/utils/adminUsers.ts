@@ -3,7 +3,7 @@
 // et l'import en masse (users/import.post.ts).
 import type { UserRole } from '~/types'
 
-export const USER_ROLES: UserRole[] = ['admin', 'superviseur', 'merchandiser', 'commercial']
+export const USER_ROLES: UserRole[] = ['admin', 'superviseur', 'merchandiser', 'commercial', 'agence']
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export interface CreateUserInput {

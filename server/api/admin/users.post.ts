@@ -44,6 +44,10 @@ export default defineEventHandler(async (event) => {
   // Code d'agence : validé contre la table agence (avant sa migration : friesland / atom).
   const employeur = await employeurValide(service, body?.employeur)
   const direction = ['south', 'north', 'mt'].includes(body?.direction) ? body.direction : null
+  // Un compte agence voit les merchandisers de son agence : sans agence, il n'aurait aucune portée.
+  if (role === 'agence' && employeur === 'friesland') {
+    throw apiError(400, 'Un compte agence doit être rattaché à son agence (Employeur)')
+  }
 
   return await createUserWithProfile(service, {
     email,
