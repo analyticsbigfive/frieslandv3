@@ -17,6 +17,11 @@ describe('erreurMotDePasse', () => {
     expect(erreurMotDePasse('Lagune-Cocody-2026', 'admin', 'admin@friesland.ci')).toBeNull()
   })
 
+  it('applique la règle renforcée au compte agence', () => {
+    expect(erreurMotDePasse('abcdefgh', 'agence')).toMatch(/12 caractères/)
+    expect(erreurMotDePasse('Lagune-Cocody-2026', 'agence', 'responsable@agence.ci')).toBeNull()
+  })
+
   it('refuse les mots courants et l\'identifiant', () => {
     expect(erreurMotDePasse('MonAzerty-2026', 'admin')).toMatch(/mot courant/)
     expect(erreurMotDePasse('Kouassi.jean-2026', 'admin', 'kouassi@friesland.ci')).toMatch(/identifiant/)

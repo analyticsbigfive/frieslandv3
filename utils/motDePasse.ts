@@ -3,7 +3,8 @@
 // (pages/mon-mot-de-passe.vue).
 //
 // Les comptes privilégiés (admin, superviseur) ouvrent tout le parc et, pour
-// l'admin, la gestion des utilisateurs : on leur impose un mot de passe plus
+// l'admin, la gestion des utilisateurs ; le compte agence charge le routing de
+// toute une agence depuis le back-office. On leur impose un mot de passe plus
 // long et plus varié. Les comptes terrain gardent la règle des 8 caractères,
 // saisie sur téléphone.
 import { isPrivilegedRole } from './roles'
@@ -24,7 +25,7 @@ const CLASSES: ((mdp: string) => boolean)[] = [
 const MOTS_INTERDITS = ['test1234', 'password', 'motdepasse', 'azerty', 'qwerty', '123456', 'admin', 'friesland', 'bonnetrouge']
 
 export function reglesMotDePasse(role?: string | null, email?: string | null): RegleMotDePasse[] {
-  if (!isPrivilegedRole(role)) {
+  if (!isPrivilegedRole(role) && role !== 'agence') {
     return [{ libelle: 'Au moins 8 caractères', respectee: mdp => mdp.length >= 8 }]
   }
   const identifiant = String(email || '').split('@')[0].toLowerCase()
