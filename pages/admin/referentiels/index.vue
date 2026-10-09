@@ -204,6 +204,18 @@ const supabase = useSupabaseClient()
 // Tables ajoutées après la génération des types Supabase : client non typé.
 const table = (nom: string): any => (supabase as any).from(nom)
 const toast = useToast()
+const authStore = useAuthStore()
+
+// Après une correction du routing mensuel : les règles du merchandiser sont
+// refaites depuis ses cases actives, puis ses tournées des 7 jours à venir
+// (mêmes opérations, revalidées par le serveur, que l'import de l'agence).
+async function appliquerRoutingMensuel(userId: string) {
+  const { operationsDepuisRouting }: any = await import('~/scripts/lib/imports/routing-mensuel.mjs')
+  const toutes = (requete: () => any) => fetchAllRows<any>((from, to) => requete().range(from, to))
+  const operations = await operationsDepuisRouting(supabase, userId, { toutes, auteurId: authStore.profile?.id || null })
+  await $fetch('/api/admin/imports/routing-mensuel/appliquer', { method: 'POST', body: { operations } })
+}
+const LIEU_SEP = /[|;\n]+/
 
 // -- Enumérations métier (Système B) --------------------------------------
 const CANAUX = ['GT', 'MT']
@@ -1231,15 +1243,16 @@ const defs: Def[] = [
   },
   {
     id: 'routing_mensuel', section: 'distrib', label: 'Routing mensuel', table: 'routing_mensuel',
-    select: 'id, merchandiser_id, jour_semaine, semaine_du_mois, secteur, point_visite, zone, quartiers, ssf_id, ssf_texte, type_engin, source, actif',
+    select: 'id, merchandiser_id, jour_semaine, semaine_du_mois, secteur, commune, point_visite, zone, quartiers, lieux, ssf_id, ssf_texte, type_engin, source, actif',
     order: q => q.order('merchandiser_id').order('jour_semaine').order('semaine_du_mois'),
-    aide: 'Routing mensuel de l’agence : pour chaque merchandiser, jour et semaine du mois, le point de visite, ses quartiers et le SSF du jour (binôme sans lien hiérarchique : tous deux dépendent du commercial). Alimenté par Import / Export › Imports terrain › Routing mensuel ; une correction ici vaut jusqu’au prochain import. Sans quartier reconnu, la tournée suit le portefeuille ce jour-là. Après une modification, relancez Maintenance › Recalculer les tournées.',
+    aide: 'Routing mensuel de l’agence : pour chaque merchandiser, jour et semaine du mois, le point de visite, ses quartiers (dans sa commune) et le SSF du jour (binôme sans lien hiérarchique : tous deux dépendent du commercial). Alimenté par Import / Export › Imports terrain › Routing mensuel ; une correction ici vaut jusqu’au prochain import. Sans quartier, la tournée prend le portefeuille du merchandiser dans la commune ; sans commune, tout le portefeuille. Enregistrer refait aussitôt les règles du merchandiser et ses tournées des 7 jours à venir (celle du jour ne change pas).',
     columns: [
       { label: 'Merchandiser', cell: r => nomUtilisateur(r.merchandiser_id) },
       { label: 'Jour', cell: r => JOURS_SEMAINE[r.jour_semaine] },
       { label: 'Semaine', cell: r => `S${r.semaine_du_mois}`, align: 'c' },
+      { label: 'Commune', cell: r => r.commune || '—' },
       { label: 'Point de visite', cell: r => r.point_visite || '—' },
-      { label: 'Quartiers', cell: r => (r.quartiers || []).join(', ') || 'Non reconnu (portefeuille)', muted: true },
+      { label: 'Quartiers', cell: r => (r.lieux || []).join(', ') || (r.commune ? `Commune de ${r.commune} (portefeuille)` : 'Portefeuille'), muted: true },
       { label: 'SSF', cell: r => (r.ssf_id ? ssfNomOf(r.ssf_id) : r.ssf_texte ? `${r.ssf_texte} (non relié)` : 'Aucun SSF') },
       { label: 'Origine', cell: r => ORIGINES_BINOME(r.source).label, kind: 'badge', color: r => ORIGINES_BINOME(r.source).color },
       { label: 'Actif', cell: r => r.actif, align: 'c', kind: 'bool' },
@@ -1249,32 +1262,46 @@ const defs: Def[] = [
       { key: 'jour_semaine', label: 'Jour', type: 'select', opts: () => JOURS_OPTS, required: true, lockEdit: true },
       { key: 'semaine_du_mois', label: 'Semaine du mois', type: 'select', opts: () => [1, 2, 3, 4].map(s => ({ value: s, label: `Semaine ${s}` })), required: true, lockEdit: true },
       { key: 'point_visite', label: 'Point de visite', type: 'text' },
-      { key: 'zone', label: 'Zone', type: 'text', hint: 'Libellé exact du territoire des PDV (ex. YOPOUGON 3).' },
-      { key: 'quartiers', label: 'Quartiers', type: 'text', hint: 'Libellés exacts des PDV, séparés par des virgules. Vide : portefeuille ce jour-là.' },
+      { key: 'commune', label: 'Commune', type: 'text', hint: 'Commune du fichier de l’agence (ex. Abobo). Sans quartier : portefeuille du merchandiser dans cette commune.' },
+      { key: 'lieux', label: 'Quartiers', type: 'text', hint: 'ZONE›QUARTIER tels que dans les PDV, séparés par « | » (ex. ABOBO 1›SAMAKE | ABOBO 1›BC). Vide : la commune, sinon tout le portefeuille.' },
       { key: 'ssf_id', label: 'SSF', type: 'select', opts: () => [{ value: 0, label: 'Aucun SSF' }, ...ssfOpts()] },
       { key: 'type_engin', label: 'Engin du SSF', type: 'text', hint: 'Mini van, Moto, Grossiste…' },
       { key: 'actif', label: 'Actif', type: 'bool' },
     ],
-    blank: () => ({ merchandiser_id: null, jour_semaine: 1, semaine_du_mois: 1, point_visite: '', zone: '', quartiers: '', ssf_id: 0, type_engin: '', actif: true }),
-    fill: r => ({ ...r, quartiers: (r.quartiers || []).join(', '), ssf_id: r.ssf_id || 0 }),
+    blank: () => ({ merchandiser_id: null, jour_semaine: 1, semaine_du_mois: 1, point_visite: '', commune: '', lieux: '', ssf_id: 0, type_engin: '', actif: true }),
+    fill: r => ({ ...r, commune: r.commune || '', lieux: (r.lieux || []).join(' | '), ssf_id: r.ssf_id || 0 }),
     rowKey: r => r.id,
-    search: r => `${nomUtilisateur(r.merchandiser_id)} ${r.ssf_id ? ssfNomOf(r.ssf_id) : r.ssf_texte || ''} ${JOURS_SEMAINE[r.jour_semaine]} ${r.point_visite || ''} ${(r.quartiers || []).join(' ')}`.toLowerCase(),
-    valid: f => !!f.merchandiser_id && f.jour_semaine != null && !!f.semaine_du_mois,
-    save: (f, e) => {
+    search: r => `${nomUtilisateur(r.merchandiser_id)} ${r.ssf_id ? ssfNomOf(r.ssf_id) : r.ssf_texte || ''} ${JOURS_SEMAINE[r.jour_semaine]} ${r.commune || ''} ${r.point_visite || ''} ${(r.lieux || []).join(' ')}`.toLowerCase(),
+    valid: f => !!f.merchandiser_id && f.jour_semaine != null && !!f.semaine_du_mois
+      && String(f.lieux || '').split(LIEU_SEP).map((x: string) => x.trim()).filter(Boolean).every((x: string) => x.includes('›')),
+    save: async (f, e) => {
+      const lieux = [...new Set(String(f.lieux || '').split(LIEU_SEP).map((x: string) => x.split('›').map(t => t.trim()).join('›')).filter(Boolean))]
       const rec = {
         point_visite: String(f.point_visite || '').trim() || null,
-        zone: String(f.zone || '').trim() || null,
-        quartiers: String(f.quartiers || '').split(/[,;|\n]+/).map(q => q.trim()).filter(Boolean),
+        commune: String(f.commune || '').trim() || null,
+        lieux,
+        zone: lieux[0]?.split('›')[0] || null,
+        quartiers: [...new Set(lieux.map(x => x.split('›')[1]).filter(Boolean))],
         ssf_id: f.ssf_id || null,
         type_engin: String(f.type_engin || '').trim() || null,
         actif: f.actif !== false,
         source: 'admin',
       }
-      return e
-        ? table('routing_mensuel').update(rec).eq('id', f.id)
-        : table('routing_mensuel').upsert({ ...rec, merchandiser_id: f.merchandiser_id, jour_semaine: f.jour_semaine, semaine_du_mois: f.semaine_du_mois }, { onConflict: 'merchandiser_id,jour_semaine,semaine_du_mois' })
+      const res = e
+        ? await table('routing_mensuel').update(rec).eq('id', f.id)
+        : await table('routing_mensuel').upsert({ ...rec, merchandiser_id: f.merchandiser_id, jour_semaine: f.jour_semaine, semaine_du_mois: f.semaine_du_mois }, { onConflict: 'merchandiser_id,jour_semaine,semaine_du_mois' })
+      if (res.error) return res
+      try { await appliquerRoutingMensuel(f.merchandiser_id) }
+      catch (err: any) { return { error: new Error(`Case enregistrée, mais tournées non refaites : ${err?.data?.statusMessage || err.message}`) } }
+      return res
     },
-    del: r => table('routing_mensuel').delete().eq('id', r.id),
+    del: async (r) => {
+      const res = await table('routing_mensuel').delete().eq('id', r.id)
+      if (res.error) return res
+      try { await appliquerRoutingMensuel(r.merchandiser_id) }
+      catch (err: any) { return { error: new Error(`Case supprimée, mais tournées non refaites : ${err?.data?.statusMessage || err.message}`) } }
+      return res
+    },
   },
   {
     id: 'alias_import', section: 'distrib', label: 'Alias d’import', table: 'alias_import',
