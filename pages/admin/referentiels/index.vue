@@ -1,52 +1,68 @@
 <template>
   <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Référentiels</h1>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Géographie, distribution, points de vente, produits et paramètres Perfect Store <span class="text-xs">(Système B)</span>.
-        </p>
-      </div>
-      <UButton v-if="!activeVue && !activeDef.lectureSeule" icon="i-heroicons-plus" class="bg-fc-blue" @click="openCreate">Ajouter — {{ activeDef.label }}</UButton>
+    <AdminPageHeader description="Les listes de référence du back-office et de l'application : territoires, distributeurs, catégories, produits, réglages du terrain.">
+      <template #actions>
+        <UButton v-if="!activeVue && !activeDef.lectureSeule" icon="i-heroicons-plus" @click="openCreate">Ajouter : {{ activeDef.label }}</UButton>
+      </template>
+    </AdminPageHeader>
+
+    <div v-if="error" class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-100">
+      {{ error }}
     </div>
 
-    <div v-if="error" class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
-      Référentiels indisponibles — {{ error }}
-    </div>
+    <div class="grid gap-6 lg:grid-cols-[17rem_minmax(0,1fr)]">
+      <!-- Choix de la liste : une colonne groupée avec recherche (pas d'onglets
+           dans les onglets). La liste choisie est dans l'URL (?liste=). -->
+      <aside class="lg:sticky lg:top-20 lg:self-start" aria-label="Listes de référence">
+        <div class="lg:hidden">
+          <UFormGroup label="Liste" size="md">
+            <USelect
+              :model-value="activeId"
+              :options="optionsMobile"
+              option-attribute="label"
+              value-attribute="value"
+              size="md"
+              @update:model-value="choisirListe"
+            />
+          </UFormGroup>
+        </div>
+        <div class="hidden lg:block admin-surface p-3">
+          <UInput
+            v-model="rechercheListe"
+            icon="i-heroicons-magnifying-glass"
+            placeholder="Rechercher une liste"
+            aria-label="Rechercher une liste"
+            size="sm"
+            class="mb-3"
+          />
+          <nav class="max-h-[calc(100dvh-14rem)] space-y-4 overflow-y-auto pr-1">
+            <div v-for="groupe in groupesListes" :key="groupe.key">
+              <h2 class="mb-1 px-2 text-xs font-semibold text-slate-500 dark:text-slate-400">{{ groupe.label }}</h2>
+              <ul class="space-y-0.5">
+                <li v-for="d in groupe.entrees" :key="d.id">
+                  <NuxtLink
+                    :to="{ query: { liste: d.id } }"
+                    class="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm transition-colors"
+                    :class="activeId === d.id
+                      ? 'bg-brand-50 font-semibold text-brand-700 dark:bg-brand-950/50 dark:text-brand-200'
+                      : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'"
+                    :aria-current="activeId === d.id ? 'page' : undefined"
+                  >
+                    <span class="truncate">{{ d.label }}</span>
+                    <span v-if="!('vue' in d)" class="shrink-0 text-xs tabular-nums text-slate-500 dark:text-slate-400">{{ (store[d.id] || []).length }}</span>
+                  </NuxtLink>
+                </li>
+              </ul>
+            </div>
+            <p v-if="!groupesListes.length" class="px-2 text-sm text-slate-600">Aucune liste ne correspond.</p>
+          </nav>
+        </div>
+      </aside>
 
-    <!-- Sections -->
-    <div class="flex flex-wrap gap-2">
-      <button
-        v-for="s in sections"
-        :key="s.key"
-        type="button"
-        class="rounded-full px-4 py-2 text-sm font-semibold transition-colors"
-        :class="section === s.key
-          ? 'bg-fc-red text-white shadow-sm'
-          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'"
-        @click="selectSection(s.key)"
-      >
-        {{ s.label }}
-      </button>
-    </div>
-
-    <!-- Referentiels within section -->
-    <div class="border-b border-gray-200 dark:border-gray-700">
-      <nav class="flex flex-wrap gap-x-5 gap-y-1">
-        <button
-          v-for="d in sectionEntrees"
-          :key="d.id"
-          type="button"
-          class="whitespace-nowrap border-b-2 pb-2.5 text-sm font-medium transition-colors"
-          :class="activeId === d.id
-            ? 'border-fc-red text-fc-red'
-            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'"
-          @click="activeId = d.id"
-        >
-          {{ d.label }} <span v-if="!('vue' in d)" class="text-xs text-gray-400">({{ (store[d.id] || []).length }})</span>
-        </button>
-      </nav>
+      <div class="min-w-0 space-y-4">
+    <div>
+      <h2 class="text-lg font-semibold text-slate-900 dark:text-white">{{ activeVue ? activeVue.label : activeDef.label }}</h2>
+      <p v-if="!activeVue && activeDef.aide" class="mt-1 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">{{ activeDef.aide }}</p>
     </div>
 
     <!-- Écrans dédiés (grille, actions) : pas de table générique -->
@@ -57,21 +73,21 @@
     <template v-if="!activeVue">
     <!-- Toolbar -->
     <div class="admin-toolbar flex items-center justify-between gap-3">
-      <UInput v-model="search" icon="i-heroicons-magnifying-glass" placeholder="Rechercher..." size="sm" class="w-full sm:w-80" />
-      <p class="whitespace-nowrap text-xs text-gray-400">{{ filteredRows.length }} / {{ (store[activeId] || []).length }}</p>
+      <UInput v-model="search" icon="i-heroicons-magnifying-glass" placeholder="Rechercher dans la liste" aria-label="Rechercher dans la liste" size="sm" class="w-full sm:w-80" />
+      <p class="whitespace-nowrap text-sm tabular-nums text-slate-600 dark:text-slate-300">{{ filteredRows.length }} sur {{ (store[activeId] || []).length }}</p>
     </div>
 
     <!-- Table -->
     <div class="admin-surface overflow-x-auto">
       <table class="admin-table">
-        <thead class="bg-gray-50 dark:bg-gray-700/50">
+        <thead>
           <tr>
-            <th v-for="col in activeDef.columns" :key="col.label" :class="col.align === 'c' ? 'th-c' : 'th-l'">{{ col.label }}</th>
-            <th class="th-c w-20">Actions</th>
+            <th v-for="col in activeDef.columns" :key="col.label" :class="col.align === 'c' ? 'text-center' : ''">{{ col.label }}</th>
+            <th class="w-20 text-center"><span class="sr-only">Actions</span></th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-          <tr v-for="row in paginatedRefRows" :key="activeDef.rowKey(row)" class="row">
+        <tbody>
+          <tr v-for="row in paginatedRefRows" :key="activeDef.rowKey(row)">
             <td v-for="col in activeDef.columns" :key="col.label" class="px-4 py-2.5 text-sm" :class="col.align === 'c' ? 'text-center' : 'text-gray-900 dark:text-gray-100'">
               <template v-if="col.kind === 'badge'">
                 <UBadge :color="col.color ? col.color(row) : 'gray'" variant="soft" size="xs">{{ col.cell(row) }}</UBadge>
@@ -80,24 +96,28 @@
                 <UIcon
                   :name="col.cell(row) ? 'i-heroicons-check-circle-solid' : 'i-heroicons-minus-circle'"
                   class="h-5 w-5"
-                  :class="col.cell(row) ? 'text-emerald-500' : 'text-gray-300 dark:text-gray-600'"
+                  :class="col.cell(row) ? 'text-emerald-700' : 'text-slate-400 dark:text-slate-500'"
+                  aria-hidden="true"
                 />
+                <span class="sr-only">{{ col.cell(row) ? 'Oui' : 'Non' }}</span>
               </template>
               <span v-else-if="col.kind === 'mono'" class="font-mono text-xs text-gray-500 dark:text-gray-400">{{ col.cell(row) || '—' }}</span>
               <span v-else :class="col.kind === 'num' ? 'font-semibold tabular-nums' : (col.muted ? 'text-gray-600 dark:text-gray-300' : '')">{{ col.cell(row) }}</span>
             </td>
             <td class="px-4 py-2.5 text-center">
               <UDropdown v-if="!activeDef.lectureSeule" :items="rowActions(row)">
-                <UButton variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" />
+                <UButton variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" :aria-label="`Actions : ${activeDef.search(row)}`" />
               </UDropdown>
             </td>
           </tr>
           <tr v-if="!loading && !filteredRows.length">
-            <td :colspan="activeDef.columns.length + 1" class="px-4 py-10 text-center text-sm text-gray-400">Aucune donnée.</td>
+            <td :colspan="activeDef.columns.length + 1" class="px-4 py-10 text-center text-sm text-slate-600 dark:text-slate-300">
+              {{ search ? 'Aucune ligne ne correspond à cette recherche.' : (activeDef.lectureSeule ? 'Cette liste est vide.' : 'Cette liste est vide. Ajoutez un premier élément avec le bouton « Ajouter ».') }}
+            </td>
           </tr>
         </tbody>
       </table>
-      <div class="border-t border-gray-100 px-4 py-3 dark:border-gray-700">
+      <div class="border-t border-slate-200 px-4 py-3 dark:border-slate-700">
         <AdminPagination
           :total="filteredRows.length"
           :page="refPage"
@@ -107,16 +127,17 @@
         />
       </div>
       <div v-if="loading" class="p-8 text-center">
-        <UIcon name="i-heroicons-arrow-path" class="mx-auto h-8 w-8 animate-spin text-fc-blue" />
+        <ChargementContenu variante="compact" libelle="Chargement des listes…" />
       </div>
     </div>
-    <p v-if="activeDef.aide" class="text-xs text-gray-500 dark:text-gray-400">{{ activeDef.aide }}</p>
     </template>
+      </div>
+    </div>
 
     <!-- CRUD Modal -->
     <AdminFormModal
       v-model="showModal"
-      :title="`${editing ? 'Modifier' : 'Ajouter'} — ${activeDef.label}`"
+      :title="`${editing ? 'Modifier' : 'Ajouter'} : ${activeDef.label}`"
       description="Renseignez les propriétés de cet élément de référentiel."
       icon="i-heroicons-circle-stack"
       width="sm:max-w-3xl"
@@ -139,7 +160,7 @@
             value-attribute="value"
             :disabled="editing && f.lockEdit"
             searchable
-            searchable-placeholder="Rechercher..."
+            searchable-placeholder="Rechercher…"
             :placeholder="f.label"
             size="md"
             class="w-full"
@@ -181,7 +202,6 @@
         </UButton>
         <UButton
           icon="i-heroicons-check"
-          class="bg-fc-blue text-white hover:bg-fc-blue-600 disabled:bg-fc-blue-300 aria-disabled:bg-fc-blue-300 focus-visible:outline-fc-blue-500 dark:bg-fc-blue dark:text-white dark:hover:bg-fc-blue-600 dark:disabled:bg-fc-blue-700 dark:aria-disabled:bg-fc-blue-700 dark:focus-visible:outline-fc-blue-400"
           :loading="saving"
           :disabled="!canSave"
           @click="save"
@@ -197,6 +217,7 @@
 import { fetchAllRows } from '~/utils/fetchAll'
 import { AGENCES_DEFAUT, DIRECTIONS, libelleDirection } from '~/utils/agences'
 import { catalogueProduits, getSkus, getSkuLabel } from '~/utils/products'
+import { messageUtilisateur } from '~/utils/supabaseErrors'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
@@ -375,6 +396,8 @@ interface Def {
   noDelete?: boolean
   /** Consultation seule : ni ajout ni modification (données écrites par l'app). */
   lectureSeule?: boolean
+  /** Chargée (menus des autres listes) mais modifiée ailleurs : Paramètres › Standards ou › Versions de l'app. */
+  ailleurs?: string
   columns: Col[]
   fields: Field[]
   blank: () => any
@@ -463,7 +486,7 @@ const defs: Def[] = [
     del: r => supabase.from('territoire').delete().eq('code', r.code),
   },
   {
-    id: 'zone', section: 'geo', label: 'Zones / Areas', table: 'zone',
+    id: 'zone', section: 'geo', label: 'Zones commerciales (areas)', table: 'zone',
     select: 'id, code, nom, territoire_code', order: q => q.order('territoire_code').order('code'),
     columns: [
       { label: 'Code area', cell: r => r.code || '—', kind: 'mono' },
@@ -556,7 +579,7 @@ const defs: Def[] = [
     del: r => supabase.from('distributeur').delete().eq('id', r.id),
   },
   {
-    id: 'territoire_distributeur', section: 'distrib', label: 'Distrib ↔ Territoires', table: 'territoire_distributeur',
+    id: 'territoire_distributeur', section: 'distrib', label: 'Territoires des distributeurs', table: 'territoire_distributeur',
     select: 'territoire_id, distributeur_id',
     columns: [
       { label: 'Territoire', cell: r => territoireNameOf(r.territoire_id) },
@@ -575,7 +598,7 @@ const defs: Def[] = [
     del: r => supabase.from('territoire_distributeur').delete().eq('territoire_id', r.territoire_id).eq('distributeur_id', r.distributeur_id),
   },
   {
-    id: 'zone_distributeur', section: 'distrib', label: 'Distrib ↔ Areas', table: 'zone_distributeur',
+    id: 'zone_distributeur', section: 'distrib', label: 'Zones des distributeurs', table: 'zone_distributeur',
     select: 'zone_id, distributeur_id',
     columns: [
       { label: 'Code area', cell: r => zoneCodeOf(r.zone_id), kind: 'mono' },
@@ -596,7 +619,7 @@ const defs: Def[] = [
   },
   // ===== POINTS DE VENTE =====
   {
-    id: 'categorie_pdv', section: 'pdv', label: 'Catégories PDV', table: 'categorie_pdv',
+    id: 'categorie_pdv', section: 'pdv', label: 'Catégories de PDV', table: 'categorie_pdv',
     select: 'id, nom, nom_fr, canal', order: q => q.order('nom'),
     columns: [
       { label: 'Catégorie (niveau 3)', cell: r => r.nom },
@@ -618,7 +641,7 @@ const defs: Def[] = [
     del: r => supabase.from('categorie_pdv').delete().eq('id', r.id),
   },
   {
-    id: 'type_pdv', section: 'pdv', label: 'Types PDV', table: 'type_pdv',
+    id: 'type_pdv', section: 'pdv', label: 'Types de PDV', table: 'type_pdv',
     select: 'id, nom, nom_fr, categorie_pdv_id', order: q => q.order('nom'),
     columns: [
       { label: 'Type (niveau 4)', cell: r => r.nom },
@@ -836,7 +859,7 @@ const defs: Def[] = [
     del: async () => ({ error: new Error('Suppression désactivée : désactivez l’objectif (les coachings passés le gardent).') }),
   },
   {
-    id: 'coaching_critere', section: 'app', label: 'Grille coaching MT', table: 'coaching_critere',
+    id: 'coaching_critere', section: 'app', label: 'Grille de coaching, supermarchés (MT)', table: 'coaching_critere',
     select: 'id, grille, bloc, code, libelle, aide, ordre, actif', order: q => q.order('grille').order('bloc').order('ordre'),
     aide: 'Standards d’exécution Modern Trade (part linéaire, visibilité…) évalués quand un commercial MT suit un merchandiser. À remplir avec la grille fournie par le client ; tant qu’elle est vide, le coaching MT n’est pas proposé. La grille General Trade (vendeurs) reste celle de l’application.',
     columns: [
@@ -871,7 +894,7 @@ const defs: Def[] = [
   {
     // Mise à jour obligatoire de l'app mobile (migration 20260930091000,
     // plugins/version-app.client.ts). Une ligne par plateforme.
-    id: 'version_app', section: 'app', label: 'Version minimale', table: 'version_app',
+    id: 'version_app', ailleurs: "Paramètres › Versions de l'app", section: 'app', label: 'Version minimale', table: 'version_app',
     select: 'plateforme, version_code_min, version_nom_min, url_telechargement, message', order: q => q.order('plateforme'), noDelete: true,
     columns: [
       { label: 'Plateforme', cell: r => r.plateforme, kind: 'badge' },
@@ -904,7 +927,7 @@ const defs: Def[] = [
   },
   {
     // Lecture seule : version déclarée par l'app au lancement (version_installee).
-    id: 'version_installee', section: 'app', label: 'Versions installées', table: 'version_installee',
+    id: 'version_installee', ailleurs: "Paramètres › Versions de l'app", section: 'app', label: 'Versions installées', table: 'version_installee',
     select: 'user_id, plateforme, version_code, version_nom, vu_le, profil:user_id(nom, email, role)', order: q => q.order('vu_le', { ascending: false }), noDelete: true, lectureSeule: true,
     columns: [
       { label: 'Utilisateur', cell: r => r.profil?.nom || r.profil?.email || r.user_id },
@@ -921,7 +944,7 @@ const defs: Def[] = [
     del: async () => ({ error: new Error('Déclarée automatiquement par l’application.') }),
   },
   {
-    id: 'segment_grade_type_pdv', section: 'pdv', label: 'Segment / Grade', table: 'segment_grade_type_pdv',
+    id: 'segment_grade_type_pdv', ailleurs: "Paramètres › Standards Perfect Store", section: 'pdv', label: 'Segment / Grade', table: 'segment_grade_type_pdv',
     select: 'type_pdv_id, segment, grade',
     columns: [
       { label: 'Type PDV', cell: r => typePdvNameOf(r.type_pdv_id) },
@@ -943,7 +966,7 @@ const defs: Def[] = [
     del: r => supabase.from('segment_grade_type_pdv').delete().eq('type_pdv_id', r.type_pdv_id),
   },
   {
-    id: 'segment_visibilite_type_pdv', section: 'pdv', label: 'Segment Visibilité', table: 'segment_visibilite_type_pdv',
+    id: 'segment_visibilite_type_pdv', ailleurs: "Paramètres › Standards Perfect Store", section: 'pdv', label: 'Segment Visibilité', table: 'segment_visibilite_type_pdv',
     select: 'type_pdv_id, segment',
     columns: [
       { label: 'Type PDV', cell: r => typePdvNameOf(r.type_pdv_id) },
@@ -1006,7 +1029,7 @@ const defs: Def[] = [
     del: r => supabase.from('reference_produit').delete().eq('id', r.id),
   },
   {
-    id: 'correspondance_reference', section: 'produit', label: 'Correspondance SKU', table: 'correspondance_reference',
+    id: 'correspondance_reference', section: 'produit', label: 'Correspondance des références', table: 'correspondance_reference',
     select: 'reference_produit_id, categorie_jsonb, sku_key',
     columns: [
       { label: 'Référence', cell: r => refNameOf(r.reference_produit_id) },
@@ -1066,7 +1089,7 @@ const defs: Def[] = [
     del: r => supabase.from('marque_concurrente').delete().eq('id', r.id),
   },
   {
-    id: 'marque_concurrente_sku', section: 'produit', label: 'SKU concurrents', table: 'marque_concurrente_sku',
+    id: 'marque_concurrente_sku', section: 'produit', label: 'Références concurrentes', table: 'marque_concurrente_sku',
     select: 'id, marque_id, code, libelle, grammage_g, format, colisage, image_url, actif, ordre', order: q => q.order('ordre').order('libelle'),
     columns: [
       { label: 'Marque', cell: r => marqueNomOf(r.marque_id) },
@@ -1174,7 +1197,7 @@ const defs: Def[] = [
     del: async () => ({ error: new Error('Suppression désactivée : désactivez l’agence (ses merchandisers gardent leur rattachement).') }),
   },
   {
-    id: 'ssf', section: 'distrib', label: 'SSF (vendeurs)', table: 'ssf',
+    id: 'ssf', section: 'distrib', label: 'Vendeurs des distributeurs (SSF)', table: 'ssf',
     select: 'id, nom, nom_brut, telephone, distributeur_id, commercial_id, actif, a_confirmer, source, commentaire', order: q => q.order('nom'),
     noDelete: true,
     aide: 'SSF : vendeur d’un distributeur (pas un salarié Friesland), suivi par un commercial comme les merchandisers de son équipe. Il ne dirige pas le merchandiser : certains jours ils travaillent ensemble (onglet Routing mensuel) pour passer dans les mêmes PDV.',
@@ -1221,7 +1244,7 @@ const defs: Def[] = [
     del: async () => ({ error: new Error('Suppression désactivée : désactivez le SSF (ses visites gardent son nom).') }),
   },
   {
-    id: 'ssf_quartier', section: 'distrib', label: 'SSF ↔ Quartiers', table: 'ssf_quartier',
+    id: 'ssf_quartier', section: 'distrib', label: 'Quartiers des vendeurs (SSF)', table: 'ssf_quartier',
     select: 'id, ssf_id, zone, quartier, source, a_confirmer', order: q => q.order('ssf_id').order('zone').order('quartier'),
     aide: 'Quartiers couverts par un SSF (réunion des lieux de ses jours dans le routing mensuel). Ils complètent les PDV des tournées des jours où il travaille avec le merchandiser. « Dérivée des visites » = proposée d’après les visites passées, à confirmer ; une ligne modifiée ici devient une saisie admin et n’est plus recalculée par les imports.',
     columns: [
@@ -1320,7 +1343,7 @@ const defs: Def[] = [
     },
   },
   {
-    id: 'alias_import', section: 'distrib', label: 'Alias d’import', table: 'alias_import',
+    id: 'alias_import', section: 'distrib', label: 'Alias d’import (orthographes)', table: 'alias_import',
     select: 'id, type, motif, mode, cible, commentaire', order: q => q.order('type').order('motif'),
     aide: 'Orthographes rencontrées dans les fichiers d’import (export Atom, DMS, routing mensuel de l’agence) et leur correspondance dans le référentiel. Le texte est comparé en majuscules, sans accents ni ponctuation. Type « quartier » : rattache un point de visite du routing aux quartiers des PDV, une fois pour toutes.',
     columns: [
@@ -1349,7 +1372,7 @@ const defs: Def[] = [
   },
   // ===== PERFECT STORE =====
   {
-    id: 'niveau_perfect_store', section: 'ps', label: 'Niveaux Perfect Store', table: 'niveau_perfect_store',
+    id: 'niveau_perfect_store', ailleurs: "Paramètres › Standards Perfect Store", section: 'ps', label: 'Niveaux Perfect Store', table: 'niveau_perfect_store',
     select: 'code, rang, dispo_rayon_min, visibilite_min, promotion_min', order: q => q.order('rang', { ascending: false }),
     columns: [
       { label: 'Niveau', cell: r => r.code },
@@ -1378,7 +1401,7 @@ const defs: Def[] = [
     del: r => supabase.from('niveau_perfect_store').delete().eq('code', r.code),
   },
   {
-    id: 'poids_reference', section: 'ps', label: 'Poids SKU', table: 'poids_reference',
+    id: 'poids_reference', section: 'ps', label: 'Poids des références', table: 'poids_reference',
     select: 'reference_produit_id, canal, base_calcul, poids',
     columns: [
       { label: 'Référence', cell: r => refNameOf(r.reference_produit_id) },
@@ -1404,7 +1427,7 @@ const defs: Def[] = [
     del: r => supabase.from('poids_reference').delete().eq('reference_produit_id', r.reference_produit_id).eq('canal', r.canal).eq('base_calcul', r.base_calcul),
   },
   {
-    id: 'seuil_disponibilite', section: 'ps', label: 'Seuils dispo', table: 'seuil_disponibilite',
+    id: 'seuil_disponibilite', section: 'ps', label: 'Seuils de disponibilité', table: 'seuil_disponibilite',
     select: 'reference_produit_id, segment, grade, quantite_min',
     columns: [
       { label: 'Référence', cell: r => refNameOf(r.reference_produit_id) },
@@ -1429,7 +1452,7 @@ const defs: Def[] = [
     del: r => supabase.from('seuil_disponibilite').delete().eq('reference_produit_id', r.reference_produit_id).eq('segment', r.segment).eq('grade', r.grade),
   },
   {
-    id: 'seuil_disponibilite_mt', section: 'ps', label: 'Seuils dispo MT (facings)', table: 'seuil_disponibilite_mt',
+    id: 'seuil_disponibilite_mt', section: 'ps', label: 'Seuils de disponibilité, supermarchés (MT)', table: 'seuil_disponibilite_mt',
     select: 'reference_produit_id, segment_mt, quantite_min, facings',
     columns: [
       { label: 'Référence', cell: r => refNameOf(r.reference_produit_id) },
@@ -1454,7 +1477,7 @@ const defs: Def[] = [
     del: r => supabase.from('seuil_disponibilite_mt').delete().eq('reference_produit_id', r.reference_produit_id).eq('segment_mt', r.segment_mt),
   },
   {
-    id: 'standard_assortiment', section: 'ps', label: 'Assortiment', table: 'standard_assortiment',
+    id: 'standard_assortiment', ailleurs: "Paramètres › Standards Perfect Store", section: 'ps', label: 'Assortiment', table: 'standard_assortiment',
     select: 'segment, grade, sku_cibles, min_sku_presents, heros_obligatoires',
     columns: [
       { label: 'Segment', cell: r => r.segment, kind: 'badge' },
@@ -1480,7 +1503,7 @@ const defs: Def[] = [
     del: r => supabase.from('standard_assortiment').delete().eq('segment', r.segment).eq('grade', r.grade),
   },
   {
-    id: 'element_visibilite', section: 'ps', label: 'Éléments visibilité', table: 'element_visibilite',
+    id: 'element_visibilite', section: 'ps', label: 'Éléments de visibilité (PLV)', table: 'element_visibilite',
     select: 'id, segment, code, nom, pilier, emplacement, optionnel', order: q => q.order('segment').order('id'),
     columns: [
       { label: 'Segment', cell: r => r.segment, kind: 'badge' },
@@ -1511,7 +1534,7 @@ const defs: Def[] = [
     del: r => supabase.from('element_visibilite').delete().eq('id', r.id),
   },
   {
-    id: 'standard_visibilite', section: 'ps', label: 'Standards visibilité', table: 'standard_visibilite',
+    id: 'standard_visibilite', ailleurs: "Paramètres › Standards Perfect Store", section: 'ps', label: 'Standards visibilité', table: 'standard_visibilite',
     select: 'segment, niveau_perfect_store, element_visibilite_id, requis',
     columns: [
       { label: 'Segment', cell: r => r.segment, kind: 'badge' },
@@ -1539,21 +1562,60 @@ const defs: Def[] = [
 
 const sections = [
   { key: 'geo', label: 'Géographie' },
-  { key: 'distrib', label: 'Distribution' },
+  { key: 'distrib', label: 'Distribution et vendeurs' },
   { key: 'pdv', label: 'Points de vente' },
   { key: 'produit', label: 'Produits' },
   { key: 'ps', label: 'Perfect Store' },
   { key: 'app', label: 'Application mobile' },
 ]
 
+// « Publier une version » et la version minimale sont dans Paramètres ›
+// Versions de l'app (un seul endroit).
 const vues: Vue[] = [
-  { id: 'quotas_atom', section: 'app', label: 'Quotas (programme merchandiser)', vue: true },
-  { id: 'publier_version', section: 'app', label: 'Publier une version', vue: true },
-  { id: 'maintenance', section: 'app', label: 'Maintenance', vue: true },
+  { id: 'quotas_atom', section: 'app', label: 'Quotas du programme merchandiser', vue: true },
+  { id: 'maintenance', section: 'app', label: 'Tâches automatiques', vue: true },
 ]
 
-const section = ref('geo')
-const activeId = ref(defs[0].id)
+// Compte agence : seulement le routing mensuel de ses merchandisers et les
+// alias de quartier (les règles de la base limitent aussi ce qu'il lit et écrit).
+const LISTES_AGENCE = ['routing_mensuel', 'alias_import']
+const entreesVisibles = computed<(Def | Vue)[]>(() => {
+  const toutes = [...defs, ...vues].filter(d => !('ailleurs' in d && d.ailleurs))
+  return authStore.isAgence ? toutes.filter(d => LISTES_AGENCE.includes(d.id)) : toutes
+})
+
+const route = useRoute()
+const router = useRouter()
+// Liste choisie : ?liste= (ancien lien : ?onglet=, réécrit ci-dessous).
+const activeId = computed(() => {
+  const voulu = String(route.query.liste || route.query.onglet || '')
+  return entreesVisibles.value.find(d => d.id === voulu)?.id || entreesVisibles.value[0]?.id || defs[0].id
+})
+function choisirListe(id: string) {
+  router.push({ query: { ...route.query, liste: id, onglet: undefined } })
+}
+watch(() => route.query.onglet, (onglet) => {
+  if (onglet) router.replace({ query: { ...route.query, onglet: undefined, liste: String(onglet) } })
+}, { immediate: true })
+
+const rechercheListe = ref('')
+const groupesListes = computed(() => {
+  const q = normaliser(rechercheListe.value.trim()).toLowerCase()
+  return sections
+    .map(sec => ({
+      ...sec,
+      entrees: entreesVisibles.value.filter(d => d.section === sec.key && (!q || normaliser(d.label).toLowerCase().includes(q))),
+    }))
+    .filter(g => g.entrees.length)
+})
+const optionsMobile = computed(() => sections
+  .map(sec => ({
+    value: `groupe-${sec.key}`,
+    label: sec.label,
+    children: entreesVisibles.value.filter(d => d.section === sec.key).map(d => ({ value: d.id, label: d.label })),
+  }))
+  .filter(g => g.children.length))
+
 const search = ref('')
 const showModal = ref(false)
 const editing = ref(false)
@@ -1561,24 +1623,8 @@ const saving = ref(false)
 const { charger: chargerCatalogue } = useCatalogueReleve()
 const form = ref<any>({})
 
-const sectionEntrees = computed<(Def | Vue)[]>(() => [...defs, ...vues].filter(d => d.section === section.value))
 const activeVue = computed(() => vues.find(v => v.id === activeId.value) || null)
 const activeDef = computed(() => defs.find(d => d.id === activeId.value) || defs[0])
-
-function selectSection(key: string) {
-  section.value = key
-  const first = [...defs, ...vues].find(d => d.section === key)
-  if (first) activeId.value = first.id
-  search.value = ''
-}
-
-// Lien direct vers un onglet : /admin/referentiels?onglet=ssf
-const route = useRoute()
-onMounted(() => {
-  const onglet = String(route.query.onglet || '')
-  const cible = [...defs, ...vues].find(d => d.id === onglet)
-  if (cible) { section.value = cible.section; activeId.value = cible.id }
-})
 
 watch(activeId, () => { search.value = '' })
 
@@ -1634,7 +1680,7 @@ async function save() {
     if (activeDef.value.id === 'categorie_releve') void chargerCatalogue(true)
   }
   catch (err: any) {
-    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+    toast.add({ title: 'Enregistrement impossible', description: messageUtilisateur(err), color: 'red' })
   }
   finally {
     saving.value = false
@@ -1655,7 +1701,7 @@ async function remove(row: any) {
     await reload(activeDef.value)
   }
   catch (err: any) {
-    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+    toast.add({ title: 'Enregistrement impossible', description: messageUtilisateur(err), color: 'red' })
   }
 }
 
@@ -1663,7 +1709,7 @@ async function reload(def: Def) {
   let query = supabase.from(def.table).select(def.select)
   if (def.order) query = def.order(query)
   const { data, error: err } = await query
-  if (err) { toast.add({ title: 'Erreur de rechargement', description: err.message, color: 'red' }); return }
+  if (err) { toast.add({ title: 'Liste non actualisée', description: messageUtilisateur(err), color: 'red' }); return }
   store[def.id] = data || []
   rebuildMaps()
 }
@@ -1672,7 +1718,10 @@ async function fetchAll() {
   loading.value = true
   error.value = null
   try {
-    const results = await Promise.all(defs.map((d) => {
+    // Seulement les listes que ce compte peut ouvrir (un compte agence n'a pas
+    // à charger, ni à voir échouer, les autres tables).
+    const aCharger = authStore.isAgence ? defs.filter(d => LISTES_AGENCE.includes(d.id)) : defs
+    const results = await Promise.all(aCharger.map((d) => {
       let query = supabase.from(d.table).select(d.select)
       if (d.order) query = d.order(query)
       return query
@@ -1680,15 +1729,19 @@ async function fetchAll() {
     // Résilient : une table absente (ex. migration non exécutée) → tableau vide,
     // sans casser le chargement des autres référentiels.
     const missing: string[] = []
-    defs.forEach((d, i) => {
-      if (results[i].error) { store[d.id] = []; missing.push(d.label) }
+    aCharger.forEach((d, i) => {
+      if (results[i].error) {
+        store[d.id] = []
+        missing.push(d.label)
+        console.error(`[référentiels] ${d.table}`, results[i].error)
+      }
       else store[d.id] = results[i].data || []
     })
     rebuildMaps()
-    if (missing.length) error.value = `Table(s) non disponible(s) : ${missing.join(', ')} (migration à exécuter).`
+    if (missing.length) error.value = `Ces listes n'ont pas pu être chargées : ${missing.join(', ')}. Les autres sont utilisables ; prévenez l'administrateur technique si le problème continue.`
   }
   catch (err: any) {
-    error.value = err?.message || 'chargement impossible'
+    error.value = messageUtilisateur(err)
   }
   finally {
     loading.value = false
@@ -1702,8 +1755,3 @@ onMounted(() => {
 })
 </script>
 
-<style scoped>
-.th-l { @apply px-4 py-2.5 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400; }
-.th-c { @apply px-4 py-2.5 text-center text-xs font-medium uppercase text-gray-500 dark:text-gray-400; }
-.row { @apply hover:bg-gray-50 dark:hover:bg-gray-700/50; }
-</style>

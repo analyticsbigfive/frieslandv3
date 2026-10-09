@@ -20,7 +20,7 @@
     <div class="rounded-xl border border-blue-100 dark:border-blue-900 bg-blue-50/60 dark:bg-blue-950/30 p-4 text-sm text-gray-700 dark:text-gray-300 space-y-1">
       <p><strong>La clé d'un produit est figée</strong> : c'est elle qui range les quantités dans les visites. Pour remplacer un produit, retirez-le du formulaire et ajoutez-en un nouveau.</p>
       <p>Un produit retiré disparaît du formulaire ; ses relevés passés restent dans les tableaux et l'export.</p>
-      <p>Un nouveau produit ne compte au Perfect Store qu'après une <NuxtLink to="/admin/referentiels?onglet=correspondance_reference" class="text-fc-blue underline">correspondance SKU</NuxtLink>. Les catégories se gèrent dans <NuxtLink to="/admin/referentiels?onglet=categorie_releve" class="text-fc-blue underline">Référentiels › Catégories du relevé</NuxtLink>.</p>
+      <p>Un nouveau produit ne compte au Perfect Store qu'après une <NuxtLink to="/admin/referentiels?liste=correspondance_reference" class="text-fc-blue underline">correspondance SKU</NuxtLink>. Les catégories se gèrent dans <NuxtLink to="/admin/referentiels?liste=categorie_releve" class="text-fc-blue underline">Référentiels › Catégories du relevé</NuxtLink>.</p>
       <p>Les téléphones reçoivent les changements à l'ouverture de l'app (version 1.0.12 et suivantes).</p>
     </div>
 

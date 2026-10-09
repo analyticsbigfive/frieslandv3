@@ -88,9 +88,9 @@
 
     <p class="text-xs text-gray-500 dark:text-gray-400">
       Réglages : grille des quotas, commune aux directions (elle fixe aussi l'objectif mensuel), et canal des sous-catégories dans
-      <NuxtLink to="/admin/referentiels?onglet=quotas_atom" class="font-semibold text-fc-red underline">Référentiels › Quotas</NuxtLink>,
-      routing mensuel de l’agence dans <NuxtLink to="/admin/referentiels?onglet=routing_mensuel" class="font-semibold text-fc-red underline">Référentiels › Routing mensuel</NuxtLink>,
-      agences dans <NuxtLink to="/admin/referentiels?onglet=agence" class="font-semibold text-fc-red underline">Référentiels › Agences</NuxtLink>.
+      <NuxtLink to="/admin/referentiels?liste=quotas_atom" class="font-semibold text-fc-red underline">Référentiels › Quotas</NuxtLink>,
+      routing mensuel de l’agence dans <NuxtLink to="/admin/referentiels?liste=routing_mensuel" class="font-semibold text-fc-red underline">Référentiels › Routing mensuel</NuxtLink>,
+      agences dans <NuxtLink to="/admin/referentiels?liste=agence" class="font-semibold text-fc-red underline">Référentiels › Agences</NuxtLink>.
     </p>
   </div>
 </template>

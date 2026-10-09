@@ -117,7 +117,7 @@
 
     <p class="text-xs text-gray-500 dark:text-gray-400">
       Sources : SSF de chaque jour dans
-      <NuxtLink to="/admin/referentiels?onglet=routing_mensuel" class="font-semibold text-fc-red underline">Référentiels › Routing mensuel</NuxtLink>
+      <NuxtLink to="/admin/referentiels?liste=routing_mensuel" class="font-semibold text-fc-red underline">Référentiels › Routing mensuel</NuxtLink>
       (fichier de l’agence : SSF de chaque jour et semaine du mois), routing des SSF dans
       <NuxtLink to="/admin/import-export" class="font-semibold text-fc-red underline">Import / Export › Imports terrain</NuxtLink>
       (export clients DMS). L’export DMS ne donne pas le jour de passage : un PDV du routing d’un SSF vaut pour tous ses jours.
