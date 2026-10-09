@@ -6,56 +6,12 @@
       :description="activeTab === 'templates'
         ? 'Les règles qui génèrent les tournées chaque semaine ou chaque mois, mois suivant compris.'
         : 'Les tournées prévues pour chaque merchandiser, générées par les règles récurrentes.'"
-    />
-    <p v-if="lectureSeule" class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-      <UIcon name="i-heroicons-eye" class="h-4 w-4" aria-hidden="true" />
-      Consultation : le routing de vos merchandisers se charge dans Paramètres › Import / Export, et se corrige dans Paramètres › Référentiels › Routing mensuel.
-    </p>
-
-    <!-- ==================== TAB 1: ROUTINGS PONCTUELS ==================== -->
-    <template v-if="activeTab === 'routings'">
-      <!-- Action bar -->
-      <div class="flex flex-wrap items-start justify-between gap-3">
-        <div class="admin-toolbar flex flex-1 flex-wrap items-end gap-4">
-          <div v-if="vueTournees === 'personnes'">
-            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Date début</label>
-            <UInput v-model="filters.dateFrom" type="date" size="sm" />
-          </div>
-          <div v-if="vueTournees === 'personnes'">
-            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Date fin</label>
-            <UInput v-model="filters.dateTo" type="date" size="sm" />
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Personne</label>
-            <USelectMenu
-              v-model="filters.userId"
-              :options="userOptions"
-              placeholder="Toute l'équipe"
-              option-attribute="label"
-              value-attribute="value"
-              size="sm"
-              class="w-48"
-            />
-          </div>
-          <div v-if="vueTournees === 'personnes'">
-            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Statut</label>
-            <USelectMenu
-              v-model="filters.status"
-              :options="statusOptions"
-              placeholder="Tous"
-              option-attribute="label"
-              value-attribute="value"
-              size="sm"
-              class="w-36"
-            />
-          </div>
-          <UButton variant="soft" size="sm" icon="i-heroicons-arrow-path" @click="loadRoutings">
-            Actualiser
-          </UButton>
-        </div>
-        <div class="flex flex-wrap gap-2">
+    >
+      <!-- Actions de l'onglet courant ; l'action principale (rouge) en dernier. -->
+      <template #actions>
+        <template v-if="activeTab === 'routings'">
           <UButton v-if="authStore.isAdmin" variant="outline" icon="i-heroicons-arrow-down-tray" :loading="downloadingTemplate" @click="handleDownloadTemplate">
-            Modèle Excel
+            Modèle de fichier (Excel)
           </UButton>
           <UButton v-if="authStore.isAdmin" variant="outline" icon="i-heroicons-arrow-up-tray" @click="showImportModal = true">
             Importer
@@ -66,7 +22,66 @@
           <UButton v-if="!lectureSeule" icon="i-heroicons-plus" @click="openCreateRouting">
             Nouvelle tournée
           </UButton>
+        </template>
+        <template v-else-if="!lectureSeule">
+          <UButton icon="i-heroicons-bolt" variant="outline" :loading="preGenerating" @click="handlePreGenerer">
+            Générer les 7 prochains jours
+          </UButton>
+          <UButton icon="i-heroicons-calendar-days" variant="outline" @click="showGenerateModal = true">
+            Générer sur une période
+          </UButton>
+          <UButton icon="i-heroicons-plus" @click="showTemplateCreateModal = true">
+            Nouvelle règle
+          </UButton>
+        </template>
+      </template>
+    </AdminPageHeader>
+    <p v-if="lectureSeule" class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+      <UIcon name="i-heroicons-eye" class="h-4 w-4 shrink-0" aria-hidden="true" />
+      Consultation : le routing de vos merchandisers se charge dans Paramètres › Import / Export, et se corrige dans Paramètres › Référentiels › Routing mensuel.
+    </p>
+
+    <!-- ==================== TAB 1: ROUTINGS PONCTUELS ==================== -->
+    <template v-if="activeTab === 'routings'">
+      <!-- Filtres -->
+      <div class="admin-toolbar flex flex-wrap items-end gap-4">
+        <div v-if="vueTournees === 'personnes'">
+          <label for="filtre-tournees-du" class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Date début</label>
+          <UInput id="filtre-tournees-du" v-model="filters.dateFrom" type="date" size="sm" />
         </div>
+        <div v-if="vueTournees === 'personnes'">
+          <label for="filtre-tournees-au" class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Date fin</label>
+          <UInput id="filtre-tournees-au" v-model="filters.dateTo" type="date" size="sm" />
+        </div>
+        <div>
+          <label for="filtre-tournees-personne" class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Personne</label>
+          <USelectMenu
+            id="filtre-tournees-personne"
+            v-model="filters.userId"
+            :options="userOptions"
+            placeholder="Toute l'équipe"
+            option-attribute="label"
+            value-attribute="value"
+            size="sm"
+            class="w-56"
+          />
+        </div>
+        <div v-if="vueTournees === 'personnes'">
+          <label for="filtre-tournees-statut" class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Statut</label>
+          <USelectMenu
+            id="filtre-tournees-statut"
+            v-model="filters.status"
+            :options="statusOptions"
+            placeholder="Tous"
+            option-attribute="label"
+            value-attribute="value"
+            size="sm"
+            class="w-40"
+          />
+        </div>
+        <UButton variant="outline" size="sm" icon="i-heroicons-arrow-path" @click="loadRoutings">
+          Actualiser
+        </UButton>
       </div>
 
       <!-- Affichage (pas une navigation) : planning d'équipe (une ligne par
@@ -118,111 +133,106 @@
       <div v-else class="space-y-4">
         <ChargementContenu v-if="loading" libelle="Chargement des tournées…" />
 
-        <div v-else-if="routings.length === 0" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-12 text-center">
-          <UIcon name="i-heroicons-map" class="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p class="text-gray-500 dark:text-gray-400 font-medium">Aucun routing trouvé</p>
-          <p class="text-gray-400 text-sm mt-1">Créez un routing ou générez depuis un template permanent</p>
+        <div v-else-if="routings.length === 0" class="admin-surface p-8 text-center">
+          <UIcon name="i-heroicons-map" class="mx-auto mb-3 h-10 w-10 text-slate-400" aria-hidden="true" />
+          <p class="font-semibold text-slate-900 dark:text-white">Aucune tournée sur cette période</p>
+          <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            Élargissez les dates ou choisissez « Toute l'équipe ».<template v-if="!lectureSeule"> Vous pouvez aussi créer une tournée, ou la générer depuis une règle récurrente.</template>
+          </p>
         </div>
 
         <template v-else>
-          <p class="text-xs text-gray-400">
-            {{ tourneesParPersonne.length }} personne(s) · {{ routings.length }} tournée(s). Cliquez sur une carte pour voir ses tournées.
+          <p class="text-sm text-slate-600 dark:text-slate-300">
+            {{ tourneesParPersonne.length }} personne(s) · {{ routings.length }} tournée(s). Cliquez sur une personne pour voir ses tournées.
           </p>
 
           <div
             v-for="p in tourneesParPersonne"
             :key="p.id"
-            class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden"
+            class="admin-surface overflow-hidden"
           >
             <!-- En-tête personne -->
             <div
-              class="flex flex-wrap items-center gap-4 px-5 py-4 cursor-pointer select-none hover:bg-gray-50/70 dark:hover:bg-gray-700/40 transition-colors"
+              class="flex cursor-pointer select-none flex-wrap items-center gap-4 px-5 py-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/40"
               role="button"
+              tabindex="0"
               :aria-expanded="personneTourneesOuverte(p.id)"
               @click="basculer(personnesTourneesOuvertes, p.id)"
+              @keydown.enter.self.prevent="basculer(personnesTourneesOuvertes, p.id)"
+              @keydown.space.self.prevent="basculer(personnesTourneesOuvertes, p.id)"
             >
-              <div class="w-11 h-11 shrink-0 rounded-full bg-fc-red/10 text-fc-red flex items-center justify-center text-sm font-bold">
+              <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200" aria-hidden="true">
                 {{ initiales(p.user) }}
               </div>
-              <div class="flex-1 min-w-[12rem]">
-                <h3 class="text-lg font-bold leading-tight text-gray-900 dark:text-gray-100">{{ nomPersonne(p.user) }}</h3>
-                <p class="text-xs text-gray-400 truncate">
+              <div class="min-w-[12rem] flex-1">
+                <h3 class="text-base font-semibold leading-tight text-slate-900 dark:text-white">{{ nomPersonne(p.user) }}</h3>
+                <p class="truncate text-xs text-slate-500 dark:text-slate-400">
                   {{ profileTerritories(p.user).join(', ') || 'Aucun territoire assigné' }}
                 </p>
               </div>
 
-              <!-- Portefeuille DMS -->
-              <div v-if="p.dms" class="min-w-[14rem] rounded-lg border border-fc-red/20 bg-fc-red/5 px-3 py-2 dark:border-fc-red/30 dark:bg-fc-red/10">
-                <p class="text-[10px] font-semibold uppercase tracking-wide text-fc-red">Portefeuille DMS</p>
-                <p class="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{{ libelleDms(p.dms) }}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">
+              <!-- Portefeuille tiré du fichier du distributeur (DMS) -->
+              <div v-if="p.dms" class="min-w-[14rem] rounded-md border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-600 dark:bg-slate-900/40">
+                <p class="text-xs font-medium text-slate-600 dark:text-slate-300">Portefeuille (fichier du distributeur)</p>
+                <p class="truncate text-sm font-semibold text-slate-900 dark:text-white">{{ libelleDms(p.dms) }}</p>
+                <p class="text-xs text-slate-600 dark:text-slate-300">
                   {{ p.dms.nb_pdv ?? 0 }} PDV · {{ libelleJours(p.dms) }}
-                  <span v-if="nbSansGpsRegle(p.dms)" class="font-semibold text-red-600 dark:text-red-400"> · {{ nbSansGpsRegle(p.dms) }} sans GPS</span>
+                  <span v-if="nbSansGpsRegle(p.dms)" class="font-semibold text-red-700 dark:text-red-300"> · {{ nbSansGpsRegle(p.dms) }} sans GPS</span>
                 </p>
               </div>
-              <div v-else class="min-w-[14rem] rounded-lg border border-dashed border-gray-200 px-3 py-2 text-xs text-gray-400 dark:border-gray-600">
-                <p class="text-[10px] font-semibold uppercase tracking-wide">Portefeuille DMS</p>
-                <p>Aucun portefeuille DMS</p>
+              <div v-else class="min-w-[14rem] rounded-md border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-600 dark:border-slate-600 dark:text-slate-300">
+                <p class="font-medium">Portefeuille (fichier du distributeur)</p>
+                <p>Pas de portefeuille du distributeur</p>
               </div>
 
-              <div class="text-right text-sm">
-                <p class="font-semibold text-gray-900 dark:text-gray-100">{{ p.routings.length }} tournée(s)</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">{{ p.nbFaits }}/{{ p.nbPdv }} PDV faits</p>
+              <div class="text-sm tabular-nums sm:text-right">
+                <p class="font-semibold text-slate-900 dark:text-white">{{ p.routings.length }} tournée(s)</p>
+                <p class="text-xs text-slate-600 dark:text-slate-300">{{ p.nbFaits }}/{{ p.nbPdv }} PDV faits</p>
               </div>
 
-              <UButton size="xs" variant="outline" icon="i-heroicons-calendar-days" @click.stop="voirCalendrier(p.id)">
-                Voir son calendrier
-              </UButton>
-              <UButton v-if="!lectureSeule" size="xs" variant="outline" icon="i-heroicons-plus" @click.stop="openCreateRoutingPour(p.id)">
-                Nouvelle tournée
-              </UButton>
-              <UIcon
-                :name="personneTourneesOuverte(p.id) ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
-                class="w-5 h-5 text-gray-400"
-              />
+              <div class="ml-auto flex flex-wrap items-center gap-2">
+                <UButton size="xs" variant="outline" icon="i-heroicons-calendar-days" @click.stop="voirCalendrier(p.id)">
+                  Voir son calendrier
+                </UButton>
+                <UButton v-if="!lectureSeule" size="xs" variant="outline" icon="i-heroicons-plus" @click.stop="openCreateRoutingPour(p.id)">
+                  Nouvelle tournée
+                </UButton>
+                <UIcon
+                  :name="personneTourneesOuverte(p.id) ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
+                  class="h-5 w-5 text-slate-500"
+                  aria-hidden="true"
+                />
+              </div>
             </div>
 
-            <!-- Tournées de la personne -->
-            <div v-if="personneTourneesOuverte(p.id)" class="border-t border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 px-5 py-4 space-y-3">
-            <template v-if="p.routings">
-              <div
+            <!-- Tournées de la personne : une ligne par jour, sans carte dans la carte -->
+            <ul v-if="personneTourneesOuverte(p.id)" class="divide-y divide-slate-200 border-t border-slate-200 dark:divide-slate-700 dark:border-slate-700">
+              <li
                 v-for="routing in p.routings"
                 :key="routing.id"
-                class="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 overflow-hidden"
+                class="flex flex-wrap items-center justify-between gap-3 px-5 py-3"
               >
-                <div class="px-4 py-3 flex items-center justify-between">
-                  <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-full bg-fc-red/10 flex items-center justify-center">
-                      <UIcon name="i-heroicons-calendar-days" class="w-4 h-4 text-fc-red" />
-                    </div>
-                    <div>
-                      <h4 class="font-semibold text-gray-900 dark:text-gray-100 capitalize">{{ formatDate(routing.date_routing) }}</h4>
-                      <p v-if="routing.creator" class="text-xs text-gray-400">par {{ routing.creator.nom }}</p>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-3">
-                    <UBadge :color="statusColor(routing.status)" variant="soft" size="sm">
-                      {{ statusLabel(routing.status) }}
-                    </UBadge>
-                    <span class="text-sm font-medium text-gray-600 dark:text-gray-300">
-                      {{ routing.nb_faits ?? completedPdvCount(routing) }}/{{ routing.nb_pdv ?? routing.routing_pdv?.length ?? 0 }} PDV
-                    </span>
-                    <UDropdown v-if="!lectureSeule" :items="routingActions(routing)" :popper="{ placement: 'bottom-end' }">
-                      <UButton variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" :aria-label="`Actions sur la tournée du ${formatDate(routing.date_routing)}`" />
-                    </UDropdown>
-                  </div>
+                <div class="min-w-0">
+                  <h4 class="text-sm font-semibold text-slate-900 first-letter:uppercase dark:text-white">{{ formatDate(routing.date_routing) }}</h4>
+                  <p v-if="routing.creator" class="text-xs text-slate-500 dark:text-slate-400">Créée par {{ routing.creator.nom }}</p>
+                  <p v-if="routing.notes" class="mt-0.5 text-xs text-slate-600 dark:text-slate-300">Note : {{ routing.notes }}</p>
                 </div>
-
-                <p v-if="routing.notes" class="px-4 pb-2 text-xs text-gray-400">Note : {{ routing.notes }}</p>
-                <button
-                  class="w-full py-2 text-xs text-gray-500 hover:text-fc-red hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-t border-gray-100 dark:border-gray-700"
-                  @click="ouvrirTournee(routing, p.user)"
-                >
-                  Voir les PDV du jour et leur statut
-                </button>
-              </div>
-            </template>
-            </div>
+                <div class="flex flex-wrap items-center gap-3">
+                  <UBadge :color="statusColor(routing.status)" variant="soft" size="sm">
+                    {{ statusLabel(routing.status) }}
+                  </UBadge>
+                  <span class="text-sm font-medium tabular-nums text-slate-700 dark:text-slate-200">
+                    {{ routing.nb_faits ?? completedPdvCount(routing) }}/{{ routing.nb_pdv ?? routing.routing_pdv?.length ?? 0 }} PDV faits
+                  </span>
+                  <UButton size="xs" variant="ghost" icon="i-heroicons-list-bullet" @click="ouvrirTournee(routing, p.user)">
+                    Voir les points de vente
+                  </UButton>
+                  <UDropdown v-if="!lectureSeule" :items="routingActions(routing)" :popper="{ placement: 'bottom-end' }">
+                    <UButton variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" :aria-label="`Actions sur la tournée du ${formatDate(routing.date_routing)}`" />
+                  </UDropdown>
+                </div>
+              </li>
+            </ul>
           </div>
         </template>
       </div>
@@ -230,226 +240,228 @@
 
     <!-- ==================== TAB 2: TEMPLATES PERMANENTS ==================== -->
     <template v-if="activeTab === 'templates'">
-      <!-- Action bar -->
-      <div class="flex flex-wrap items-start justify-between gap-3">
-        <div class="admin-toolbar flex flex-wrap items-end gap-4">
-          <div>
-            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Personne</label>
-            <USelectMenu
-              v-model="templateFilterUser"
-              :options="userOptions"
-              placeholder="Toute l'équipe"
-              option-attribute="label"
-              value-attribute="value"
-              size="sm"
-              class="w-56"
-            />
-          </div>
-          <UButton variant="soft" size="sm" icon="i-heroicons-arrow-path" @click="loadTemplates">
-            Actualiser
-          </UButton>
+      <!-- Filtres -->
+      <div class="admin-toolbar flex flex-wrap items-end gap-4">
+        <div>
+          <label for="filtre-regles-personne" class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Personne</label>
+          <USelectMenu
+            id="filtre-regles-personne"
+            v-model="templateFilterUser"
+            :options="userOptions"
+            placeholder="Toute l'équipe"
+            option-attribute="label"
+            value-attribute="value"
+            size="sm"
+            class="w-56"
+          />
         </div>
-        <div v-if="!lectureSeule" class="flex flex-wrap gap-2">
-          <UButton icon="i-heroicons-bolt" variant="outline" :loading="preGenerating" @click="handlePreGenerer">
-            Pré-générer 7 jours
-          </UButton>
-          <UButton icon="i-heroicons-calendar-days" variant="outline" @click="showGenerateModal = true">
-            Générer sur une période
-          </UButton>
-          <UButton icon="i-heroicons-plus" @click="showTemplateCreateModal = true">
-            Nouvelle règle
-          </UButton>
-        </div>
+        <UButton variant="outline" size="sm" icon="i-heroicons-arrow-path" @click="loadTemplates">
+          Actualiser
+        </UButton>
       </div>
 
       <ChargementContenu v-if="templateLoading || !reglesChargees" libelle="Chargement des règles récurrentes…" />
 
-      <div v-else-if="groupedTemplates.length === 0" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-12 text-center">
-        <UIcon name="i-heroicons-calendar" class="w-12 h-12 text-gray-300 mx-auto mb-3" />
-        <p class="text-gray-500 dark:text-gray-400 font-medium">Aucune règle récurrente</p>
-        <p class="text-gray-400 text-sm mt-1">
-          Créez une règle (« ce merchandiser visite ces PDV chaque lundi et jeudi ») : les tournées se génèrent ensuite toutes seules.
+      <div v-else-if="groupedTemplates.length === 0" class="admin-surface p-8 text-center">
+        <UIcon name="i-heroicons-calendar" class="mx-auto mb-3 h-10 w-10 text-slate-400" aria-hidden="true" />
+        <p class="font-semibold text-slate-900 dark:text-white">Aucune règle récurrente</p>
+        <p v-if="lectureSeule" class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+          Aucune règle pour vos merchandisers : le routing se charge dans Paramètres › Import / Export.
+        </p>
+        <p v-else class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+          Créez une règle (« ce merchandiser visite ces points de vente chaque lundi et jeudi ») : les tournées se génèrent ensuite toutes seules.
         </p>
       </div>
 
       <!-- Règles regroupées par personne : une carte dépliable par merchandiser -->
       <div v-else class="space-y-4">
-        <p class="text-xs text-gray-400">
-          {{ reglesParPersonne.length }} personne(s) · {{ groupedTemplates.length }} règle(s). Cliquez sur une carte pour voir et modifier ses règles.
+        <p class="text-sm text-slate-600 dark:text-slate-300">
+          {{ reglesParPersonne.length }} personne(s) · {{ groupedTemplates.length }} règle(s). Cliquez sur une personne pour {{ lectureSeule ? 'voir' : 'voir et modifier' }} ses règles.
         </p>
 
         <div
           v-for="p in reglesParPersonne"
           :key="p.id"
-          class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden"
+          class="admin-surface overflow-hidden"
         >
           <!-- En-tête personne -->
           <div
-            class="flex flex-wrap items-center gap-4 px-5 py-4 cursor-pointer select-none hover:bg-gray-50/70 dark:hover:bg-gray-700/40 transition-colors"
+            class="flex cursor-pointer select-none flex-wrap items-center gap-4 px-5 py-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/40"
             role="button"
+            tabindex="0"
             :aria-expanded="personneReglesOuverte(p.id)"
             @click="basculer(personnesOuvertes, p.id)"
+            @keydown.enter.self.prevent="basculer(personnesOuvertes, p.id)"
+            @keydown.space.self.prevent="basculer(personnesOuvertes, p.id)"
           >
-            <div class="w-11 h-11 shrink-0 rounded-full bg-fc-red/10 text-fc-red flex items-center justify-center text-sm font-bold">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200" aria-hidden="true">
               {{ initiales(p.user) }}
             </div>
-            <div class="flex-1 min-w-[12rem]">
-              <h3 class="text-lg font-bold leading-tight text-gray-900 dark:text-gray-100">{{ nomPersonne(p.user) }}</h3>
-              <p class="text-xs text-gray-400 truncate">
+            <div class="min-w-[12rem] flex-1">
+              <h3 class="text-base font-semibold leading-tight text-slate-900 dark:text-white">{{ nomPersonne(p.user) }}</h3>
+              <p class="truncate text-xs text-slate-500 dark:text-slate-400">
                 {{ profileTerritories(p.user).join(', ') || 'Aucun territoire assigné' }}
               </p>
             </div>
 
-            <!-- Portefeuille DMS -->
-            <div v-if="p.dms" class="min-w-[14rem] rounded-lg border border-fc-red/20 bg-fc-red/5 px-3 py-2 dark:border-fc-red/30 dark:bg-fc-red/10">
-              <p class="text-[10px] font-semibold uppercase tracking-wide text-fc-red">Portefeuille DMS</p>
-              <p class="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{{ libelleDms(p.dms) }}</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">
+            <!-- Portefeuille tiré du fichier du distributeur (DMS) -->
+            <div v-if="p.dms" class="min-w-[14rem] rounded-md border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-600 dark:bg-slate-900/40">
+              <p class="text-xs font-medium text-slate-600 dark:text-slate-300">Portefeuille (fichier du distributeur)</p>
+              <p class="truncate text-sm font-semibold text-slate-900 dark:text-white">{{ libelleDms(p.dms) }}</p>
+              <p class="text-xs text-slate-600 dark:text-slate-300">
                 {{ p.dms.nb_pdv ?? 0 }} PDV · {{ libelleJours(p.dms) }}
-                <span v-if="nbSansGpsRegle(p.dms)" class="font-semibold text-red-600 dark:text-red-400"> · {{ nbSansGpsRegle(p.dms) }} sans GPS</span>
+                <span v-if="nbSansGpsRegle(p.dms)" class="font-semibold text-red-700 dark:text-red-300"> · {{ nbSansGpsRegle(p.dms) }} sans GPS</span>
               </p>
             </div>
-            <div v-else class="min-w-[14rem] rounded-lg border border-dashed border-gray-200 px-3 py-2 text-xs text-gray-400 dark:border-gray-600">
-              <p class="text-[10px] font-semibold uppercase tracking-wide">Portefeuille DMS</p>
-              <p>Aucun portefeuille DMS</p>
+            <div v-else class="min-w-[14rem] rounded-md border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-600 dark:border-slate-600 dark:text-slate-300">
+              <p class="font-medium">Portefeuille (fichier du distributeur)</p>
+              <p>Pas de portefeuille du distributeur</p>
             </div>
 
-            <div class="text-right text-sm">
-              <p class="font-semibold text-gray-900 dark:text-gray-100">{{ p.regles.length }} règle(s)</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">
+            <div class="text-sm tabular-nums sm:text-right">
+              <p class="font-semibold text-slate-900 dark:text-white">{{ p.regles.length }} règle(s)</p>
+              <p class="text-xs text-slate-600 dark:text-slate-300">
                 {{ p.nbPdv }} PDV
-                <span v-if="p.nbSansGps" class="font-semibold text-red-600 dark:text-red-400">· {{ p.nbSansGps }} sans GPS</span>
+                <span v-if="p.nbSansGps" class="font-semibold text-red-700 dark:text-red-300">· {{ p.nbSansGps }} sans GPS</span>
               </p>
             </div>
-            <UIcon
-              :name="personneReglesOuverte(p.id) ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
-              class="w-5 h-5 text-gray-400"
-            />
+            <div class="ml-auto flex items-center gap-2">
+              <UButton size="xs" variant="outline" icon="i-heroicons-calendar-days" @click.stop="voirCalendrier(p.id)">
+                Voir son calendrier
+              </UButton>
+              <UIcon
+                :name="personneReglesOuverte(p.id) ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
+                class="h-5 w-5 text-slate-500"
+                aria-hidden="true"
+              />
+            </div>
           </div>
 
-          <!-- Règles de la personne -->
-          <div v-if="personneReglesOuverte(p.id)" class="border-t border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 px-5 py-4 space-y-4">
-            <div class="flex justify-end">
-              <UButton size="xs" variant="outline" icon="i-heroicons-calendar-days" @click="voirCalendrier(p.id)">Voir son calendrier</UButton>
-            </div>
-            <template v-if="p.regles">
-            <div
+          <!-- Règles de la personne : une section par règle, séparées d'un trait -->
+          <div v-if="personneReglesOuverte(p.id)" class="divide-y divide-slate-200 border-t border-slate-200 dark:divide-slate-700 dark:border-slate-700">
+            <section
               v-for="tpl in p.regles"
               :key="tpl.id"
-              class="bg-white dark:bg-gray-800 rounded-lg border overflow-hidden"
-              :class="estRegleDms(tpl) ? 'border-fc-red/30' : 'border-gray-100 dark:border-gray-700'"
+              class="space-y-4 px-5 py-4"
+              :aria-label="`Règle ${titreRegle(tpl)}`"
             >
               <!-- En-tête règle -->
-              <div class="px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-700">
-                <div class="flex items-center gap-3">
-                  <div class="flex gap-1">
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div class="flex min-w-0 items-start gap-3">
+                  <div class="flex shrink-0 flex-wrap gap-1" aria-hidden="true">
                     <span
                       v-for="j in joursDeRegle(tpl)"
                       :key="j"
-                      class="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold"
-                      :class="dayColors[j]"
+                      class="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200"
                     >
                       {{ dayShort[j] }}
                     </span>
                   </div>
-                  <div>
-                    <h4 class="font-semibold text-gray-900 dark:text-gray-100">
-                      <span v-if="tpl.label">{{ tpl.label }}</span>
+                  <div class="min-w-0">
+                    <h4 class="text-sm font-semibold text-slate-900 dark:text-white">
+                      <span v-if="tpl.label">{{ titreRegle(tpl) }}</span>
                       <span v-else>{{ libelleJours(tpl) }}</span>
-                      <span v-if="tpl.label" class="font-normal text-gray-500 dark:text-gray-400"> — {{ libelleJours(tpl) }}</span>
+                      <span v-if="tpl.label" class="font-normal text-slate-600 dark:text-slate-300"> — {{ libelleJours(tpl) }}</span>
                     </h4>
-                    <p class="text-xs text-gray-400">
+                    <p class="text-xs text-slate-600 dark:text-slate-300">
                       {{ tpl.nb_pdv ?? tpl.routing_template_pdv?.length ?? 0 }} PDV
-                      <span v-if="nbSansGpsRegle(tpl)" class="font-semibold text-red-600 dark:text-red-400">dont {{ nbSansGpsRegle(tpl) }} sans GPS</span>
+                      <span v-if="nbSansGpsRegle(tpl)" class="font-semibold text-red-700 dark:text-red-300">dont {{ nbSansGpsRegle(tpl) }} sans GPS</span>
                       <template v-if="tpl.territoire"> · {{ tpl.territoire }}</template>
                       <template v-if="tpl.distributeur"> · {{ tpl.distributeur }}</template>
                       ·
-                      <template v-if="tpl.date_fin">du {{ tpl.date_debut || '—' }} au {{ tpl.date_fin }}</template>
-                      <template v-else>à partir du {{ tpl.date_debut || '—' }}, sans date de fin</template>
+                      <template v-if="tpl.date_fin">du {{ dateFr(tpl.date_debut) }} au {{ dateFr(tpl.date_fin) }}</template>
+                      <template v-else>à partir du {{ dateFr(tpl.date_debut) }}, sans date de fin</template>
                     </p>
                   </div>
                 </div>
-                <div class="flex items-center gap-2">
-                  <UBadge v-if="estRegleDms(tpl)" color="red" variant="soft" size="sm">Portefeuille DMS</UBadge>
-                  <UBadge v-if="tpl.mode === 'quota'" color="violet" variant="soft" size="sm" title="N PDV par canal et par jour, chaque PDV une fois par mois (merchandisers d’agence)">
+                <div class="flex flex-wrap items-center gap-2">
+                  <UBadge v-if="estRegleDms(tpl)" color="gray" variant="soft" size="sm">Portefeuille du distributeur</UBadge>
+                  <UBadge v-if="tpl.mode === 'quota'" color="gray" variant="soft" size="sm" title="Chaque jour, un nombre fixe de points de vente par canal ; chacun est vu une fois par mois (merchandisers d’agence)">
                     Quotas
                   </UBadge>
-                  <UBadge v-if="tpl.ssf_id" color="teal" variant="soft" size="sm" :title="quartiersSsfTexte(tpl.ssf_id)">
-                    SSF · {{ nomSsf(tpl.ssf_id) }}
+                  <UBadge v-if="tpl.ssf_id" color="gray" variant="soft" size="sm" :title="quartiersSsfTexte(tpl.ssf_id)">
+                    Avec {{ nomSsf(tpl.ssf_id) }} (SSF)
                   </UBadge>
                   <UBadge :color="tpl.is_active ? 'green' : 'gray'" variant="soft" size="sm">
-                    {{ tpl.is_active ? 'Actif' : 'Inactif' }}
+                    {{ tpl.is_active ? 'Active' : 'Inactive' }}
                   </UBadge>
                   <UButton v-if="!lectureSeule" size="xs" variant="outline" icon="i-heroicons-no-symbol" @click="openExceptionModal(tpl)">
                     Décocher une semaine
                   </UButton>
                   <UDropdown v-if="!lectureSeule" :items="templateActions(tpl)" :popper="{ placement: 'bottom-end' }">
-                    <UButton variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" :aria-label="`Actions sur la règle ${tpl.label || libelleJours(tpl)}`" />
+                    <UButton variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" :aria-label="`Actions sur la règle ${titreRegle(tpl)}`" />
                   </UDropdown>
                 </div>
               </div>
 
               <!-- Jours couverts, semaine par semaine : un clic montre les PDV du jour -->
-              <div class="border-b border-gray-100 px-4 py-3 dark:border-gray-700">
-                <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                  PDV visités par jour
-                  <span class="font-normal normal-case">· cliquez sur un jour pour voir sa liste</span>
+              <div>
+                <p class="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                  Points de vente prévus par jour
+                  <span class="font-normal text-slate-600 dark:text-slate-300">· cliquez sur un jour pour voir sa liste</span>
                 </p>
                 <div v-if="semainesDeRegle(tpl).length" class="mt-2 space-y-1.5">
                   <div v-for="sem in semainesDeRegle(tpl)" :key="sem.lundi" class="flex flex-wrap items-center gap-1.5">
-                    <span class="w-20 shrink-0 text-[11px] text-gray-400">{{ sem.libelle }}</span>
+                    <span class="w-28 shrink-0 text-xs text-slate-600 dark:text-slate-300">{{ sem.libelle }}</span>
                     <button
                       v-for="d in sem.jours"
                       :key="d"
                       type="button"
-                      class="flex min-w-[5.5rem] flex-col items-start rounded-lg border px-2 py-1 text-left text-xs transition hover:border-fc-red"
+                      class="flex min-w-[5.5rem] flex-col items-start rounded-md border px-2 py-1 text-left text-xs transition-colors hover:border-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                       :class="classeJour(p.id, d)"
-                      :title="`Voir les PDV du ${jourLong(d)}`"
+                      :title="`Voir les points de vente du ${jourLong(d)}`"
                       @click="ouvrirJour(p.id, p.user, d, tpl)"
                     >
                       <span class="font-semibold">{{ jourCourt(d) }}</span>
-                      <span class="text-[11px]">{{ etatJour(p.id, d) }}</span>
+                      <span>{{ etatJour(p.id, d) }}</span>
                     </button>
                   </div>
                 </div>
-                <p v-else class="mt-1 text-xs text-gray-400">Aucun jour couvert sur les 4 semaines à venir.</p>
+                <p v-else class="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                  Aucun jour prévu sur les 4 prochaines semaines (règle inactive, dates de la règle ou exceptions).
+                </p>
               </div>
 
-              <div v-if="tpl.routing_template_exception?.length" class="border-b border-gray-100 px-4 py-3 dark:border-gray-700">
-                <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Exceptions</p>
+              <div v-if="tpl.routing_template_exception?.length">
+                <p class="text-xs font-semibold text-slate-700 dark:text-slate-200">Exceptions</p>
                 <div class="mt-1 flex flex-wrap gap-1.5">
-                  <button
-                    v-for="e in tpl.routing_template_exception"
-                    :key="e.id"
-                    type="button"
-                    class="inline-flex items-center gap-1.5 rounded-md bg-amber-50 px-2 py-0.5 text-xs text-amber-700 hover:bg-amber-100 dark:bg-amber-950/30 dark:text-amber-300"
-                    title="Retirer cette exception"
-                    @click="handleRemoveException(e.id)"
-                  >
-                    {{ exceptionLabel(e, tpl) }}
-                    <UIcon name="i-heroicons-x-mark" class="h-3 w-3" />
-                  </button>
+                  <template v-for="e in tpl.routing_template_exception" :key="e.id">
+                    <span
+                      v-if="lectureSeule"
+                      class="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-200"
+                    >
+                      {{ exceptionLabel(e, tpl) }}
+                    </span>
+                    <button
+                      v-else
+                      type="button"
+                      class="inline-flex items-center gap-1.5 rounded-md bg-amber-50 px-2 py-0.5 text-xs text-amber-800 hover:bg-amber-100 dark:bg-amber-950/30 dark:text-amber-200"
+                      :title="`Retirer l'exception : ${exceptionLabel(e, tpl)}`"
+                      @click="retirerException(e, tpl)"
+                    >
+                      {{ exceptionLabel(e, tpl) }}
+                      <UIcon name="i-heroicons-x-mark" class="h-3 w-3" aria-hidden="true" />
+                      <span class="sr-only">(retirer l'exception)</span>
+                    </button>
+                  </template>
                 </div>
               </div>
 
               <!-- Affectation des PDV : en popups -->
-              <div class="flex flex-wrap items-center gap-2 px-4 py-3">
-                <UButton
-                  size="sm"
-                  icon="i-heroicons-plus"
-                  class="bg-fc-red text-white hover:bg-fc-red/90"
-                  @click="regleAjoutId = tpl.id"
-                >
+              <div class="flex flex-wrap items-center gap-2">
+                <UButton v-if="!lectureSeule" size="sm" variant="outline" icon="i-heroicons-plus" @click="regleAjoutId = tpl.id">
                   Ajouter des PDV
                 </UButton>
                 <UButton size="sm" variant="outline" icon="i-heroicons-list-bullet" @click="ouvrirGestionPdv(tpl)">
-                  Gérer les {{ tpl.nb_pdv ?? tpl.routing_template_pdv?.length ?? 0 }} PDV du portefeuille
+                  {{ lectureSeule ? 'Voir' : 'Gérer' }} les {{ tpl.nb_pdv ?? tpl.routing_template_pdv?.length ?? 0 }} PDV du portefeuille
                 </UButton>
-                <p v-if="tpl.notes" class="ml-auto text-xs text-gray-400">📝 {{ tpl.notes }}</p>
+                <p v-if="tpl.notes" class="ml-auto inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                  <UIcon name="i-heroicons-document-text" class="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span><span class="sr-only">Note : </span>{{ tpl.notes }}</span>
+                </p>
               </div>
-            </div>
-            </template>
-            </div>
+            </section>
+          </div>
         </div>
       </div>
     </template>
@@ -457,7 +469,7 @@
     <!-- ==================== CREATE ROUTING MODAL ==================== -->
     <AdminFormModal
       v-model="showCreateModal"
-      :title="editingRoutingId ? 'Modifier le routing' : 'Nouveau routing'"
+      :title="editingRoutingId ? 'Modifier la tournée' : 'Nouvelle tournée'"
       description="Planifiez la tournée, puis composez la liste ordonnée des points de vente."
       icon="i-heroicons-map"
       width="sm:max-w-4xl"
@@ -466,26 +478,26 @@
     >
       <section aria-labelledby="routing-planning-title">
         <div class="mb-4 flex items-center gap-3">
-          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300" aria-hidden="true">
             <UIcon name="i-heroicons-calendar-days" class="h-4 w-4" />
           </div>
           <div>
             <h3 id="routing-planning-title" class="text-sm font-semibold text-slate-900 dark:text-white">
               Planification
             </h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400">Affectation, date et instructions destinées au terrain.</p>
+            <p class="text-xs text-slate-600 dark:text-slate-300">Personne, date et instructions destinées au terrain.</p>
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-4">
-          <UFormGroup label="Utilisateur" required size="md">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <UFormGroup label="Personne" required size="md">
             <USelectMenu
               v-model="newRouting.userId"
               :options="merchandiserOptions"
-              placeholder="Sélectionner un utilisateur"
+              placeholder="Choisir une personne"
               option-attribute="label"
               value-attribute="value"
               searchable
-              searchable-placeholder="Rechercher..."
+              searchable-placeholder="Rechercher…"
               size="md"
               class="w-full"
             />
@@ -506,40 +518,40 @@
         </div>
 
         <UFormGroup label="Notes" class="mt-5" size="md">
-          <UTextarea v-model="newRouting.notes" placeholder="Instructions pour le terrain..." :rows="2" />
+          <UTextarea v-model="newRouting.notes" placeholder="Instructions pour le terrain…" :rows="2" />
         </UFormGroup>
       </section>
 
       <section aria-labelledby="routing-pdv-title" class="border-t border-slate-200 pt-7 dark:border-slate-700">
         <div class="mb-4 flex items-center gap-3">
-          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300" aria-hidden="true">
             <UIcon name="i-heroicons-building-storefront" class="h-4 w-4" />
           </div>
           <div>
             <h3 id="routing-pdv-title" class="text-sm font-semibold text-slate-900 dark:text-white">
               Points de vente à visiter
             </h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400">Filtrez, ajoutez puis réordonnez les étapes de la tournée.</p>
+            <p class="text-xs text-slate-600 dark:text-slate-300">Filtrez, ajoutez puis réordonnez les étapes de la tournée.</p>
           </div>
         </div>
           <div class="flex items-center justify-between mb-2">
-            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Sélection des PDV <span class="text-fc-red">*</span></span>
-            <span class="text-xs text-gray-400">{{ newRouting.pdvItems.length }} PDV sélectionnés</span>
+            <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Points de vente de la tournée <span class="text-red-700 dark:text-red-300" aria-hidden="true">*</span></span>
+            <span class="text-xs tabular-nums text-slate-600 dark:text-slate-300">{{ newRouting.pdvItems.length }} sélectionné(s)</span>
           </div>
 
           <!-- Périmètre : on ne peut cocher que les PDV des territoires du merchandiser choisi. -->
           <div
             v-if="!newRouting.userId"
-            class="mb-3 rounded-lg border border-dashed border-amber-300 bg-amber-50 px-3 py-2.5 text-xs text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300"
+            class="mb-3 rounded-md border border-dashed border-amber-300 bg-amber-50 px-3 py-2.5 text-xs text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200"
           >
-            Sélectionnez d’abord un merchandiser pour voir les PDV de ses territoires.
+            Choisissez d’abord une personne pour voir les points de vente de ses territoires.
           </div>
           <div
             v-else-if="!scopedPdvList.length"
-            class="mb-3 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-2.5 text-xs text-gray-500 dark:border-gray-600 dark:bg-gray-800"
+            class="mb-3 rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2.5 text-xs text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
           >
-            Aucun PDV dans le périmètre de ce merchandiser
-            ({{ profileTerritories(selectedMerchandiser).join(', ') || 'aucun territoire assigné' }}).
+            Aucun point de vente dans le périmètre de cette personne
+            ({{ profileTerritories(selectedMerchandiser).join(', ') || 'aucun territoire assigné' }}) : assignez-lui un territoire dans Paramètres › Utilisateurs.
           </div>
 
           <!-- Préselection par colonnes PDV -->
@@ -550,15 +562,14 @@
             <USelectMenu v-model="pdvFilter.quartier" :options="pdvFilterQuartierOptions" option-attribute="label" value-attribute="value" placeholder="Quartier" size="sm" />
           </div>
           <div class="flex items-center justify-between mb-2">
-            <span class="text-xs text-gray-400">{{ filteredAvailablePdv.length }} PDV disponibles</span>
-            <div class="flex gap-2">
+            <span class="text-xs tabular-nums text-slate-600 dark:text-slate-300">{{ filteredAvailablePdv.length }} point(s) de vente disponible(s)</span>
+            <div class="flex flex-wrap gap-2">
               <UButton v-if="hasPdvFilter" size="xs" variant="ghost" icon="i-heroicons-x-mark" @click="clearPdvFilter">
                 Réinitialiser
               </UButton>
               <UButton
                 size="xs"
-                color="red"
-                variant="soft"
+                variant="outline"
                 icon="i-heroicons-plus-circle"
                 :disabled="!filteredAvailablePdv.length"
                 @click="addFilteredPDV"
@@ -571,24 +582,24 @@
           <!-- Liste cochable des PDV filtrés -->
           <div
             v-if="hasPdvFilter"
-            class="border border-gray-200 dark:border-gray-700 rounded-lg max-h-48 overflow-y-auto mb-3 divide-y divide-gray-100 dark:divide-gray-700"
+            class="mb-3 max-h-48 divide-y divide-slate-200 overflow-y-auto rounded-md border border-slate-200 dark:divide-slate-700 dark:border-slate-700"
           >
             <label
               v-for="p in filteredPdvForSelection"
               :key="p.pdv_id"
-              class="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50"
+              class="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700/50"
             >
               <input
                 type="checkbox"
                 :checked="selectedPdvIds.has(p.pdv_id)"
-                class="rounded border-gray-300 text-fc-red focus:ring-fc-red"
+                class="rounded border-slate-300 text-brand-500 focus:ring-brand-500"
                 @change="togglePdvSelection(p.pdv_id)"
               />
-              <span class="text-sm text-gray-900 dark:text-gray-100 flex-1 min-w-0 truncate">{{ p.nom_pdv }}</span>
-              <span class="text-xs text-gray-400 shrink-0">{{ [p.zone, p.quartier].filter(Boolean).join(' / ') }}</span>
+              <span class="min-w-0 flex-1 truncate text-sm text-slate-900 dark:text-white">{{ p.nom_pdv || 'Point de vente sans nom' }}</span>
+              <span class="shrink-0 text-xs text-slate-500 dark:text-slate-400">{{ [p.zone, p.quartier].filter(Boolean).join(' / ') }}</span>
             </label>
-            <p v-if="!filteredPdvForSelection.length" class="px-3 py-4 text-center text-xs text-gray-400">
-              Aucun PDV pour ces filtres
+            <p v-if="!filteredPdvForSelection.length" class="px-3 py-4 text-center text-xs text-slate-600 dark:text-slate-300">
+              Aucun point de vente pour ces filtres : changez un filtre ou cliquez sur « Réinitialiser ».
             </p>
           </div>
 
@@ -596,9 +607,9 @@
             <USelectMenu
               v-model="selectedPdvToAdd"
               :options="filteredAvailablePdvOptions"
-              placeholder="Ajouter un PDV..."
+              placeholder="Ajouter un point de vente…"
               searchable
-              searchable-placeholder="Rechercher un PDV..."
+              searchable-placeholder="Rechercher un point de vente…"
               option-attribute="label"
               value-attribute="value"
               size="sm"
@@ -606,8 +617,8 @@
             />
             <UButton
               size="sm"
+              variant="outline"
               icon="i-heroicons-plus"
-              class="bg-fc-red text-white hover:bg-fc-red-600 disabled:bg-fc-red-300 aria-disabled:bg-fc-red-300 dark:bg-fc-red dark:text-white dark:hover:bg-fc-red-600 dark:disabled:bg-fc-red-700 dark:aria-disabled:bg-fc-red-700"
               :disabled="!selectedPdvToAdd"
               @click="addPDV"
             >
@@ -619,7 +630,7 @@
             <div
               v-for="(item, idx) in newRouting.pdvItems"
               :key="item.pdv_id"
-              class="flex items-center gap-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 transition-all"
+              class="flex flex-wrap items-center gap-3 rounded-md bg-slate-50 px-3 py-2 transition-all dark:bg-slate-700/50"
               :class="[
                 dragIndex === idx ? 'opacity-40' : '',
                 dragOverIndex === idx && dragIndex !== idx ? 'ring-2 ring-fc-red ring-inset' : '',
@@ -631,32 +642,32 @@
               @drop="onDrop(idx)"
               @dragend="onDragEnd"
             >
-              <UIcon name="i-heroicons-bars-3" class="w-4 h-4 text-gray-300 cursor-grab active:cursor-grabbing shrink-0" title="Glisser pour réordonner" />
+              <UIcon name="i-heroicons-bars-3" class="h-4 w-4 shrink-0 cursor-grab text-slate-500 active:cursor-grabbing" title="Glisser pour réordonner" aria-hidden="true" />
               <div class="flex flex-col gap-0.5">
-                <button class="text-gray-400 hover:text-gray-600 disabled:opacity-30" :disabled="idx === 0" @click="movePDV(idx, -1)">
-                  <UIcon name="i-heroicons-chevron-up" class="w-3 h-3" />
+                <button type="button" class="text-slate-500 hover:text-slate-900 disabled:opacity-30 dark:text-slate-400 dark:hover:text-white" :disabled="idx === 0" :aria-label="`Monter ${getPDVName(item.pdv_id)}`" @click="movePDV(idx, -1)">
+                  <UIcon name="i-heroicons-chevron-up" class="h-3 w-3" aria-hidden="true" />
                 </button>
-                <button class="text-gray-400 hover:text-gray-600 disabled:opacity-30" :disabled="idx === newRouting.pdvItems.length - 1" @click="movePDV(idx, 1)">
-                  <UIcon name="i-heroicons-chevron-down" class="w-3 h-3" />
+                <button type="button" class="text-slate-500 hover:text-slate-900 disabled:opacity-30 dark:text-slate-400 dark:hover:text-white" :disabled="idx === newRouting.pdvItems.length - 1" :aria-label="`Descendre ${getPDVName(item.pdv_id)}`" @click="movePDV(idx, 1)">
+                  <UIcon name="i-heroicons-chevron-down" class="h-3 w-3" aria-hidden="true" />
                 </button>
               </div>
-              <span class="w-6 h-6 rounded-full bg-fc-red text-white text-xs flex items-center justify-center font-bold shrink-0">{{ idx + 1 }}</span>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ getPDVName(item.pdv_id) }}</p>
+              <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold tabular-nums text-slate-800 dark:bg-slate-600 dark:text-white">{{ idx + 1 }}</span>
+              <div class="min-w-[10rem] flex-1">
+                <p class="truncate text-sm font-medium text-slate-900 dark:text-white">{{ getPDVName(item.pdv_id) }}</p>
               </div>
-              <div class="flex items-center gap-2">
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <label v-for="obj in objectifOptions" :key="obj.key" class="flex items-center gap-1">
                   <input
                     type="checkbox"
                     :checked="!!(item.objectifs as Record<string, boolean>)[obj.key]"
-                    class="rounded border-gray-300 text-fc-red focus:ring-fc-red"
+                    class="rounded border-slate-300 text-brand-500 focus:ring-brand-500"
                     @change="toggleObjectif(idx, obj.key)"
                   />
-                  <span class="text-xs text-gray-500 dark:text-gray-400">{{ obj.short }}</span>
+                  <span class="text-xs text-slate-700 dark:text-slate-200">{{ obj.short }}</span>
                 </label>
               </div>
-              <button class="text-red-400 hover:text-red-600" @click="removePDV(idx)">
-                <UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
+              <button type="button" class="text-red-600 hover:text-red-800 dark:text-red-400" :aria-label="`Retirer ${getPDVName(item.pdv_id)} de la tournée`" @click="removePDV(idx)">
+                <UIcon name="i-heroicons-x-mark" class="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -668,12 +679,11 @@
         </UButton>
         <UButton
           icon="i-heroicons-check"
-          class="bg-fc-red text-white hover:bg-fc-red-600 disabled:bg-fc-red-300 aria-disabled:bg-fc-red-300 focus-visible:outline-fc-red-500 dark:bg-fc-red dark:text-white dark:hover:bg-fc-red-600 dark:disabled:bg-fc-red-700 dark:aria-disabled:bg-fc-red-700 dark:focus-visible:outline-fc-red-400"
           :loading="creating"
           :disabled="!canCreate"
           @click="handleSaveRouting"
         >
-          {{ editingRoutingId ? 'Mettre à jour' : 'Créer le routing' }}
+          {{ editingRoutingId ? 'Enregistrer la tournée' : 'Créer la tournée' }}
         </UButton>
       </template>
     </AdminFormModal>
@@ -681,7 +691,7 @@
     <!-- ==================== DUPLICATE ROUTING MODAL ==================== -->
     <AdminFormModal
       v-model="showDuplicateModal"
-      title="Dupliquer le routing"
+      title="Dupliquer la tournée"
       description="Créez une nouvelle tournée à partir de la sélection actuelle."
       icon="i-heroicons-document-duplicate"
       width="sm:max-w-xl"
@@ -691,11 +701,11 @@
         <UFormGroup label="Nouvelle date" required size="md">
           <UInput v-model="duplicateDate" type="date" size="md" class="w-full" />
         </UFormGroup>
-        <UFormGroup label="Utilisateur" help="Laissez vide pour conserver l’utilisateur actuel." size="md">
+        <UFormGroup label="Personne" help="Laissez vide pour garder la même personne." size="md">
           <USelectMenu
             v-model="duplicateUserId"
             :options="merchandiserOptions"
-            placeholder="Même utilisateur"
+            placeholder="Même personne"
             option-attribute="label"
             value-attribute="value"
             searchable
@@ -708,7 +718,6 @@
           <UButton type="button" color="gray" variant="ghost" @click="showDuplicateModal = false">Annuler</UButton>
           <UButton
             icon="i-heroicons-document-duplicate"
-            class="bg-fc-red text-white hover:bg-fc-red-600 disabled:bg-fc-red-300 aria-disabled:bg-fc-red-300 focus-visible:outline-fc-red-500 dark:bg-fc-red dark:text-white dark:hover:bg-fc-red-600 dark:disabled:bg-fc-red-700 dark:aria-disabled:bg-fc-red-700 dark:focus-visible:outline-fc-red-400"
             :disabled="!duplicateDate"
             @click="handleDuplicate"
           >
@@ -733,12 +742,12 @@
           <USelectMenu
             v-model="newTemplate.userId"
             :options="merchandiserOptions"
-            placeholder="Sélectionner un utilisateur"
+            placeholder="Choisir une personne"
             option-attribute="label"
             value-attribute="value"
             :disabled="!!regleEditionId"
             searchable
-            searchable-placeholder="Rechercher..."
+            searchable-placeholder="Rechercher…"
             size="md"
             class="w-full"
           />
@@ -753,10 +762,10 @@
               v-for="j in JOURS_SEMAINE"
               :key="j.value"
               type="button"
-              class="rounded-lg border px-3 py-1.5 text-sm font-medium transition"
+              class="rounded-md border px-3 py-1.5 text-sm font-medium transition-colors"
               :class="newTemplate.daysOfWeek.includes(j.value)
-                ? 'border-fc-red bg-fc-red text-white'
-                : 'border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700'"
+                ? 'border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900'
+                : 'border-slate-300 text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700'"
               :aria-pressed="newTemplate.daysOfWeek.includes(j.value)"
               @click="toggleJour(j.value)"
             >
@@ -768,7 +777,7 @@
         <!-- Territoire et distributeur portés par LA RÈGLE : un merchandiser peut
              couvrir Abobo/Distributeur A une semaine, Adjamé/Distributeur B la
              suivante. Il suffit de créer deux règles. -->
-        <UFormGroup label="Territoire" help="Restreint les PDV que cette règle peut contenir." size="md">
+        <UFormGroup label="Territoire" help="Limite les points de vente que cette règle peut contenir." size="md">
           <USelectMenu
             v-model="newTemplate.territoire"
             :options="territoireOptionsRegle"
@@ -784,22 +793,22 @@
 
         <!-- Binôme : le SSF (vendeur du distributeur) avec qui le merchandiser
              travaille les jours choisis ; ses quartiers bornent les PDV de la règle. -->
-        <UFormGroup v-if="sousZonesSsf.length" label="SSF du binôme" :help="aideSsf" size="md" class="sm:col-span-2">
+        <UFormGroup v-if="sousZonesSsf.length" label="Vendeur du distributeur (SSF) qui accompagne" :help="aideSsf" size="md" class="sm:col-span-2">
           <USelectMenu
             v-model="ssfChoisi"
             :options="ssfOptions"
             option-attribute="label"
             value-attribute="value"
             searchable
-            searchable-placeholder="Rechercher un SSF..."
+            searchable-placeholder="Rechercher un vendeur…"
             size="md"
             class="w-full"
           />
         </UFormGroup>
 
         <UFormGroup
-          label="Logique de tournée"
-          help="Quotas : la tournée du jour pioche dans le portefeuille selon la grille Référentiels › Quotas ; un PDV déjà planifié ou visité dans le mois n'est pas repris."
+          label="Composition de la tournée du jour"
+          help="Le nombre de points de vente par canal se règle dans Référentiels › Quotas."
           size="md"
           class="sm:col-span-2"
         >
@@ -816,19 +825,18 @@
         <UFormGroup label="À partir du" size="md">
           <UInput v-model="newTemplate.dateDebut" type="date" size="md" class="w-full" />
         </UFormGroup>
-        <UFormGroup label="Jusqu'au" help="Vide = la règle court indéfiniment." size="md">
+        <UFormGroup label="Jusqu'au" help="Laissez vide pour une règle sans fin." size="md">
           <UInput v-model="newTemplate.dateFin" type="date" size="md" class="w-full" />
         </UFormGroup>
 
         <UFormGroup label="Notes" size="md" class="sm:col-span-2">
-          <UTextarea v-model="newTemplate.notes" placeholder="Instructions récurrentes..." :rows="2" />
+          <UTextarea v-model="newTemplate.notes" placeholder="Instructions récurrentes…" :rows="2" />
         </UFormGroup>
 
       <template #footer>
           <UButton type="button" color="gray" variant="ghost" @click="showTemplateCreateModal = false">Annuler</UButton>
           <UButton
             icon="i-heroicons-check"
-            class="bg-fc-red text-white hover:bg-fc-red-600 disabled:bg-fc-red-300 aria-disabled:bg-fc-red-300 focus-visible:outline-fc-red-500 dark:bg-fc-red dark:text-white dark:hover:bg-fc-red-600 dark:disabled:bg-fc-red-700 dark:aria-disabled:bg-fc-red-700 dark:focus-visible:outline-fc-red-400"
             :disabled="!newTemplate.userId || !newTemplate.daysOfWeek.length"
             :loading="creating"
             @click="handleCreateTemplate"
@@ -842,7 +850,7 @@
     <AdminFormModal
       v-model="showExceptionModal"
       title="Décocher une période"
-      description="Suspend la tournée, ou un PDV seul, sur une période donnée. La règle n'est pas supprimée : elle reprend d'elle-même après."
+      description="Suspend la tournée, ou un seul point de vente, sur une période. La règle n'est pas supprimée : elle reprend d'elle-même après."
       icon="i-heroicons-no-symbol"
       width="sm:max-w-xl"
       body-class="space-y-5"
@@ -858,7 +866,7 @@
         />
       </UFormGroup>
 
-      <div class="flex gap-2">
+      <div class="flex flex-wrap gap-2">
         <UButton size="xs" variant="outline" @click="setSemaineException(0)">Cette semaine</UButton>
         <UButton size="xs" variant="outline" @click="setSemaineException(1)">Semaine prochaine</UButton>
       </div>
@@ -880,7 +888,6 @@
         <UButton type="button" color="gray" variant="ghost" @click="showExceptionModal = false">Annuler</UButton>
         <UButton
           icon="i-heroicons-check"
-          class="bg-fc-red text-white hover:bg-fc-red-600"
           :disabled="!newException.dateDebut || !newException.dateFin"
           @click="handleAddException"
         >
@@ -892,18 +899,18 @@
     <!-- ==================== GENERATE ROUTINGS MODAL ==================== -->
     <AdminFormModal
       v-model="showGenerateModal"
-      title="Générer les routings"
-      description="Créez automatiquement les tournées quotidiennes depuis les templates permanents."
+      title="Générer les tournées"
+      description="Crée les tournées de chaque jour à partir des règles récurrentes. Les journées déjà planifiées ne sont pas touchées."
       icon="i-heroicons-arrow-path-rounded-square"
       width="sm:max-w-2xl"
       body-class="space-y-5"
       required-note
     >
-        <UFormGroup label="Utilisateur" required size="md">
+        <UFormGroup label="Personne" required size="md">
           <USelectMenu
             v-model="generateConfig.userId"
             :options="merchandiserOptions"
-            placeholder="Sélectionner un utilisateur"
+            placeholder="Choisir une personne"
             option-attribute="label"
             value-attribute="value"
             searchable
@@ -920,7 +927,7 @@
           </UFormGroup>
         </div>
 
-        <p v-if="generateMessage" class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-gray-700 dark:border-slate-700 dark:bg-slate-700/50 dark:text-gray-300">
+        <p v-if="generateMessage" class="rounded-md border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-700/50 dark:text-slate-200" role="status">
           {{ generateMessage }}
         </p>
 
@@ -928,7 +935,6 @@
           <UButton type="button" color="gray" variant="ghost" @click="showGenerateModal = false; generateMessage = ''">Fermer</UButton>
           <UButton
             icon="i-heroicons-sparkles"
-            class="bg-fc-red text-white hover:bg-fc-red-600 disabled:bg-fc-red-300 aria-disabled:bg-fc-red-300 focus-visible:outline-fc-red-500 dark:bg-fc-red dark:text-white dark:hover:bg-fc-red-600 dark:disabled:bg-fc-red-700 dark:aria-disabled:bg-fc-red-700 dark:focus-visible:outline-fc-red-400"
             :disabled="!generateConfig.userId || !generateConfig.dateFrom || !generateConfig.dateTo"
             :loading="generating"
             @click="handleGenerate"
@@ -940,29 +946,28 @@
 
     <!-- ==================== AJOUT DE PDV À UNE RÈGLE ==================== -->
     <AdminFormModal
-      :model-value="!!regleAjout"
+      :model-value="!!regleAjout && !lectureSeule"
       :title="`Ajouter des PDV — ${nomPersonne(regleAjout?.user)}`"
-      :description="regleAjout ? `Règle « ${regleAjout.label || libelleJours(regleAjout)} » · ${regleAjout.nb_pdv ?? 0} PDV. Seuls les PDV du périmètre sont proposés ; la popup reste ouverte pour enchaîner les ajouts.` : ''"
+      :description="regleAjout ? `Règle « ${titreRegle(regleAjout)} » · ${regleAjout.nb_pdv ?? 0} PDV. Seuls les points de vente de son périmètre sont proposés ; la fenêtre reste ouverte pour enchaîner les ajouts.` : ''"
       icon="i-heroicons-plus"
       width="sm:max-w-xl"
       body-class="space-y-4"
       @update:model-value="(v: boolean) => { if (!v) regleAjoutId = null }"
     >
-      <div v-if="regleAjout" class="flex gap-2">
+      <div v-if="regleAjout" class="flex flex-wrap gap-2">
         <USelectMenu
           v-model="templateAddPdvId[regleAjout.id]"
           :options="availableTemplatePdvOptions(regleAjout)"
-          placeholder="Rechercher un PDV du périmètre..."
+          placeholder="Rechercher un point de vente du périmètre…"
           searchable
-          searchable-placeholder="Nom ou zone..."
+          searchable-placeholder="Nom ou zone…"
           option-attribute="label"
           value-attribute="value"
           size="md"
-          class="flex-1"
+          class="min-w-[14rem] flex-1"
         />
         <UButton
           icon="i-heroicons-plus"
-          class="bg-fc-red text-white hover:bg-fc-red/90 disabled:bg-fc-red/40"
           :disabled="!templateAddPdvId[regleAjout.id]"
           @click="handleAddTemplatePDV(regleAjout)"
         >
@@ -978,31 +983,30 @@
     <AdminFormModal
       :model-value="!!regleGestion"
       :title="`PDV du portefeuille — ${nomPersonne(regleGestion?.user)}`"
-      :description="regleGestion ? `Règle « ${regleGestion.label || libelleJours(regleGestion)} » · ${regleGestion.nb_pdv ?? 0} PDV${nbSansGpsRegle(regleGestion) ? `, dont ${nbSansGpsRegle(regleGestion)} sans GPS` : ''}. Ordre, objectifs et retrait de chaque PDV.` : ''"
+      :description="regleGestion ? `Règle « ${titreRegle(regleGestion)} » · ${regleGestion.nb_pdv ?? 0} PDV${nbSansGpsRegle(regleGestion) ? `, dont ${nbSansGpsRegle(regleGestion)} sans GPS` : ''}.${lectureSeule ? '' : ' Ordre, objectifs et retrait de chaque point de vente.'}` : ''"
       icon="i-heroicons-list-bullet"
       width="sm:max-w-4xl"
       body-class="space-y-4"
       @update:model-value="(v: boolean) => { if (!v) regleGestionId = null }"
     >
       <template v-if="regleGestion">
-        <div class="rounded-lg bg-fc-red/5 p-3 dark:bg-fc-red/10">
-          <p class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-fc-red">Ajouter un PDV</p>
-          <div class="flex gap-2">
+        <div v-if="!lectureSeule" class="rounded-md border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/40">
+          <p class="mb-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200">Ajouter un point de vente</p>
+          <div class="flex flex-wrap gap-2">
             <USelectMenu
               v-model="templateAddPdvId[regleGestion.id]"
               :options="availableTemplatePdvOptions(regleGestion)"
-              placeholder="Rechercher un PDV du périmètre..."
+              placeholder="Rechercher un point de vente du périmètre…"
               searchable
-              searchable-placeholder="Nom ou zone..."
+              searchable-placeholder="Nom ou zone…"
               option-attribute="label"
               value-attribute="value"
               size="sm"
-              class="flex-1"
+              class="min-w-[14rem] flex-1"
             />
             <UButton
               size="sm"
               icon="i-heroicons-plus"
-              class="bg-fc-red text-white hover:bg-fc-red/90 disabled:bg-fc-red/40"
               :disabled="!templateAddPdvId[regleGestion.id]"
               @click="handleAddTemplatePDV(regleGestion)"
             >
@@ -1012,60 +1016,68 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-3">
-          <UInput v-model="rechercheGestion" icon="i-heroicons-magnifying-glass" placeholder="Filtrer par nom, code, zone ou quartier" size="sm" class="flex-1 min-w-[14rem]" />
-          <span class="text-xs text-gray-400">
-            {{ pdvGestionFiltres.length }} affiché(s) sur {{ regleGestion.routing_template_pdv?.length || 0 }} chargé(s) / {{ regleGestion.nb_pdv ?? 0 }}
+          <UInput v-model="rechercheGestion" icon="i-heroicons-magnifying-glass" placeholder="Filtrer par nom, code, zone ou quartier" size="sm" class="min-w-[14rem] flex-1" aria-label="Filtrer les points de vente de la règle" />
+          <span class="text-xs tabular-nums text-slate-600 dark:text-slate-300">
+            {{ pdvGestionFiltres.length }} affiché(s) sur {{ regleGestion.routing_template_pdv?.length || 0 }} chargé(s), {{ regleGestion.nb_pdv ?? 0 }} au total
           </span>
         </div>
-        <p v-if="rechercheGestion" class="text-xs text-gray-400">Le filtre porte sur les PDV chargés ; videz-le pour réordonner.</p>
+        <p v-if="rechercheGestion && !lectureSeule" class="text-xs text-slate-600 dark:text-slate-300">Le filtre porte sur les points de vente chargés ; videz-le pour changer l'ordre.</p>
 
-        <div class="space-y-2">
-          <div
+        <ul class="space-y-2">
+          <li
             v-for="{ tp, idx } in pdvGestionFiltres"
             :key="tp.id"
-            class="flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-700/50"
+            class="flex items-center gap-3 rounded-md bg-slate-50 px-3 py-2 dark:bg-slate-700/50"
           >
-            <div class="flex flex-col gap-0.5">
+            <div v-if="!lectureSeule" class="flex flex-col gap-0.5">
               <button
-                class="text-gray-400 hover:text-gray-600 disabled:opacity-30"
+                type="button"
+                class="text-slate-500 hover:text-slate-900 disabled:opacity-30 dark:text-slate-400 dark:hover:text-white"
                 :disabled="idx === 0 || !!rechercheGestion"
+                :aria-label="`Monter ${tp.pdv?.nom_pdv || 'ce point de vente'}`"
                 title="Monter"
                 @click="moveTemplatePDV(regleGestion, idx, -1)"
               >
-                <UIcon name="i-heroicons-chevron-up" class="w-3 h-3" />
+                <UIcon name="i-heroicons-chevron-up" class="h-3 w-3" aria-hidden="true" />
               </button>
               <button
-                class="text-gray-400 hover:text-gray-600 disabled:opacity-30"
+                type="button"
+                class="text-slate-500 hover:text-slate-900 disabled:opacity-30 dark:text-slate-400 dark:hover:text-white"
                 :disabled="idx === (regleGestion.routing_template_pdv?.length || 1) - 1 || !!rechercheGestion"
+                :aria-label="`Descendre ${tp.pdv?.nom_pdv || 'ce point de vente'}`"
                 title="Descendre"
                 @click="moveTemplatePDV(regleGestion, idx, 1)"
               >
-                <UIcon name="i-heroicons-chevron-down" class="w-3 h-3" />
+                <UIcon name="i-heroicons-chevron-down" class="h-3 w-3" aria-hidden="true" />
               </button>
             </div>
-            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-fc-red text-xs font-bold text-white">{{ idx + 1 }}</span>
+            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold tabular-nums text-slate-800 dark:bg-slate-600 dark:text-white">{{ idx + 1 }}</span>
             <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{{ tp.pdv?.nom_pdv || tp.pdv_id }}</p>
-              <p class="text-xs text-gray-400">
+              <p class="truncate text-sm font-medium text-slate-900 dark:text-white">{{ tp.pdv?.nom_pdv || 'Point de vente sans nom' }}</p>
+              <p class="text-xs text-slate-600 dark:text-slate-300">
                 {{ tp.pdv?.zone || '' }} {{ tp.pdv?.quartier ? `— ${tp.pdv.quartier}` : '' }}
-                <span v-if="tp.pdv && !pdvAGps(tp.pdv)" class="ml-1 rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300">Sans GPS</span>
+                <span v-if="tp.pdv && !pdvAGps(tp.pdv)" class="ml-1 rounded-full bg-red-50 px-1.5 py-0.5 text-xs font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300">Sans GPS</span>
               </p>
             </div>
-            <div class="hidden items-center gap-1 sm:flex">
+            <div class="hidden flex-wrap items-center gap-1 sm:flex">
               <template v-for="(val, key) in tp.objectifs" :key="key">
-                <UBadge v-if="val" variant="soft" size="xs" color="blue">{{ objectifLabel(key as string) }}</UBadge>
+                <UBadge v-if="val" variant="soft" size="xs" color="gray">{{ objectifLabel(key as string) }}</UBadge>
               </template>
             </div>
-            <UDropdown :items="templatePDVObjectifActions(regleGestion, tp)" :popper="{ placement: 'bottom-end' }">
-              <UButton variant="ghost" size="xs" icon="i-heroicons-cog-6-tooth" title="Modifier les objectifs" />
-            </UDropdown>
-            <UButton variant="ghost" color="red" size="xs" icon="i-heroicons-x-mark" title="Retirer de la règle" @click="handleRemoveTemplatePDV(regleGestion, tp)" />
-          </div>
-          <p v-if="!pdvGestionFiltres.length" class="py-6 text-center text-sm text-gray-400">Aucun PDV ne correspond.</p>
-        </div>
+            <template v-if="!lectureSeule">
+              <UDropdown :items="templatePDVObjectifActions(regleGestion, tp)" :popper="{ placement: 'bottom-end' }">
+                <UButton variant="ghost" size="xs" icon="i-heroicons-cog-6-tooth" title="Modifier les objectifs" :aria-label="`Modifier les objectifs de ${tp.pdv?.nom_pdv || 'ce point de vente'}`" />
+              </UDropdown>
+              <UButton variant="ghost" color="red" size="xs" icon="i-heroicons-x-mark" title="Retirer de la règle" :aria-label="`Retirer ${tp.pdv?.nom_pdv || 'ce point de vente'} de la règle`" @click="handleRemoveTemplatePDV(regleGestion, tp)" />
+            </template>
+          </li>
+          <li v-if="!pdvGestionFiltres.length" class="py-6 text-center text-sm text-slate-600 dark:text-slate-300">
+            Aucun point de vente ne correspond : modifiez ou videz le filtre.
+          </li>
+        </ul>
 
         <div v-if="(regleGestion.routing_template_pdv?.length || 0) < (regleGestion.nb_pdv ?? 0)" class="text-center">
-          <UButton size="xs" variant="soft" color="gray" :loading="chargementRegles.has(regleGestion.id)" @click="chargerSuiteRegle(regleGestion)">
+          <UButton size="xs" variant="outline" :loading="chargementRegles.has(regleGestion.id)" @click="chargerSuiteRegle(regleGestion)">
             Afficher la suite ({{ (regleGestion.nb_pdv ?? 0) - (regleGestion.routing_template_pdv?.length || 0) }} PDV restants)
           </UButton>
         </div>
@@ -1089,84 +1101,89 @@
     >
       <template v-if="jourModal.routing">
         <div class="flex flex-wrap items-center gap-3">
-          <div class="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200">
+          <p class="rounded-md bg-emerald-50 px-3 py-2 text-sm tabular-nums text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200">
             <strong>{{ nbFaitsJour }}</strong> / {{ jourModal.etapes.length }} PDV faits
-          </div>
-          <div class="ml-auto flex gap-1">
-            <UButton
+          </p>
+          <div class="ml-auto inline-flex rounded-md border border-slate-300 bg-white p-0.5 dark:border-slate-600 dark:bg-slate-800" role="radiogroup" aria-label="Points de vente affichés">
+            <button
               v-for="f in [{ v: 'tous', l: 'Tous' }, { v: 'afaire', l: 'À faire' }, { v: 'faits', l: 'Faits' }]"
               :key="f.v"
-              size="xs"
-              :variant="jourModal.filtre === f.v ? 'solid' : 'ghost'"
-              :color="jourModal.filtre === f.v ? 'red' : 'gray'"
+              type="button"
+              role="radio"
+              :aria-checked="jourModal.filtre === f.v"
+              class="rounded px-3 py-1 text-xs font-medium transition-colors"
+              :class="jourModal.filtre === f.v ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700'"
               @click="jourModal.filtre = f.v as any"
             >
               {{ f.l }}
-            </UButton>
+            </button>
           </div>
         </div>
 
-        <div v-if="jourModal.chargement" class="py-8 text-center">
-          <UIcon name="i-heroicons-arrow-path" class="mx-auto h-6 w-6 animate-spin text-fc-red" />
-        </div>
-        <div v-else class="space-y-2">
-          <div
+        <ChargementContenu v-if="jourModal.chargement" variante="lignes" libelle="Chargement des points de vente…" />
+        <ul v-else class="space-y-2">
+          <li
             v-for="rp in etapesJourFiltrees"
             :key="rp.id"
-            class="flex items-center gap-3 rounded-lg px-3 py-2"
-            :class="rp.status === 'completed' ? 'bg-emerald-50 dark:bg-emerald-500/10' : rp.status === 'skipped' ? 'bg-gray-50 dark:bg-gray-700/50' : rp.status === 'in_progress' ? 'bg-amber-50 dark:bg-amber-500/10' : 'bg-gray-50/60 dark:bg-gray-800'"
+            class="flex items-center gap-3 rounded-md px-3 py-2"
+            :class="rp.status === 'completed' ? 'bg-emerald-50 dark:bg-emerald-500/10' : rp.status === 'skipped' ? 'bg-slate-100 dark:bg-slate-700/50' : rp.status === 'in_progress' ? 'bg-amber-50 dark:bg-amber-500/10' : 'bg-slate-50 dark:bg-slate-800'"
           >
-            <div
-              class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-              :class="rp.status === 'completed' ? 'bg-emerald-500 text-white' : rp.status === 'skipped' ? 'bg-gray-400 text-white' : rp.status === 'in_progress' ? 'bg-amber-500 text-white' : 'bg-gray-200 text-gray-600'"
+            <span
+              class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold tabular-nums"
+              :class="rp.status === 'completed' ? 'bg-emerald-700 text-white' : rp.status === 'skipped' ? 'bg-slate-600 text-white' : rp.status === 'in_progress' ? 'bg-amber-700 text-white' : 'bg-slate-200 text-slate-800 dark:bg-slate-600 dark:text-white'"
             >
               {{ rp.position_order }}
-            </div>
+            </span>
             <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{{ rp.pdv?.nom_pdv || rp.pdv_id }}</p>
-              <p class="text-xs text-gray-400">
+              <p class="truncate text-sm font-medium text-slate-900 dark:text-white">{{ rp.pdv?.nom_pdv || 'Point de vente sans nom' }}</p>
+              <p class="text-xs text-slate-600 dark:text-slate-300">
                 {{ rp.pdv?.zone || '' }} {{ rp.pdv?.quartier ? `— ${rp.pdv.quartier}` : '' }}
-                <span v-if="rp.pdv && !pdvAGps(rp.pdv)" class="ml-1 rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300">Sans GPS</span>
+                <span v-if="rp.pdv && !pdvAGps(rp.pdv)" class="ml-1 rounded-full bg-red-50 px-1.5 py-0.5 text-xs font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300">Sans GPS</span>
               </p>
             </div>
-            <div class="flex items-center gap-1.5">
+            <div class="flex flex-wrap items-center justify-end gap-1.5">
               <template v-for="(val, key) in rp.objectifs" :key="key">
-                <UBadge v-if="val" variant="soft" size="xs" color="blue" class="hidden sm:inline-flex">{{ objectifLabel(key as string) }}</UBadge>
+                <UBadge v-if="val" variant="soft" size="xs" color="gray" class="hidden sm:inline-flex">{{ objectifLabel(key as string) }}</UBadge>
               </template>
-              <UIcon v-if="rp.geofence_validated" name="i-heroicons-map-pin-solid" class="h-4 w-4 text-emerald-500" title="GPS validé" />
+              <span v-if="rp.geofence_validated" class="inline-flex items-center text-emerald-700 dark:text-emerald-300" title="Position GPS validée sur place">
+                <UIcon name="i-heroicons-map-pin-solid" class="h-4 w-4" aria-hidden="true" />
+                <span class="sr-only">Position GPS validée sur place</span>
+              </span>
               <UBadge :color="pdvStatusColor(rp.status)" variant="soft" size="xs">{{ pdvStatusLabel(rp.status) }}</UBadge>
             </div>
-          </div>
-          <p v-if="!etapesJourFiltrees.length" class="py-6 text-center text-sm text-gray-400">Aucun PDV pour ce filtre.</p>
-        </div>
-        <p v-if="jourModal.routing.notes" class="text-xs text-gray-400">Note : {{ jourModal.routing.notes }}</p>
+          </li>
+          <li v-if="!etapesJourFiltrees.length" class="py-6 text-center text-sm text-slate-600 dark:text-slate-300">
+            Aucun point de vente pour ce filtre : choisissez « Tous ».
+          </li>
+        </ul>
+        <p v-if="jourModal.routing.notes" class="text-xs text-slate-600 dark:text-slate-300">Note : {{ jourModal.routing.notes }}</p>
       </template>
 
-      <div v-else class="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+      <div v-else class="space-y-3 text-sm text-slate-700 dark:text-slate-200">
         <p v-if="jourModal.date < aujourdhui">Aucune tournée n'a été planifiée ce jour-là.</p>
         <template v-else>
           <p v-if="jourModal.regle?.mode === 'quota'">
-            Règle en mode <strong>Quotas</strong> : la liste du jour est tirée au moment de la génération, selon la grille
-            Référentiels › Quotas (N PDV par canal), parmi les PDV du portefeuille pas encore planifiés ni visités dans le mois.
+            Règle <strong>par quotas</strong> : la liste du jour est choisie au moment de la génération, parmi les points de vente
+            du portefeuille pas encore prévus ni visités ce mois-ci. Le nombre par canal se règle dans Référentiels › Quotas.
           </p>
           <p v-else-if="jourModal.regle">
-            Règle en mode <strong>Périmètre</strong> : tout le portefeuille ({{ jourModal.regle.nb_pdv ?? 0 }} PDV) sera visité ce jour-là, hors exceptions.
+            Règle <strong>tout le portefeuille</strong> : ses {{ jourModal.regle.nb_pdv ?? 0 }} points de vente seront à visiter ce jour-là, sauf exceptions.
           </p>
-          <p class="text-xs text-gray-400">
-            Les tournées se génèrent automatiquement chaque nuit pour les 7 jours suivants. Vous pouvez générer celle-ci dès maintenant pour voir sa liste.
+          <p class="text-xs text-slate-600 dark:text-slate-300">
+            Les tournées se génèrent automatiquement chaque nuit pour les 7 jours suivants.<template v-if="!lectureSeule"> Vous pouvez générer celle-ci dès maintenant pour voir sa liste.</template>
           </p>
         </template>
       </div>
 
       <template #footer>
         <UButton color="gray" variant="ghost" @click="jourModal.ouvert = false">Fermer</UButton>
-        <UButton v-if="jourModal.routing" variant="outline" icon="i-heroicons-pencil-square" @click="modifierTourneeDuJour">
+        <!-- Compte agence (lectureSeule) : ni modification ni génération depuis cette fenêtre. -->
+        <UButton v-if="jourModal.routing && !lectureSeule" variant="outline" icon="i-heroicons-pencil-square" @click="modifierTourneeDuJour">
           Modifier cette tournée
         </UButton>
         <UButton
-          v-else-if="jourModal.date >= aujourdhui"
+          v-else-if="!jourModal.routing && jourModal.date >= aujourdhui && !lectureSeule"
           icon="i-heroicons-sparkles"
-          class="bg-fc-red text-white hover:bg-fc-red/90"
           :loading="jourModal.generation"
           @click="genererJour"
         >
@@ -1177,75 +1194,78 @@
 
     <!-- ==================== IMPORT ROUTINGS MODAL ==================== -->
     <UModal v-model="showImportModal" :ui="{ width: 'max-w-xl' }">
-      <div class="p-6 space-y-4">
-        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Importer des tournées</h2>
+      <div class="space-y-4 p-6">
+        <h2 class="text-base font-semibold text-slate-900 dark:text-white">Importer des tournées</h2>
 
-        <ol class="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+        <ol class="space-y-2 text-sm text-slate-700 dark:text-slate-200">
           <li class="flex gap-2">
-            <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-fc-red text-xs font-bold text-white">1</span>
+            <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-800 dark:bg-slate-600 dark:text-white" aria-hidden="true">1</span>
             <span>
-              <UButton variant="link" size="sm" class="p-0 align-baseline" :loading="downloadingTemplate" @click="handleDownloadTemplate">Téléchargez le modèle Excel</UButton>
-              — il contient les merchandisers et points de vente à jour.
+              <UButton variant="link" size="sm" class="p-0 align-baseline" :loading="downloadingTemplate" @click="handleDownloadTemplate">Téléchargez le modèle de fichier (Excel)</UButton>
+              : il contient les merchandisers et les points de vente à jour.
             </span>
           </li>
           <li class="flex gap-2">
-            <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-fc-red text-xs font-bold text-white">2</span>
+            <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-800 dark:bg-slate-600 dark:text-white" aria-hidden="true">2</span>
             <span>Remplissez l'onglet <strong>Tournées</strong> : une ligne par point de vente à visiter, en choisissant chaque valeur dans les listes. L'onglet <em>Mode d'emploi</em> détaille chaque colonne.</span>
           </li>
           <li class="flex gap-2">
-            <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-fc-red text-xs font-bold text-white">3</span>
+            <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-800 dark:bg-slate-600 dark:text-white" aria-hidden="true">3</span>
             <span>Enregistrez-le, choisissez-le ci-dessous et cliquez sur <strong>Importer</strong>. Une journée déjà planifiée est mise à jour, jamais dupliquée.</span>
           </li>
         </ol>
 
-        <UFormGroup label="Que faire des PDV déjà présents et absents du fichier ?" size="sm">
+        <UFormGroup label="Que faire des points de vente déjà prévus mais absents du fichier ?" size="sm">
           <div class="space-y-2">
-            <label class="flex items-start gap-2 cursor-pointer">
-              <input v-model="importMode" type="radio" value="fusion" class="mt-1 text-fc-red focus:ring-fc-red" />
+            <label class="flex cursor-pointer items-start gap-2">
+              <input v-model="importMode" type="radio" value="fusion" class="mt-1 text-brand-500 focus:ring-brand-500" />
               <span class="text-sm">
-                <strong class="text-gray-900 dark:text-gray-100">Fusionner</strong>
-                <span class="block text-xs text-gray-500 dark:text-gray-400">
-                  Les conserver. À utiliser pour corriger un mois déjà importé sans rien perdre.
+                <strong class="text-slate-900 dark:text-white">Les garder</strong>
+                <span class="block text-xs text-slate-600 dark:text-slate-300">
+                  À utiliser pour corriger un mois déjà importé sans rien perdre.
                 </span>
               </span>
             </label>
-            <label class="flex items-start gap-2 cursor-pointer">
-              <input v-model="importMode" type="radio" value="remplacement" class="mt-1 text-fc-red focus:ring-fc-red" />
+            <label class="flex cursor-pointer items-start gap-2">
+              <input v-model="importMode" type="radio" value="remplacement" class="mt-1 text-brand-500 focus:ring-brand-500" />
               <span class="text-sm">
-                <strong class="text-gray-900 dark:text-gray-100">Remplacer</strong>
-                <span class="block text-xs text-gray-500 dark:text-gray-400">
-                  Les supprimer. La tournée devient exactement le contenu du fichier.
+                <strong class="text-slate-900 dark:text-white">Les retirer</strong>
+                <span class="block text-xs text-slate-600 dark:text-slate-300">
+                  La tournée devient exactement le contenu du fichier.
                 </span>
               </span>
             </label>
           </div>
         </UFormGroup>
 
-        <div class="border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-lg p-6 text-center">
+        <div class="rounded-md border-2 border-dashed border-slate-300 p-6 text-center dark:border-slate-600">
           <input ref="importFileInput" type="file" accept=".xlsx,.csv" class="hidden" @change="handleImportFileSelect" />
           <UButton variant="outline" @click="($refs.importFileInput as HTMLInputElement)?.click()">
             Choisir le fichier
           </UButton>
-          <p class="text-xs text-gray-400 mt-1">Excel (.xlsx) ou ancien format CSV</p>
-          <p v-if="importFile" class="text-sm text-gray-600 mt-2">{{ importFile.name }}</p>
+          <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">Excel (.xlsx) ou ancien format CSV</p>
+          <p v-if="importFile" class="mt-2 text-sm text-slate-700 dark:text-slate-200">{{ importFile.name }}</p>
         </div>
 
         <!-- Résultat import -->
-        <div v-if="importSummary" class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 space-y-2">
-          <div class="flex flex-wrap gap-3 text-sm">
-            <span class="text-emerald-600 font-medium">{{ importSummary.created }} créé(s)</span>
-            <span class="text-blue-600 font-medium">{{ importSummary.updated }} mis à jour</span>
-            <span class="text-gray-500 dark:text-gray-400">{{ importSummary.pdvCount }} point(s) de vente</span>
-            <span v-if="importSummary.errors.length" class="text-red-600 font-medium">{{ importSummary.errors.length }} message(s)</span>
+        <div v-if="importSummary" class="space-y-2 rounded-md bg-slate-50 p-3 dark:bg-slate-700/50" role="status">
+          <div class="flex flex-wrap gap-3 text-sm tabular-nums">
+            <span class="font-medium text-slate-900 dark:text-white">{{ importSummary.created }} créée(s)</span>
+            <span class="font-medium text-slate-900 dark:text-white">{{ importSummary.updated }} mise(s) à jour</span>
+            <span class="text-slate-600 dark:text-slate-300">{{ importSummary.pdvCount }} point(s) de vente</span>
+            <span v-if="importSummary.errors.length" class="font-medium text-red-700 dark:text-red-300">{{ importSummary.errors.length }} ligne(s) à corriger</span>
           </div>
-          <div v-if="importSummary.errors.length" class="max-h-40 overflow-y-auto space-y-1 border-t border-gray-200 dark:border-gray-600 pt-2">
-            <p v-for="(e, i) in importSummary.errors" :key="i" class="text-xs text-red-600">⚠ {{ e }}</p>
-          </div>
+          <ul v-if="importSummary.errors.length" class="max-h-40 space-y-1 overflow-y-auto border-t border-slate-200 pt-2 dark:border-slate-600">
+            <li v-for="(e, i) in importSummary.errors" :key="i" class="flex items-start gap-1.5 text-xs text-red-700 dark:text-red-300">
+              <UIcon name="i-heroicons-exclamation-triangle" class="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span>{{ e }}</span>
+            </li>
+          </ul>
         </div>
 
-        <div class="flex justify-end gap-3 pt-4 border-t">
-          <UButton variant="ghost" @click="closeImportModal">Fermer</UButton>
-          <UButton class="bg-fc-red hover:bg-fc-red/90" :disabled="!importFile" :loading="importing" @click="handleImportRoutings">
+        <div class="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
+          <UButton color="gray" variant="ghost" @click="closeImportModal">Fermer</UButton>
+          <UButton :disabled="!importFile" :loading="importing" @click="handleImportRoutings">
             Importer
           </UButton>
         </div>
@@ -1259,6 +1279,7 @@ import type { Profile, Routing, RoutingPDV, RoutingObjectives, RoutingTemplate, 
 import { toIsoJour, debutDeSemaine } from '~/utils/periode'
 import { fetchAllRows } from '~/utils/fetchAll'
 import { JOURS_SEMAINE, joursDeRegle, libelleJours, datesDeRegle } from '~/utils/routingRecurrence'
+import { messageUtilisateur } from '~/utils/supabaseErrors'
 
 // Écran de PLANIFICATION : création et édition de routings, de templates et
 // d'exceptions. La matrice RBAC le range dans la section « principal », ouverte
@@ -1299,7 +1320,7 @@ async function handleDownloadTemplate() {
   try {
     await downloadRoutingExcelTemplate()
   } catch (err: any) {
-    toast.add({ title: 'Modèle indisponible', description: err.message, color: 'red' })
+    toast.add({ title: 'Modèle indisponible', description: messageUtilisateur(err), color: 'red' })
   } finally {
     downloadingTemplate.value = false
   }
@@ -1344,7 +1365,7 @@ async function handleExportTournees() {
     })
   }
   catch (err: any) {
-    toast.add({ title: 'Erreur d\'export', description: err.message, color: 'red' })
+    toast.add({ title: 'Export impossible', description: messageUtilisateur(err), color: 'red' })
   }
   finally {
     exportEnCours.value = false
@@ -1366,7 +1387,7 @@ async function handleImportRoutings() {
     })
     loadRoutings()
   } catch (err: any) {
-    toast.add({ title: 'Erreur d\'import', description: err.message, color: 'red' })
+    toast.add({ title: 'Import impossible', description: messageUtilisateur(err), color: 'red' })
   } finally {
     importing.value = false
   }
@@ -1464,10 +1485,10 @@ const ssfParId = computed(() => new Map(sousZonesSsf.value.map(s => [s.ssf_id, s
 const nomSsf = (id: number) => ssfParId.value.get(id)?.nom || `SSF ${id}`
 const quartiersSsfTexte = (id: number) => {
   const s = ssfParId.value.get(id)
-  return s?.quartiers?.length ? `Sous-zone ${s.zone || ''} : ${s.quartiers.join(', ')}` : 'Sous-zone non définie (Référentiels › SSF ↔ Quartiers)'
+  return s?.quartiers?.length ? `Quartiers suivis${s.zone ? ` (${s.zone})` : ''} : ${s.quartiers.join(', ')}` : 'Quartiers non renseignés (Référentiels › Quartiers des vendeurs)'
 }
 const ssfOptions = computed(() => [
-  { value: 0, label: 'Aucun (règle sans SSF)' },
+  { value: 0, label: 'Aucun vendeur' },
   ...sousZonesSsf.value.filter(s => s.actif !== false).map(s => ({
     value: s.ssf_id,
     label: `${s.nom}${s.zone ? ` · ${s.zone}` : ''}${s.distributeur ? ` · ${s.distributeur}` : ''}`,
@@ -1479,8 +1500,8 @@ const ssfChoisi = computed<number>({
   set: (v) => { newTemplate.ssfId = v || null },
 })
 const aideSsf = computed(() => (newTemplate.ssfId
-  ? `${quartiersSsfTexte(newTemplate.ssfId)}. Les PDV de ces quartiers complètent la tournée du jour ; aucun PDV hors de ces quartiers ne peut être ajouté.`
-  : 'Vendeur du distributeur avec qui le merchandiser forme un binôme les jours de cette règle (sans lien hiérarchique : tous deux dépendent du commercial). Ses quartiers bornent les PDV, pour qu’ils passent dans les mêmes PDV.'))
+  ? `${quartiersSsfTexte(newTemplate.ssfId)}. Seuls les points de vente de ces quartiers peuvent entrer dans la règle.`
+  : 'Le vendeur avec qui le merchandiser travaille ces jours-là. Seuls les points de vente de ses quartiers pourront entrer dans la règle.'))
 
 // ---- Modification d'une règle (même formulaire que la création) ----
 const regleEditionId = ref<string | null>(null)
@@ -1524,8 +1545,8 @@ function reinitialiserFormulaireRegle() {
 }
 watch(showTemplateCreateModal, (ouvert) => { if (!ouvert && regleEditionId.value) reinitialiserFormulaireRegle() })
 const modeOptions = [
-  { value: 'perimetre', label: 'Périmètre — tout le portefeuille chaque jour (Friesland)' },
-  { value: 'quota', label: 'Quotas — N PDV par canal et par jour, chaque PDV une fois par mois (Atom)' },
+  { value: 'perimetre', label: 'Tout le portefeuille : chaque jour de la règle, il visite tous ses points de vente (FrieslandCampina).' },
+  { value: 'quota', label: 'Quotas : chaque jour, un nombre fixe de points de vente par canal, chacun vu une fois par mois (agences).' },
 ]
 
 // ---- Exceptions : « cette semaine, il ne visite pas ce PDV » ----
@@ -1571,13 +1592,13 @@ async function handleAddException() {
     )
     toast.add({
       title: 'Exception enregistrée',
-      description: newException.pdvId ? 'Ce PDV est retiré sur la période.' : 'La tournée est suspendue sur la période.',
+      description: newException.pdvId ? 'Ce point de vente est retiré de la tournée sur la période.' : 'La tournée est suspendue sur la période.',
       color: 'green',
     })
     showExceptionModal.value = false
     loadTemplates()
   } catch (err: any) {
-    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+    toast.add({ title: 'Exception non enregistrée', description: messageUtilisateur(err), color: 'red' })
   }
 }
 
@@ -1587,16 +1608,30 @@ async function handleRemoveException(exceptionId: string) {
     toast.add({ title: 'Exception retirée', color: 'green' })
     loadTemplates()
   } catch (err: any) {
-    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+    toast.add({ title: 'Exception non retirée', description: messageUtilisateur(err), color: 'red' })
   }
 }
 
 // Prochaines occurrences d'une règle sur 4 semaines, exceptions déduites.
 function exceptionLabel(e: RoutingTemplateException, tpl: RoutingTemplate): string {
   const cible = e.pdv_id
-    ? (tpl.routing_template_pdv?.find(p => p.pdv_id === e.pdv_id)?.pdv?.nom_pdv || e.pdv_id)
+    ? (tpl.routing_template_pdv?.find(p => p.pdv_id === e.pdv_id)?.pdv?.nom_pdv || 'Un point de vente')
     : 'Toute la tournée'
-  return `${cible} — du ${e.date_debut} au ${e.date_fin}`
+  return `${cible} — du ${dateFr(e.date_debut)} au ${dateFr(e.date_fin)}`
+}
+
+// Retrait d'une exception : la tournée (ou le PDV) reprend sur la période.
+function retirerException(e: RoutingTemplateException, tpl: RoutingTemplate) {
+  const consequence = e.pdv_id ? 'Ce point de vente sera de nouveau prévu' : 'La tournée sera de nouveau générée'
+  if (!confirm(`Retirer l'exception « ${exceptionLabel(e, tpl)} » de la règle « ${titreRegle(tpl)} » ? ${consequence} sur cette période.`)) return
+  void handleRemoveException(e.id)
+}
+
+// Date ISO (2026-10-06) → 06/10/2026.
+function dateFr(d?: string | null) {
+  if (!d) return '—'
+  const [a, m, j] = d.slice(0, 10).split('-')
+  return a && m && j ? `${j}/${m}/${a}` : d
 }
 
 // ---- Pré-génération de l'horizon (chemin principal de matérialisation) ----
@@ -1606,13 +1641,13 @@ async function handlePreGenerer() {
   try {
     const { users, tournees } = await routingStore.preGenererHorizon(7)
     toast.add({
-      title: `${tournees} tournée(s) pré-générée(s)`,
-      description: `${users} merchandiser(s) couverts sur les 7 prochains jours.`,
+      title: `${tournees} tournée(s) générée(s)`,
+      description: `${users} personne(s) couverte(s) sur les 7 prochains jours.`,
       color: 'green',
     })
     loadRoutings()
   } catch (err: any) {
-    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+    toast.add({ title: 'Génération impossible', description: messageUtilisateur(err), color: 'red' })
   } finally {
     preGenerating.value = false
   }
@@ -1627,10 +1662,10 @@ const generateConfig = reactive({
 // ---- Constants ----
 const objectifOptions = [
   { key: 'releve_stock', short: 'Stock', label: 'Relevé de stock' },
-  { key: 'encaissement', short: 'Encais.', label: 'Encaissement' },
+  { key: 'encaissement', short: 'Encaissement', label: 'Encaissement' },
   { key: 'photos', short: 'Photos', label: 'Photos' },
-  { key: 'merchandising', short: 'Merch.', label: 'Merchandising' },
-  { key: 'prospection', short: 'Prosp.', label: 'Prospection' },
+  { key: 'merchandising', short: 'Merchandising', label: 'Merchandising' },
+  { key: 'prospection', short: 'Prospection', label: 'Prospection' },
 ]
 
 const statusOptions = [
@@ -1646,15 +1681,6 @@ const editStatusOptions = statusOptions.filter(o => o.value)
 const dayShort: Record<number, string> = {
   0: 'Dim', 1: 'Lun', 2: 'Mar', 3: 'Mer', 4: 'Jeu', 5: 'Ven', 6: 'Sam',
 }
-const dayColors: Record<number, string> = {
-  0: 'bg-gray-100 text-gray-600',
-  1: 'bg-blue-100 text-blue-700',
-  2: 'bg-emerald-100 text-emerald-700',
-  3: 'bg-amber-100 text-amber-700',
-  4: 'bg-purple-100 text-purple-700',
-  5: 'bg-pink-100 text-pink-700',
-  6: 'bg-orange-100 text-orange-700',
-}
 
 // Territoires proposés pour une règle : ceux réellement portés par des PDV actifs.
 const territoireOptionsRegle = computed(() =>
@@ -1666,7 +1692,7 @@ const exceptionPdvOptions = computed(() => [
   { value: '', label: 'Toute la tournée' },
   ...(exceptionTemplate.value?.routing_template_pdv || []).map(p => ({
     value: p.pdv_id,
-    label: p.pdv?.nom_pdv || p.pdv_id,
+    label: p.pdv?.nom_pdv || 'Point de vente sans nom',
   })),
 ])
 
@@ -1856,6 +1882,13 @@ function libelleDms(t: RoutingTemplate) {
   return t.distributeur || suffixe || 'Distributeur non précisé'
 }
 
+// Titre affiché d'une règle : le libellé technique « Portefeuille DMS — X »
+// (posé par les scripts d'affectation) se lit « Portefeuille du distributeur — X ».
+function titreRegle(t: RoutingTemplate) {
+  if (estRegleDms(t)) return `Portefeuille du distributeur — ${libelleDms(t)}`
+  return t.label || libelleJours(t)
+}
+
 function nomPersonne(u?: Profile | null) {
   return u?.nom || u?.email || 'Sans utilisateur'
 }
@@ -1999,7 +2032,7 @@ async function chargerSuiteRegle(tpl: RoutingTemplate) {
     await routingStore.chargerPdvRegle(tpl)
   }
   catch (err: any) {
-    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+    toast.add({ title: 'Chargement impossible', description: messageUtilisateur(err), color: 'red' })
   }
   finally {
     chargementRegles.value.delete(tpl.id)
@@ -2033,7 +2066,7 @@ async function chargerJoursPersonne(userId: string) {
     tourneesParJour.value.set(userId, new Map(liste.map(r => [r.date_routing, r])))
   }
   catch (err: any) {
-    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+    toast.add({ title: 'Jours non chargés', description: messageUtilisateur(err), color: 'red' })
   }
   finally {
     chargementJours.value.delete(userId)
@@ -2060,7 +2093,7 @@ function semainesDeRegle(tpl: RoutingTemplate) {
   return [...parLundi.entries()].map(([lundi, js]) => ({
     lundi,
     jours: js,
-    libelle: lundi === lundiVue ? 'Cette semaine' : `Sem. ${jourCourt(lundi).split(' ')[1]}`,
+    libelle: lundi === lundiVue ? 'Cette semaine' : `Semaine du ${jourCourt(lundi).split(' ')[1]}`,
   }))
 }
 
@@ -2086,7 +2119,7 @@ function etatJour(userId: string, d: string) {
 function classeJour(userId: string, d: string) {
   const r = tourneesParJour.value.get(userId)?.get(d)
   const base = d === aujourdhui ? 'ring-2 ring-fc-red/40 ' : ''
-  if (!r) return `${base}border-dashed border-gray-200 text-gray-400 dark:border-gray-600`
+  if (!r) return `${base}border-dashed border-slate-300 text-slate-600 dark:border-slate-600 dark:text-slate-300`
   if (d < aujourdhui && (r.nb_faits ?? 0) < (r.nb_pdv ?? 0)) {
     return `${base}border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200`
   }
@@ -2122,7 +2155,7 @@ async function chargerEtapesJour() {
     jourModal.etapes = await routingStore.toutesEtapesRouting(jourModal.routing.id)
   }
   catch (err: any) {
-    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+    toast.add({ title: 'Points de vente non chargés', description: messageUtilisateur(err), color: 'red' })
   }
   finally {
     jourModal.chargement = false
@@ -2155,11 +2188,11 @@ async function genererJour() {
     const [genere] = await routingStore.fetchRoutings({ userId: jourModal.userId, dateFrom: jourModal.date, dateTo: jourModal.date })
     jourModal.routing = genere || null
     if (jourModal.routing) await chargerEtapesJour()
-    else toast.add({ title: 'Aucune tournée générée', description: 'Aucun PDV à visiter ce jour : quotas déjà couverts dans le mois, ou exceptions.', color: 'amber' })
+    else toast.add({ title: 'Aucune tournée générée', description: 'Aucun point de vente à visiter ce jour : quotas du mois déjà couverts, ou exception en cours.', color: 'amber' })
     loadRoutings()
   }
   catch (err: any) {
-    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+    toast.add({ title: 'Génération impossible', description: messageUtilisateur(err), color: 'red' })
   }
   finally {
     jourModal.generation = false
@@ -2241,7 +2274,8 @@ const pdvGestionFiltres = computed(() => {
 })
 
 function getPDVName(pdvId: string) {
-  return pdvList.value.find(p => p.pdv_id === pdvId)?.nom_pdv || pdvId
+  return pdvList.value.find(p => p.pdv_id === pdvId)?.nom_pdv
+    || (pdvList.value.length ? 'Point de vente sans nom' : 'Chargement…')
 }
 
 function addPDV() {
@@ -2288,10 +2322,15 @@ function routingActions(routing: Routing) {
       label: 'Supprimer',
       icon: 'i-heroicons-trash',
       click: async () => {
-        if (confirm('Supprimer ce routing ?')) {
+        const nb = routing.nb_pdv ?? routing.routing_pdv?.length ?? 0
+        if (!confirm(`Supprimer la tournée de ${nomPersonne(routing.user)} du ${formatDate(routing.date_routing)} ? Ses ${nb} point(s) de vente prévu(s) disparaissent de son application ; les visites déjà faites restent enregistrées.`)) return
+        try {
           await routingStore.deleteRouting(routing.id)
-          toast.add({ title: 'Routing supprimé', color: 'green' })
+          toast.add({ title: 'Tournée supprimée', color: 'green' })
           loadRoutings()
+        }
+        catch (err: any) {
+          toast.add({ title: 'Tournée non supprimée', description: messageUtilisateur(err), color: 'red' })
         }
       },
     },
@@ -2310,19 +2349,29 @@ function templateActions(tpl: RoutingTemplate) {
       label: tpl.is_active ? 'Désactiver' : 'Activer',
       icon: tpl.is_active ? 'i-heroicons-pause' : 'i-heroicons-play',
       click: async () => {
-        await routingStore.updateTemplate(tpl.id, { is_active: !tpl.is_active })
-        toast.add({ title: `Template ${tpl.is_active ? 'désactivé' : 'activé'}`, color: 'green' })
-        loadTemplates()
+        try {
+          await routingStore.updateTemplate(tpl.id, { is_active: !tpl.is_active })
+          toast.add({ title: `Règle ${tpl.is_active ? 'désactivée' : 'activée'}`, color: 'green' })
+          loadTemplates()
+        }
+        catch (err: any) {
+          toast.add({ title: 'Règle non modifiée', description: messageUtilisateur(err), color: 'red' })
+        }
       },
     },
     {
       label: 'Supprimer',
       icon: 'i-heroicons-trash',
       click: async () => {
-        if (confirm('Supprimer ce template permanent ? Les routings déjà générés ne seront pas affectés.')) {
+        const nom = tpl.label ? `« ${titreRegle(tpl)} » (${libelleJours(tpl)})` : `du ${libelleJours(tpl)}`
+        if (!confirm(`Supprimer la règle ${nom} de ${nomPersonne(tpl.user)} et ses ${tpl.nb_pdv ?? tpl.routing_template_pdv?.length ?? 0} point(s) de vente ? Plus aucune tournée ne sera générée par cette règle ; les tournées déjà générées restent.`)) return
+        try {
           await routingStore.deleteTemplate(tpl.id)
-          toast.add({ title: 'Template supprimé', color: 'green' })
+          toast.add({ title: 'Règle supprimée', color: 'green' })
           loadTemplates()
+        }
+        catch (err: any) {
+          toast.add({ title: 'Règle non supprimée', description: messageUtilisateur(err), color: 'red' })
         }
       },
     },
@@ -2336,9 +2385,14 @@ function templatePDVObjectifActions(tpl: RoutingTemplate, tp: RoutingTemplatePDV
     click: async () => {
       const updated = { ...tp.objectifs } as any
       updated[obj.key] = !updated[obj.key]
-      await routingStore.updateTemplatePDVObjectifs(tp.id, updated)
-      tp.objectifs = updated
-      toast.add({ title: 'Objectif mis à jour', color: 'green' })
+      try {
+        await routingStore.updateTemplatePDVObjectifs(tp.id, updated)
+        tp.objectifs = updated
+        toast.add({ title: 'Objectif mis à jour', color: 'green' })
+      }
+      catch (err: any) {
+        toast.add({ title: 'Objectif non modifié', description: messageUtilisateur(err), color: 'red' })
+      }
     },
   }))]
 }
@@ -2372,21 +2426,21 @@ async function handleAddTemplatePDV(tpl: RoutingTemplate) {
   try {
     await routingStore.addTemplatePDV(tpl.id, pdvId)
     templateAddPdvId[tpl.id] = ''
-    toast.add({ title: 'PDV ajouté au template', color: 'green' })
+    toast.add({ title: 'Point de vente ajouté à la règle', color: 'green' })
     loadTemplates()
   } catch (err: any) {
-    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+    toast.add({ title: 'Point de vente non ajouté', description: messageUtilisateur(err), color: 'red' })
   }
 }
 
 async function handleRemoveTemplatePDV(tpl: RoutingTemplate, tp: RoutingTemplatePDV) {
-  if (!confirm(`Retirer "${tp.pdv?.nom_pdv || tp.pdv_id}" du template ?`)) return
+  if (!confirm(`Retirer « ${tp.pdv?.nom_pdv || 'ce point de vente'} » de la règle « ${titreRegle(tpl)} » ? Il ne sera plus prévu dans les prochaines tournées de cette règle ; les tournées déjà générées ne changent pas.`)) return
   try {
     await routingStore.removeTemplatePDV(tpl.id, tp.id)
-    toast.add({ title: 'PDV retiré du template', color: 'green' })
+    toast.add({ title: 'Point de vente retiré de la règle', color: 'green' })
     loadTemplates()
   } catch (err: any) {
-    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+    toast.add({ title: 'Point de vente non retiré', description: messageUtilisateur(err), color: 'red' })
   }
 }
 
@@ -2396,7 +2450,12 @@ async function moveTemplatePDV(tpl: RoutingTemplate, idx: number, dir: number) {
   if (target < 0 || target >= sorted.length) return
   const ids = sorted.map(p => p.id)
   ;[ids[idx], ids[target]] = [ids[target], ids[idx]]
-  await routingStore.reorderTemplatePDV(tpl.id, ids)
+  try {
+    await routingStore.reorderTemplatePDV(tpl.id, ids)
+  }
+  catch (err: any) {
+    toast.add({ title: 'Ordre non enregistré', description: messageUtilisateur(err), color: 'red' })
+  }
 }
 
 // ---- Load functions ----
@@ -2414,7 +2473,7 @@ async function loadRoutings() {
     })
   }
   catch (err: any) {
-    toast.add({ title: 'Erreur de chargement des tournées', description: err.message, color: 'red' })
+    toast.add({ title: 'Tournées non chargées', description: messageUtilisateur(err), color: 'red' })
   }
   finally {
     loading.value = false
@@ -2458,7 +2517,7 @@ async function openEditRouting(routing: Routing) {
     etapes = await routingStore.toutesEtapesRouting(routing.id)
   }
   catch (err: any) {
-    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+    toast.add({ title: 'Tournée non chargée', description: messageUtilisateur(err), color: 'red' })
     return
   }
   editingRoutingId.value = routing.id
@@ -2495,15 +2554,15 @@ async function handleSaveRouting() {
         },
         newRouting.pdvItems,
       )
-      toast.add({ title: 'Routing mis à jour', description: `${newRouting.pdvItems.length} PDV`, color: 'green' })
+      toast.add({ title: 'Tournée mise à jour', description: `${newRouting.pdvItems.length} point(s) de vente`, color: 'green' })
     } else {
       await routingStore.createRouting(newRouting.userId, newRouting.date, newRouting.pdvItems, authStore.profile!.id, newRouting.notes)
-      toast.add({ title: 'Routing créé', description: `${newRouting.pdvItems.length} PDV assignés`, color: 'green' })
+      toast.add({ title: 'Tournée créée', description: `${newRouting.pdvItems.length} point(s) de vente`, color: 'green' })
     }
     closeRoutingModal()
     loadRoutings()
   } catch (err: any) {
-    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+    toast.add({ title: 'Tournée non enregistrée', description: messageUtilisateur(err), color: 'red' })
   } finally {
     creating.value = false
   }
@@ -2512,11 +2571,11 @@ async function handleSaveRouting() {
 async function handleDuplicate() {
   try {
     await routingStore.duplicateRouting(duplicateRoutingId.value, duplicateDate.value, duplicateUserId.value || undefined)
-    toast.add({ title: 'Routing dupliqué', color: 'green' })
+    toast.add({ title: 'Tournée dupliquée', color: 'green' })
     showDuplicateModal.value = false
     loadRoutings()
   } catch (err: any) {
-    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+    toast.add({ title: 'Duplication impossible', description: messageUtilisateur(err), color: 'red' })
   }
 }
 
@@ -2538,7 +2597,7 @@ async function handleCreateTemplate() {
         // Colonne ssf_id écrite seulement quand les SSF sont disponibles (migration appliquée).
         ...(sousZonesSsf.value.length ? { ssf_id: newTemplate.ssfId } : {}),
       })
-      toast.add({ title: 'Règle modifiée', description: 'Les tournées déjà générées ne changent pas (Maintenance › Recalculer les tournées à venir).', color: 'green' })
+      toast.add({ title: 'Règle modifiée', description: 'Les tournées déjà générées ne changent pas : Référentiels › Maintenance › « Recalculer les tournées à venir » les met à jour.', color: 'green' })
       showTemplateCreateModal.value = false
       reinitialiserFormulaireRegle()
       loadTemplates()
@@ -2561,7 +2620,7 @@ async function handleCreateTemplate() {
     )
     toast.add({
       title: 'Règle créée',
-      description: `${libelleJours({ days_of_week: newTemplate.daysOfWeek })} — ajoutez maintenant les PDV`,
+      description: `${libelleJours({ days_of_week: newTemplate.daysOfWeek })} : ajoutez maintenant ses points de vente.`,
       color: 'green',
     })
     showTemplateCreateModal.value = false
@@ -2576,7 +2635,7 @@ async function handleCreateTemplate() {
     newTemplate.ssfId = null
     loadTemplates()
   } catch (err: any) {
-    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+    toast.add({ title: 'Règle non enregistrée', description: messageUtilisateur(err), color: 'red' })
   } finally {
     creating.value = false
   }
@@ -2606,7 +2665,7 @@ async function handleGenerate() {
     toast.add({ title: `${crees} tournée(s) générée(s)`, color: 'green' })
     loadRoutings()
   } catch (err: any) {
-    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+    toast.add({ title: 'Génération impossible', description: messageUtilisateur(err), color: 'red' })
   } finally {
     generating.value = false
   }
