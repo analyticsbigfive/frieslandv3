@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <AdminPageHeader title="Actions commerciales" eyebrow="Domaine actions" />
+    <AdminPageHeader title="Actions commerciales" />
 
     <AdminListToolbar :result-count="filtrees.length" result-label="action(s)" :chips="chips" @reset="resetFilters" @remove-chip="removeChip">
       <template #filters>

@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <AdminPageHeader title="Field coaching" eyebrow="Domaine visites" />
+    <AdminPageHeader title="Field coaching" />
 
     <AdminListToolbar :result-count="filtres.length" result-label="coaching(s)" :chips="chips" @reset="resetFilters" @remove-chip="removeChip">
       <template #filters>

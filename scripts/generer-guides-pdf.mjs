@@ -34,7 +34,7 @@
  * le pied de page « page X / Y »). CHROME_PATH permet d'indiquer un autre binaire.
  */
 import { spawn } from 'node:child_process'
-import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises'
+import { copyFile, mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
@@ -383,6 +383,14 @@ try {
     const pdf = join(SORTIE, `${ROLES[role].fichier}.pdf`)
     await imprimer(chrome, html, pdf, ROLES[role].titre)
     console.log(`✅ ${pdf.replace(`${RACINE}/`, '')}`)
+  }
+
+  // Le bouton « Aide » du back-office sert ces deux guides
+  // (server/routes/guides/[nom].get.ts) : copie dans les assets du serveur.
+  const ASSETS_GUIDES = join(RACINE, 'server', 'assets', 'guides')
+  await mkdir(ASSETS_GUIDES, { recursive: true })
+  for (const fichier of ['GUIDE-ADMIN.pdf', 'GUIDE-ADMIN-ATOM.pdf']) {
+    await copyFile(join(SORTIE, fichier), join(ASSETS_GUIDES, fichier))
   }
 
   if (emailAdmin) {

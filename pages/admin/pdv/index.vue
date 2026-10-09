@@ -2,7 +2,6 @@
   <div class="space-y-5">
     <AdminPageHeader
       title="Points de vente"
-      eyebrow="Domaine PDV"
     />
 
     <AdminListToolbar

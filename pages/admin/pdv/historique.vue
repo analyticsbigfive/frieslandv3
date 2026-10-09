@@ -2,7 +2,6 @@
   <div class="space-y-6">
     <AdminPageHeader
       title="Historique d'un point de vente"
-      eyebrow="Évolution Perfect Store"
     />
 
     <!-- Choix du PDV : recherche par nom, PDV du périmètre actif -->

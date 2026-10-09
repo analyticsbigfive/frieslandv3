@@ -2,7 +2,6 @@
   <div class="space-y-6">
     <AdminPageHeader
       title="Écarts SSF ↔ merchandiser"
-      eyebrow="Routing & Planning"
       description="Le SSF (vendeur du distributeur) et le merchandiser qui travaillent ensemble un jour donné doivent passer dans les mêmes PDV. Pour un jour : les PDV de la tournée du merchandiser absents du routing DMS du SSF prévu ce jour-là (routing mensuel de l’agence)."
     >
       <template #actions>

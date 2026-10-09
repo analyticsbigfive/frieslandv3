@@ -1,4 +1,5 @@
 // middleware/admin.ts
+import { libelleEcran, premiereOuvrable } from '~/utils/adminNavigation'
 export default defineNuxtRouteMiddleware(async (to) => {
   const authStore = useAuthStore()
   const user = useSupabaseUser()
@@ -18,13 +19,17 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   // Tous les autres rôles passent par la matrice RBAC. Les rôles terrain sont
   // refusés par défaut, mais un admin peut leur ouvrir une section précise.
-  const { fetchAccess, canAccessPath } = useAccessControl()
+  const { fetchAccess, canAccessPath, canAccessSection } = useAccessControl()
   await fetchAccess()
 
-  if (!canAccessPath(to.path)) {
-    // Repli vers le dashboard si autorisé, sinon mobile
-    if (to.path !== '/admin' && canAccessPath('/admin')) {
-      return navigateTo('/admin')
+  if (!canAccessPath(to.path, role, to.query)) {
+    // Repli vers la première page que ce compte peut ouvrir, avec le nom de
+    // l'écran refusé : le layout l'annonce (« Vous n'avez pas accès à… »).
+    // Aucun écran du back-office ouvert (merchandiser) : l'application mobile.
+    const repli = premiereOuvrable(role, s => canAccessSection(s, role))
+    if (repli && repli.path !== to.path) {
+      const ecran = libelleEcran(to.path, to.query) || 'cet écran'
+      return navigateTo({ path: repli.path, query: { ...repli.query, acces_refuse: ecran } })
     }
     return navigateTo('/mobile')
   }

@@ -2,7 +2,6 @@
   <div class="space-y-6">
     <AdminPageHeader
       title="Visibilité extérieure"
-      eyebrow="Perfect Store · Visibilité"
     />
 
     <DashboardFilters

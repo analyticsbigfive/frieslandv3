@@ -1,52 +1,37 @@
 // composables/useAccessControl.ts
 // RBAC: contrôle d'accès par rôle aux sections du dashboard admin.
 import type { UserRole } from '~/types'
+import { accessSectionForPath, peutOuvrirChemin, sectionCoverage, type AccessSection } from '~/utils/adminNavigation'
 
 export interface DashboardSection {
-  key: string
+  key: AccessSection
   title: string
+  /** Écrans couverts, en « Domaine › Vue » (lus dans utils/adminNavigation.ts). */
+  ecrans: string[]
 }
 
-// Sections du dashboard (alignées sur les groupes de la sidebar).
-// Statistiques : pdv, visites, perfect-store, visibilite, concurrence, produits.
-// Paramétrage : parametres (standards, seuils, référentiels, utilisateurs, permissions, import/export).
-export const DASHBOARD_SECTIONS: DashboardSection[] = [
-  { key: 'principal', title: 'Principal' },
-  { key: 'pdv', title: 'Stats · PDV' },
-  { key: 'visites', title: 'Stats · Visites & commerciaux' },
-  { key: 'perfect-store', title: 'Stats · Perfect Store' },
-  { key: 'visibilite', title: 'Stats · Visibilité' },
-  { key: 'concurrence', title: 'Stats · Concurrence' },
-  { key: 'produits', title: 'Stats · Produits' },
+// Sections de la matrice role_section_access : les clés sont celles de la
+// base. Le libellé dit ce que la case ouvre ; la liste des écrans vient du
+// registre de navigation, pour rester exacte quand un écran est ajouté.
+const SECTIONS: { key: AccessSection, title: string }[] = [
+  { key: 'principal', title: 'Accueil et pilotage' },
+  { key: 'perfect-store', title: 'Perfect Store (détail)' },
+  { key: 'pdv', title: 'Points de vente' },
+  { key: 'visites', title: 'Visites' },
+  { key: 'visibilite', title: 'Visibilité' },
+  { key: 'concurrence', title: 'Concurrence' },
+  { key: 'produits', title: 'Produits' },
   { key: 'actions', title: 'Actions' },
   { key: 'parametres', title: 'Paramètres' },
 ]
+export const DASHBOARD_SECTIONS: DashboardSection[] = SECTIONS.map(s => ({ ...s, ecrans: sectionCoverage(s.key) }))
 
-export const MANAGED_ROLES: UserRole[] = ['admin', 'superviseur', 'merchandiser', 'commercial']
+export const MANAGED_ROLES: UserRole[] = ['admin', 'superviseur', 'commercial', 'agence', 'merchandiser']
 
-// Résout un chemin /admin/... vers une clé de section.
-// Les chemins de paramétrage priment sur leur section statistique parente
-// (ex. /admin/perfect-store/standards est un paramètre, pas une stat).
+// Section d'un chemin /admin/... : registre de navigation (le chemin d'onglet
+// ou d'alias le plus précis). null pour un chemin inconnu.
 export function sectionKeyForPath(path: string): string | null {
-  if (
-    path.startsWith('/admin/perfect-store/standards') ||
-    path.startsWith('/admin/produits/seuils') ||
-    path.startsWith('/admin/users') ||
-    path.startsWith('/admin/referentiels') ||
-    path.startsWith('/admin/import') ||
-    path.startsWith('/admin/permissions') ||
-    path.startsWith('/admin/profile') ||
-    path.startsWith('/admin/distributeurs')
-  ) return 'parametres'
-  if (path === '/admin' || path.startsWith('/admin/activite') || path.startsWith('/admin/routing') || path.startsWith('/admin/map') || path.startsWith('/admin/trajets')) return 'principal'
-  if (path.startsWith('/admin/perfect-store')) return 'perfect-store'
-  if (path.startsWith('/admin/pdv')) return 'pdv'
-  if (path.startsWith('/admin/visites')) return 'visites'
-  if (path.startsWith('/admin/visibilite')) return 'visibilite'
-  if (path.startsWith('/admin/concurrence')) return 'concurrence'
-  if (path.startsWith('/admin/produits')) return 'produits'
-  if (path.startsWith('/admin/actions')) return 'actions'
-  return null
+  return accessSectionForPath(path)
 }
 
 export function useAccessControl() {
@@ -93,13 +78,13 @@ export function useAccessControl() {
     return !!roleMap[sectionKey]
   }
 
-  function canAccessPath(path: string, role?: string): boolean {
-    const key = sectionKeyForPath(path)
-    // Chemin non mappé : REFUS par défaut. Un écran ajouté sans être déclaré
-    // dans sectionKeyForPath() ne doit pas s'ouvrir à tous les rôles en
-    // silence — l'admin garde son court-circuit dans canAccessSection().
-    if (!key) return canAccessSection('parametres', role)
-    return canAccessSection(key, role)
+  // Accès à une page : l'onglet exact s'il existe (rôles réservés, écrans
+  // ouverts « page par page »), sinon la section du chemin. Chemin non déclaré
+  // dans le registre : REFUS par défaut (vaut « parametres ») — l'admin garde
+  // son court-circuit.
+  function canAccessPath(path: string, role?: string, query?: Record<string, unknown>): boolean {
+    const r = role || authStore.profile?.role
+    return peutOuvrirChemin(path, query, r, section => canAccessSection(section, r))
   }
 
   async function updateAccess(role: string, sectionKey: string, value: boolean) {

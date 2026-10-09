@@ -2,7 +2,6 @@
   <div class="space-y-6">
     <AdminPageHeader
       :title="`Programme merchandiser ${libelleDirection(direction, true)}`"
-      eyebrow="Routing & Planning"
       :description="`Couverture du mois par merchandiser des agences ${direction === 'north' ? 'de l’intérieur' : 'd’Abidjan'}${agencesTexte ? ` (${agencesTexte})` : ''} : chaque PDV une fois par mois. Objectif de chaque agent = quotas de la grille sur ses jours de tournée du mois (${objectifAffiche}).`"
     >
       <template #actions>

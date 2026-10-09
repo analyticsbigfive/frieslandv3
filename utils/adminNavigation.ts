@@ -48,8 +48,6 @@ export interface AdminTab {
   roles?: AdminRole[]
   /** Ouvert à ces rôles même si leur section est fermée (écrans ouverts « page par page »). */
   ouvertA?: AdminRole[]
-  /** Paramètres d'URL conservés en passant d'un onglet à l'autre du domaine. */
-  keepQuery?: string[]
   /** Phrase d'aide d'une ligne (sous le titre, dans le guide). */
   aide?: string
 }
@@ -120,7 +118,7 @@ export const ADMIN_DOMAINS: AdminDomain[] = [
     tabs: [
       { id: 'planning.tournees', label: 'Tournées', title: 'Tournées planifiées', path: '/admin/routing', access: 'principal', roles: ['admin', 'superviseur', 'agence'], aide: 'Les tournées prévues pour chaque merchandiser.' },
       { id: 'planning.regles', label: 'Règles récurrentes', path: '/admin/routing', query: { vue: 'regles' }, access: 'principal', roles: ['admin', 'superviseur', 'agence'], aide: 'Les règles qui génèrent les tournées chaque semaine ou chaque mois.' },
-      { id: 'planning.programme', label: 'Programme merchandiser', path: '/admin/routing/programme-merchandiser', access: 'principal', keepQuery: ['direction'], aide: 'La couverture du mois des merchandisers d\'agence.' },
+      { id: 'planning.programme', label: 'Programme merchandiser', path: '/admin/routing/programme-merchandiser', access: 'principal', aide: 'La couverture du mois des merchandisers d\'agence.' },
       { id: 'planning.ecarts', label: 'Écarts de tournée', title: 'Écarts entre merchandisers et vendeurs', path: '/admin/routing/ecarts-ssf', access: 'principal', aide: 'Les jours où le merchandiser et le vendeur du distributeur ne sont pas passés aux mêmes endroits.' },
     ],
   },
@@ -194,9 +192,9 @@ export const ADMIN_DOMAINS: AdminDomain[] = [
     group: 'marche',
     tabs: [
       { id: 'produits.synthese', label: 'Synthèse', title: 'Produits', path: '/admin/produits/recap', access: 'produits' },
-      { id: 'produits.disponibilite', label: 'Disponibilité', title: 'Disponibilité des produits', path: '/admin/produits/familles', access: 'produits', keepQuery: ['famille'] },
-      { id: 'produits.prix', label: 'Prix', title: 'Prix relevés', path: '/admin/produits/familles', query: { vue: 'prix' }, access: 'produits', keepQuery: ['famille'] },
-      { id: 'produits.releves', label: 'Détail par visite', title: 'Relevés produits par visite', path: '/admin/produits/familles', query: { vue: 'releves' }, access: 'produits', keepQuery: ['famille'] },
+      { id: 'produits.disponibilite', label: 'Disponibilité', title: 'Disponibilité des produits', path: '/admin/produits/familles', access: 'produits' },
+      { id: 'produits.prix', label: 'Prix', title: 'Prix relevés', path: '/admin/produits/familles', query: { vue: 'prix' }, access: 'produits' },
+      { id: 'produits.releves', label: 'Détail par visite', title: 'Relevés produits par visite', path: '/admin/produits/familles', query: { vue: 'releves' }, access: 'produits' },
       { id: 'produits.inventaire', label: 'Inventaire', title: 'Inventaire des références', path: '/admin/produits/inventaire', access: 'produits' },
     ],
   },
@@ -334,15 +332,43 @@ export function peutOuvrirChemin(
   return canAccessSection(accessSectionForPath(path) ?? 'parametres')
 }
 
-/** Lien d'un onglet : ses propres paramètres plus ceux de `keepQuery` déjà présents dans l'URL. */
-export function tabHref(tab: AdminTab, currentQuery?: Query): { path: string, query: Record<string, string> } {
+/** Lien d'un onglet depuis un autre domaine (menu latéral, liens) : ses seuls paramètres. */
+export function tabHref(tab: AdminTab): { path: string, query: Record<string, string> } {
+  return { path: tab.path, query: { ...(tab.query || {}) } }
+}
+
+/**
+ * Lien d'un onglet depuis la barre d'onglets de son domaine : les filtres de
+ * l'URL suivent (période, direction, famille…), sauf les paramètres qui
+ * distinguent les onglets du domaine (`vue`) et la page de pagination.
+ */
+export function lienEntreOnglets(domain: AdminDomain, tab: AdminTab, currentQuery?: Query): { path: string, query: Record<string, string> } {
+  const exclues = new Set(['page', ...domain.tabs.flatMap(t => Object.keys(t.query || {}))])
   const query: Record<string, string> = {}
-  for (const cle of tab.keepQuery || []) {
+  for (const cle of Object.keys(currentQuery || {})) {
+    if (exclues.has(cle)) continue
     const v = valeurQuery(currentQuery, cle)
     if (v != null && v !== '') query[cle] = v
   }
   Object.assign(query, tab.query || {})
   return { path: tab.path, query }
+}
+
+/** Première page que ce rôle peut ouvrir (ordre du menu), ou null s'il n'en a aucune. */
+export function premiereOuvrable(
+  role: string | null | undefined,
+  canAccessSection: (section: AccessSection) => boolean,
+): { path: string, query: Record<string, string> } | null {
+  const trouve = ADMIN_TABS.find(({ tab }) => peutOuvrirOnglet(tab, role, canAccessSection))
+  return trouve ? tabHref(trouve.tab) : null
+}
+
+/** Libellé « Domaine › Vue » d'une page, pour les messages (accès refusé). */
+export function libelleEcran(path: string, query?: Query): string | null {
+  const c = locate(path, query)
+  if (!c) return null
+  if (!c.tab || c.domain.tabs.length === 1) return c.domain.label
+  return `${c.domain.label} › ${c.tab.label}`
 }
 
 /** Écrans couverts par une section, en « Domaine › Vue » (page Permissions). */

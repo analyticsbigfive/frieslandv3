@@ -1,17 +1,16 @@
 <template>
-  <div class="flex min-h-dvh bg-[var(--admin-bg)] transition-colors dark:bg-slate-950">
-    <a href="#admin-main-content" class="sr-only z-[60] rounded-lg bg-white px-4 py-2 text-sm font-semibold text-fc-red focus:not-sr-only focus:fixed focus:left-4 focus:top-4">
+  <div class="flex min-h-dvh bg-[var(--admin-bg)] dark:bg-slate-950">
+    <a href="#admin-main-content" class="sr-only z-[60] rounded-md bg-white px-4 py-2 text-sm font-semibold text-brand-600 focus:not-sr-only focus:fixed focus:left-4 focus:top-4">
       Aller au contenu
     </a>
     <button
       v-if="mobileSidebarOpen"
       type="button"
       aria-label="Fermer le menu"
-      class="fixed inset-0 z-40 bg-slate-950/35 backdrop-blur-sm lg:hidden"
+      class="fixed inset-0 z-40 bg-slate-900/40 lg:hidden"
       @click="mobileSidebarOpen = false"
     />
 
-    <!-- Sidebar -->
     <AdminSidebar
       :collapsed="sidebarCollapsed"
       :mobile-open="mobileSidebarOpen"
@@ -19,102 +18,106 @@
       @navigate="mobileSidebarOpen = false"
     />
 
-    <!-- Main Content -->
     <div
       class="flex min-h-dvh min-w-0 flex-1 flex-col transition-[margin] duration-300"
       :class="sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'"
     >
-      <!-- Top Header -->
-      <header class="sticky top-0 z-30 border-b border-slate-200/80 bg-white/[0.82] px-4 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90 sm:px-6 lg:px-8">
-        <div class="flex min-h-16 flex-col gap-2.5 py-2.5 lg:flex-row lg:items-center lg:justify-between">
-          <div class="flex min-w-0 items-center gap-4">
-          <button
-            type="button"
-            aria-label="Ouvrir le menu"
-            class="rounded-lg p-2 text-slate-600 transition hover:bg-slate-100 hover:text-slate-950 dark:text-gray-300 dark:hover:bg-gray-700 lg:hidden"
-            @click="mobileSidebarOpen = true"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-            <div class="min-w-0">
-              <p class="text-[11px] font-semibold uppercase tracking-normal text-fc-red">Administration</p>
-              <h1 class="truncate text-xl font-semibold leading-tight text-slate-950 dark:text-gray-100">{{ pageTitle }}</h1>
-            </div>
+      <!-- En-tête : où je suis (fil d'Ariane), état du terrain, aide, compte.
+           Le titre de la page est le h1 d'AdminPageHeader, pas ici. -->
+      <header class="sticky top-0 z-30 border-b border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-900 sm:px-6 lg:px-8">
+        <div class="flex min-h-14 items-center justify-between gap-3">
+          <div class="flex min-w-0 items-center gap-2">
+            <button
+              type="button"
+              aria-label="Ouvrir le menu"
+              class="-ml-2 flex h-10 w-10 items-center justify-center rounded-md text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 lg:hidden"
+              @click="mobileSidebarOpen = true"
+            >
+              <UIcon name="i-heroicons-bars-3" class="h-5 w-5" aria-hidden="true" />
+            </button>
+            <nav v-if="courant" aria-label="Fil d'Ariane" class="min-w-0">
+              <ol class="flex min-w-0 items-center gap-1.5 text-sm">
+                <li class="min-w-0 truncate">
+                  <NuxtLink
+                    v-if="filAriane.vue && arriveeDomaine"
+                    :to="arriveeDomaine"
+                    class="text-slate-600 underline-offset-4 hover:text-slate-900 hover:underline dark:text-slate-300 dark:hover:text-white"
+                  >{{ courant.domain.label }}</NuxtLink>
+                  <span v-else class="font-semibold text-slate-900 dark:text-white" aria-current="page">{{ courant.domain.label }}</span>
+                </li>
+                <template v-if="filAriane.vue">
+                  <li aria-hidden="true" class="text-slate-400">
+                    <UIcon name="i-heroicons-chevron-right-20-solid" class="h-4 w-4" />
+                  </li>
+                  <li class="min-w-0 truncate font-semibold text-slate-900 dark:text-white" aria-current="page">{{ filAriane.vue }}</li>
+                </template>
+              </ol>
+            </nav>
           </div>
 
-          <div class="flex flex-wrap items-center gap-2 lg:justify-end">
-            <div class="hidden items-center gap-2 xl:flex">
-              <div v-for="metric in headerMetrics" :key="metric.label" class="admin-kpi-chip min-w-28">
-                <p class="text-[10px] font-semibold uppercase tracking-normal text-slate-400">{{ metric.label }}</p>
-                <p class="mt-0.5 text-sm font-semibold tabular-nums text-slate-950 dark:text-white">{{ metric.value }}</p>
-              </div>
+          <div class="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <!-- Présence terrain : personnes en tournée (point GPS des 10 dernières minutes). -->
+            <NuxtLink
+              v-if="peutOuvrir('/admin/trajets')"
+              to="/admin/trajets"
+              class="flex h-9 items-center gap-2 rounded-md border border-slate-200 px-2.5 text-sm text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              :aria-label="`${commerciauxEnTournee} personne(s) en tournée en ce moment, ouvrir le suivi des équipes`"
+              :title="`${commerciauxEnTournee} personne(s) en tournée en ce moment`"
+            >
+              <span
+                class="inline-flex h-2.5 w-2.5 rounded-full"
+                :class="commerciauxEnTournee > 0 ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-600'"
+                aria-hidden="true"
+              />
+              <span class="tabular-nums">{{ commerciauxEnTournee }}</span>
+              <span class="hidden sm:inline">en tournée</span>
+            </NuxtLink>
+
+            <div v-if="pendingCount > 0" class="hidden h-9 items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2.5 text-sm font-medium text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200 sm:flex">
+              <UIcon name="i-heroicons-arrow-path" class="h-4 w-4 animate-spin" aria-hidden="true" />
+              {{ pendingCount }} en attente sur cet appareil
             </div>
-          <!-- Présence terrain : commerciaux en ligne (ping GPS récent) + accès
-               au suivi des tournées. -->
-          <NuxtLink
-            to="/admin/trajets"
-            class="flex h-9 items-center gap-2 rounded-xl border border-slate-200/80 bg-white/70 px-3 text-sm shadow-[0_10px_24px_-22px_rgba(15,23,42,0.7)] transition hover:bg-white dark:border-slate-700 dark:bg-slate-800/70 dark:hover:bg-slate-800"
-            :aria-label="`${commerciauxEnTournee} commercial(aux) en ligne, ouvrir le suivi terrain`"
-          >
-            <span class="relative flex h-2.5 w-2.5">
-              <span
-                v-if="commerciauxEnTournee > 0"
-                class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"
-              />
-              <span
-                class="relative inline-flex h-2.5 w-2.5 rounded-full"
-                :class="commerciauxEnTournee > 0 ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'"
-              />
-            </span>
-            <span class="text-gray-500 dark:text-gray-400 hidden sm:inline">
-              {{ commerciauxEnTournee }} en ligne
-            </span>
-          </NuxtLink>
 
-          <!-- Sync pending -->
-          <div v-if="pendingCount > 0" class="flex h-9 items-center gap-1 rounded-xl border border-amber-200 bg-amber-50 px-3 text-sm font-medium text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
-            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-            {{ pendingCount }} en attente sur cet appareil
-          </div>
+            <NuxtLink
+              v-if="errorCount > 0"
+              to="/admin/visites"
+              class="flex h-9 items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-2.5 text-sm font-medium text-red-800 transition-colors hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200"
+              :aria-label="`${errorCount} envoi(s) en échec sur cet appareil, ouvrir les visites`"
+            >
+              <UIcon name="i-heroicons-exclamation-triangle" class="h-4 w-4" aria-hidden="true" />
+              <span class="hidden sm:inline">{{ errorCount }} envoi{{ errorCount > 1 ? 's' : '' }} en échec</span>
+            </NuxtLink>
 
-          <NuxtLink
-            v-if="errorCount > 0"
-            to="/admin/visites"
-            class="flex h-9 items-center gap-1 rounded-xl border border-red-200 bg-red-50 px-3 text-sm font-medium text-red-700 transition hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-950/50"
-            :aria-label="`${errorCount} synchronisation(s) en erreur sur cet appareil, ouvrir les visites`"
-          >
-            <UIcon name="i-heroicons-exclamation-triangle" class="h-4 w-4" aria-hidden="true" />
-            {{ errorCount }} erreur{{ errorCount > 1 ? 's' : '' }} sur cet appareil
-          </NuxtLink>
+            <a
+              :href="lienGuide"
+              target="_blank"
+              rel="noopener"
+              class="flex h-9 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+              title="Ouvrir le guide d'utilisation (PDF)"
+            >
+              <UIcon name="i-heroicons-question-mark-circle" class="h-5 w-5" aria-hidden="true" />
+              <span class="hidden md:inline">Aide</span>
+            </a>
 
-          <!-- Dark mode toggle -->
-          <DarkModeToggle />
+            <DarkModeToggle />
 
-          <!-- User dropdown -->
-          <UDropdown
-            :items="userMenuItems"
-            :popper="{ placement: 'bottom-end' }"
-          >
-            <button class="flex h-9 items-center gap-2 rounded-xl border border-slate-200/80 bg-white/70 px-2.5 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.7)] transition hover:bg-white dark:border-slate-700 dark:bg-slate-800/70 dark:hover:bg-slate-800">
-              <div class="w-8 h-8 rounded-lg bg-fc-red flex items-center justify-center">
-                <span class="text-white text-sm font-medium">
+            <UDropdown :items="userMenuItems" :popper="{ placement: 'bottom-end' }">
+              <button
+                type="button"
+                class="flex h-9 items-center gap-2 rounded-md border border-slate-200 px-1.5 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800 md:pr-2.5"
+                :aria-label="`Mon compte : ${authStore.profile?.nom || authStore.profile?.email || ''}`"
+              >
+                <span class="flex h-7 w-7 items-center justify-center rounded bg-brand-500 text-xs font-semibold text-white" aria-hidden="true">
                   {{ userInitials }}
                 </span>
-              </div>
-              <span class="text-sm text-gray-700 dark:text-gray-300 hidden md:inline">{{ authStore.profile?.nom || authStore.profile?.email }}</span>
-            </button>
-          </UDropdown>
+                <span class="hidden max-w-40 truncate text-sm text-slate-700 dark:text-slate-200 md:inline">{{ authStore.profile?.nom || authStore.profile?.email }}</span>
+              </button>
+            </UDropdown>
           </div>
         </div>
       </header>
 
-      <!-- Page content -->
-      <main id="admin-main-content" class="flex-1 px-4 py-5 dark:text-slate-200 sm:px-6 lg:px-8 lg:py-7">
+      <main id="admin-main-content" class="flex-1 px-4 py-5 dark:text-slate-200 sm:px-6 lg:px-8 lg:py-6">
         <div class="mx-auto w-full max-w-[1600px]">
           <AdminSectionTabs class="mb-6" />
           <AdminTableEnhancer>
@@ -123,28 +126,19 @@
         </div>
       </main>
 
-      <!-- Footer -->
-      <footer class="border-t border-slate-200/80 px-4 py-4 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400 sm:px-6 lg:px-8">
+      <footer class="border-t border-slate-200 px-4 py-4 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-300 sm:px-6 lg:px-8">
         <div class="mx-auto flex w-full max-w-[1600px] flex-col items-center gap-2 sm:flex-row sm:justify-between">
           <p>
             Développé par
-            <a
-              href="https://bigfive.solutions"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="font-semibold text-fc-red hover:underline"
-            >Big Five</a>
+            <a href="https://bigfive.solutions" target="_blank" rel="noopener noreferrer" class="font-semibold text-brand-600 hover:underline dark:text-brand-300">Big Five</a>
           </p>
           <div class="flex items-center gap-3">
-            <a
-              href="mailto:jeanluc@bigfiveabidjan.com"
-              class="inline-flex items-center gap-1 transition hover:text-fc-red"
-            >
-              <UIcon name="i-heroicons-envelope" class="h-3.5 w-3.5" aria-hidden="true" />
+            <a href="mailto:jeanluc@bigfiveabidjan.com" class="inline-flex items-center gap-1 transition-colors hover:text-brand-600">
+              <UIcon name="i-heroicons-envelope" class="h-4 w-4" aria-hidden="true" />
               Contacter le support
             </a>
-            <span class="text-slate-300 dark:text-slate-600">·</span>
-            <span class="tabular-nums">Version 3.0</span>
+            <span class="text-slate-400" aria-hidden="true">·</span>
+            <span class="tabular-nums">Version {{ appVersion }}</span>
           </div>
         </div>
       </footer>
@@ -154,18 +148,33 @@
 
 <script setup lang="ts">
 const route = useRoute()
+const router = useRouter()
+const toast = useToast()
 const authStore = useAuthStore()
 const { pendingCount, errorCount } = useOfflineSync()
-const visitesStore = useVisitesStore()
 const supabase = useSupabaseClient()
+const { courant, arrivee, peutOuvrir, titreCourant } = useAdminNavigation()
+const appVersion = useRuntimeConfig().public.appVersion
 
 const sidebarCollapsed = ref(false)
 const mobileSidebarOpen = ref(false)
-const numberFormatter = new Intl.NumberFormat('fr-FR')
 
-// Commerciaux « en tournée » : un point GPS envoyé dans les 10 dernières
-// minutes (l'app mobile émet un point toutes les 1–2 min pendant une tournée).
-// Distinct du témoin « En ligne » du header, qui reflète le réseau de ce poste.
+// Fil d'Ariane « Domaine › Vue » ; un domaine à une seule vue n'a qu'un maillon.
+const filAriane = computed(() => {
+  const c = courant.value
+  if (!c || c.domain.tabs.length <= 1 || !c.tab) return { vue: null as string | null }
+  return { vue: c.tab.label }
+})
+const arriveeDomaine = computed(() => (courant.value ? arrivee(courant.value.domain) : null))
+
+useHead(() => ({ title: titreCourant.value ? `${titreCourant.value} · Bonnet Rouge` : 'Bonnet Rouge' }))
+
+// Guide d'utilisation : celui du compte agence pour l'agence, le guide
+// administrateur sinon (server/routes/guides/[nom].get.ts).
+const lienGuide = computed(() => (authStore.isAgence ? '/guides/GUIDE-ADMIN-ATOM.pdf' : '/guides/GUIDE-ADMIN.pdf'))
+
+// Personnes « en tournée » : un point GPS envoyé dans les 10 dernières minutes
+// (l'app mobile émet un point toutes les 1 à 2 min pendant une tournée).
 const PRESENCE_WINDOW_MIN = 10
 const commerciauxEnTournee = ref(0)
 let presenceTimer: ReturnType<typeof setInterval> | null = null
@@ -180,56 +189,15 @@ async function fetchCommerciauxEnTournee() {
   commerciauxEnTournee.value = new Set((data || []).map((r: any) => r.user_id)).size
 }
 
-const pageTitle = computed(() => {
-  const titles: Record<string, string> = {
-    '/admin': 'Dashboard',
-    '/admin/routing': 'Routing & Planning',
-    '/admin/routing/programme-merchandiser': 'Programme merchandiser',
-    '/admin/routing/ecarts-ssf': 'Écarts SSF ↔ merchandiser',
-    '/admin/visites': 'Visites',
-    '/admin/pdv': 'Points de Vente',
-    '/admin/users': 'Utilisateurs',
-    '/admin/permissions': 'Permissions & accès',
-    '/admin/referentiels': 'Référentiels',
-    '/admin/perfect-store': 'Perfect Store',
-    '/admin/perfect-store/standards': 'Standards Perfect Store',
-    '/admin/produits/inventaire': 'Inventaire SKU',
-    '/admin/produits/seuils': 'Produits du formulaire',
-    '/admin/produits': 'Produits',
-    '/admin/import-export': 'Import / Export',
-    '/admin/map': 'Carte',
-    '/admin/trajets': 'Suivi commerciaux',
-  }
-  if (titles[route.path]) return titles[route.path]
-
-  const prefixes: Array<[string, string]> = [
-    ['/admin/perfect-store', 'Perfect Store'],
-    ['/admin/visites', 'Visites'],
-    ['/admin/pdv', 'Points de vente'],
-    ['/admin/distributeurs', 'Distributeurs'],
-    ['/admin/visibilite', 'Visibilité'],
-    ['/admin/concurrence', 'Concurrence'],
-    ['/admin/produits', 'Produits'],
-    ['/admin/actions', 'Actions'],
-    ['/admin/users', 'Utilisateurs'],
-    ['/admin/permissions', 'Permissions & accès'],
-    ['/admin/referentiels', 'Référentiels'],
-  ]
-  return prefixes.find(([prefix]) => route.path.startsWith(prefix))?.[1] || 'Dashboard'
-})
-
 const userInitials = computed(() => {
   const nom = authStore.profile?.nom || authStore.profile?.email || '?'
   return nom.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2)
 })
 
-// « Mon profil » pointait vers /admin/profile, page qui n'existe pas : le clic
-// menait à un 404, et sectionKeyForPath la classant dans « parametres », un
-// commercial y était de toute façon redirigé. Entrée retirée tant qu'il n'y a
-// pas d'écran de profil.
+// Pas d'entrée « Mon profil » : il n'existe pas d'écran de profil.
 const userMenuItems = [
   [{
-    label: 'App Mobile',
+    label: 'Application mobile',
     icon: 'i-heroicons-device-phone-mobile',
     click: () => navigateTo('/mobile'),
   }, {
@@ -238,7 +206,7 @@ const userMenuItems = [
     click: () => navigateTo('/mon-mot-de-passe'),
   }],
   [{
-    label: 'Déconnexion',
+    label: 'Se déconnecter',
     icon: 'i-heroicons-arrow-right-on-rectangle',
     click: () => {
       authStore.logout()
@@ -247,23 +215,27 @@ const userMenuItems = [
   }],
 ]
 
-const headerMetrics = computed(() => {
-  const stats = visitesStore.stats
-  return [
-    { label: 'Visites mois', value: numberFormatter.format(stats?.visites_month ?? 0) },
-    { label: 'PDV actifs', value: numberFormatter.format(stats?.total_pdv ?? 0) },
-    { label: 'Commerciaux actifs', value: `${commerciauxEnTournee.value} / ${numberFormatter.format(stats?.total_commerciaux ?? 0)}` },
-  ]
-})
+// Accès refusé : middleware/admin.ts renvoie ici avec le nom de l'écran.
+function annoncerRefus() {
+  const ecran = route.query.acces_refuse
+  if (typeof ecran !== 'string' || !ecran) return
+  toast.add({
+    title: `Vous n'avez pas accès à « ${ecran} »`,
+    description: 'Demandez à un administrateur si vous en avez besoin.',
+    icon: 'i-heroicons-lock-closed',
+    color: 'amber',
+  })
+  const { acces_refuse: _retire, ...reste } = route.query
+  router.replace({ query: reste })
+}
+watch(() => route.query.acces_refuse, annoncerRefus)
 
 watch(mobileSidebarOpen, (opened) => {
   if (opened) sidebarCollapsed.value = false
 })
 
 onMounted(() => {
-  // Le bandeau n'affiche que trois compteurs : pas besoin des tableaux
-  // (performance des commerciaux = 6 s de base de données à chaque page admin).
-  visitesStore.fetchStats({ leger: true }).catch(() => {})
+  annoncerRefus()
   fetchCommerciauxEnTournee()
   presenceTimer = setInterval(fetchCommerciauxEnTournee, 60_000)
 })

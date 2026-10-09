@@ -2,7 +2,6 @@
   <div class="space-y-6">
     <AdminPageHeader
       title="Distributeurs"
-      eyebrow="Domaine PDV"
     />
 
     <div class="admin-toolbar flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

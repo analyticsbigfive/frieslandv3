@@ -2,7 +2,6 @@
   <div class="space-y-6">
     <AdminPageHeader
       title="Versions de l'app"
-      eyebrow="Paramètres"
       description="Qui a installé la version minimale exigée, qui est bloqué, qui tourne encore sur une ancienne version."
     >
       <template #actions>

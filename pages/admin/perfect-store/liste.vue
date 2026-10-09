@@ -2,7 +2,6 @@
   <div class="space-y-5">
     <AdminPageHeader
       title="Perfect Store — liste par niveau"
-      eyebrow="Perfect Store"
     />
 
     <AdminListToolbar

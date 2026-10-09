@@ -1,73 +1,69 @@
 <template>
+  <!-- Second et dernier niveau de navigation : les vues du domaine courant
+       (utils/adminNavigation.ts). Masquée quand le domaine n'a qu'une vue. -->
   <nav
-    v-if="tabs.length"
-    class="admin-section-tabs"
-    :aria-label="`Navigation ${sectionLabel}`"
+    v-if="onglets.length > 1 && courant"
+    class="admin-section-tabs relative"
+    :aria-label="`Vues : ${courant.domain.label}`"
   >
-    <div class="admin-section-tabs__scroll">
+    <div
+      ref="defilement"
+      class="admin-section-tabs__scroll"
+      @scroll.passive="mesurer"
+    >
       <NuxtLink
-        v-for="tab in tabs"
-        :key="tab.label"
-        :to="linkTo(tab.to)"
+        v-for="tab in onglets"
+        :key="tab.id"
+        :to="lienOnglet(tab)"
         class="admin-section-tabs__link"
-        :class="isActive(tab) ? 'admin-section-tabs__link--active' : ''"
-        :aria-current="isActive(tab) ? 'page' : undefined"
+        :class="estActif(tab.id) ? 'admin-section-tabs__link--active' : ''"
+        :aria-current="estActif(tab.id) ? 'page' : undefined"
+        :data-actif="estActif(tab.id) || undefined"
       >
-        <UIcon v-if="tab.icon" :name="tab.icon" class="h-4 w-4 shrink-0" aria-hidden="true" />
-        <span>{{ tab.label }}</span>
+        {{ tab.label }}
       </NuxtLink>
     </div>
+    <!-- Fondu au bord quand d'autres onglets sont hors champ (barre de défilement masquée). -->
+    <div
+      v-if="debordeGauche"
+      class="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-[var(--admin-bg)] to-transparent dark:from-slate-950"
+      aria-hidden="true"
+    />
+    <div
+      v-if="debordeDroite"
+      class="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-[var(--admin-bg)] to-transparent dark:from-slate-950"
+      aria-hidden="true"
+    />
   </nav>
 </template>
 
 <script setup lang="ts">
-import {
-  adminSectionLabels,
-  adminSectionTabs,
-  detectAdminSection,
-  type AdminSection,
-  type AdminSectionTab,
-} from '~/utils/adminSectionTabs'
-import { categoriesProduitsActives } from '~/utils/products'
+const { courant, ongletsCourants: onglets, lienOnglet } = useAdminNavigation()
 
-const props = defineProps<{ section?: AdminSection }>()
-const route = useRoute()
+const estActif = (id: string) => courant.value?.tab?.id === id
 
-const detectedSection = computed(() => detectAdminSection(route.path))
+const defilement = ref<HTMLElement | null>(null)
+const debordeGauche = ref(false)
+const debordeDroite = ref(false)
 
-const currentSection = computed(() => props.section ?? detectedSection.value)
-const sectionLabel = computed(() => currentSection.value ? adminSectionLabels[currentSection.value] : '')
-// Les onglets produits (/admin/produits/<code>) suivent le catalogue
-// (Paramètres › Produits du formulaire) : une catégorie active par onglet,
-// dans l'ordre de l'admin ; une catégorie retirée n'a plus d'onglet.
-const { charger: chargerCatalogue } = useCatalogueReleve()
-onMounted(() => { void chargerCatalogue() })
+function mesurer() {
+  const el = defilement.value
+  if (!el) return
+  debordeGauche.value = el.scrollLeft > 4
+  debordeDroite.value = el.scrollLeft + el.clientWidth < el.scrollWidth - 4
+}
 
-const tabs = computed<AdminSectionTab[]>(() => {
-  if (!currentSection.value) return []
-  const liste = adminSectionTabs[currentSection.value]
-  if (currentSection.value !== 'produits') return liste
-  return [
-    ...liste,
-    ...categoriesProduitsActives().map(c => ({ label: c.label, to: `/admin/produits/${c.key}`, icon: 'i-heroicons-squares-2x2' })),
-  ]
+// L'onglet actif reste visible sur petit écran.
+function centrerActif() {
+  const actif = defilement.value?.querySelector<HTMLElement>('[data-actif]')
+  actif?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  mesurer()
+}
+
+watch(() => courant.value?.tab?.id, () => nextTick(centrerActif))
+onMounted(() => {
+  nextTick(centrerActif)
+  window.addEventListener('resize', mesurer, { passive: true })
 })
-
-function isActive(tab: AdminSectionTab) {
-  return route.path === tab.to.split('?')[0]
-}
-
-function linkTo(to: string) {
-  const [path, rawQuery] = to.split('?')
-  const query = new URLSearchParams(rawQuery || '')
-
-  Object.entries(route.query).forEach(([key, value]) => {
-    if (query.has(key)) return
-    if (Array.isArray(value)) value.forEach(item => query.append(key, item || ''))
-    else if (value != null) query.set(key, value)
-  })
-
-  const queryString = query.toString()
-  return queryString ? `${path}?${queryString}` : path
-}
+onBeforeUnmount(() => window.removeEventListener('resize', mesurer))
 </script>

@@ -2,7 +2,6 @@
   <div class="space-y-6">
     <AdminPageHeader
       title="Analyse des gaps"
-      eyebrow="Aide à la décision"
     />
 
     <!-- Période + périmètre, mêmes axes que la synthèse par zone : tout passe

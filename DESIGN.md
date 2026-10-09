@@ -232,7 +232,7 @@ Des angles doucement arrondis et constants : 6 px pour les contrôles (boutons, 
 - **Error / Disabled:** trait et message en rouge d'erreur sous le champ ; désactivé en slate-100 avec texte slate-400.
 
 ### Navigation
-- **Menu latéral:** fond blanc, trait à droite. Intitulés de groupe en étiquette slate-500 (Piloter, Terrain, Marché, Réglages). Entrée : 14 px, icône 18 px, hauteur 36 px, texte slate-700, survol slate-100. Entrée active : voile rouge, texte rouge profond, 600, trait rouge de 3 px à gauche. Replié : icônes seules avec info-bulle et `aria-label`.
+- **Menu latéral:** fond blanc, trait à droite. Intitulés de groupe en étiquette slate-500 (Piloter, Terrain, Marché, Réglages). Entrée : 14 px, icône 18 px, hauteur 36 px, texte slate-700, survol slate-100. Entrée active : voile rouge, texte rouge profond, 600 (pas de barre colorée sur le bord). Replié : icônes seules avec info-bulle et `aria-label`.
 - **Barre d'onglets:** sous l'en-tête, texte 14 px slate-600 ; onglet actif souligné de 2 px rouge, texte rouge. Défile horizontalement sur mobile avec un fondu sur le bord.
 - **Fil d'Ariane:** « Domaine › Vue » en 14 px, domaine en slate-500 cliquable, vue en encre.
 

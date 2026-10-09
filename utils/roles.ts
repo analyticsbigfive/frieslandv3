@@ -40,6 +40,8 @@ export function canWriteTerrain(role?: string | null): boolean {
 // les autres rôles terrain saisissent ; les privilégiés vont au dashboard web.
 export function homePathForRole(role?: string | null): string {
   if (isPrivilegedRole(role)) return '/admin'
+  // Compte agence : son travail est le routing de ses merchandisers (back-office).
+  if (role === 'agence') return '/admin/routing'
   if (isCommercialRole(role)) return '/mobile/equipe'
   return '/mobile'
 }
@@ -52,6 +54,7 @@ export function homePathForRole(role?: string | null): string {
 // L'appelant doit masquer l'entrée sur l'APK : native-scope.global.ts renvoie
 // tout /admin vers /mobile (voir composables/usePlateforme.ts).
 export function analysePathForRole(role?: string | null): string | null {
+  if (role === 'agence') return '/admin/routing'
   return isPrivilegedRole(role) || isCommercialRole(role) ? '/admin' : null
 }
 

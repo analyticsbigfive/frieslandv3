@@ -8,6 +8,7 @@ import {
   ADMIN_TABS,
   accessSectionForPath,
   findTab,
+  lienEntreOnglets,
   locate,
   peutOuvrirChemin,
   sectionCoverage,
@@ -117,11 +118,15 @@ describe('registre de navigation', () => {
     expect(locate('/admin/distributeurs')?.domain.id).toBe('pdv')
   })
 
-  it('ne garde que les paramètres listés en passant d\'un onglet à l\'autre', () => {
-    const disponibilite = findTab('/admin/produits/familles')!.tab
-    expect(tabHref(disponibilite, { famille: 'imp', vue: 'prix', page: '3' })).toEqual({ path: '/admin/produits/familles', query: { famille: 'imp' } })
-    const tournees = findTab('/admin/routing')!.tab
-    expect(tabHref(tournees, { vue: 'regles' })).toEqual({ path: '/admin/routing', query: {} })
+  it('les filtres suivent d\'un onglet à l\'autre, pas le paramètre qui distingue les onglets', () => {
+    const { domain, tab: disponibilite } = findTab('/admin/produits/familles')!
+    expect(lienEntreOnglets(domain, disponibilite, { famille: 'imp', vue: 'prix', page: '3', dateFrom: '2026-10-01' }))
+      .toEqual({ path: '/admin/produits/familles', query: { famille: 'imp', dateFrom: '2026-10-01' } })
+    const { domain: planning, tab: tournees } = findTab('/admin/routing')!
+    expect(lienEntreOnglets(planning, tournees, { vue: 'regles' })).toEqual({ path: '/admin/routing', query: {} })
+    const regles = findTab('/admin/routing', { vue: 'regles' })!.tab
+    expect(lienEntreOnglets(planning, regles, {})).toEqual({ path: '/admin/routing', query: { vue: 'regles' } })
+    expect(tabHref(regles)).toEqual({ path: '/admin/routing', query: { vue: 'regles' } })
   })
 
   it('décrit les écrans de chaque section pour la page Permissions', () => {

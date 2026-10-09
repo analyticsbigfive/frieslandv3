@@ -2,7 +2,6 @@
   <div class="space-y-6">
     <AdminPageHeader
       title="Perfect Store"
-      eyebrow="Vue de synthèse"
     />
 
     <!-- Filtres cascade Division → Territoire → Quartier + Distributeur (pilotent KPI + tableaux) -->

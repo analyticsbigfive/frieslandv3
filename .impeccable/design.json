@@ -4,31 +4,139 @@
   "title": "Design System: Bonnet Rouge — back-office",
   "extensions": {
     "colorMeta": {
-      "bonnet-rouge": { "role": "primary", "displayName": "Rouge Bonnet Rouge", "canonical": "#C8102E", "tonalRamp": ["#140305", "#41060F", "#6E0919", "#9B0D23", "#C8102E", "#F0516F", "#FAC5CF", "#FDE8EC"] },
-      "encre": { "role": "neutral", "displayName": "Encre", "canonical": "#0F172A", "tonalRamp": ["#020617", "#0F172A", "#1E293B", "#334155", "#64748B", "#CBD5E1", "#E2E8F0", "#F8FAFC"] },
-      "succes": { "role": "tertiary", "displayName": "Succès", "canonical": "#047857", "tonalRamp": ["#022C22", "#064E3B", "#065F46", "#047857", "#10B981", "#6EE7B7", "#D1FAE5", "#ECFDF5"] },
-      "alerte": { "role": "tertiary", "displayName": "Alerte", "canonical": "#B45309", "tonalRamp": ["#451A03", "#78350F", "#92400E", "#B45309", "#F59E0B", "#FCD34D", "#FEF3C7", "#FFFBEB"] },
-      "erreur": { "role": "tertiary", "displayName": "Erreur", "canonical": "#DC2626", "tonalRamp": ["#450A0A", "#7F1D1D", "#991B1B", "#DC2626", "#EF4444", "#FCA5A5", "#FEE2E2", "#FEF2F2"] }
+      "bonnet-rouge": {
+        "role": "primary",
+        "displayName": "Rouge Bonnet Rouge",
+        "canonical": "#C8102E",
+        "tonalRamp": [
+          "#140305",
+          "#41060F",
+          "#6E0919",
+          "#9B0D23",
+          "#C8102E",
+          "#F0516F",
+          "#FAC5CF",
+          "#FDE8EC"
+        ]
+      },
+      "encre": {
+        "role": "neutral",
+        "displayName": "Encre",
+        "canonical": "#0F172A",
+        "tonalRamp": [
+          "#020617",
+          "#0F172A",
+          "#1E293B",
+          "#334155",
+          "#64748B",
+          "#CBD5E1",
+          "#E2E8F0",
+          "#F8FAFC"
+        ]
+      },
+      "succes": {
+        "role": "tertiary",
+        "displayName": "Succès",
+        "canonical": "#047857",
+        "tonalRamp": [
+          "#022C22",
+          "#064E3B",
+          "#065F46",
+          "#047857",
+          "#10B981",
+          "#6EE7B7",
+          "#D1FAE5",
+          "#ECFDF5"
+        ]
+      },
+      "alerte": {
+        "role": "tertiary",
+        "displayName": "Alerte",
+        "canonical": "#B45309",
+        "tonalRamp": [
+          "#451A03",
+          "#78350F",
+          "#92400E",
+          "#B45309",
+          "#F59E0B",
+          "#FCD34D",
+          "#FEF3C7",
+          "#FFFBEB"
+        ]
+      },
+      "erreur": {
+        "role": "tertiary",
+        "displayName": "Erreur",
+        "canonical": "#DC2626",
+        "tonalRamp": [
+          "#450A0A",
+          "#7F1D1D",
+          "#991B1B",
+          "#DC2626",
+          "#EF4444",
+          "#FCA5A5",
+          "#FEE2E2",
+          "#FEF2F2"
+        ]
+      }
     },
     "typographyMeta": {
-      "titre-page": { "displayName": "Titre de page", "purpose": "Unique h1 de chaque page, rendu par AdminPageHeader." },
-      "titre-section": { "displayName": "Titre de section", "purpose": "h2 des blocs d'une page." },
-      "titre-carte": { "displayName": "Titre de carte", "purpose": "Titre d'un graphique, d'un tableau, d'une carte." },
-      "texte": { "displayName": "Texte", "purpose": "Texte courant et cellules de tableau." },
-      "etiquette": { "displayName": "Étiquette", "purpose": "Libellés de champ, en-têtes de colonne, pastilles. Jamais sous 12 px." },
-      "chiffre": { "displayName": "Chiffre", "purpose": "Valeur d'un indicateur, chiffres tabulaires." }
+      "titre-page": {
+        "displayName": "Titre de page",
+        "purpose": "Unique h1 de chaque page, rendu par AdminPageHeader."
+      },
+      "titre-section": {
+        "displayName": "Titre de section",
+        "purpose": "h2 des blocs d'une page."
+      },
+      "titre-carte": {
+        "displayName": "Titre de carte",
+        "purpose": "Titre d'un graphique, d'un tableau, d'une carte."
+      },
+      "texte": {
+        "displayName": "Texte",
+        "purpose": "Texte courant et cellules de tableau."
+      },
+      "etiquette": {
+        "displayName": "Étiquette",
+        "purpose": "Libellés de champ, en-têtes de colonne, pastilles. Jamais sous 12 px."
+      },
+      "chiffre": {
+        "displayName": "Chiffre",
+        "purpose": "Valeur d'un indicateur, chiffres tabulaires."
+      }
     },
     "shadows": [
-      { "name": "couche-flottante", "value": "0 10px 30px -12px rgba(15, 23, 42, 0.25)", "purpose": "Modales, menus déroulants, notifications. Aucune autre surface n'a d'ombre." }
+      {
+        "name": "couche-flottante",
+        "value": "0 10px 30px -12px rgba(15, 23, 42, 0.25)",
+        "purpose": "Modales, menus déroulants, notifications. Aucune autre surface n'a d'ombre."
+      }
     ],
     "motion": [
-      { "name": "transition-etat", "value": "150ms cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Changements de couleur au survol et au focus. Aucun déplacement." }
+      {
+        "name": "transition-etat",
+        "value": "150ms cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Changements de couleur au survol et au focus. Aucun déplacement."
+      }
     ],
     "breakpoints": [
-      { "name": "sm", "value": "640px" },
-      { "name": "md", "value": "768px" },
-      { "name": "lg", "value": "1024px" },
-      { "name": "xl", "value": "1280px" }
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
     ]
   },
   "components": [
@@ -60,9 +168,9 @@
       "name": "Entrée de menu latéral",
       "kind": "nav",
       "refersTo": "menu-entree-active",
-      "description": "Entrée du menu latéral (domaine) ; l'active porte le voile rouge et un trait de 3 px.",
+      "description": "Entrée du menu latéral (domaine) ; l'active porte le voile rouge et le texte rouge profond.",
       "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-item\">Perfect Store</a><a class=\"ds-nav-item ds-nav-item--active\" aria-current=\"page\">Points de vente</a><a class=\"ds-nav-item\">Visites</a></nav>",
-      "css": ".ds-nav { display: grid; gap: 2px; width: 224px; font-family: 'Nunito Sans Variable', system-ui, sans-serif; } .ds-nav-item { position: relative; display: block; padding: 8px 12px; border-radius: 6px; color: #334155; font: 500 14px/20px inherit; text-decoration: none; cursor: pointer; } .ds-nav-item:hover { background: #F1F5F9; } .ds-nav-item--active { background: #FDE8EC; color: #9B0D23; font-weight: 600; } .ds-nav-item--active::before { content: ''; position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px; border-radius: 0 3px 3px 0; background: #C8102E; } .ds-nav-item:focus-visible { outline: 2px solid #C8102E; outline-offset: 2px; }"
+      "css": ".ds-nav { display: grid; gap: 2px; width: 224px; font-family: 'Nunito Sans Variable', system-ui, sans-serif; } .ds-nav-item { position: relative; display: block; padding: 8px 12px; border-radius: 6px; color: #334155; font: 500 14px/20px inherit; text-decoration: none; cursor: pointer; } .ds-nav-item:hover { background: #F1F5F9; } .ds-nav-item--active { background: #FDE8EC; color: #9B0D23; font-weight: 600; } .ds-nav-item:focus-visible { outline: 2px solid #C8102E; outline-offset: 2px; }"
     },
     {
       "name": "Barre d'onglets",
@@ -100,13 +208,41 @@
       "Français simple partout ; le détail technique reste dans la console."
     ],
     "rules": [
-      { "name": "The Red Means Act Rule", "body": "Le rouge Bonnet Rouge signale une action ou la position courante, rien d'autre. Un seul bouton rouge plein par zone d'écran ; pas de rouge décoratif, pas de grand aplat rouge.", "section": "colors" },
-      { "name": "The No Default Green Rule", "body": "Nuxt UI prend primary = brand et gray = slate dans app.config.ts. Aucun composant ne doit retomber sur le vert par défaut.", "section": "colors" },
-      { "name": "The One Gray Rule", "body": "Une seule famille de gris : slate. gray-* n'est plus employé dans le back-office.", "section": "colors" },
-      { "name": "The 12-Pixel Floor Rule", "body": "Aucun texte sous 12 px.", "section": "typography" },
-      { "name": "The No Shouting Rule", "body": "Pas de titres ni d'en-têtes de colonne en capitales ; pas de sur-titre au-dessus du titre de page.", "section": "typography" },
-      { "name": "The Fixed Scale Rule", "body": "Échelle fixe en rem : pas de clamp() sur les titres du back-office.", "section": "typography" },
-      { "name": "The Flat-By-Default Rule", "body": "Cartes, tableaux, indicateurs, menu et en-tête n'ont aucune ombre et ne bougent pas au survol.", "section": "elevation" }
+      {
+        "name": "The Red Means Act Rule",
+        "body": "Le rouge Bonnet Rouge signale une action ou la position courante, rien d'autre. Un seul bouton rouge plein par zone d'écran ; pas de rouge décoratif, pas de grand aplat rouge.",
+        "section": "colors"
+      },
+      {
+        "name": "The No Default Green Rule",
+        "body": "Nuxt UI prend primary = brand et gray = slate dans app.config.ts. Aucun composant ne doit retomber sur le vert par défaut.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Gray Rule",
+        "body": "Une seule famille de gris : slate. gray-* n'est plus employé dans le back-office.",
+        "section": "colors"
+      },
+      {
+        "name": "The 12-Pixel Floor Rule",
+        "body": "Aucun texte sous 12 px.",
+        "section": "typography"
+      },
+      {
+        "name": "The No Shouting Rule",
+        "body": "Pas de titres ni d'en-têtes de colonne en capitales ; pas de sur-titre au-dessus du titre de page.",
+        "section": "typography"
+      },
+      {
+        "name": "The Fixed Scale Rule",
+        "body": "Échelle fixe en rem : pas de clamp() sur les titres du back-office.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "Cartes, tableaux, indicateurs, menu et en-tête n'ont aucune ombre et ne bougent pas au survol.",
+        "section": "elevation"
+      }
     ],
     "dos": [
       "Do réserver le rouge Bonnet Rouge (#C8102E) aux actions principales, à la position courante et au focus.",

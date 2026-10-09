@@ -2,7 +2,6 @@
   <div class="space-y-6">
     <AdminPageHeader
       title="Synthèse par zone"
-      eyebrow="Tableau de bord commerciaux"
     />
 
     <!-- Période + périmètre. Comme le tableau de bord principal : tout passe par

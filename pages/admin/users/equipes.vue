@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <AdminPageHeader title="Équipes" eyebrow="Paramètres" />
+    <AdminPageHeader title="Équipes" />
 
     <div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900/50 dark:bg-blue-900/10 dark:text-blue-200">
       Rattacher un merchandiseur à un commercial sert aux filtres « mon équipe » et aux relances WhatsApp.
