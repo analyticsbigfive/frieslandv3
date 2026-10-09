@@ -90,6 +90,9 @@ begin
   or (new.territoires_assignes is distinct from old.territoires_assignes)
   or (new.quartiers_assignes   is distinct from old.quartiers_assignes)
   or (new.commercial_id        is distinct from old.commercial_id)
+  -- Colonnes déjà protégées en production (ne pas les perdre en redéfinissant).
+  or (new.routing_mode         is distinct from old.routing_mode)
+  or (new.profil_canonique_id  is distinct from old.profil_canonique_id)
   or (new.direction            is distinct from old.direction)
   then
     if auth.uid() is not null
