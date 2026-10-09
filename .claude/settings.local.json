@@ -41,7 +41,19 @@
       "Bash(mkdir -p android/app/src/main/java/com/bdetco/bonnetrouge)",
       "Bash(git mv *)",
       "Bash(rmdir android/app/src/main/java/com/friesland/bonnetrouge android/app/src/main/java/com/friesland)",
-      "Bash(LC_ALL=C sed -i '' 's/com\\\\.friesland\\\\.bonnetrouge/com.bdetco.bonnetrouge/g' capacitor.config.ts android/app/build.gradle android/app/src/main/res/values/strings.xml android/app/src/main/java/com/bdetco/bonnetrouge/MainActivity.java android/app/src/main/java/com/bdetco/bonnetrouge/BatteryOptimizationPlugin.java)"
+      "Bash(LC_ALL=C sed -i '' 's/com\\\\.friesland\\\\.bonnetrouge/com.bdetco.bonnetrouge/g' capacitor.config.ts android/app/build.gradle android/app/src/main/res/values/strings.xml android/app/src/main/java/com/bdetco/bonnetrouge/MainActivity.java android/app/src/main/java/com/bdetco/bonnetrouge/BatteryOptimizationPlugin.java)",
+      "Bash(adb devices *)",
+      "Bash(adb shell *)",
+      "Bash(ls ~/Library/Android/sdk/platform-tools/adb 2>/dev/null; cat android/local.properties 2>/dev/null; grep -E \"^\\(SUPABASE_URL|SEED_DEFAULT_PASSWORD\\)\" .env | sed 's/=.*/=<set>/')",
+      "Bash(chmod +x /private/tmp/claude-501/-Users-bfaproduction-Documents-GitHub-frieslandv3/5710d422-a634-4946-ab12-e4886cc3f6ed/scratchpad/ui.sh)",
+      "Bash(/private/tmp/claude-501/-Users-bfaproduction-Documents-GitHub-frieslandv3/5710d422-a634-4946-ab12-e4886cc3f6ed/scratchpad/ui.sh 01)",
+      "Bash(sed -E 's/=\\(.*\\)$/=<len \\\\1>/')",
+      "Bash(awk -F'<len ' '{printf \"%s<len %d>\\\\n\", $1, length\\($2\\)-1}')",
+      "Bash(git check-ignore *)",
+      "Bash(node -e ' *)",
+      "Bash(S=/private/tmp/claude-501/-Users-bfaproduction-Documents-GitHub-frieslandv3/02c0eedb-b382-4b78-9e9b-38a7b45bf7ec/scratchpad && cp $S/verif.mjs scripts/.verif-tmp.mjs && node scripts/.verif-tmp.mjs 2>&1 | head -40; rm scripts/.verif-tmp.mjs)",
+      "Bash(pbcopy)",
+      "Bash(pbpaste)"
     ]
   }
 }

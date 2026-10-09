@@ -161,6 +161,7 @@ export function useOfflineData() {
       del('offline:contacts'),
       // Planning SSF du merchandiser et liste des SSF (useSsfTerrain).
       del('offline:ssf-semaine'),
+      del('offline:routing-semaine'),
       del('offline:ssf'),
       options.keepQueue ? Promise.resolve() : del('offline:queue'),
     ])

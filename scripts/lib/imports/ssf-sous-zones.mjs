@@ -1,5 +1,10 @@
 /**
- * Sous-zones SSF et planning hebdomadaire des merchandisers Atom.
+ * Sous-zones SSF et planning hebdomadaire des merchandisers d'agence.
+ *
+ * Depuis la réunion client du 08/10/2026, le planning des merchandisers vient
+ * du routing mensuel de l'agence (scripts/lib/imports/routing-mensuel.mjs,
+ * Admin › Imports terrain). Ce module ne sert plus qu'en ligne de commande
+ * (scripts/deriver-ssf-sous-zones.mjs), pour diagnostic :
  *
  * À partir des visites qui portent un SSF (export Atom importé, puis app 1.0.12) :
  *   A. sous-zone de chaque SSF = quartiers (pdv.zone + pdv.quartier) où il a
@@ -26,7 +31,7 @@
  * scripts/deriver-ssf-sous-zones.mjs et par Admin › Imports terrain.
  * Sortie : { resume, rapport (markdown), csv, operations, retour }.
  */
-import { aGps, csvTexte, cleNom, haversine, mediane, norm, ordreGps, texteCellule, toutesLesLignes, uniques } from '../commun.mjs'
+import { aGps, csvTexte, cleNom, feuillesDepuisClasseur, feuillesDepuisCsv, haversine, mediane, norm, ordreGps, texteCellule, toutesLesLignes, uniques } from '../commun.mjs'
 
 export const OPTIONS_DEFAUT = {
   seuilVisites: 5, // visites minimum d'un quartier pour l'inclure dans la sous-zone
@@ -40,6 +45,9 @@ export const OPTIONS_DEFAUT = {
   pregenererJours: 0, // > 0 : tournées à venir recalculées sur N jours à partir de demain
   auteurId: null,
   fichierClient: null, // nom du fichier client (pour la source)
+  // false (admin) : seul le fichier de l'agence compte ; les SSF et
+  // merchandisers qu'il ne cite pas restent tels quels.
+  deriverHistorique: true,
 }
 
 export const JOURS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
@@ -86,11 +94,24 @@ export async function chargerDonneesSsf(sb, { onEtape, toutes = toutesLesLignes 
   const pdvs = await toutes(() => sb.from('pdv')
     .select('pdv_id,nom_pdv,zone,quartier,sous_categorie_pdv,geolocation_lat,geolocation_lng,is_active').order('pdv_id'))
   etape('Référentiels')
+  // Agences « programme » (migration 20261008100000), sinon Atom seul.
+  let codesAgences = ['atom']
+  try {
+    const agences = await toutes(() => sb.from('agence').select('code,programme,actif').order('code'))
+    const programmes = agences.filter(a => a.programme && a.actif !== false).map(a => a.code)
+    if (programmes.length) codesAgences = programmes
+  }
+  catch { /* table absente : Atom seul */ }
+  // ssf.commercial_id : migration 20261008120000.
+  const lireSsf = async () => {
+    try { return await toutes(() => sb.from('ssf').select('id,nom,nom_brut,telephone,distributeur_id,commercial_id,actif,a_confirmer').order('id')) }
+    catch { return toutes(() => sb.from('ssf').select('id,nom,nom_brut,telephone,distributeur_id,actif,a_confirmer').order('id')) }
+  }
   const [profils, ssfs, distributeurs, quotas] = await Promise.all([
     toutes(() => sb.from('profiles')
-      .select('id,email,nom,role,employeur,is_active,zone_assignee,territoires_assignes,quartiers_assignes')
-      .eq('employeur', 'atom').order('id')),
-    toutes(() => sb.from('ssf').select('id,nom,nom_brut,telephone,distributeur_id,actif,a_confirmer').order('id')),
+      .select('id,email,nom,role,employeur,is_active,zone_assignee,territoires_assignes,quartiers_assignes,commercial_id')
+      .in('employeur', codesAgences).order('id')),
+    lireSsf(),
     toutes(() => sb.from('distributeur').select('id,nom').order('id')),
     toutes(() => sb.from('routing_quota_canal').select('canal,jour_semaine,quota').order('canal')),
   ])
@@ -117,7 +138,7 @@ export async function chargerDonneesSsf(sb, { onEtape, toutes = toutesLesLignes 
     reglesPdv.push(...await toutes(() => sb.from('routing_template_pdv')
       .select('template_id,pdv_id,position_order').in('template_id', idsRegles.slice(i, i + 50)).order('id')))
   }
-  return { visites, pdvs, profils, ssfs, distributeurs, ssfQuartiers, quotas, regles, reglesPdv, migrationAppliquee }
+  return { visites, pdvs, profils, ssfs, distributeurs, ssfQuartiers, quotas, regles, reglesPdv, migrationAppliquee, codesAgences }
 }
 
 // ---------------------------------------------------------------------------
@@ -138,22 +159,24 @@ export function lireJours(texte) {
 }
 
 /**
- * Lit l'Excel du client : une ligne par SSF × zone (quartiers dans une cellule,
- * séparés par , ; / | ou retour à la ligne) ou par SSF × quartier.
+ * Lit le fichier de l'agence (« SSF – merch – zone »), déjà découpé en
+ * feuilles de cellules texte : une ligne par SSF × zone (quartiers dans une
+ * cellule, séparés par , ; / | ou retour à la ligne) ou par SSF × quartier.
  * Colonnes reconnues (en-tête, casse et accents indifférents) : SSF ; Zone ou
  * Territoire ou Commune ; Quartier(s) ou Sous-zone ; Merchandiser(s) ou Merch
  * ou Email ; Jour(s) ; Distributeur ; Téléphone.
+ * `feuilles` : [{ nom, lignes: [{ n, cellules: string[] (index 1 = colonne A) }] }].
  */
-export function lireExcelClientSsf(wb) {
+export function lireFeuillesClientSsf(feuilles) {
   const lignes = []
-  for (const ws of wb.worksheets) {
+  for (const f of feuilles) {
     let cols = null
-    ws.eachRow((row, n) => {
-      const v = (i) => (i ? String(texteCellule(row.getCell(i).value) ?? '').trim() : '')
+    for (const { n, cellules } of f.lignes) {
+      const v = (i) => (i ? String(cellules[i] ?? '').trim() : '')
       if (!cols) {
         const idx = {}
-        row.eachCell((c, i) => {
-          const h = norm(texteCellule(c.value))
+        cellules.forEach((c, i) => {
+          const h = norm(c)
           if (!h) return
           if (/^SSF|VENDEUR|SALESMAN/.test(h) && !idx.ssf) idx.ssf = i
           else if (/^(ZONE|TERRITOIRE|COMMUNE)/.test(h) && !idx.zone) idx.zone = i
@@ -164,22 +187,28 @@ export function lireExcelClientSsf(wb) {
           else if (/^(TEL|TÉL|CONTACT)/.test(h) && !idx.telephone) idx.telephone = i
         })
         if (idx.ssf && (idx.zone || idx.quartiers)) cols = idx
-        return
+        continue
       }
       const ssf = v(cols.ssf)
-      if (!ssf) return
+      if (!ssf) continue
       lignes.push({
-        feuille: ws.name, ligne: n, ssf,
+        feuille: f.nom, ligne: n, ssf,
         zone: v(cols.zone),
         quartiers: v(cols.quartiers).split(/[,;/|\n]+/).map(q => q.trim()).filter(Boolean),
         merch: v(cols.merch), jours: lireJours(v(cols.jours)),
         distributeur: v(cols.distributeur), telephone: v(cols.telephone),
       })
-    })
+    }
   }
   if (!lignes.length) throw new Error('Aucune ligne lisible : il faut au moins les colonnes « SSF » et « Zone » ou « Quartier »')
   return lignes
 }
+
+/** Classeur Excel (ExcelJS) du client → lignes. */
+export const lireExcelClientSsf = (wb) => lireFeuillesClientSsf(feuillesDepuisClasseur(wb))
+
+/** CSV du client → lignes (séparateur « ; », « , » ou tabulation). */
+export const lireCsvClientSsf = (texte, nom = 'CSV') => lireFeuillesClientSsf(feuillesDepuisCsv(texte, nom))
 
 // ---------------------------------------------------------------------------
 // Dérivation
@@ -262,6 +291,7 @@ export function deriverSsf(donnees, options = {}) {
       if (l.zone && !zone) { client.rejets.push(`${ou} : zone « ${l.zone} » inconnue`); continue }
       if (!client.sousZones.has(cle)) client.sousZones.set(cle, { ref: refSsf, lignes: [] })
       const sz = client.sousZones.get(cle)
+      const debutLigne = sz.lignes.length
       if (!l.quartiers.length && zone) {
         // Zone entière : tous ses quartiers connus.
         for (const [k, q] of quartierParNorm) if (k.startsWith(`${norm(zone)}|`)) sz.lignes.push({ zone, quartier: q })
@@ -277,12 +307,20 @@ export function deriverSsf(donnees, options = {}) {
       }
       if (l.merch) {
         const m = merchParCle.get(l.merch.toLowerCase()) || merchParCle.get(cleNom(l.merch))
-        if (!m) { client.rejets.push(`${ou} : merchandiser « ${l.merch} » introuvable parmi les comptes Atom`); continue }
+        if (!m) { client.rejets.push(`${ou} : merchandiser « ${l.merch} » introuvable parmi les comptes des agences`); continue }
         if (!client.planning.has(m.id)) client.planning.set(m.id, new Map())
         const pl = client.planning.get(m.id)
-        const jours = pl.get(cle)?.jours || new Set()
-        for (const j of (l.jours.length ? l.jours : OUVRES)) jours.add(j)
-        pl.set(cle, { ref: refSsf, jours })
+        // Binôme : par jour, la zone et les quartiers de CETTE ligne (un même
+        // SSF peut couvrir d'autres quartiers avec un autre merchandiser).
+        const avant = pl.get(cle) || { ref: refSsf, jours: new Set(), parJour: new Map() }
+        for (const j of (l.jours.length ? l.jours : OUVRES)) {
+          avant.jours.add(j)
+          const b = avant.parJour.get(j) || { zone: null, lignes: [] }
+          b.zone = b.zone || zone || null
+          b.lignes.push(...sz.lignes.slice(debutLigne))
+          avant.parJour.set(j, b)
+        }
+        pl.set(cle, avant)
       }
     }
   }
@@ -304,6 +342,8 @@ export function deriverSsf(donnees, options = {}) {
       sousZones.set(cle, { ref: { id: s.id, nom: s.nom }, ssf: s, lignes, origine: 'client' })
       continue
     }
+    // Admin : seul le fichier de l'agence compte, les autres SSF restent tels quels.
+    if (!o.deriverHistorique) continue
     const manuelles = existantes.filter(q => !String(q.source || '').startsWith('derive-'))
     if (manuelles.length) {
       // Saisie admin ou client antérieure : prioritaire, on ne la recalcule pas.
@@ -375,7 +415,11 @@ export function deriverSsf(donnees, options = {}) {
     const choixJours = {}
     if (client.planning.has(p.id)) {
       affectations = new Map([...client.planning.get(p.id)].map(([cle, x]) => [cle, { ref: x.ref, jours: x.jours, origine: 'client' }]))
-      for (const j of OUVRES) choixJours[j] = 'fichier client'
+      for (const j of OUVRES) choixJours[j] = 'fichier de l’agence'
+    }
+    else if (!o.deriverHistorique) {
+      // Merchandiser absent du fichier de l'agence : rien ne change pour lui.
+      continue
     }
     else {
       // Sa zone : communes de ses territoires actuels (réorganisation Atom du
@@ -536,13 +580,14 @@ export function deriverSsf(donnees, options = {}) {
   }
 
   const md = []
-  md.push('# Sous-zones SSF et planning des merchandisers Atom', '')
+  md.push('# Sous-zones SSF et planning des merchandisers d’agence', '')
   md.push(`Visites analysées : ${visites.length} (mois ${moisListe[0] || '—'} → ${moisListe[moisListe.length - 1] || '—'}). Jours déterminés sur ${moisRef}.`)
   if (o.fichierClient) md.push(`Fichier client : ${o.fichierClient} (${o.lignesClient?.length || 0} lignes, ${client.rejets.length} rejet(s)).`)
+  if (!o.deriverHistorique) md.push('', 'Seuls les SSF et merchandisers cités dans le fichier sont modifiés ; les autres gardent leur planning.')
   md.push('', '## Résumé', '')
   md.push(`- Sous-zones : ${resume.sousZonesDerivees} dérivées, ${resume.sousZonesClient} du fichier client, ${resume.sousZonesConservees} déjà saisies (conservées).`)
   md.push(`- SSF sans sous-zone (bruit ou trop peu de visites) : ${resume.ssfBruit}.`)
-  md.push(`- Merchandisers Atom actifs : ${resume.merchandisers}, dont ${resume.merchandisersAvecRegles} avec un planning SSF (${resume.regles} règles).`)
+  md.push(`- Merchandisers d’agence traités : ${resume.merchandisers}, dont ${resume.merchandisersAvecRegles} avec un planning SSF (${resume.regles} règles).`)
   md.push(`- Jours sans SSF (laissés à la règle de portefeuille) : ${resume.joursNonCouverts}.`)
   if (resume.reglesPasseesEnQuotas) md.push(`- Règles de portefeuille passées du mode périmètre (tout le portefeuille chaque jour) aux quotas : ${resume.reglesPasseesEnQuotas}.`)
   if (o.pregenererJours > 0) md.push(`- Tournées intactes du ${debutPre} au ${finPre} recalculées après écriture.`)

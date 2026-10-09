@@ -56,8 +56,8 @@
               <p class="mt-0.5 flex items-center gap-1.5 text-[11px] text-gray-400">
                 <span
                   class="rounded px-1 text-[10px] font-semibold uppercase tracking-wide"
-                  :class="ligne.atom ? 'bg-fc-red/10 text-fc-red' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300'"
-                >{{ ligne.atom ? 'Atom' : 'Friesland' }}</span>
+                  :class="ligne.programme ? 'bg-fc-red/10 text-fc-red' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300'"
+                >{{ ligne.agence }}</span>
                 <span class="truncate">{{ ligne.zone }}</span>
               </p>
             </th>
@@ -115,7 +115,7 @@
       <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-amber-200 dark:bg-amber-500/40" />Incomplète</span>
       <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm border border-dashed border-gray-400" />Prévue par une règle, à générer</span>
       <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-gray-200 dark:bg-gray-600" />Suspendue / annulée</span>
-      <span>Sous le nombre de PDV : le SSF du jour (merchandisers Atom).</span>
+      <span>Sous le nombre de PDV : le SSF du jour (routing mensuel des agences).</span>
     </div>
   </div>
 </template>
@@ -123,6 +123,7 @@
 <script setup lang="ts">
 import type { Profile, Routing, RoutingTemplate } from '~/types'
 import { toIsoJour } from '~/utils/periode'
+import { estMerchandiserProgramme } from '~/utils/agences'
 import { couvertureJour, decalerSemaine, etatJourTournee, joursSemaine, lundiDe, type EtatJourTournee } from '~/utils/calendrierTournees'
 import { CLASSES_ETAT_TOURNEE } from '~/composables/classesEtatTournee'
 
@@ -149,11 +150,11 @@ const emit = defineEmits<{
   (e: 'jour', payload: { userId: string; user: Profile | null; date: string; routing: Routing | null; regle: RoutingTemplate | null }): void
 }>()
 
-const FILTRES = [
-  { k: 'tous', l: 'Tous' },
-  { k: 'atom', l: 'Atom' },
-  { k: 'friesland', l: 'Friesland' },
-] as const
+// Un filtre par agence active (Référentiels › Agences) : une nouvelle agence
+// apparaît sans changer le code.
+const { actives: agencesActives, nom: nomAgence, charger: chargerAgences } = useAgences()
+void chargerAgences()
+const FILTRES = computed(() => [{ k: 'tous', l: 'Tous' }, ...agencesActives.value.map(a => ({ k: a.code, l: a.nom }))])
 const JOURS_COURTS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 
 const routingStore = useRoutingStore()
@@ -162,7 +163,7 @@ const toast = useToast()
 const aujourdhui = toIsoJour(new Date())
 const lundiCourant = lundiDe(aujourdhui)
 const lundi = ref(lundiCourant)
-const filtre = ref<'tous' | 'atom' | 'friesland'>('tous')
+const filtre = ref<string>('tous')
 const recherche = ref('')
 
 const tournees = ref(new Map<string, Routing>())
@@ -264,11 +265,13 @@ const grille = computed(() => {
         id,
         user,
         nom: user?.nom || user?.email || 'Personne inconnue',
-        atom: user?.employeur === 'atom',
+        employeur: user?.employeur || 'friesland',
+        agence: nomAgence(user?.employeur || 'friesland'),
+        programme: estMerchandiserProgramme(user?.employeur, agencesActives.value),
         zone: (zones as string[]).join(', '),
       }
     })
-    .filter(p => filtre.value === 'tous' || (filtre.value === 'atom') === p.atom)
+    .filter(p => filtre.value === 'tous' || p.employeur === filtre.value)
     .filter(p => !q || p.nom.toLowerCase().includes(q) || p.zone.toLowerCase().includes(q))
     .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
     .map(p => ({ ...p, cases: jours.value.map(d => caseDe(p.id, d)) }))

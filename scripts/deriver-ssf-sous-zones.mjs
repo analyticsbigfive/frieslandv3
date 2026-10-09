@@ -9,8 +9,10 @@
  *     PDV de son portefeuille situés dans la sous-zone ;
  *   - la règle de portefeuille (DMS ou périmètre) garde les jours non couverts, et passe en quotas si elle était en périmètre ;
  *   - le périmètre du profil est élargi aux zones et quartiers des sous-zones.
- * L'Excel « SSF ↔ zones » du client (--fichier) remplace la dérivation pour les
- * SSF et merchandisers qu'il cite.
+ * Un fichier « SSF ↔ zones » (--fichier, .xlsx ou .csv) remplace la dérivation
+ * pour les SSF et merchandisers qu'il cite ; --sans-derivation : seul le
+ * fichier compte. Diagnostic seulement : le planning des merchandisers vient
+ * désormais du routing mensuel de l'agence (Admin › Imports terrain).
  *
  * Logique : scripts/lib/imports/ssf-sous-zones.mjs (partagée avec Admin ›
  * Imports terrain). Écritures : scripts/lib/imports/operations.mjs.
@@ -20,14 +22,15 @@
  * arrière) dans ~/Downloads/imports-terrain/ssf-sous-zones-<date-heure>/.
  *
  * Usage :
- *   node scripts/deriver-ssf-sous-zones.mjs [--fichier=ssf-zones.xlsx] [--mois=2026-09]
+ *   node scripts/deriver-ssf-sous-zones.mjs [--fichier=ssf-zones.xlsx|.csv] [--sans-derivation] [--mois=2026-09]
  *        [--debut=AAAA-MM-JJ] [--pregenerer=7] [--auteur=admin@…] [--apply]
  *        [--seuil-visites=5] [--seuil-part=0.05] [--seuil-ssf-part=0.08] [--seuil-ssf-visites=40]
  *   node scripts/deriver-ssf-sous-zones.mjs --retour=…/retour.json [--apply]
  */
+import { readFile } from 'node:fs/promises'
 import { basename } from 'node:path'
 import { arg, chemin, clientServiceRole, lireClasseur, nombre, terminerImport, traiterRetour } from './lib/cli-import.mjs'
-import { chargerDonneesSsf, deriverSsf, lireExcelClientSsf } from './lib/imports/ssf-sous-zones.mjs'
+import { chargerDonneesSsf, deriverSsf, lireCsvClientSsf, lireExcelClientSsf } from './lib/imports/ssf-sous-zones.mjs'
 
 const supabase = clientServiceRole()
 if (await traiterRetour(supabase, 'ssf-sous-zones')) process.exit(0)
@@ -38,7 +41,9 @@ if (!donnees.migrationAppliquee) console.log('⚠ Migration 20261007100000 pas e
 const fichier = chemin(arg('fichier', null))
 let lignesClient = null
 if (fichier) {
-  lignesClient = lireExcelClientSsf(await lireClasseur(fichier))
+  lignesClient = /\.csv$/i.test(fichier)
+    ? lireCsvClientSsf(await readFile(fichier, 'utf8'), basename(fichier))
+    : lireExcelClientSsf(await lireClasseur(fichier))
   console.log(`Fichier client : ${lignesClient.length} ligne(s) lue(s) dans ${fichier}`)
 }
 
@@ -61,6 +66,7 @@ const res = deriverSsf(donnees, {
   auteurId,
   lignesClient,
   fichierClient: fichier ? basename(fichier) : null,
+  deriverHistorique: !process.argv.includes('--sans-derivation'),
 })
 await terminerImport(supabase, 'ssf-sous-zones', res, {
   avantApplication: async () => {

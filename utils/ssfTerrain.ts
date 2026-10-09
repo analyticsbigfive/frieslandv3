@@ -1,13 +1,16 @@
 // utils/ssfTerrain.ts
-// SSF côté terrain (merchandisers Atom) : planning de la semaine renvoyé par
-// la RPC ssf_semaine, SSF du jour, et appartenance d'un PDV à la sous-zone
-// d'un SSF (même règle que etapes_quota_du_jour : zone et quartier exacts).
+// SSF côté terrain (merchandisers d'agence) : planning de la semaine (binômes
+// SSF ↔ merchandiser, RPC ssf_semaine), SSF du jour, et appartenance d'un PDV
+// aux quartiers du SSF (même règle que etapes_quota_du_jour : zone et quartier
+// exacts). Le SSF ne dirige pas le merchandiser : les deux dépendent du
+// commercial et passent dans les mêmes PDV.
 // Pur et testé (tests/ssfTerrain.spec.ts).
 
 /** Une ligne de ssf_semaine : un SSF prévu un jour de la semaine (0 = dimanche). */
 export interface JourSsf {
   jour_semaine: number
-  template_id: string
+  /** Règle « SSF — » qui porte le binôme ; null si le binôme n'a pas (encore) de règle. */
+  template_id: string | null
   libelle: string | null
   ssf_id: number
   ssf_nom: string
@@ -81,4 +84,35 @@ export function libelleSousZone(quartiers: QuartierSsf[], ssfId: number | null |
     parZone.set(q.zone, liste)
   }
   return [...parZone].map(([zone, qs]) => `${zone} : ${qs.join(', ')}`).join(' · ')
+}
+
+/**
+ * Une case du routing mensuel de la semaine (RPC routing_semaine, migration
+ * 20261008130000) : lieu du jour et SSF éventuel (null = « Aucun SSF »).
+ */
+export interface JourRouting {
+  jour_semaine: number
+  date_jour: string | null
+  semaine: number | null
+  secteur: string | null
+  point_visite: string | null
+  zone: string | null
+  quartiers: string[] | null
+  ssf_id: number | null
+  ssf_nom: string | null
+  ssf_telephone: string | null
+  distributeur: string | null
+  type_engin: string | null
+}
+
+/** Planning SSF de l'ancienne RPC (ssf_semaine) au format du routing mensuel. */
+export const versRouting = (semaine: JourSsf[]): JourRouting[] => semaine.map(l => ({
+  jour_semaine: l.jour_semaine, date_jour: null, semaine: null, secteur: null, point_visite: null,
+  zone: l.zone, quartiers: l.quartiers, ssf_id: l.ssf_id, ssf_nom: l.ssf_nom, ssf_telephone: l.ssf_telephone,
+  distributeur: l.distributeur, type_engin: null,
+}))
+
+/** Semaine lundi → samedi : les cases de chaque jour (vide = portefeuille). */
+export function routingParJour(lignes: JourRouting[]) {
+  return JOURS_TERRAIN.map(j => ({ ...j, cases: lignes.filter(l => l.jour_semaine === j.jour) }))
 }

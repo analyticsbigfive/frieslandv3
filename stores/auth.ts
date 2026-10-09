@@ -119,6 +119,7 @@ export const useAuthStore = defineStore('auth', () => {
     zone_assignee?: string | null
     commercial_id?: string | null
     employeur?: Employeur
+    direction?: string | null
     territoires_assignes?: string[]
     quartiers_assignes?: string[]
     region?: string | null

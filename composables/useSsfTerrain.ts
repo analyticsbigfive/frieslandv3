@@ -4,10 +4,11 @@
 // ligne (IndexedDB) : le SSF du jour doit s'afficher sans réseau, sur le
 // terrain. Effacés à la déconnexion (useOfflineData.clearOfflineData).
 import { get, set } from 'idb-keyval'
-import type { JourSsf, QuartierSsf, SsfTerrain } from '~/utils/ssfTerrain'
+import { versRouting, type JourRouting, type JourSsf, type QuartierSsf, type SsfTerrain } from '~/utils/ssfTerrain'
 
 export const CLE_CACHE_SSF = 'offline:ssf'
 export const CLE_CACHE_SSF_SEMAINE = 'offline:ssf-semaine'
+export const CLE_CACHE_ROUTING_SEMAINE = 'offline:routing-semaine'
 
 export function useSsfTerrain() {
   const supabase = useSupabaseClient() as any
@@ -15,6 +16,8 @@ export function useSsfTerrain() {
   const listeSsf = useState<SsfTerrain[]>('ssf-liste', () => [])
   const quartiers = useState<QuartierSsf[]>('ssf-quartiers', () => [])
   const chargee = useState('ssf-semaine-chargee', () => false)
+  const routing = useState<JourRouting[]>('routing-semaine', () => [])
+  const routingCharge = useState('routing-semaine-charge', () => false)
 
   /** Planning de la semaine du merchandiser : réseau, sinon cache. */
   async function chargerSemaine(userId: string | null | undefined) {
@@ -51,5 +54,30 @@ export function useSsfTerrain() {
     }
   }
 
-  return { semaine, listeSsf, quartiers, chargee, chargerSemaine, chargerListe }
+  /**
+   * Routing mensuel de la semaine (lieu du jour, SSF ou « Aucun SSF ») : réseau,
+   * sinon cache. Base sans la migration 20261008130000 : planning SSF seul.
+   */
+  async function chargerRouting(userId: string | null | undefined) {
+    if (!userId) return
+    try {
+      const { data, error } = await supabase.rpc('routing_semaine', { p_user_id: userId })
+      if (error) throw error
+      routing.value = (data || []) as JourRouting[]
+      routingCharge.value = true
+      await set(CLE_CACHE_ROUTING_SEMAINE, { userId, lignes: JSON.parse(JSON.stringify(routing.value)) }).catch(() => {})
+    }
+    catch (e: any) {
+      if (/routing_semaine|function|schema cache/i.test(e?.message || '')) {
+        await chargerSemaine(userId)
+        routing.value = versRouting(semaine.value)
+        routingCharge.value = chargee.value
+        return
+      }
+      const cache = await get<{ userId: string, lignes: JourRouting[] }>(CLE_CACHE_ROUTING_SEMAINE).catch(() => undefined)
+      if (cache?.userId === userId) { routing.value = cache.lignes; routingCharge.value = true }
+    }
+  }
+
+  return { semaine, listeSsf, quartiers, chargee, chargerSemaine, chargerListe, routing, routingCharge, chargerRouting }
 }

@@ -218,6 +218,7 @@
 
 <script setup lang="ts">
 import { categoriesProduitsActives } from '~/utils/products'
+import { estMerchandiserProgramme } from '~/utils/agences'
 import type { Visite } from '~/types'
 
 definePageMeta({
@@ -257,7 +258,7 @@ const startY = ref(0)
 const { parametres } = useParametresApp()
 const routingStore = useRoutingStore()
 const dailyTarget = computed(() => parametres.value.objectif_visites_jour
-  ?? (authStore.profile?.employeur === 'atom' && routingStore.totalCount ? routingStore.totalCount : 10))
+  ?? (estMerchandiserProgramme(authStore.profile?.employeur) && routingStore.totalCount ? routingStore.totalCount : 10))
 
 const todayCount = computed(() => {
   const today = new Date().toISOString().slice(0, 10)

@@ -21,7 +21,7 @@
           </label>
           <input
             type="file"
-            accept=".xlsx"
+            :accept="f.accept || '.xlsx'"
             class="block w-full text-xs text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold dark:text-gray-300 dark:file:bg-gray-700"
             @change="(e: Event) => choisirFichier(imp.type, f.cle, e)"
           >
@@ -36,9 +36,7 @@
           <UInput v-model="options.debut" type="date" size="xs" class="w-36" />
           <UCheckbox v-model="options.pregenererDms" label="Générer les tournées des 7 premiers jours" />
         </div>
-        <div v-if="imp.type === 'ssf-sous-zones'" class="flex flex-wrap items-center gap-3 text-xs text-gray-600 dark:text-gray-300">
-          <span>Mois de référence des jours</span>
-          <UInput v-model="options.moisSsf" type="month" size="xs" class="w-36" />
+        <div v-if="imp.type === 'routing-mensuel'" class="flex flex-wrap items-center gap-3 text-xs text-gray-600 dark:text-gray-300">
           <UCheckbox v-model="options.recalculerSsf" label="Recalculer les tournées des 7 prochains jours" />
         </div>
         <UButton
@@ -154,12 +152,12 @@ import { markdownVersHtml } from '~/utils/markdownSimple'
 // @ts-ignore modules JS partagés avec les scripts (sans types)
 import { decouperOperations } from '~/scripts/lib/imports/operations.mjs'
 
-type TypeImport = 'dms-pdv' | 'merch-dms' | 'routing-atom' | 'ssf-sous-zones'
+type TypeImport = 'dms-pdv' | 'merch-dms' | 'routing-atom' | 'ssf-sous-zones' | 'routing-ssf-dms' | 'routing-mensuel'
 interface DefImport {
   type: TypeImport
   titre: string
   description: string
-  fichiers: { cle: string, libelle: string, requis: boolean }[]
+  fichiers: { cle: string, libelle: string, requis: boolean, accept?: string }[]
 }
 
 const IMPORTS: DefImport[] = [
@@ -185,13 +183,20 @@ const IMPORTS: DefImport[] = [
     fichiers: [{ cle: 'principal', libelle: 'Export Bonnet Rouge (.xlsx)', requis: true }],
   },
   {
-    type: 'ssf-sous-zones',
-    titre: 'Sous-zones SSF et planning Atom',
-    description: 'Sans fichier : sous-zones et planning (un SSF par jour) dérivés des visites. Avec le fichier « SSF ↔ zones » du client : ses lignes remplacent la dérivation.',
-    fichiers: [{ cle: 'principal', libelle: 'Fichier « SSF ↔ zones » du client (.xlsx)', requis: false }],
+    type: 'routing-mensuel',
+    titre: 'Routing mensuel des merchandisers (fichier de l’agence)',
+    description: 'Déploiement mensuel de l’agence : pour chaque merchandiser, jour et semaine du mois (Occurrence), le point de visite et le SSF du jour (ou « Aucun SSF »). Met à jour le routing sans doublon et les règles de tournée ; un lieu non reconnu laisse le portefeuille ce jour-là. Seuls les merchandisers cités changent.',
+    fichiers: [{ cle: 'principal', libelle: 'Fichier de l’agence (.xlsx ou .csv) : Merchandiser, Jour, Occurrence, Point de visite, SSF…', requis: true, accept: '.xlsx,.csv' }],
+  },
+  {
+    type: 'routing-ssf-dms',
+    titre: 'Routing des SSF (export DMS)',
+    description: 'Export clients DMS : pour chaque SSF (salesman), les PDV de ses clients. Sert au contrôle d’écart avec la tournée du merchandiser de son binôme. À lancer après l’import des clients DMS.',
+    fichiers: [{ cle: 'principal', libelle: 'Export clients DMS (.xlsx)', requis: true }],
   },
 ]
-const TITRES: Record<string, string> = Object.fromEntries(IMPORTS.map(i => [i.type, i.titre]))
+// Imports retirés de l'écran : leurs lots passés restent lisibles et annulables.
+const TITRES: Record<string, string> = { 'ssf-sous-zones': 'Sous-zones SSF (ancien import)', ...Object.fromEntries(IMPORTS.map(i => [i.type, i.titre])) }
 const STATUTS: Record<string, string> = { en_cours: 'En cours', applique: 'Appliqué', erreur: 'Erreur', annulation: 'Annulation en cours', annule: 'Annulé' }
 const COULEURS_STATUT: Record<string, any> = { en_cours: 'blue', applique: 'green', erreur: 'red', annulation: 'amber', annule: 'gray' }
 
@@ -202,12 +207,10 @@ const authStore = useAuthStore()
 const fichiers = reactive<Record<string, Record<string, File | null>>>({})
 const maintenant = new Date()
 const jourIso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-const moisPrecedent = new Date(maintenant.getFullYear(), maintenant.getMonth() - 1, 1)
 const options = reactive({
   seuilDepot: 10,
   debut: jourIso(maintenant),
   pregenererDms: false,
-  moisSsf: `${moisPrecedent.getFullYear()}-${String(moisPrecedent.getMonth() + 1).padStart(2, '0')}`,
   recalculerSsf: true,
 })
 const simulationEnCours = ref<TypeImport | null>(null)
@@ -272,14 +275,23 @@ async function simuler(imp: DefImport) {
       etape.value = 'Rapprochement…'
       res = simulerRoutingAtom(lignes, donnees, { fichier: principal!.name, marqueur: `import-atom-${horodatage()}` })
     }
+    else if (imp.type === 'routing-ssf-dms') {
+      const { chargerDonneesRoutingSsf, simulerRoutingSsf }: any = await import('~/scripts/lib/imports/routing-ssf-dms.mjs')
+      const classeur = await lireClasseur(principal!)
+      const donnees = await chargerDonneesRoutingSsf(sb, { onEtape, toutes })
+      etape.value = 'Rapprochement…'
+      res = simulerRoutingSsf(classeur, donnees, { nomFichier: principal!.name })
+    }
     else {
-      const { chargerDonneesSsf, deriverSsf, lireExcelClientSsf }: any = await import('~/scripts/lib/imports/ssf-sous-zones.mjs')
-      const lignesClient = principal ? lireExcelClientSsf(await lireClasseur(principal)) : null
-      const donnees = await chargerDonneesSsf(sb, { onEtape, toutes })
-      if (!donnees.migrationAppliquee) throw new Error('La migration des sous-zones SSF (20261007100000) n’est pas encore appliquée.')
-      res = deriverSsf(donnees, {
-        moisJours: options.moisSsf || null, pregenererJours: options.recalculerSsf ? 7 : 0, auteurId: authStore.profile?.id || null,
-        lignesClient, fichierClient: principal?.name || null,
+      // Routing mensuel : le fichier de l'agence fait foi.
+      const { chargerDonneesRoutingMensuel, lireRoutingMensuelCsv, lireRoutingMensuelExcel, simulerRoutingMensuel }: any = await import('~/scripts/lib/imports/routing-mensuel.mjs')
+      const lignes = /\.csv$/i.test(principal!.name)
+        ? lireRoutingMensuelCsv(await principal!.text(), principal!.name)
+        : lireRoutingMensuelExcel(await lireClasseur(principal!))
+      const donnees = await chargerDonneesRoutingMensuel(sb, { onEtape, toutes })
+      etape.value = 'Rapprochement…'
+      res = simulerRoutingMensuel(lignes, donnees, {
+        fichier: principal!.name, pregenererJours: options.recalculerSsf ? 7 : 0, auteurId: authStore.profile?.id || null,
       })
     }
     resultat.value = { type: imp.type, titre: imp.titre, fichier: principal?.name || null, res }

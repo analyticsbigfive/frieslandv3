@@ -152,6 +152,7 @@ export function lireDmsClasseur(wb, { seuilDepot = 0, nomFichier = 'l\'export DM
     if (c) {
       // Même client suivi par plusieurs vendeurs / distributeurs
       c.distributeurs.push(v('distributeur')); c.distCodes.push(v('distCode')); c.vendeurs.push(vendeur)
+      c.vendeursDetail.push({ nom: v('vendeur'), code: v('vendeurCode'), distributeur: v('distributeur') })
       if (!c.zone) c.zone = v('zone')
       if (!c.merch) c.merch = v('merch')
       return
@@ -159,6 +160,8 @@ export function lireDmsClasseur(wb, { seuilDepot = 0, nomFichier = 'l\'export DM
     parCode.set(v('code'), {
       code: v('code'), nom: v('nom'), contact: v('contact'), region: v('region'),
       distributeurs: [v('distributeur')], distCodes: [v('distCode')], vendeurs: [vendeur],
+      // Vendeur (SSF) par ligne, pour le routing SSF : nom seul, code, distributeur.
+      vendeursDetail: [{ nom: v('vendeur'), code: v('vendeurCode'), distributeur: v('distributeur') }],
       rue: v('rue'), quartier: v('quartier'), district: v('district'), sousCanal: v('sousCanal'),
       lat: Number(v('lat')), lng: Number(v('lng')), zone: v('zone'), merch: v('merch'),
     })
@@ -436,3 +439,111 @@ export const paquets = (xs, taille) => Array.from({ length: Math.ceil(xs.length 
 
 export const jourIsoLocal = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+// ---------- Fichiers des agences : feuilles de cellules texte ----------
+
+/**
+ * Classeur ExcelJS → [{ nom, lignes: [{ n, cellules }] }], cellules[1] =
+ * colonne A (même index que ExcelJS).
+ */
+export function feuillesDepuisClasseur(wb) {
+  return wb.worksheets.map((ws) => {
+    const lignes = []
+    ws.eachRow((row, n) => {
+      const cellules = []
+      row.eachCell({ includeEmpty: true }, (c, i) => { cellules[i] = String(texteCellule(c.value) ?? '') })
+      lignes.push({ n, cellules })
+    })
+    return { nom: ws.name, lignes }
+  })
+}
+
+/**
+ * CSV → une feuille, même forme. Séparateur détecté sur l'en-tête (« ; » des
+ * Excel français, sinon « , » ou tabulation) ; guillemets doubles gérés.
+ */
+export function feuillesDepuisCsv(texte, nom = 'CSV') {
+  const brut = String(texte || '').replace(/^﻿/, '')
+  const premiere = brut.split(/\r?\n/, 1)[0] || ''
+  const sep = [';', '\t', ','].map(s => [s, premiere.split(s).length]).sort((a, b) => b[1] - a[1])[0][0]
+  const lignes = []
+  let cellules = ['']
+  let champ = ''
+  let guillemets = false
+  let n = 1
+  const finChamp = () => { cellules.push(champ); champ = '' }
+  const finLigne = () => {
+    finChamp()
+    if (cellules.some(c => String(c).trim())) lignes.push({ n, cellules })
+    cellules = ['']
+    n++
+  }
+  for (let i = 0; i < brut.length; i++) {
+    const c = brut[i]
+    if (guillemets) {
+      if (c === '"' && brut[i + 1] === '"') { champ += '"'; i++ }
+      else if (c === '"') guillemets = false
+      else champ += c
+    }
+    else if (c === '"') guillemets = true
+    else if (c === sep) finChamp()
+    else if (c === '\n') finLigne()
+    else if (c !== '\r') champ += c
+  }
+  if (champ || cellules.length > 1) finLigne()
+  return [{ nom, lignes }]
+}
+
+// ---------- Noms de personnes écrits autrement que dans la base ----------
+
+const CIVILITES = new Set(['M', 'MR', 'MME', 'MLLE', 'MELLE', 'MISS', 'MONSIEUR', 'MADAME', 'DR'])
+/** Mots d'un nom de personne, sans civilité ni ponctuation. */
+export const motsPersonne = (s) => norm(s).replace(/[^A-Z0-9 ]/g, ' ').split(' ').filter(w => w && !CIVILITES.has(w))
+
+/** Deux mots identiques à une faute près (mots de 4 lettres ou plus), ou l'un qui commence l'autre (5 lettres ou plus : MURIEL / MURIELLE). */
+export function motsProches(a, b) {
+  if (a === b) return true
+  if (Math.min(a.length, b.length) >= 5 && (a.startsWith(b) || b.startsWith(a))) return true
+  if (Math.min(a.length, b.length) < 4 || Math.abs(a.length - b.length) > 1) return false
+  let i = 0
+  let j = 0
+  let ecarts = 0
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) { i++; j++; continue }
+    if (++ecarts > 1) return false
+    if (a.length > b.length) i++
+    else if (b.length > a.length) j++
+    else { i++; j++ }
+  }
+  return ecarts + (a.length - i) + (b.length - j) <= 1
+}
+
+/**
+ * Personne d'une liste pour un nom de fichier. Ordre : nom identique (mots
+ * dans n'importe quel ordre, civilité retirée), alias, puis tous les mots du
+ * nom le plus court présents dans l'autre (une faute tolérée par mot).
+ * Renvoie { trouve, certitude: 'exact' | 'alias' | 'approche', candidats } ;
+ * plusieurs candidats approchés = ambigu (trouve null, candidats = pistes).
+ * `noms(c)` : noms connus d'un candidat (nom, orthographes…).
+ */
+export function trouverPersonne(texte, candidats, { noms = c => [c.nom], alias = null } = {}) {
+  const mots = motsPersonne(texte)
+  if (!mots.length) return { trouve: null, certitude: null, candidats: [] }
+  const cle = [...mots].sort().join(' ')
+  const exact = candidats.filter(c => noms(c).some(n => [...motsPersonne(n)].sort().join(' ') === cle))
+  if (exact.length === 1) return { trouve: exact[0], certitude: 'exact', candidats: exact }
+  if (alias) {
+    const viaAlias = candidats.filter(c => noms(c).some(n => norm(n) === norm(alias) || cleNom(n) === cleNom(alias)))
+    if (viaAlias.length === 1) return { trouve: viaAlias[0], certitude: 'alias', candidats: viaAlias }
+  }
+  const inclus = (petit, grand) => petit.every(w => grand.some(g => motsProches(w, g)))
+  const approches = candidats.filter(c => noms(c).some((n) => {
+    const autres = motsPersonne(n)
+    const [petit, grand] = mots.length <= autres.length ? [mots, autres] : [autres, mots]
+    return petit.some(w => w.length >= 3) && inclus(petit, grand)
+  }))
+  if (approches.length === 1) return { trouve: approches[0], certitude: 'approche', candidats: approches }
+  // Pistes pour le rapport : au moins un mot en commun.
+  const pistes = approches.length ? approches : candidats.filter(c => noms(c).some(n => motsPersonne(n).some(w => w.length >= 4 && mots.some(m => motsProches(m, w)))))
+  return { trouve: null, certitude: null, candidats: pistes.slice(0, 5) }
+}

@@ -409,7 +409,7 @@
                 </div>
                 <div class="flex items-center gap-2">
                   <UBadge v-if="estRegleDms(tpl)" color="red" variant="soft" size="sm">Portefeuille DMS</UBadge>
-                  <UBadge v-if="tpl.mode === 'quota'" color="violet" variant="soft" size="sm" title="N PDV par canal et par jour, chaque PDV une fois par mois (Atom)">
+                  <UBadge v-if="tpl.mode === 'quota'" color="violet" variant="soft" size="sm" title="N PDV par canal et par jour, chaque PDV une fois par mois (merchandisers d’agence)">
                     Quotas
                   </UBadge>
                   <UBadge v-if="tpl.ssf_id" color="teal" variant="soft" size="sm" :title="quartiersSsfTexte(tpl.ssf_id)">
@@ -820,9 +820,9 @@
           <UInput v-model="newTemplate.distributeur" placeholder="Ex. Distributeur A" size="md" class="w-full" />
         </UFormGroup>
 
-        <!-- SSF (vendeur du distributeur) : sa sous-zone borne les PDV de la
-             règle les jours choisis (merchandisers Atom). -->
-        <UFormGroup v-if="sousZonesSsf.length" label="SSF (avec qui)" :help="aideSsf" size="md" class="sm:col-span-2">
+        <!-- Binôme : le SSF (vendeur du distributeur) avec qui le merchandiser
+             travaille les jours choisis ; ses quartiers bornent les PDV de la règle. -->
+        <UFormGroup v-if="sousZonesSsf.length" label="SSF du binôme" :help="aideSsf" size="md" class="sm:col-span-2">
           <USelectMenu
             v-model="ssfChoisi"
             :options="ssfOptions"
@@ -837,7 +837,7 @@
 
         <UFormGroup
           label="Logique de tournée"
-          help="Quotas : la tournée du jour pioche dans le portefeuille selon la grille Référentiels › Quotas Atom ; un PDV déjà planifié ou visité dans le mois n'est pas repris."
+          help="Quotas : la tournée du jour pioche dans le portefeuille selon la grille Référentiels › Quotas ; un PDV déjà planifié ou visité dans le mois n'est pas repris."
           size="md"
           class="sm:col-span-2"
         >
@@ -1185,7 +1185,7 @@
         <template v-else>
           <p v-if="jourModal.regle?.mode === 'quota'">
             Règle en mode <strong>Quotas</strong> : la liste du jour est tirée au moment de la génération, selon la grille
-            Référentiels › Quotas Atom (N PDV par canal), parmi les PDV du portefeuille pas encore planifiés ni visités dans le mois.
+            Référentiels › Quotas (N PDV par canal), parmi les PDV du portefeuille pas encore planifiés ni visités dans le mois.
           </p>
           <p v-else-if="jourModal.regle">
             Règle en mode <strong>Périmètre</strong> : tout le portefeuille ({{ jourModal.regle.nb_pdv ?? 0 }} PDV) sera visité ce jour-là, hors exceptions.
@@ -1515,8 +1515,8 @@ const ssfChoisi = computed<number>({
   set: (v) => { newTemplate.ssfId = v || null },
 })
 const aideSsf = computed(() => (newTemplate.ssfId
-  ? `${quartiersSsfTexte(newTemplate.ssfId)}. Les PDV de ces quartiers complètent la tournée du jour ; aucun PDV hors sous-zone ne peut être ajouté.`
-  : 'Vendeur du distributeur qui accompagne le merchandiser les jours de cette règle : sa sous-zone borne les PDV (merchandisers Atom).'))
+  ? `${quartiersSsfTexte(newTemplate.ssfId)}. Les PDV de ces quartiers complètent la tournée du jour ; aucun PDV hors de ces quartiers ne peut être ajouté.`
+  : 'Vendeur du distributeur avec qui le merchandiser forme un binôme les jours de cette règle (sans lien hiérarchique : tous deux dépendent du commercial). Ses quartiers bornent les PDV, pour qu’ils passent dans les mêmes PDV.'))
 
 // ---- Modification d'une règle (même formulaire que la création) ----
 const regleEditionId = ref<string | null>(null)

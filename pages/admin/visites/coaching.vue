@@ -11,6 +11,9 @@
         <UFormGroup label="Zone" class="min-w-48">
           <USelectMenu v-model="filtreZone" :options="zoneOptions" placeholder="Toutes" size="sm" searchable />
         </UFormGroup>
+        <UFormGroup label="Coaching" class="min-w-44">
+          <USelectMenu v-model="filtreType" :options="TYPES_COACHING" placeholder="GT et MT" size="sm" value-attribute="value" option-attribute="label" />
+        </UFormGroup>
       </template>
       <template #actions>
         <UButton size="sm" variant="outline" icon="i-heroicons-arrow-down-tray" @click="exporter">Export CSV</UButton>
@@ -29,21 +32,26 @@
       <table class="admin-table w-full">
         <thead>
           <tr>
-            <th>Date</th><th>PDV</th><th>Zone</th><th>Superviseur</th><th>En charge</th><th>Distributeur</th><th>Vendeur</th><th>Engin</th>
+            <th>Date</th><th>Type</th><th>PDV</th><th>Zone</th><th>Superviseur</th><th>En charge</th><th>Distributeur</th><th>Vendeur / merchandiser</th><th>Objectif</th><th>Engin</th>
             <th>SKU dispo</th><th>Visibilité</th><th>Promotion</th><th>Score</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-if="loading"><td colspan="12" class="py-8 text-center text-gray-400">Chargement…</td></tr>
-          <tr v-else-if="!pagines.length"><td colspan="12" class="py-8 text-center text-gray-400">Aucun field coaching sur la période.</td></tr>
+          <tr v-if="loading"><td colspan="14" class="py-8 text-center text-gray-400">Chargement…</td></tr>
+          <tr v-else-if="!pagines.length"><td colspan="14" class="py-8 text-center text-gray-400">Aucun field coaching sur la période.</td></tr>
           <tr v-for="c in pagines" :key="c.id">
             <td>{{ formatDate(c.date_coaching) }}</td>
+            <td><UBadge :color="c.type_coaching === 'mt' ? 'purple' : 'blue'" variant="soft" size="xs">{{ (c.type_coaching || 'gt').toUpperCase() }}</UBadge></td>
             <td class="font-medium">{{ c.pdv?.nom_pdv || c.pdv_id }}</td>
             <td>{{ c.pdv?.zone || '—' }}</td>
             <td>{{ c.superviseur?.nom || c.auteur?.nom || '—' }}</td>
             <td>{{ c.assigne?.nom || '—' }}</td>
             <td>{{ c.distributeur_nom || '—' }}</td>
-            <td>{{ c.vendeur_nom || '—' }}</td>
+            <td>
+              {{ c.type_coaching === 'mt' ? (c.merchandiser?.nom || '—') : (c.ssf?.nom || c.vendeur_nom || '—') }}
+              <span v-if="c.type_coaching !== 'mt' && c.ssf_id" class="ml-1 text-[10px] font-semibold uppercase text-emerald-600" title="Vendeur relié au référentiel SSF">SSF</span>
+            </td>
+            <td>{{ libelleObjectif(c.objectif_code) }}</td>
             <td>{{ c.engin_code || '—' }}</td>
             <td>{{ c.nb_sku_dispo ?? '—' }} / {{ c.nb_sku_pdv ?? '—' }}</td>
             <td>{{ pct(scoreCoaching(c.reponses, 'visibilite').taux) }}</td>
@@ -74,6 +82,15 @@ const rows = ref<FieldCoaching[]>([])
 const periode = ref<PeriodeValue>({ preset: '30j', ...plageDePeriode('30j') })
 const filtreSuperviseur = ref('')
 const filtreZone = ref('')
+const filtreType = ref('')
+const TYPES_COACHING = [
+  { value: '', label: 'GT et MT' },
+  { value: 'gt', label: 'General Trade (vendeurs)' },
+  { value: 'mt', label: 'Modern Trade (merchandisers)' },
+]
+// Objectifs de coaching (Référentiels › Objectifs de coaching).
+const objectifs = ref<{ code: string, libelle: string }[]>([])
+const libelleObjectif = (code?: string | null) => (code ? objectifs.value.find(o => o.code === code)?.libelle || code : '—')
 const page = ref(1)
 const perPage = 25
 
@@ -90,21 +107,25 @@ const zoneOptions = computed(() => [...new Set(rows.value.map(c => c.pdv?.zone).
 
 const filtres = computed(() => rows.value.filter(c =>
   (!filtreSuperviseur.value || (c.superviseur_id || c.auteur_id) === filtreSuperviseur.value)
-  && (!filtreZone.value || c.pdv?.zone === filtreZone.value),
+  && (!filtreZone.value || c.pdv?.zone === filtreZone.value)
+  && (!filtreType.value || (c.type_coaching || 'gt') === filtreType.value),
 ))
 const pagines = computed(() => filtres.value.slice((page.value - 1) * perPage, page.value * perPage))
 
 const chips = computed(() => [
   ...(filtreSuperviseur.value ? [{ key: 'superviseur', label: `Superviseur : ${superviseurOptions.value.find(o => o.value === filtreSuperviseur.value)?.label}` }] : []),
   ...(filtreZone.value ? [{ key: 'zone', label: `Zone : ${filtreZone.value}` }] : []),
+  ...(filtreType.value ? [{ key: 'type', label: TYPES_COACHING.find(t => t.value === filtreType.value)?.label || '' }] : []),
 ])
 function removeChip(key: string) {
   if (key === 'superviseur') filtreSuperviseur.value = ''
   if (key === 'zone') filtreZone.value = ''
+  if (key === 'type') filtreType.value = ''
 }
 function resetFilters() {
   filtreSuperviseur.value = ''
   filtreZone.value = ''
+  filtreType.value = ''
   periode.value = { preset: '30j', ...plageDePeriode('30j') }
 }
 
@@ -134,8 +155,11 @@ function exporter() {
     quartier: c.quartier || '',
     superviseur: c.superviseur?.nom || c.auteur?.nom || '',
     en_charge: c.assigne?.nom || '',
+    type: (c.type_coaching || 'gt').toUpperCase(),
     distributeur: c.distributeur_nom || '',
-    vendeur: c.vendeur_nom || '',
+    vendeur: c.type_coaching === 'mt' ? '' : (c.ssf?.nom || c.vendeur_nom || ''),
+    merchandiser_suivi: c.type_coaching === 'mt' ? (c.merchandiser?.nom || '') : '',
+    objectif: c.objectif_code ? libelleObjectif(c.objectif_code) : '',
     engin: c.engin_code || '',
     route_jour: c.route_jour || '',
     type_pdv: c.type_pdv || '',
@@ -158,13 +182,16 @@ function imprimer() { window.print() }
 async function charger() {
   loading.value = true
   try {
-    const { data, error } = await supabase
-      .from('field_coaching')
-      .select('id, date_coaching, auteur_id, superviseur_id, assigne_a, distributeur_nom, vendeur_nom, engin_code, pdv_id, route_jour, type_pdv, type_pdv_detail, quartier, proprietaire_nom, proprietaire_prenom, proprietaire_tel, nb_sku_pdv, nb_sku_dispo, skus_disponibles, reponses, commentaire, motif_non_participation, pdv:pdv_id(nom_pdv, zone), auteur:auteur_id(nom), assigne:assigne_a(nom), superviseur:superviseur_id(nom)')
+    const BASE = 'id, date_coaching, auteur_id, superviseur_id, assigne_a, distributeur_nom, vendeur_nom, engin_code, pdv_id, route_jour, type_pdv, type_pdv_detail, quartier, proprietaire_nom, proprietaire_prenom, proprietaire_tel, nb_sku_pdv, nb_sku_dispo, skus_disponibles, reponses, commentaire, motif_non_participation, pdv:pdv_id(nom_pdv, zone), auteur:auteur_id(nom), assigne:assigne_a(nom), superviseur:superviseur_id(nom)'
+    // Type, SSF, merchandiser suivi, objectif : migration 20261008160000 (repli sans).
+    const requete = (colonnes: string) => (supabase.from('field_coaching') as any)
+      .select(colonnes)
       .gte('date_coaching', `${periode.value.debut}T00:00:00`)
       .lte('date_coaching', `${periode.value.fin}T23:59:59`)
       .order('date_coaching', { ascending: false })
       .limit(2000)
+    let { data, error } = await requete(`${BASE}, type_coaching, ssf_id, merchandiser_id, objectif_code, ssf:ssf_id(nom), merchandiser:merchandiser_id(nom)`)
+    if (error) ({ data, error } = await requete(BASE))
     if (error) throw error
     rows.value = (data || []) as unknown as FieldCoaching[]
   }
@@ -177,6 +204,10 @@ async function charger() {
   }
 }
 watch(periode, charger, { deep: true })
-watch([filtreSuperviseur, filtreZone], () => { page.value = 1 })
-onMounted(charger)
+watch([filtreSuperviseur, filtreZone, filtreType], () => { page.value = 1 })
+onMounted(async () => {
+  void charger()
+  const { data } = await (supabase.from('coaching_objectif') as any).select('code, libelle').order('ordre')
+  objectifs.value = data || []
+})
 </script>

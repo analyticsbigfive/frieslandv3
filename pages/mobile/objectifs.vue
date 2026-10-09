@@ -43,7 +43,7 @@
         </div>
         <p class="font-semibold text-gray-700 dark:text-gray-200">Pas d'objectifs par canal</p>
         <p class="mx-auto mt-1 max-w-[280px] text-sm text-gray-500 dark:text-gray-400">
-          Votre tournée n'est pas organisée par quotas. Ces objectifs concernent les merchandisers du programme Atom.
+          Votre tournée n'est pas organisée par quotas. Ces objectifs concernent les merchandisers des agences (programme merchandiser).
         </p>
       </div>
 
