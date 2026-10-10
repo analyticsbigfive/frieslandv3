@@ -186,6 +186,12 @@ describe('droits par rôle', () => {
     expect(peut('commercial', '/admin/routing/ecarts-ssf')).toBe(true)
   })
 
+  it('Routing du mois : admin et agence seulement', () => {
+    expect(peut('admin', '/admin/routing/mensuel')).toBe(true)
+    expect(peut('agence', '/admin/routing/mensuel')).toBe(true)
+    for (const role of ['superviseur', 'commercial', 'merchandiser'] as const) expect(peut(role, '/admin/routing/mensuel')).toBe(false)
+  })
+
   it('agence : vue d\'ensemble, activité, planning, visites et trois écrans de paramètres', () => {
     expect(peut('agence', '/admin')).toBe(true)
     expect(peut('agence', '/admin/activite')).toBe(true)

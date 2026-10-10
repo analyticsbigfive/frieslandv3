@@ -118,6 +118,7 @@ export const ADMIN_DOMAINS: AdminDomain[] = [
     tabs: [
       { id: 'planning.tournees', label: 'Tournées', title: 'Tournées planifiées', path: '/admin/routing', access: 'principal', roles: ['admin', 'superviseur', 'agence', 'commercial'], aide: 'Les tournées prévues pour chaque merchandiser.' },
       { id: 'planning.regles', label: 'Règles récurrentes', path: '/admin/routing', query: { vue: 'regles' }, access: 'principal', roles: ['admin', 'superviseur', 'agence', 'commercial'], aide: 'Les règles qui génèrent les tournées chaque semaine ou chaque mois.' },
+      { id: 'planning.mensuel', label: 'Routing du mois', title: 'Charger le routing du mois', path: '/admin/routing/mensuel', access: 'principal', roles: ['admin', 'agence'], aide: 'Le fichier mensuel de l\'agence en trois étapes : le préparer, l\'importer, vérifier les tournées.' },
       { id: 'planning.programme', label: 'Programme merchandiser', path: '/admin/routing/programme-merchandiser', access: 'principal', aide: 'La couverture du mois des merchandisers d\'agence.' },
       { id: 'planning.ecarts', label: 'Écarts de tournée', title: 'Écarts entre merchandisers et vendeurs', path: '/admin/routing/ecarts-ssf', access: 'principal', aide: 'Les jours où le merchandiser et le vendeur du distributeur ne sont pas passés aux mêmes endroits.' },
     ],
