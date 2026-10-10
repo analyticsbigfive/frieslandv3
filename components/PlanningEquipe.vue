@@ -9,7 +9,7 @@
       <UButton size="xs" variant="ghost" color="gray" icon="i-heroicons-chevron-right" aria-label="Semaine suivante" @click="lundi = decalerSemaine(lundi, 1)" />
       <UButton v-if="lundi !== lundiCourant" size="xs" variant="outline" @click="lundi = lundiCourant">Cette semaine</UButton>
 
-      <div class="inline-flex flex-wrap rounded-md border border-slate-300 bg-white p-0.5 dark:border-slate-600 dark:bg-slate-800" role="group" aria-label="Filtrer par agence">
+      <div v-if="!authStore.isAgence" class="inline-flex flex-wrap rounded-md border border-slate-300 bg-white p-0.5 dark:border-slate-600 dark:bg-slate-800" role="group" aria-label="Filtrer par agence">
         <button
           v-for="f in FILTRES"
           :key="f.k"
@@ -158,6 +158,8 @@ const emit = defineEmits<{
 // Un filtre par agence active (Référentiels › Agences) : une nouvelle agence
 // apparaît sans changer le code.
 const { actives: agencesActives, nom: nomAgence, charger: chargerAgences } = useAgences()
+// Le compte agence ne voit que ses merchandisers : pas de filtre par agence.
+const authStore = useAuthStore()
 void chargerAgences()
 const FILTRES = computed(() => [{ k: 'tous', l: 'Tous' }, ...agencesActives.value.map(a => ({ k: a.code, l: a.nom }))])
 const JOURS_COURTS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']

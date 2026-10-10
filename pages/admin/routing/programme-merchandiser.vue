@@ -11,7 +11,7 @@
       </template>
       <template #actions>
         <!-- Direction : un filtre de la page (pas deux entrées de menu). -->
-        <div class="inline-flex rounded-md border border-slate-300 bg-white p-0.5 dark:border-slate-600 dark:bg-slate-800" role="radiogroup" aria-label="Direction">
+        <div v-if="!directionImposee" class="inline-flex rounded-md border border-slate-300 bg-white p-0.5 dark:border-slate-600 dark:bg-slate-800" role="radiogroup" aria-label="Direction">
           <button
             v-for="d in OPTIONS_DIRECTION"
             :key="d.value"
@@ -142,6 +142,13 @@ const direction = ref<Direction>(route.query.direction === 'north' ? 'north' : '
 watch(() => route.query.direction, (d) => { direction.value = d === 'north' ? 'north' : 'south' })
 watch(direction, (d) => { if (route.query.direction !== d) router.replace({ query: { ...route.query, direction: d } }) })
 const { programmes, charger: chargerAgences } = useAgences()
+// Compte agence : une seule direction, celle de son agence (pas de bascule).
+const directionImposee = computed<Direction | null>(() => {
+  if (!authStore.isAgence) return null
+  const d = (authStore.profile as any)?.direction || programmes.value.find(a => a.code === authStore.agenceCourante)?.direction
+  return d === 'north' || d === 'south' ? d : null
+})
+watch(directionImposee, (d) => { if (d && direction.value !== d) direction.value = d }, { immediate: true })
 const agencesTexte = computed(() => programmes.value.filter(a => a.direction === direction.value).map(a => a.nom).join(', '))
 const plusieursAgences = computed(() => new Set(lignes.value.map(r => r.agence).filter(Boolean)).size > 1)
 
