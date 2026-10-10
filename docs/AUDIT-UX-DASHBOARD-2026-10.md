@@ -157,4 +157,6 @@ Mesures du 9 octobre (avant) et du 10 octobre 2026 (après la refonte et la seco
 
 **Traités après la seconde critique (10 octobre)** : un échec de chargement s'affiche avec sa cause et « Réessayer » ; « Non évalué » est distinct de « Non conforme » ; mode sombre (bouton principal 5,9:1, focus, axes des graphiques) ; « Tous » et les textes indicatifs à 4,8:1 ; les confirmations natives remplacées ; session expirée annoncée ; notifications (toasts) enfin affichées ; onglet Planning › Routing du mois pour l'agence ; le commercial consulte les tournées de son équipe. Perfect Store : la disponibilité, la présence et l'assortiment lisent désormais les statuts des relevés (0 % avant, 53,6 % de disponibilité sur les visites avec relevé).
 
-**Restent à décider** : les 10 080 visites Atom sans relevé produit comptent 0 % au lieu de « non évaluées » ; le bloc « Passer au niveau supérieur » dépasse le délai au-delà d'un mois ; aucun point de vente n'atteint un niveau Perfect Store tant que la visibilité exige 100 % des éléments du standard.
+Les 10 080 visites Atom sans relevé ne sont plus notées 0 % : elles sont « non évaluées » (disponibilité moyenne affichée : 53,6 % au lieu de 17,9 %).
+
+**Restent à décider** : 13 097 visites dont le type de point de vente n'a pas de standard ; le bloc « Passer au niveau supérieur » dépasse le délai au-delà d'un mois ; aucun point de vente n'atteint un niveau Perfect Store tant que la visibilité exige 100 % des éléments du standard.

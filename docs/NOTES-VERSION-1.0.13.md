@@ -33,7 +33,8 @@ Application mobile **1.0.13** (versionCode 16) et back-office web.
 **Perfect Store : les chiffres sont enfin calculés**
 - La disponibilité, la présence et l'assortiment restaient à 0 % : le calcul ne lisait que des quantités, presque jamais saisies. Il lit désormais les cases cochées pendant la visite.
 - Règle : une référence est disponible quand « Disponible » est coché sans « En rupture ». Elle est présente quand « Présent » ou « Disponible » est coché.
-- Toutes les visites ont été recalculées. Sur les visites avec relevé, la disponibilité moyenne est de 53,6 %.
+- Toutes les visites ont été recalculées : disponibilité moyenne 53,6 %, présence 64,6 %, assortiment 76,3 %.
+- Les 10 080 visites importées d'Atom, simples passages sans relevé, ne sont plus notées 0 % : elles sont « non évaluées » et sortent des moyennes Perfect Store (elles comptent toujours comme visites).
 - Aucun point de vente n'atteint encore un niveau : le standard exige 100 % des éléments de visibilité.
 
 **Fiche d'une visite et produits**
@@ -64,4 +65,4 @@ Application mobile **1.0.13** (versionCode 16) et back-office web.
 ## À savoir
 
 - Aucune visite n'a été saisie dans l'application depuis le 30 septembre.
-- Les 10 080 visites Atom importées n'ont pas de relevé produit. Elles comptent encore pour 0 % dans les moyennes Perfect Store (correction proposée, à décider).
+- 13 097 visites avec relevé restent « non évaluées » pour la disponibilité : leur type de point de vente n'est rattaché à aucun standard (segment et grade à compléter dans les référentiels).
