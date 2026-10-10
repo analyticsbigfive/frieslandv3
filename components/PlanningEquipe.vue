@@ -5,17 +5,17 @@
   <div class="space-y-3">
     <div class="flex flex-wrap items-center gap-2">
       <UButton size="xs" variant="ghost" color="gray" icon="i-heroicons-chevron-left" aria-label="Semaine précédente" @click="lundi = decalerSemaine(lundi, -1)" />
-      <h4 class="min-w-[14rem] text-center text-sm font-semibold text-gray-900 dark:text-gray-100">{{ libelleSemaine }}</h4>
+      <h2 class="min-w-[14rem] text-center text-base font-semibold text-slate-900 dark:text-white" aria-live="polite">{{ libelleSemaine }}</h2>
       <UButton size="xs" variant="ghost" color="gray" icon="i-heroicons-chevron-right" aria-label="Semaine suivante" @click="lundi = decalerSemaine(lundi, 1)" />
-      <UButton v-if="lundi !== lundiCourant" size="xs" variant="soft" color="gray" @click="lundi = lundiCourant">Aujourd'hui</UButton>
+      <UButton v-if="lundi !== lundiCourant" size="xs" variant="outline" @click="lundi = lundiCourant">Cette semaine</UButton>
 
-      <div class="inline-flex rounded-lg bg-white p-0.5 shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700" role="group" aria-label="Employeur">
+      <div v-if="!authStore.isAgence" class="inline-flex flex-wrap rounded-md border border-slate-300 bg-white p-0.5 dark:border-slate-600 dark:bg-slate-800" role="group" aria-label="Filtrer par agence">
         <button
           v-for="f in FILTRES"
           :key="f.k"
           type="button"
-          class="rounded-md px-3 py-1 text-xs font-medium transition"
-          :class="filtre === f.k ? 'bg-fc-red text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'"
+          class="rounded px-3 py-1 text-xs font-medium transition-colors"
+          :class="filtre === f.k ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700'"
           :aria-pressed="filtre === f.k"
           @click="filtre = f.k"
         >
@@ -24,77 +24,81 @@
       </div>
       <UInput v-model="recherche" size="xs" icon="i-heroicons-magnifying-glass" placeholder="Personne ou zone" class="w-48" aria-label="Rechercher une personne ou une zone" />
 
-      <p class="ml-auto text-xs text-gray-500 dark:text-gray-400">
+      <p class="ml-auto text-xs tabular-nums text-slate-600 dark:text-slate-300">
         <template v-if="chargement">Chargement…</template>
         <template v-else>{{ resume.tournees }} tournée(s) · {{ resume.faits }}/{{ resume.pdv }} PDV faits</template>
       </p>
     </div>
 
-    <div class="relative overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-      <table class="w-full min-w-[52rem] border-separate border-spacing-0 text-xs tabular-nums">
+    <!-- data-no-column-tools : grille personne × jour, déjà filtrée par agence et
+         recherche ; le tri et les filtres par colonne d'AdminTableEnhancer n'y ont pas de sens. -->
+    <div class="relative overflow-x-auto rounded-md border border-slate-200 dark:border-slate-700">
+      <table class="w-full min-w-[52rem] border-separate border-spacing-0 text-xs tabular-nums" data-no-column-tools>
         <thead>
-          <tr class="bg-gray-50 dark:bg-gray-800">
-            <th scope="col" class="sticky left-0 z-10 w-56 border-b border-r border-gray-200 bg-gray-50 px-3 py-2 text-left font-semibold text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+          <tr class="bg-slate-50 dark:bg-slate-800">
+            <th scope="col" class="sticky left-0 z-10 w-56 border-b border-r border-slate-200 bg-slate-50 px-3 py-2 text-left font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
               {{ grille.length }} personne(s)
             </th>
             <th
               v-for="d in jours"
               :key="d"
               scope="col"
-              class="border-b border-gray-200 px-2 py-2 text-center text-[11px] font-semibold uppercase tracking-wide dark:border-gray-700"
-              :class="d === aujourdhui ? 'text-fc-red' : 'text-gray-400'"
+              class="border-b border-slate-200 px-2 py-2 text-center text-xs font-semibold dark:border-slate-700"
+              :class="d === aujourdhui ? 'text-brand-600 dark:text-brand-300' : 'text-slate-600 dark:text-slate-300'"
+              :aria-current="d === aujourdhui ? 'date' : undefined"
             >
               {{ JOURS_COURTS[jourSemaine(d)] }}
-              <span class="block text-sm normal-case" :class="d === aujourdhui ? 'text-fc-red' : 'text-gray-900 dark:text-gray-100'">{{ Number(d.slice(8)) }}</span>
+              <span class="block text-sm" :class="d === aujourdhui ? 'text-brand-600 dark:text-brand-300' : 'text-slate-900 dark:text-white'">{{ Number(d.slice(8)) }}</span>
             </th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="ligne in grille" :key="ligne.id">
-            <th scope="row" class="sticky left-0 z-10 border-b border-r border-gray-100 bg-white px-3 py-2 text-left align-top font-normal dark:border-gray-700 dark:bg-gray-800">
-              <p class="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{{ ligne.nom }}</p>
-              <p class="mt-0.5 flex items-center gap-1.5 text-[11px] text-gray-400">
-                <span
-                  class="rounded px-1 text-[10px] font-semibold uppercase tracking-wide"
-                  :class="ligne.programme ? 'bg-fc-red/10 text-fc-red' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300'"
-                >{{ ligne.agence }}</span>
-                <span class="truncate">{{ ligne.zone }}</span>
-              </p>
+            <th scope="row" class="sticky left-0 z-10 border-b border-r border-slate-200 bg-white px-3 py-2 text-left align-top font-normal dark:border-slate-700 dark:bg-slate-800">
+              <!-- Largeur fixe : sans elle, une longue liste de zones élargit toute la colonne. -->
+              <div class="w-52">
+                <p class="truncate text-sm font-semibold text-slate-900 dark:text-white">{{ ligne.nom }}</p>
+                <p class="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400" :title="ligne.zone || undefined">
+                  <span class="shrink-0 rounded bg-slate-100 px-1.5 text-xs font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200">{{ ligne.agence }}</span>
+                  <span class="truncate">{{ ligne.zone }}</span>
+                </p>
+              </div>
             </th>
             <td
               v-for="(c, i) in ligne.cases"
               :key="jours[i]"
-              class="border-b border-gray-100 p-1 align-top dark:border-gray-700"
-              :class="jours[i] === aujourdhui ? 'bg-fc-red/[0.03]' : ''"
+              class="border-b border-slate-200 p-1 align-top dark:border-slate-700"
+              :class="jours[i] === aujourdhui ? 'bg-brand-50/40 dark:bg-brand-500/5' : ''"
             >
               <button
                 type="button"
-                class="flex min-h-[3.5rem] w-full flex-col items-start gap-0.5 rounded-md p-1.5 text-left transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-fc-red disabled:cursor-default"
+                class="flex min-h-[3.5rem] w-full flex-col items-start gap-0.5 rounded-md p-1.5 text-left transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 disabled:cursor-default"
                 :class="c.classes.fond"
                 :title="c.titre || undefined"
                 :disabled="!c.cliquable"
                 @click="ouvrir(ligne, jours[i]!, c)"
               >
-                <span class="text-[11px] sm:text-xs" :class="c.texte ? c.classes.texte : 'text-gray-300 dark:text-gray-600'">{{ c.texte || '—' }}</span>
-                <span v-if="c.ssf" class="max-w-full truncate text-[10px] font-medium text-gray-500 dark:text-gray-400">{{ c.ssf }}</span>
-                <span v-if="c.progression !== null" class="mt-auto h-1 w-full overflow-hidden rounded-full bg-black/5 dark:bg-white/10">
+                <span v-if="c.texte" class="text-xs" :class="c.classes.texte">{{ c.texte }}</span>
+                <span v-else class="text-xs text-slate-500 dark:text-slate-400"><span aria-hidden="true">—</span><span class="sr-only">Rien de prévu</span></span>
+                <span v-if="c.ssf" class="max-w-full truncate text-xs text-slate-600 dark:text-slate-300">{{ c.ssf }}</span>
+                <span v-if="c.progression !== null" class="mt-auto h-1 w-full overflow-hidden rounded-full bg-black/5 dark:bg-white/10" aria-hidden="true">
                   <span class="block h-full rounded-full bg-current" :style="{ width: `${c.progression}%` }" />
                 </span>
               </button>
             </td>
           </tr>
           <tr v-if="!grille.length && !chargement">
-            <td :colspan="jours.length + 1" class="px-3 py-8 text-center text-sm text-gray-400">
-              Aucune tournée ni règle cette semaine pour ce filtre.
+            <td :colspan="jours.length + 1" class="px-3 py-8 text-center text-sm text-slate-600 dark:text-slate-300">
+              Aucune tournée ni règle cette semaine pour ce filtre. Changez de semaine, d'agence ou videz la recherche.
             </td>
           </tr>
         </tbody>
         <tfoot v-if="grille.length">
-          <tr class="bg-gray-50 dark:bg-gray-800">
-            <td class="sticky left-0 z-10 border-r border-gray-200 bg-gray-50 px-3 py-2 font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
+          <tr class="bg-slate-50 dark:bg-slate-800">
+            <td class="sticky left-0 z-10 border-r border-slate-200 bg-slate-50 px-3 py-2 font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
               Total du jour
             </td>
-            <td v-for="(t, i) in totaux" :key="jours[i]" class="px-2 py-2 text-center font-semibold text-gray-500 dark:text-gray-400">
+            <td v-for="(t, i) in totaux" :key="jours[i]" class="px-2 py-2 text-center font-semibold text-slate-700 dark:text-slate-200">
               <template v-if="!t.n">—</template>
               <template v-else-if="jours[i]! <= aujourdhui">{{ t.faits }}/{{ t.pdv }} faits</template>
               <template v-else>{{ t.pdv }} PDV</template>
@@ -103,19 +107,17 @@
         </tfoot>
       </table>
 
-      <div v-if="chargement" class="absolute inset-0 flex items-center justify-center bg-white/60 dark:bg-gray-900/50">
+      <div v-if="chargement" class="absolute inset-0 flex items-center justify-center bg-white/60 dark:bg-slate-900/50">
         <ChargementContenu variante="compact" libelle="Chargement de la semaine…" />
       </div>
     </div>
 
     <!-- Légende (mêmes couleurs que le calendrier par personne) -->
-    <div class="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-500 dark:text-gray-400">
-      <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-sky-200 dark:bg-sky-500/40" />À venir</span>
-      <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-emerald-200 dark:bg-emerald-500/40" />Tout fait</span>
-      <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-amber-200 dark:bg-amber-500/40" />Incomplète</span>
-      <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm border border-dashed border-gray-400" />Prévue par une règle, à générer</span>
-      <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-gray-200 dark:bg-gray-600" />Suspendue / annulée</span>
-      <span>Sous le nombre de PDV : le SSF du jour (routing mensuel des agences).</span>
+    <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-300">
+      <span v-for="l in LEGENDE" :key="l.libelle" class="inline-flex items-center gap-1.5">
+        <span class="h-3 w-3 rounded-sm" :class="l.pastille" aria-hidden="true" />{{ l.libelle }}
+      </span>
+      <span>Sous le nombre de points de vente : le vendeur du distributeur (SSF) prévu ce jour-là.</span>
     </div>
   </div>
 </template>
@@ -126,6 +128,17 @@ import { toIsoJour } from '~/utils/periode'
 import { estMerchandiserProgramme } from '~/utils/agences'
 import { couvertureJour, decalerSemaine, etatJourTournee, joursSemaine, lundiDe, type EtatJourTournee } from '~/utils/calendrierTournees'
 import { CLASSES_ETAT_TOURNEE } from '~/composables/classesEtatTournee'
+import { messageUtilisateur } from '~/utils/supabaseErrors'
+
+// Légende : mêmes fonds que les cases (CLASSES_ETAT_TOURNEE), cerclés d'un
+// trait pour que les voiles clairs restent visibles à 12 px.
+const LEGENDE = [
+  { libelle: 'À venir', pastille: `${CLASSES_ETAT_TOURNEE.planifiee.fond} ring-1 ring-inset ring-sky-300 dark:ring-sky-500/60` },
+  { libelle: 'Tout fait', pastille: `${CLASSES_ETAT_TOURNEE.faite.fond} ring-1 ring-inset ring-emerald-300 dark:ring-emerald-500/60` },
+  { libelle: 'Incomplète', pastille: `${CLASSES_ETAT_TOURNEE.incomplete.fond} ring-1 ring-inset ring-amber-300 dark:ring-amber-500/60` },
+  { libelle: 'Prévue par une règle, à générer', pastille: 'border border-dashed border-slate-400 dark:border-slate-500' },
+  { libelle: 'Suspendue ou annulée', pastille: `${CLASSES_ETAT_TOURNEE.suspendue.fond} ring-1 ring-inset ring-slate-300 dark:ring-slate-600` },
+] as const
 
 const props = withDefaults(defineProps<{
   /** Toutes les règles de tournée (la page les a déjà chargées). */
@@ -153,6 +166,8 @@ const emit = defineEmits<{
 // Un filtre par agence active (Référentiels › Agences) : une nouvelle agence
 // apparaît sans changer le code.
 const { actives: agencesActives, nom: nomAgence, charger: chargerAgences } = useAgences()
+// Le compte agence ne voit que ses merchandisers : pas de filtre par agence.
+const authStore = useAuthStore()
 void chargerAgences()
 const FILTRES = computed(() => [{ k: 'tous', l: 'Tous' }, ...agencesActives.value.map(a => ({ k: a.code, l: a.nom }))])
 const JOURS_COURTS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
@@ -187,7 +202,7 @@ async function charger() {
     if (moi === jeton) tournees.value = new Map(liste.map(r => [`${r.user_id}|${r.date_routing}`, r]))
   }
   catch (err: any) {
-    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
+    toast.add({ title: 'Semaine non chargée', description: messageUtilisateur(err), color: 'red' })
   }
   finally {
     if (moi === jeton) chargement.value = false

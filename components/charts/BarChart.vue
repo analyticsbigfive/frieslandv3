@@ -1,21 +1,30 @@
 <template>
   <div class="admin-surface p-6">
-    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">{{ title }}</h3>
-    <div class="h-64">
-      <Bar v-if="chartData" :data="chartData" :options="chartOptions" />
+    <h3 class="mb-4 text-base font-semibold text-slate-900 dark:text-white">{{ title }}</h3>
+    <div v-if="chartData" class="h-64">
+      <Bar :data="chartData" :options="chartOptions" />
+    </div>
+    <div v-else class="flex h-64 items-center justify-center rounded-lg bg-slate-50 px-4 text-center text-sm text-slate-600 dark:bg-slate-700/40 dark:text-slate-300">
+      {{ emptyLabel }}
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { SERIES } from '~/utils/chartPalette'
 import { Bar } from 'vue-chartjs'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   title: string
   labels: string[]
   values: number[]
   color?: string
-}>()
+  emptyLabel?: string
+}>(), {
+  emptyLabel: 'Aucune donnée sur la période. Élargissez les dates ou retirez un filtre.',
+})
+
+const axes = useAxesGraphique()
 
 const chartData = computed(() => {
   if (!props.labels?.length) return null
@@ -25,20 +34,22 @@ const chartData = computed(() => {
     datasets: [{
       label: props.title,
       data: props.values,
-      backgroundColor: props.color || '#003DA5',
+      backgroundColor: props.color || SERIES[0],
       borderRadius: 6,
       maxBarThickness: 40,
     }],
   }
 })
 
-const chartOptions = {
+const chartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
     legend: { display: false },
     tooltip: {
-      backgroundColor: '#1f2937',
+      backgroundColor: axes.value.infobulleFond,
+      titleColor: axes.value.infobulleTexte,
+      bodyColor: axes.value.infobulleTexte,
       padding: 10,
       cornerRadius: 8,
     },
@@ -46,13 +57,15 @@ const chartOptions = {
   scales: {
     x: {
       grid: { display: false },
-      ticks: { font: { size: 10 }, color: '#9ca3af' },
+      border: { color: axes.value.bordure },
+      ticks: { font: { size: axes.value.taillePolice }, color: axes.value.texte },
     },
     y: {
       beginAtZero: true,
-      grid: { color: '#f3f4f6' },
-      ticks: { font: { size: 10 }, color: '#9ca3af' },
+      grid: { color: axes.value.grille },
+      border: { color: axes.value.bordure },
+      ticks: { font: { size: axes.value.taillePolice }, color: axes.value.texte },
     },
   },
-}
+}))
 </script>

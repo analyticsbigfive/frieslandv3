@@ -1,19 +1,20 @@
 <template>
   <div class="admin-surface h-full p-6">
     <div class="mb-5">
-      <h3 class="font-semibold text-slate-950 dark:text-white">{{ title }}</h3>
-      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ subtitle }}</p>
+      <h3 class="text-base font-semibold text-slate-900 dark:text-white">{{ title }}</h3>
+      <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">{{ subtitle }}</p>
     </div>
     <div v-if="chartData" class="h-72">
-      <Line v-if="chartData" :data="chartData" :options="chartOptions" />
+      <Line :data="chartData" :options="chartOptions" />
     </div>
-    <div v-else class="flex h-72 items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-400 dark:bg-slate-700/40">
-      Aucune visite sur la période
+    <div v-else class="flex h-72 items-center justify-center rounded-lg bg-slate-50 px-4 text-center text-sm text-slate-600 dark:bg-slate-700/40 dark:text-slate-300">
+      Aucune visite sur la période. Élargissez les dates ou retirez un filtre.
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { REMPLISSAGE_PRINCIPAL, SERIES } from '~/utils/chartPalette'
 import { Line } from 'vue-chartjs'
 
 const props = withDefaults(defineProps<{
@@ -28,10 +29,17 @@ const props = withDefaults(defineProps<{
   seriesLabel: 'Visites',
 })
 
+const axes = useAxesGraphique()
+
 const chartData = computed(() => {
   if (!props.data?.length) return null
 
-  const sorted = [...props.data].sort((a, b) => a.date.localeCompare(b.date))
+  // Seules les dates ISO se trient comme du texte. Les libellés déjà formatés
+  // (« S9 - 2026 », « juillet 2026 ») arrivent dans l'ordre chronologique :
+  // un tri alphabétique mettrait S10 avant S9 et août avant juillet.
+  const sorted = props.data.every(d => isIsoDate(d.date))
+    ? [...props.data].sort((a, b) => a.date.localeCompare(b.date))
+    : props.data
 
   return {
     labels: sorted.map(d =>
@@ -44,24 +52,26 @@ const chartData = computed(() => {
     datasets: [{
       label: props.seriesLabel,
       data: sorted.map(d => d.count),
-      borderColor: '#C8102E',
-      backgroundColor: 'rgba(200, 16, 46, 0.08)',
+      borderColor: SERIES[0],
+      backgroundColor: REMPLISSAGE_PRINCIPAL,
       fill: true,
       tension: 0.4,
       pointRadius: 3,
       pointHoverRadius: 6,
-      pointBackgroundColor: '#C8102E',
+      pointBackgroundColor: SERIES[0],
     }],
   }
 })
 
-const chartOptions = {
+const chartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
     legend: { display: false },
     tooltip: {
-      backgroundColor: '#1f2937',
+      backgroundColor: axes.value.infobulleFond,
+      titleColor: axes.value.infobulleTexte,
+      bodyColor: axes.value.infobulleTexte,
       titleFont: { size: 12 },
       bodyFont: { size: 12 },
       padding: 10,
@@ -71,13 +81,15 @@ const chartOptions = {
   scales: {
     x: {
       grid: { display: false },
-      ticks: { font: { size: 10 }, color: '#9ca3af' },
+      border: { color: axes.value.bordure },
+      ticks: { font: { size: axes.value.taillePolice }, color: axes.value.texte },
     },
     y: {
       beginAtZero: true,
-      grid: { color: '#f3f4f6' },
-      ticks: { font: { size: 10 }, color: '#9ca3af' },
+      grid: { color: axes.value.grille },
+      border: { color: axes.value.bordure },
+      ticks: { font: { size: axes.value.taillePolice }, color: axes.value.texte },
     },
   },
-}
+}))
 </script>

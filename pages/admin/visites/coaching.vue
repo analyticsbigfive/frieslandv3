@@ -1,76 +1,118 @@
 <template>
   <div class="space-y-6">
-    <AdminPageHeader title="Field coaching" eyebrow="Domaine visites" />
+    <AdminPageHeader description="Les coachings terrain faits par les commerciaux auprès des vendeurs du distributeur (SSF) et des merchandisers." />
 
-    <AdminListToolbar :result-count="filtres.length" result-label="coaching(s)" :chips="chips" @reset="resetFilters" @remove-chip="removeChip">
+    <AdminListToolbar :result-count="loading ? undefined : filtres.length" result-label="coaching(s)" :chips="chips" @reset="resetFilters" @remove-chip="removeChip">
       <template #filters>
         <PeriodFilter v-model="periode" />
-        <UFormGroup label="Superviseur" class="min-w-56">
-          <USelectMenu v-model="filtreSuperviseur" :options="superviseurOptions" placeholder="Tous" size="sm" searchable value-attribute="value" option-attribute="label" />
+        <UFormGroup label="Commercial" class="w-full min-w-48 sm:w-56">
+          <USelectMenu v-model="filtreSuperviseur" :options="superviseurOptions" placeholder="Tous" size="sm" searchable searchable-placeholder="Rechercher un commercial…" value-attribute="value" option-attribute="label" />
         </UFormGroup>
-        <UFormGroup label="Zone" class="min-w-48">
-          <USelectMenu v-model="filtreZone" :options="zoneOptions" placeholder="Toutes" size="sm" searchable />
+        <UFormGroup label="Territoire" class="w-full min-w-44 sm:w-48">
+          <USelectMenu v-model="filtreZone" :options="zoneOptions" placeholder="Tous" size="sm" searchable searchable-placeholder="Rechercher un territoire…" />
         </UFormGroup>
-        <UFormGroup label="Coaching" class="min-w-44">
-          <USelectMenu v-model="filtreType" :options="TYPES_COACHING" placeholder="GT et MT" size="sm" value-attribute="value" option-attribute="label" />
+        <UFormGroup label="Canal" class="w-full min-w-44 sm:w-56">
+          <USelectMenu v-model="filtreType" :options="TYPES_COACHING" placeholder="Tous" size="sm" value-attribute="value" option-attribute="label" />
         </UFormGroup>
       </template>
       <template #actions>
-        <UButton size="sm" variant="outline" icon="i-heroicons-arrow-down-tray" @click="exporter">Export CSV</UButton>
-        <UButton size="sm" variant="outline" icon="i-heroicons-printer" @click="imprimer">Imprimer</UButton>
+        <UButton size="sm" variant="outline" icon="i-heroicons-arrow-down-tray" :disabled="!filtres.length" @click="exporter">Exporter (CSV)</UButton>
+        <UButton size="sm" color="gray" variant="ghost" icon="i-heroicons-printer" @click="imprimer">Imprimer</UButton>
       </template>
     </AdminListToolbar>
 
-    <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
-      <div v-for="k in kpis" :key="k.label" class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-        <p class="text-xs uppercase tracking-wide text-gray-500">{{ k.label }}</p>
-        <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{{ k.value }}</p>
-      </div>
+    <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <StatsCard title="Coachings" :value="loading ? '—' : kpis.coachings" icon="i-heroicons-academic-cap" color="red" format="number" />
+      <StatsCard title="Points de vente couverts" :value="loading ? '—' : kpis.pdv" icon="i-heroicons-map-pin" />
+      <StatsCard title="Score de visibilité" :value="loading ? '—' : kpis.visibilite" subtitle="Moyenne des coachings" icon="i-heroicons-eye" format="none" />
+      <StatsCard title="Score de promotion" :value="loading ? '—' : kpis.promotion" subtitle="Moyenne des coachings" icon="i-heroicons-tag" format="none" />
     </div>
 
-    <div class="overflow-x-auto rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-      <table class="admin-table w-full">
-        <thead>
-          <tr>
-            <th>Date</th><th>Type</th><th>PDV</th><th>Zone</th><th>Superviseur</th><th>En charge</th><th>Distributeur</th><th>Vendeur / merchandiser</th><th>Objectif</th><th>Engin</th>
-            <th>SKU dispo</th><th>Visibilité</th><th>Promotion</th><th>Score</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="loading"><td colspan="14" class="py-8 text-center text-gray-400">Chargement…</td></tr>
-          <tr v-else-if="!pagines.length"><td colspan="14" class="py-8 text-center text-gray-400">Aucun field coaching sur la période.</td></tr>
-          <tr v-for="c in pagines" :key="c.id">
-            <td>{{ formatDate(c.date_coaching) }}</td>
-            <td><UBadge :color="c.type_coaching === 'mt' ? 'purple' : 'blue'" variant="soft" size="xs">{{ (c.type_coaching || 'gt').toUpperCase() }}</UBadge></td>
-            <td class="font-medium">{{ c.pdv?.nom_pdv || c.pdv_id }}</td>
-            <td>{{ c.pdv?.zone || '—' }}</td>
-            <td>{{ c.superviseur?.nom || c.auteur?.nom || '—' }}</td>
-            <td>{{ c.assigne?.nom || '—' }}</td>
-            <td>{{ c.distributeur_nom || '—' }}</td>
-            <td>
-              {{ c.type_coaching === 'mt' ? (c.merchandiser?.nom || '—') : (c.ssf?.nom || c.vendeur_nom || '—') }}
-              <span v-if="c.type_coaching !== 'mt' && c.ssf_id" class="ml-1 text-[10px] font-semibold uppercase text-emerald-600" title="Vendeur relié au référentiel SSF">SSF</span>
-            </td>
-            <td>{{ libelleObjectif(c.objectif_code) }}</td>
-            <td>{{ c.engin_code || '—' }}</td>
-            <td>{{ c.nb_sku_dispo ?? '—' }} / {{ c.nb_sku_pdv ?? '—' }}</td>
-            <td>{{ pct(scoreCoaching(c.reponses, 'visibilite').taux) }}</td>
-            <td>{{ pct(scoreCoaching(c.reponses, 'promotion').taux) }}</td>
-            <td><UBadge :color="couleur(scoreCoaching(c.reponses).taux)" variant="subtle">{{ pct(scoreCoaching(c.reponses).taux) }}</UBadge></td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="admin-surface overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Canal</th>
+              <th>Point de vente</th>
+              <th>Commercial</th>
+              <th>Personne coachée</th>
+              <th>Objectif</th>
+              <th class="text-right" title="Références disponibles sur les références suivies au point de vente">Références (SKU) disponibles</th>
+              <th class="text-right">Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="loading">
+              <td colspan="8"><ChargementContenu variante="compact" libelle="Chargement des coachings…" /></td>
+            </tr>
+            <tr v-else-if="erreur">
+              <td colspan="8" class="py-8 text-center text-slate-700 dark:text-slate-200" role="alert">
+                Les coachings n’ont pas pu être chargés. {{ erreur }}
+              </td>
+            </tr>
+            <tr v-else-if="!pagines.length">
+              <td colspan="8" class="py-8 text-center text-slate-600 dark:text-slate-300">
+                {{ rows.length ? 'Aucun coaching ne correspond aux filtres. Retirez un filtre pour en voir plus.' : 'Aucun coaching terrain sur la période. Élargissez la période pour en voir plus.' }}
+              </td>
+            </tr>
+            <tr v-for="c in pagines" :key="c.id">
+              <td class="whitespace-nowrap tabular-nums">{{ formatDate(c.date_coaching) }}</td>
+              <td class="whitespace-nowrap">{{ c.type_coaching === 'mt' ? 'Supermarché (MT)' : 'Boutique (GT)' }}</td>
+              <td>
+                <p class="font-medium text-slate-900 dark:text-white">{{ c.pdv?.nom_pdv || 'Point de vente sans nom' }}</p>
+                <p v-if="c.pdv?.zone" class="text-xs text-slate-500 dark:text-slate-400">{{ c.pdv.zone }}</p>
+              </td>
+              <td>
+                <p>{{ c.superviseur?.nom || c.auteur?.nom || '—' }}</p>
+                <p v-if="c.assigne?.nom" class="text-xs text-slate-500 dark:text-slate-400">En charge : {{ c.assigne.nom }}</p>
+              </td>
+              <td>
+                <p>
+                  {{ c.type_coaching === 'mt' ? (c.merchandiser?.nom || '—') : (c.ssf?.nom || c.vendeur_nom || '—') }}
+                  <span
+                    v-if="c.type_coaching !== 'mt' && c.ssf_id"
+                    class="ml-1 whitespace-nowrap rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200"
+                    title="Vendeur relié à la liste des vendeurs du distributeur (SSF)"
+                  >Vendeur (SSF)</span>
+                </p>
+                <p v-if="c.distributeur_nom || c.engin_code" class="text-xs text-slate-500 dark:text-slate-400">
+                  {{ [c.distributeur_nom, c.engin_code ? `Engin : ${c.engin_code}` : ''].filter(Boolean).join(' · ') }}
+                </p>
+              </td>
+              <td>{{ libelleObjectif(c.objectif_code) }}</td>
+              <td class="text-right tabular-nums">{{ c.nb_sku_dispo ?? '—' }} sur {{ c.nb_sku_pdv ?? '—' }}</td>
+              <td class="whitespace-nowrap text-right">
+                <UBadge :color="couleur(scoreCoaching(c.reponses).taux)" variant="subtle">{{ pct(scoreCoaching(c.reponses).taux) }}</UBadge>
+                <p class="mt-1 text-xs tabular-nums text-slate-500 dark:text-slate-400">
+                  Visibilité {{ pct(scoreCoaching(c.reponses, 'visibilite').taux) }} · Promotion {{ pct(scoreCoaching(c.reponses, 'promotion').taux) }}
+                </p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <AdminPagination
+        v-if="!loading && filtres.length"
+        :total="filtres.length"
+        :page="page"
+        :page-size="perPage"
+        item-label="coaching(s)"
+        @update:page="(p) => page = p"
+      />
     </div>
-    <AdminPagination v-model:page="page" :total="filtres.length" :per-page="perPage" />
   </div>
 </template>
 
 <script setup lang="ts">
-// Rapport des field coaching effectués (lot 4.5) : filtres, table, export, impression.
+// Rapport des coachings terrain (field coaching) effectués (lot 4.5) :
+// filtres, table, export, impression.
 import type { FieldCoaching } from '~/types'
 import type { PeriodeValue } from '~/components/PeriodFilter.vue'
 import { plageDePeriode } from '~/utils/periode'
 import { QUESTIONS_COACHING, scoreCoaching } from '~/utils/fieldCoaching'
+import { messageUtilisateur } from '~/utils/supabaseErrors'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
@@ -78,15 +120,16 @@ const supabase = useSupabaseClient()
 const { exportToCsv } = useCsvExport()
 
 const loading = ref(true)
+const erreur = ref('')
 const rows = ref<FieldCoaching[]>([])
 const periode = ref<PeriodeValue>({ preset: '30j', ...plageDePeriode('30j') })
 const filtreSuperviseur = ref('')
 const filtreZone = ref('')
 const filtreType = ref('')
 const TYPES_COACHING = [
-  { value: '', label: 'GT et MT' },
-  { value: 'gt', label: 'General Trade (vendeurs)' },
-  { value: 'mt', label: 'Modern Trade (merchandisers)' },
+  { value: '', label: 'Tous' },
+  { value: 'gt', label: 'Boutiques (GT), vendeurs' },
+  { value: 'mt', label: 'Supermarchés (MT), merchandisers' },
 ]
 // Objectifs de coaching (Référentiels › Objectifs de coaching).
 const objectifs = ref<{ code: string, libelle: string }[]>([])
@@ -113,8 +156,8 @@ const filtres = computed(() => rows.value.filter(c =>
 const pagines = computed(() => filtres.value.slice((page.value - 1) * perPage, page.value * perPage))
 
 const chips = computed(() => [
-  ...(filtreSuperviseur.value ? [{ key: 'superviseur', label: `Superviseur : ${superviseurOptions.value.find(o => o.value === filtreSuperviseur.value)?.label}` }] : []),
-  ...(filtreZone.value ? [{ key: 'zone', label: `Zone : ${filtreZone.value}` }] : []),
+  ...(filtreSuperviseur.value ? [{ key: 'superviseur', label: `Commercial : ${superviseurOptions.value.find(o => o.value === filtreSuperviseur.value)?.label}` }] : []),
+  ...(filtreZone.value ? [{ key: 'zone', label: `Territoire : ${filtreZone.value}` }] : []),
   ...(filtreType.value ? [{ key: 'type', label: TYPES_COACHING.find(t => t.value === filtreType.value)?.label || '' }] : []),
 ])
 function removeChip(key: string) {
@@ -135,15 +178,17 @@ const kpis = computed(() => {
     const t = filtres.value.map(c => scoreCoaching(c.reponses, bloc).taux).filter((x): x is number => x != null)
     return t.length ? Math.round(t.reduce((a, b) => a + b, 0) / t.length) + ' %' : '—'
   }
-  return [
-    { label: 'Coachings', value: n },
-    { label: 'PDV couverts', value: new Set(filtres.value.map(c => c.pdv_id)).size },
-    { label: 'Perfect Visibility', value: moy('visibilite') },
-    { label: 'Effective Promotion', value: moy('promotion') },
-  ]
+  // Visibilité et promotion : blocs « Perfect Visibility » et « Effective
+  // Promotion » de la grille de coaching.
+  return {
+    coachings: n,
+    pdv: new Set(filtres.value.map(c => c.pdv_id)).size,
+    visibilite: moy('visibilite'),
+    promotion: moy('promotion'),
+  }
 })
 
-function pct(t: number | null) { return t == null ? 'N/A' : `${t} %` }
+function pct(t: number | null) { return t == null ? '—' : `${t} %` }
 function couleur(t: number | null) { return t == null ? 'gray' : t >= 70 ? 'green' : t >= 40 ? 'orange' : 'red' }
 function formatDate(d: string) { return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }
 
@@ -175,7 +220,7 @@ function exporter() {
     score_global: scoreCoaching(c.reponses).taux ?? '',
     motif_non_participation: c.motif_non_participation || '',
     commentaire: c.commentaire || '',
-  })), `field-coaching-${periode.value.debut}-${periode.value.fin}.csv`)
+  })), `coaching-terrain-${periode.value.debut}-${periode.value.fin}.csv`)
 }
 function imprimer() { window.print() }
 
@@ -193,10 +238,12 @@ async function charger() {
     let { data, error } = await requete(`${BASE}, type_coaching, ssf_id, merchandiser_id, objectif_code, ssf:ssf_id(nom), merchandiser:merchandiser_id(nom)`)
     if (error) ({ data, error } = await requete(BASE))
     if (error) throw error
+    erreur.value = ''
     rows.value = (data || []) as unknown as FieldCoaching[]
   }
   catch (err) {
     console.warn('Field coaching : chargement impossible', err)
+    erreur.value = messageUtilisateur(err)
     rows.value = []
   }
   finally {

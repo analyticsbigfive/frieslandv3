@@ -8,10 +8,10 @@
 export type StatutEcart = 'ok' | 'hors_routing_ssf' | 'routing_ssf_absent' | 'sans_binome'
 
 export const LIBELLES_ECART: Record<StatutEcart, { label: string, aide: string, couleur: 'green' | 'red' | 'amber' | 'gray' }> = {
-  ok: { label: 'Aligné', aide: 'Tous les PDV de la tournée sont dans le routing du SSF du binôme.', couleur: 'green' },
-  hors_routing_ssf: { label: 'Écart', aide: 'Des PDV de la tournée ne sont pas dans le routing du SSF du binôme.', couleur: 'red' },
-  routing_ssf_absent: { label: 'Routing SSF absent', aide: 'Le SSF du binôme n’a pas de routing importé (Imports terrain › Routing des SSF).', couleur: 'amber' },
-  sans_binome: { label: 'Sans SSF ce jour', aide: 'Pas de SSF prévu ce jour pour ce merchandiser dans le routing mensuel (case « Aucun SSF » ou sans case).', couleur: 'gray' },
+  ok: { label: 'Aligné', aide: 'Tous les points de vente de la tournée sont aussi dans la tournée du vendeur (SSF) qui l’accompagne.', couleur: 'green' },
+  hors_routing_ssf: { label: 'Écart', aide: 'Des points de vente de la tournée ne sont pas dans la tournée du vendeur (SSF) qui l’accompagne.', couleur: 'red' },
+  routing_ssf_absent: { label: 'Tournée du vendeur manquante', aide: 'La tournée du vendeur (SSF) n’a pas été chargée : Paramètres › Import / Export › « Tournées des vendeurs du distributeur (SSF) ».', couleur: 'amber' },
+  sans_binome: { label: 'Sans vendeur ce jour', aide: 'Aucun vendeur (SSF) n’est prévu ce jour avec ce merchandiser dans le routing mensuel.', couleur: 'gray' },
 }
 
 /**

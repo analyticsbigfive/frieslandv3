@@ -34,6 +34,16 @@
           <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">Connexion</h2>
           <p class="text-gray-500 dark:text-gray-400 text-sm mb-8">Entrez vos identifiants pour accéder à l'application</p>
 
+          <!-- Renvoi du back-office après expiration (plugins/session-expiree.client.ts). -->
+          <div
+            v-if="sessionExpiree"
+            class="mb-6 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-100"
+            role="status"
+          >
+            <UIcon name="i-heroicons-lock-closed" class="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden="true" />
+            <span>Votre session a expiré. Reconnectez-vous : vous reviendrez sur la page où vous étiez.</span>
+          </div>
+
           <form @submit.prevent="handleLogin">
             <div class="space-y-5">
               <UFormGroup label="Email" required>
@@ -114,12 +124,24 @@
 <script setup lang="ts">
 import { Preferences } from '@capacitor/preferences'
 import { homePathForRole } from '~/utils/roles'
+import { MOTIF_SESSION_EXPIREE, cheminRetourValide } from '~/utils/sessionExpiree'
 definePageMeta({ layout: false })
 
 const EMAIL_KEY = 'fc-login-email'
 
 const authStore = useAuthStore()
 const router = useRouter()
+const route = useRoute()
+
+// Retour après reconnexion (?redirect=) : un chemin interne seulement, et dans
+// l'espace du rôle (un compte terrain n'est pas renvoyé vers /admin).
+const retourDemande = cheminRetourValide(route.query.redirect)
+const sessionExpiree = route.query.motif === MOTIF_SESSION_EXPIREE
+function destinationApresConnexion(role?: string | null): string {
+  const accueil = homePathForRole(role)
+  const espace = (chemin: string) => chemin.split(/[/?#]/)[1]
+  return retourDemande && espace(retourDemande) === espace(accueil) ? retourDemande : accueil
+}
 
 // Android : le clavier réduit la fenêtre (adjustResize) ; on ramène le champ
 // actif au-dessus du clavier, sinon le mot de passe reste caché.
@@ -165,8 +187,7 @@ watch(() => authStore.isAuthenticated, async (isAuth) => {
     await authStore.fetchProfile()
   }
 
-  const redirect = homePathForRole(authStore.profile?.role)
-  router.push(redirect)
+  router.push(destinationApresConnexion(authStore.profile?.role))
 }, { immediate: true })
 
 async function handleLogin() {
@@ -188,8 +209,7 @@ async function handleLogin() {
 
     // Wait for profile to load
     await nextTick()
-    const redirect = homePathForRole(authStore.profile?.role)
-    router.push(redirect)
+    router.push(destinationApresConnexion(authStore.profile?.role))
   }
   catch (err: any) {
     errorMessage.value = authStore.error || 'Erreur de connexion'

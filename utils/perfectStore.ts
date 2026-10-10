@@ -9,6 +9,7 @@ import {
   type VisibilityElementRef,
   type VisibilitySegment,
 } from './visibilityStandards'
+import { releveSku } from './products'
 
 export type PerfectBasis = 'taux_vente' | 'taux_revu'
 export type TradeType = 'GT' | 'MT'
@@ -86,6 +87,33 @@ export function calculerDisponibiliteRayon(poids: number[], dispo: number[]): nu
   return Math.round((wsum / wtot) * 100)
 }
 
+// Relevé d'une référence (miroir de releve_sku_disponible / releve_sku_present,
+// migration 20261010160000). Quantité saisie : elle décide. Sinon le statut :
+// disponible = « Disponible » sans « En rupture » ; présent = « Présent » ou
+// « Disponible » sans « En rupture ». Presque aucune visite n'a de quantité.
+function quantiteSaisie(catData: any, sku: string): number | null {
+  const q = catData?.quantites?.[sku]
+  if (typeof q === 'number' && Number.isFinite(q)) return q
+  if (typeof q === 'string' && /^\s*\d+(\.\d+)?\s*$/.test(q)) return Number(q)
+  return null
+}
+
+export function skuDisponibleReleve(catData: any, sku: string, seuil: number, facingsMin?: number | null): boolean {
+  const q = quantiteSaisie(catData, sku)
+  if (q !== null) {
+    const f = Number(catData?.facings?.[sku])
+    return q >= seuil && (facingsMin == null || (Number.isFinite(f) ? f : 0) >= facingsMin)
+  }
+  return releveSku(catData, sku).disponibilite === 'disponible'
+}
+
+export function skuPresentReleve(catData: any, sku: string): boolean {
+  const q = quantiteSaisie(catData, sku)
+  if (q !== null) return q >= 1
+  const d = releveSku(catData, sku).disponibilite
+  return d === 'disponible' || d === 'present'
+}
+
 /** 1 si la quantité relevée atteint le seuil de disponibilité, 0 sinon (miroir SQL). */
 export function estDisponible(quantite: number, seuil: number): number {
   return quantite >= seuil ? 1 : 0
@@ -140,9 +168,7 @@ export function scorePerfectStore(
     : []
 
   for (const s of standards) {
-    const qteRaw = produits?.[s.category]?.quantites?.[s.sku]
-    const qte = Number.isFinite(Number(qteRaw)) ? Number(qteRaw) : 0
-    const avail = qte >= s.min_quantity
+    const avail = skuDisponibleReleve(produits?.[s.category], s.sku, s.min_quantity)
     const w = weightOf(s.category, s.sku)
 
     gEval++; gWtot += w
@@ -309,24 +335,21 @@ export function scoreVisiteB(
         ? refs.seuils.find(x => x.reference_nom === c.reference_nom && x.segment === dispoSegment && x.grade === grade)
         : undefined
       if (!p || !s) continue   // référence non évaluable pour ce canal/segment/grade
-      const qteRaw = produits?.[cat]?.quantites?.[c.sku_key]
-      const qte = Number.isFinite(Number(qteRaw)) ? Number(qteRaw) : 0
       // MT : règle ET — quantité ≥ seuil MT ET facings ≥ seuil MT (miroir SQL).
       // Seuil quantité : standard MT vivant prioritaire, sinon seuil_disponibilite.
-      let okFacings = true
+      // Sans quantité saisie : statut du relevé (skuDisponibleReleve).
+      let facingsMin: number | null = null
       let seuilQte = s.quantite_min
       if (canal === 'MT' && refs.seuilsMt?.length) {
         const segMt = grade === 'A' ? 'Hypermarche' : grade === 'B' ? 'MoyenSuper' : grade === 'C' ? 'PetitSuper' : null
         const fs = segMt ? refs.seuilsMt.find(x => x.reference_nom === c.reference_nom && x.segment_mt === segMt) : undefined
         if (fs) {
           seuilQte = fs.quantite_min
-          const fRaw = produits?.[cat]?.facings?.[c.sku_key]
-          const f = Number.isFinite(Number(fRaw)) ? Number(fRaw) : 0
-          okFacings = f >= fs.facings
+          facingsMin = fs.facings
         }
       }
       poids.push(Number(p.poids))
-      dispo.push(estDisponible(qte, seuilQte) && okFacings ? 1 : 0)
+      dispo.push(skuDisponibleReleve(produits?.[cat], c.sku_key, seuilQte, facingsMin) ? 1 : 0)
     }
     dispoCategorie[cat] = poids.length ? calculerDisponibiliteRayon(poids, dispo) : null
   }
@@ -341,10 +364,8 @@ export function scoreVisiteB(
   let assortimentTaux: number | null = null
   let herosPresents: boolean | null = null
   if (assortmentStandard) {
-    const present = (item: PerfectStoreRefsB['correspondance'][number]) => {
-      const raw = produits?.[item.categorie_jsonb]?.quantites?.[item.sku_key]
-      return Number.isFinite(Number(raw)) && Number(raw) > 0
-    }
+    const present = (item: PerfectStoreRefsB['correspondance'][number]) =>
+      skuPresentReleve(produits?.[item.categorie_jsonb], item.sku_key)
     skuPresents = refs.correspondance.filter(present).length
     assortimentTaux = Math.min(skuPresents / assortmentStandard.min_sku_presents, 1)
     const heroes = refs.correspondance.filter(item => item.role === 'phare')
@@ -436,4 +457,19 @@ export function scoreVisiteB(
     isPerfectStore: niveau !== null,
     tierAtteint: niveau,
   }
+}
+
+/**
+ * Statut d'affichage d'un résultat Perfect Store. `tierAtteint` vaut null aussi
+ * bien pour une visite sous les seuils que pour un relevé sans disponibilité
+ * mesurée : seule la seconde est « non évaluée » — la dire « non conforme »
+ * accusait le point de vente d'un relevé incomplet.
+ */
+export type StatutNiveauVisite = 'atteint' | 'non_conforme' | 'non_evalue'
+export function statutNiveauVisite(r: Pick<PerfectStoreResultB, 'tierAtteint' | 'osaPondere'> | null | undefined): StatutNiveauVisite {
+  if (!r) return 'non_evalue'
+  const code = String(r.tierAtteint ?? '').trim()
+  if (code && !/^non/i.test(code)) return 'atteint'
+  if (r.osaPondere == null) return 'non_evalue'
+  return 'non_conforme'
 }

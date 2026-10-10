@@ -1,98 +1,93 @@
 <template>
   <div class="space-y-6">
-    <AdminPageHeader
-      title="Actions"
-      eyebrow="Domaine actions"
-    />
+    <AdminPageHeader description="La part des visites où chaque action a été réalisée, sur la période et le périmètre choisis." />
 
     <DashboardFilters
       v-model="dashboard.filters.value"
       @filter="dashboard.fetchVisites()"
     />
 
-    <div v-if="dashboard.loading.value" class="flex items-center justify-center py-12">
-      <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-fc-blue" />
-    </div>
+    <ChargementContenu v-if="dashboard.loading.value" variante="cartes" :nombre="2" classe-carte="admin-surface" libelle="Chargement des visites…" />
 
     <template v-else>
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard title="Total visites" :value="String(dashboard.totalVisites.value)" icon="i-heroicons-clipboard-document-list" color="blue" />
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatsCard title="Visites analysées" :value="dashboard.totalVisites.value" icon="i-heroicons-clipboard-document-list" />
+        <StatsCard
+          title="Visites avec au moins une action"
+          :value="visitesAvecAction"
+          :subtitle="dashboard.totalVisites.value ? `${pctAvecAction} % des visites` : ''"
+          icon="i-heroicons-check-badge"
+          color="green"
+        />
       </div>
 
-      <!-- Pie charts par action -->
-      <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100">Taux de réalisation par action</h2>
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        <ClientOnly>
-          <div v-for="action in actionDefs" :key="action.key" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
-            <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 text-center">{{ action.label }}</h4>
-            <ChartsPieChart
-              :labels="['Non', 'Oui']"
-              :values="[actionAbsent(action.key), actionPresent(action.key)]"
-              :colors="['#D1D5DB', '#3B82F6']"
-              height="sm"
-              :show-percentages="true"
-            />
-          </div>
-        </ClientOnly>
-      </div>
-
-      <!-- Barres de progression détaillées -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-4">Détail des taux</h3>
-        <div class="space-y-4">
-          <div v-for="action in actionStats" :key="action.key" class="space-y-1">
-            <div class="flex items-center justify-between">
-              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ action.label }}</span>
-              <span class="text-sm font-bold" :class="action.pct >= 50 ? 'text-green-600' : 'text-orange-500'">
-                {{ action.pct }}% ({{ action.count }}/{{ dashboard.totalVisites.value }})
+      <!-- Une seule représentation par action : la barre et son pourcentage
+           (les sept camemberts répétaient la même information). -->
+      <section class="admin-surface p-5">
+        <h2 class="text-base font-semibold text-slate-900 dark:text-white">Taux de réalisation par action</h2>
+        <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">Part des visites de la période où l’action a été cochée.</p>
+        <ul v-if="dashboard.totalVisites.value" class="mt-5 space-y-4">
+          <li v-for="action in actionStats" :key="action.key" class="space-y-1.5">
+            <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ action.label }}</span>
+              <span class="text-sm tabular-nums text-slate-600 dark:text-slate-300">
+                <span class="font-semibold text-slate-900 dark:text-white">{{ formatPct(action.pct) }} %</span>
+                ({{ action.count.toLocaleString('fr-FR') }} sur {{ dashboard.totalVisites.value.toLocaleString('fr-FR') }} visites)
               </span>
             </div>
-            <div class="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                class="h-full rounded-full transition-all"
-                :class="action.pct >= 50 ? 'bg-green-500' : action.pct >= 25 ? 'bg-orange-400' : 'bg-red-400'"
-                :style="{ width: action.pct + '%' }"
-              />
+            <div class="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700" aria-hidden="true">
+              <div class="h-full rounded-full" :style="{ width: action.pct + '%', backgroundColor: SERIES[0] }" />
             </div>
-          </div>
-        </div>
-      </div>
+          </li>
+        </ul>
+        <p v-else class="mt-4 rounded-md bg-slate-50 px-4 py-8 text-center text-sm text-slate-600 dark:bg-slate-700/40 dark:text-slate-300">
+          Aucune visite sur la période. Élargissez les dates ou retirez des filtres.
+        </p>
+      </section>
 
-      <!-- Évolution -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Évolution des actions réalisées</h3>
-        <ClientOnly>
-          <ChartsVisitesLineChart
-            v-if="evoData.length"
-            title=""
-            :data="evoData"
-          />
-        </ClientOnly>
-      </div>
+      <ClientOnly>
+        <ChartsMultiLineChart
+          title="Visites avec au moins une action, par semaine"
+          subtitle="Semaines du lundi au dimanche."
+          :labels="evoData.map(p => p.date)"
+          :series="[{ label: 'Visites avec au moins une action', data: evoData.map(p => p.count) }]"
+          empty-label="Aucune visite sur la période. Élargissez les dates ou retirez des filtres."
+        />
+      </ClientOnly>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
+import { SERIES } from '~/utils/chartPalette'
+
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const dashboard = useDashboardDirection()
 
 const actionDefs = [
-  { key: 'referencement_produits', label: 'Référencement produits' },
-  { key: 'execution_activites_promotionnelles', label: 'Activités promo.' },
-  { key: 'prospection_pdv', label: 'Prospection PDV' },
-  { key: 'verification_fifo', label: 'Vérification FIFO' },
-  { key: 'rangement_produits', label: 'Rangement produits' },
-  { key: 'pose_affiches', label: "Pose d'affiches" },
-  { key: 'pose_materiel_visibilite', label: 'Pose mat. visibilité' },
+  { key: 'referencement_produits', label: 'Référencement de produits' },
+  { key: 'execution_activites_promotionnelles', label: 'Activités promotionnelles' },
+  { key: 'prospection_pdv', label: 'Prospection de points de vente' },
+  { key: 'verification_fifo', label: 'Rotation des stocks (premier entré, premier sorti)' },
+  { key: 'rangement_produits', label: 'Rangement des produits' },
+  { key: 'pose_affiches', label: 'Pose d’affiches' },
+  { key: 'pose_materiel_visibilite', label: 'Pose de matériel de visibilité' },
 ]
 
 function actionPresent(key: string) {
   return dashboard.countWhere(v => v.data?.actions?.[key])
 }
-function actionAbsent(key: string) {
-  return dashboard.totalVisites.value - actionPresent(key)
+
+// Même prédicat que la courbe : au moins une des actions cochée.
+const visitesAvecAction = computed(() => dashboard.countWhere(v => actionDefs.some(a => v.data?.actions?.[a.key])))
+const pctAvecAction = computed(() => {
+  const total = dashboard.totalVisites.value
+  return total ? Math.round(visitesAvecAction.value / total * 100) : 0
+})
+
+function formatPct(v: number): string {
+  return v.toLocaleString('fr-FR', { maximumFractionDigits: 1 })
 }
 
 const actionStats = computed(() =>

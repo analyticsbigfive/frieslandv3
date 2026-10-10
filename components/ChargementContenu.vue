@@ -5,28 +5,28 @@
   <div role="status" aria-live="polite" :aria-busy="true" class="chargement-contenu">
     <!-- Barre fine sous un champ : libellé discret + progression indéterminée. -->
     <template v-if="variante === 'barre'">
-      <div class="h-1 overflow-hidden rounded-full bg-red-100 dark:bg-red-950/40">
-        <div class="cc-barre h-full w-1/3 rounded-full bg-fc-red" />
+      <div class="h-1 overflow-hidden rounded-full bg-brand-50 dark:bg-brand-950/40" aria-hidden="true">
+        <div class="cc-barre h-full w-1/3 rounded-full bg-brand-500" />
       </div>
-      <p class="mt-1.5 text-xs text-slate-500 dark:text-slate-400">{{ texte }}</p>
+      <p class="mt-1.5 text-xs text-slate-600 dark:text-slate-300">{{ texte }}</p>
     </template>
 
     <p
       v-else
-      class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400"
+      class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300"
       :class="variante === 'compact' ? '' : 'mb-3'"
     >
-      <UIcon name="i-heroicons-arrow-path" class="h-4 w-4 shrink-0 animate-spin text-fc-red" />
+      <UIcon name="i-heroicons-arrow-path" class="h-4 w-4 shrink-0 animate-spin text-slate-500 motion-reduce:animate-none dark:text-slate-400" aria-hidden="true" />
       <span>{{ texte }}</span>
     </p>
 
     <template v-if="variante === 'cartes'">
-      <div class="space-y-3">
+      <div class="space-y-3" aria-hidden="true">
         <div
           v-for="i in nombre"
           :key="i"
-          class="overflow-hidden rounded-xl p-4"
-          :class="classeCarte || 'bg-white shadow-sm dark:bg-gray-800'"
+          class="overflow-hidden p-4"
+          :class="classeCarte || 'admin-surface'"
         >
           <div class="flex items-center gap-3">
             <div class="cc-bloc h-10 w-10 shrink-0 rounded-full" />
@@ -34,15 +34,15 @@
               <div class="cc-bloc h-4 rounded" :style="{ width: `${largeur(i, 45, 30)}%` }" />
               <div class="cc-bloc h-3 rounded" :style="{ width: `${largeur(i, 25, 20)}%` }" />
             </div>
-            <div class="cc-bloc hidden h-8 w-28 rounded-lg sm:block" />
+            <div class="cc-bloc hidden h-8 w-28 rounded-md sm:block" />
           </div>
         </div>
       </div>
     </template>
 
     <template v-else-if="variante === 'lignes'">
-      <div class="space-y-2">
-        <div v-for="i in nombre" :key="i" class="flex items-center gap-3 rounded-lg px-1 py-1.5">
+      <div class="space-y-2" aria-hidden="true">
+        <div v-for="i in nombre" :key="i" class="flex items-center gap-3 px-1 py-1.5">
           <div class="cc-bloc h-7 w-7 shrink-0 rounded-full" />
           <div class="flex-1 space-y-1.5">
             <div class="cc-bloc h-3.5 rounded" :style="{ width: `${largeur(i, 55, 35)}%` }" />
@@ -65,7 +65,7 @@ const props = withDefaults(defineProps<{
   progression?: number | null
   /** Unité de la progression, ex. « PDV ». */
   unite?: string
-  /** Classe des cartes (ex. mobile-card) pour coller au style de l'écran. */
+  /** Classe des cartes (ex. mobile-card) pour coller au style de l'écran ; par défaut, la carte plate du back-office (admin-surface). */
   classeCarte?: string
 }>(), {
   libelle: 'Chargement…',

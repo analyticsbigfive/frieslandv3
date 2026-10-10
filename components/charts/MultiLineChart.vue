@@ -1,19 +1,20 @@
 <template>
   <div class="admin-surface h-full p-6">
     <div v-if="title || subtitle" class="mb-5">
-      <h3 class="font-semibold text-slate-950 dark:text-white">{{ title }}</h3>
-      <p v-if="subtitle" class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ subtitle }}</p>
+      <h3 class="text-base font-semibold text-slate-900 dark:text-white">{{ title }}</h3>
+      <p v-if="subtitle" class="mt-1 text-xs text-slate-600 dark:text-slate-300">{{ subtitle }}</p>
     </div>
     <div v-if="chartData" :class="heightClass">
       <Line :data="chartData" :options="chartOptions" />
     </div>
-    <div v-else class="flex items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-400 dark:bg-slate-700/40" :class="heightClass">
+    <div v-else class="flex items-center justify-center rounded-lg bg-slate-50 px-4 text-center text-sm text-slate-600 dark:bg-slate-700/40 dark:text-slate-300" :class="heightClass">
       {{ emptyLabel }}
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { SERIES } from '~/utils/chartPalette'
 // Courbes multi-séries (lot 5, 1.0.4). VisitesLineChart est mono-série,
 // couleur figée, sans légende : impossible de comparer deux périodes ou
 // plusieurs PDV dessus. Axe de catégories (pas de TimeScale enregistrée dans
@@ -43,10 +44,13 @@ const props = withDefaults(defineProps<{
   subtitle: '',
   unit: '',
   height: 'md',
-  emptyLabel: 'Aucune donnée sur la période',
+  emptyLabel: 'Aucune donnée sur la période. Élargissez les dates ou retirez un filtre.',
 })
 
-const PALETTE = ['#C8102E', '#2563EB', '#059669', '#D97706', '#7C3AED', '#DB2777', '#0891B2']
+const axes = useAxesGraphique()
+
+// Palette commune (utils/chartPalette.ts), ordre fixe.
+const PALETTE = [...SERIES]
 
 const heightClass = computed(() => ({ sm: 'h-56', md: 'h-72', lg: 'h-96' }[props.height]))
 
@@ -76,9 +80,11 @@ const chartOptions = computed(() => ({
   maintainAspectRatio: false,
   interaction: { mode: 'index' as const, intersect: false },
   plugins: {
-    legend: { display: true, position: 'top' as const, labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 } } },
+    legend: { display: true, position: 'top' as const, labels: { usePointStyle: true, boxWidth: 8, font: { size: axes.value.taillePolice }, color: axes.value.texte } },
     tooltip: {
-      backgroundColor: '#1f2937',
+      backgroundColor: axes.value.infobulleFond,
+      titleColor: axes.value.infobulleTexte,
+      bodyColor: axes.value.infobulleTexte,
       titleFont: { size: 12 },
       bodyFont: { size: 12 },
       padding: 10,
@@ -89,12 +95,13 @@ const chartOptions = computed(() => ({
     },
   },
   scales: {
-    x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#9ca3af' } },
+    x: { grid: { display: false }, border: { color: axes.value.bordure }, ticks: { font: { size: axes.value.taillePolice }, color: axes.value.texte } },
     y: {
       beginAtZero: true,
       ...(props.max != null ? { max: props.max } : {}),
-      grid: { color: '#f3f4f6' },
-      ticks: { font: { size: 10 }, color: '#9ca3af', callback: (v: any) => `${v}${props.unit}` },
+      grid: { color: axes.value.grille },
+      border: { color: axes.value.bordure },
+      ticks: { font: { size: axes.value.taillePolice }, color: axes.value.texte, callback: (v: any) => `${v}${props.unit}` },
     },
   },
 }))

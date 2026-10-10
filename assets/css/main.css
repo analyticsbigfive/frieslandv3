@@ -6,28 +6,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Jetons du back-office : DESIGN.md (« Registre net »). */
 :root {
-  --admin-bg: #f3f5f2;
-  --admin-ink: #172018;
-  --admin-muted: #687466;
-  --admin-line: #dfe5dc;
-  --admin-panel: #ffffff;
-  --admin-panel-soft: #f8faf6;
-  --admin-accent: #C8102E;
-  --admin-accent-dark: #9B0D23;
-  --admin-green: #2f7d52;
-  --admin-amber: #b36b16;
-  --fc-blue: #C8102E;
-  --fc-blue-dark: #9B0D23;
-  --fc-blue-light: #FDE8EC;
-  --fc-red: #C8102E;
-  --fc-red-dark: #9B0D23;
-  --fc-red-light: #FDE8EC;
-  --fc-green: #10B981;
-  --fc-green-light: #ECFDF5;
-  --fc-orange: #F59E0B;
-  --fc-gray: #64748B;
-  --fc-gray-light: #F1F5F9;
+  --admin-bg: #F8FAFC;
+  --admin-ink: #0F172A;
+  --admin-focus: #C8102E;
+}
+
+/* Mode sombre : fond slate-950 (celui du layout admin), texte slate-100,
+   anneau de focus brand-300 (4,3:1 sur slate-800, 5,9:1 sur slate-950). */
+.dark {
+  --admin-bg: #020617;
+  --admin-ink: #F1F5F9;
+  --admin-focus: #F0516F;
 }
 
 @layer base {
@@ -42,9 +33,7 @@
   }
 
   body {
-    background:
-      radial-gradient(circle at top left, rgb(200 16 46 / 8%), transparent 34rem),
-      linear-gradient(180deg, #f8faf6 0%, var(--admin-bg) 100%);
+    background: var(--admin-bg);
     color: var(--admin-ink);
     touch-action: manipulation;
     text-rendering: optimizeLegibility;
@@ -65,8 +54,13 @@
   }
 
   :focus-visible {
-    outline: 3px solid rgb(200 16 46 / 35%);
+    outline: 2px solid var(--admin-focus);
     outline-offset: 2px;
+  }
+
+  ::selection {
+    background: #FDE8EC;
+    color: #0F172A;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -103,28 +97,27 @@
     padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
   }
 
+  /* Surfaces plates : trait de 1 px, aucune ombre (The Flat-By-Default Rule). */
   .admin-surface {
-    @apply rounded-xl border border-slate-200/80 bg-white shadow-[0_18px_48px_-38px_rgba(23,32,24,0.65)] dark:border-slate-700 dark:bg-slate-800;
+    @apply rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800;
   }
 
   .admin-section-tabs {
-    @apply border-b border-slate-200/80 bg-transparent dark:border-slate-700;
+    @apply border-b border-slate-200 bg-transparent dark:border-slate-700;
   }
 
   .admin-page-header {
     @apply flex flex-wrap items-end justify-between gap-4;
   }
 
-  .admin-page-header__eyebrow {
-    @apply mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-fc-red;
-  }
-
   .admin-page-header__title {
-    @apply m-0 text-2xl font-bold tracking-tight text-slate-950 dark:text-white;
+    @apply m-0 text-2xl font-bold leading-tight text-slate-900 dark:text-white;
+    text-wrap: balance;
   }
 
   .admin-page-header__description {
-    @apply mt-1 max-w-3xl text-sm leading-6 text-slate-500 dark:text-slate-400;
+    @apply mt-1 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300;
+    text-wrap: pretty;
   }
 
   .admin-page-header__actions {
@@ -141,23 +134,23 @@
   }
 
   .admin-section-tabs__link {
-    @apply inline-flex min-h-9 shrink-0 items-center justify-center gap-2 border-b-2 border-transparent px-3 py-2 text-sm font-medium text-slate-500 transition-colors duration-200 hover:border-slate-300 hover:text-slate-900 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:text-white;
+    @apply -mb-px inline-flex min-h-10 shrink-0 items-center justify-center gap-2 border-b-2 border-transparent px-3 py-2 text-sm font-medium text-slate-600 transition-colors duration-150 hover:border-slate-300 hover:text-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:text-white;
   }
 
   .admin-section-tabs__link--active {
-    @apply border-fc-red text-fc-red hover:border-fc-red hover:text-fc-red dark:border-fc-red dark:text-fc-red dark:hover:border-fc-red dark:hover:text-fc-red;
+    @apply border-brand-500 font-semibold text-brand-500 hover:border-brand-500 hover:text-brand-500 dark:border-brand-400 dark:text-brand-300 dark:hover:border-brand-400 dark:hover:text-brand-300;
   }
 
   .admin-metric-tile {
-    @apply rounded-xl border border-slate-200/80 bg-white p-5 shadow-[0_12px_34px_-30px_rgba(23,32,24,0.6)] transition duration-300 hover:-translate-y-0.5 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600;
+    @apply rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800;
   }
 
   .admin-toolbar {
-    @apply rounded-xl border border-slate-200/80 bg-white p-4 shadow-[0_12px_34px_-30px_rgba(23,32,24,0.55)] dark:border-slate-700 dark:bg-slate-800;
+    @apply rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800;
   }
 
   .admin-list-toolbar {
-    @apply rounded-xl border border-slate-200/80 bg-white px-4 py-3 shadow-[0_12px_34px_-30px_rgba(23,32,24,0.55)] dark:border-slate-700 dark:bg-slate-800;
+    @apply rounded-lg border border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-800;
   }
 
   .admin-list-toolbar__main {
@@ -181,16 +174,16 @@
   }
 
   .admin-list-toolbar__chip {
-    @apply inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:bg-red-50 hover:text-fc-red dark:bg-slate-700/60 dark:text-slate-300 dark:hover:bg-red-950/40 dark:hover:text-red-300;
+    @apply inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-brand-50 hover:text-brand-600 dark:bg-slate-700/60 dark:text-slate-200 dark:hover:bg-brand-950/40 dark:hover:text-brand-300;
   }
 
   .admin-list-toolbar__footer {
-    @apply mt-3 flex min-h-7 items-center justify-between gap-3 border-t border-slate-100 pt-2 dark:border-slate-700;
+    @apply mt-3 flex min-h-7 items-center justify-between gap-3 border-t border-slate-200 pt-2 dark:border-slate-700;
   }
 
   .admin-list-toolbar__count,
   .admin-pagination__summary {
-    @apply text-xs text-slate-500 dark:text-slate-400;
+    @apply text-xs text-slate-600 dark:text-slate-300;
   }
 
   .admin-list-toolbar__count {
@@ -198,15 +191,15 @@
   }
 
   .admin-filter-toggle {
-    @apply inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 dark:border-slate-600 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:bg-slate-700 dark:hover:text-white;
+    @apply inline-flex min-h-9 items-center gap-1.5 rounded-md border border-slate-300 px-3 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-600 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:bg-slate-700 dark:hover:text-white;
   }
 
   .admin-filter-toggle__count {
-    @apply rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] tabular-nums text-slate-500 dark:bg-slate-700 dark:text-slate-300;
+    @apply rounded-full bg-brand-50 px-1.5 py-0.5 text-xs font-semibold tabular-nums text-brand-600 dark:bg-brand-950 dark:text-brand-300;
   }
 
   .admin-pagination {
-    @apply flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-4 py-3 dark:border-slate-700;
+    @apply flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 dark:border-slate-700;
   }
 
   .admin-pagination__actions {
@@ -214,31 +207,30 @@
   }
 
   .admin-table thead {
-    @apply bg-slate-50/80 dark:bg-slate-700/50;
+    @apply bg-slate-50 dark:bg-slate-700/50;
   }
 
   .admin-table {
     @apply w-full;
   }
 
-  .admin-table th {
-    @apply px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400;
+  /* En-têtes en casse normale, 12 px au moins (The No Shouting Rule).
+     :where() garde la spécificité d'une seule classe : un utilitaire posé sur
+     la cellule (text-right, py-10…) l'emporte. */
+  .admin-table :where(th) {
+    @apply px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300;
   }
 
-  .admin-table td {
-    @apply px-5 py-3.5 text-sm text-slate-600 dark:text-slate-300;
+  .admin-table :where(td) {
+    @apply px-4 py-3 text-sm text-slate-700 dark:text-slate-200;
   }
 
   .admin-table tbody {
-    @apply divide-y divide-slate-100 dark:divide-slate-700;
+    @apply divide-y divide-slate-200 dark:divide-slate-700;
   }
 
   .admin-table tbody tr {
-    @apply transition-colors hover:bg-slate-50/70 dark:hover:bg-slate-700/40;
-  }
-
-  .admin-kpi-chip {
-    @apply rounded-xl border border-white/70 bg-white/75 px-3 py-2 shadow-[0_10px_26px_-24px_rgba(23,32,24,0.9)] backdrop-blur dark:border-slate-700 dark:bg-slate-800/75;
+    @apply transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/40;
   }
 
 }
@@ -247,19 +239,6 @@ body {
   font-family: 'Nunito Sans Variable', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-#admin-main-content h1 {
-  color: #172018;
-  font-size: clamp(1.55rem, 1.1rem + 1.1vw, 2.2rem);
-  font-weight: 700;
-  letter-spacing: 0;
-  line-height: 1.12;
-  text-wrap: balance;
-}
-
-.dark #admin-main-content h1 {
-  color: #f8fafc;
 }
 
 #admin-main-content h1 + p,
@@ -278,17 +257,6 @@ body {
   position: relative;
 }
 
-#admin-main-content .admin-surface::before,
-#admin-main-content .admin-metric-tile::before,
-#admin-main-content .admin-toolbar::before {
-  content: '';
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 70%);
-}
-
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #f1f5f9; }
@@ -298,41 +266,6 @@ body {
 .dark ::-webkit-scrollbar-track { background: #1e293b; }
 .dark ::-webkit-scrollbar-thumb { background: #475569; }
 .dark ::-webkit-scrollbar-thumb:hover { background: #64748b; }
-
-/* Toggle buttons */
-.toggle-btn {
-  @apply px-6 py-3 rounded-lg font-semibold text-sm transition-all duration-200 cursor-pointer select-none;
-}
-.toggle-btn-active-red {
-  @apply bg-red-600 text-white shadow-md;
-}
-.toggle-btn-active-green {
-  @apply bg-emerald-600 text-white shadow-md;
-}
-.toggle-btn-inactive {
-  @apply bg-gray-100 text-gray-600 hover:bg-gray-200;
-}
-
-/* Status badges */
-.badge-disponible {
-  @apply bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full text-xs font-medium;
-}
-.badge-rupture {
-  @apply bg-red-100 text-red-700 px-2.5 py-0.5 rounded-full text-xs font-medium;
-}
-.badge-present {
-  @apply bg-red-100 text-red-700 px-2.5 py-0.5 rounded-full text-xs font-medium;
-}
-
-/* Card hover effects */
-.card-hover {
-  @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md;
-}
-
-/* Mobile bottom navigation */
-.bottom-nav-active {
-  @apply text-red-700 border-t-2 border-red-700;
-}
 
 /* PWA safe areas */
 .safe-area-top {

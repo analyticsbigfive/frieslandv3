@@ -186,6 +186,20 @@ figure.telephone img {
 }
 figure.telephone figcaption { font-size: 8pt; color: var(--gris); margin-top: 2mm; }
 
+/* Captures d'écran du back-office (pleine largeur, avec légende) */
+figure.ecran { margin: 3mm 0 5mm; break-inside: avoid; }
+figure.ecran img {
+  width: 100%; display: block;
+  border: 1px solid var(--ligne); border-radius: 2mm;
+}
+figure.ecran figcaption { font-size: 8.5pt; color: var(--gris); margin-top: 1.5mm; }
+figure.ecran--demi img { width: 70%; }
+
+/* Glossaire : terme et définition sur deux colonnes */
+dl.glossaire { display: grid; grid-template-columns: 42mm 1fr; gap: 1.6mm 5mm; margin: 2mm 0 4mm; }
+dl.glossaire dt { font-weight: 700; color: var(--encre); }
+dl.glossaire dd { margin: 0; }
+
 /* Cartes (grilles de fonctions) */
 .cartes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3.5mm; margin: 2mm 0 4mm; }
 .carte { border: 1px solid var(--ligne); border-radius: 3mm; padding: 3.5mm 4.5mm; background: #fff; break-inside: avoid; }

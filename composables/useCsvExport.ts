@@ -1,5 +1,6 @@
 // composables/useCsvExport.ts
-import ExcelJS from 'exceljs'
+import type ExcelJS from 'exceljs'
+import { chargerExcelJS } from '~/utils/chargerExcel'
 import type { Visite, PDV } from '~/types'
 import { parseCsvTexte } from '~/utils/routingImport'
 import { catalogueProduits, getSkus, skuQuantity } from '~/utils/products'
@@ -10,7 +11,8 @@ export function useCsvExport() {
    * Export visites to Excel (format compatible Google Sheets)
    */
   async function exportVisitesToExcel(visites: Visite[]) {
-    const wb = new ExcelJS.Workbook()
+    const Excel = await chargerExcelJS()
+    const wb = new Excel.Workbook()
     const ws = wb.addWorksheet('Visites')
 
     // Colonnes produits depuis le catalogue (Paramètres › Produits du
@@ -103,7 +105,8 @@ export function useCsvExport() {
    * Export PDV to Excel
    */
   async function exportPDVToExcel(pdvList: PDV[]) {
-    const wb = new ExcelJS.Workbook()
+    const Excel = await chargerExcelJS()
+    const wb = new Excel.Workbook()
     const ws = wb.addWorksheet('PDV')
 
     ws.columns = [

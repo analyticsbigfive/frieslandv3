@@ -1,20 +1,17 @@
 <template>
   <div class="space-y-6">
-    <AdminPageHeader
-      title="Perfect Store"
-      eyebrow="Vue de synthèse"
-    />
+    <AdminPageHeader />
 
-    <!-- Filtres cascade Division → Territoire → Quartier + Distributeur (pilotent KPI + tableaux) -->
+    <!-- Filtres cascade Direction → Territoire → Quartier + Distributeur (pilotent indicateurs + listes) -->
     <div class="admin-toolbar">
       <!-- Période : un PDV peut être Perfect Store cette semaine et plus la
-           suivante — le KPI n'a pas de sens sans fenêtre de temps explicite. -->
-      <div class="mb-3 border-b border-slate-100 pb-3 dark:border-slate-700">
+           suivante — l'indicateur n'a pas de sens sans fenêtre de temps explicite. -->
+      <div class="mb-3 border-b border-slate-200 pb-3 dark:border-slate-700">
         <PeriodFilter v-model="periode" />
       </div>
       <div class="grid grid-cols-2 gap-2 sm:grid-cols-5">
-        <UFormGroup label="Division (North/South)" size="xs">
-          <USelectMenu v-model="fDivision" :options="divisionOptions" placeholder="Toutes" size="xs" searchable :loading="loading" />
+        <UFormGroup label="Direction" size="xs">
+          <USelectMenu v-model="fDivision" :options="divisionOptions" placeholder="Toutes" size="xs" searchable searchable-placeholder="Rechercher…" :loading="loading" />
         </UFormGroup>
         <UFormGroup label="Territoire" size="xs">
           <USelectMenu v-model="fTerritoire" :options="territoireOptions" placeholder="Tous" size="xs" searchable searchable-placeholder="Rechercher…" :loading="loading" />
@@ -26,7 +23,7 @@
           <USelectMenu v-model="fDistrib" :options="distribOptions" placeholder="Tous" size="xs" searchable searchable-placeholder="Rechercher…" :loading="loading" />
         </UFormGroup>
         <div class="flex items-end">
-          <UButton v-if="filtersActive" size="xs" variant="ghost" @click="resetManqueFilters">Réinitialiser</UButton>
+          <UButton v-if="filtersActive" size="xs" color="gray" variant="ghost" @click="resetManqueFilters">Réinitialiser</UButton>
         </div>
       </div>
       <div v-if="filtersActive" class="admin-list-toolbar__chips">
@@ -36,236 +33,570 @@
           type="button"
           class="admin-list-toolbar__chip"
           :title="`Retirer le filtre ${chip.label}`"
+          :aria-label="`Retirer le filtre ${chip.label}`"
           @click="removeDashFilterChip(chip.key)"
         >
           <span>{{ chip.label }}</span>
-          <UIcon name="i-heroicons-x-mark" class="h-3.5 w-3.5" />
+          <UIcon name="i-heroicons-x-mark" class="h-3.5 w-3.5" aria-hidden="true" />
         </button>
       </div>
     </div>
 
-    <div v-if="loading" class="grid gap-4 lg:grid-cols-3">
-      <div class="admin-surface h-44 animate-pulse bg-slate-100 dark:bg-slate-800 lg:col-span-2" />
-      <div class="admin-surface h-44 animate-pulse bg-slate-100 dark:bg-slate-800" />
+    <div v-if="loading" class="space-y-3" role="status" aria-label="Chargement des indicateurs Perfect Store">
+      <div class="admin-surface h-28 animate-pulse bg-slate-100 dark:bg-slate-800" />
+      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div v-for="i in 4" :key="i" class="admin-surface h-24 animate-pulse bg-slate-100 dark:bg-slate-800" />
+      </div>
     </div>
 
     <template v-else-if="global">
-      <!-- Compteur global : le NOMBRE de Perfect Stores d'abord, le taux ensuite.
-           Un pourcentage seul ne dit pas sur quoi il porte. -->
-      <div class="admin-surface relative overflow-hidden p-4 sm:p-5">
-        <div class="absolute inset-y-0 left-0 w-1 bg-fc-red" />
-        <div class="flex flex-wrap items-center justify-between gap-x-8 gap-y-4">
+      <!-- Réponse d'abord : combien de points de vente sont au standard, et à
+           quel niveau. Le NOMBRE avant le taux : un pourcentage seul ne dit pas
+           sur quoi il porte. -->
+      <section class="admin-surface p-4 sm:p-5" aria-label="Perfect Stores sur la période">
+        <div class="flex flex-wrap items-start justify-between gap-x-10 gap-y-5">
           <div>
-            <p class="text-[11px] font-semibold uppercase tracking-[0.12em] text-fc-red">Perfect Stores · {{ periodeLabel }}</p>
-            <p class="mt-1.5 text-5xl font-semibold leading-none tracking-tight tabular-nums text-slate-950 dark:text-white">
-              {{ global.pdv_perfect_stores }}
+            <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">Perfect Stores</p>
+            <p class="mt-1.5 text-3xl font-bold leading-none tabular-nums text-slate-900 dark:text-white">
+              {{ fmtNombre(global.pdv_perfect_stores) }}
             </p>
-            <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
-              {{ fmtPct(global.pdv_perfect_store_pct) }} des {{ global.pdv_scores }} PDV visités
+            <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+              {{ fmtPct(global.pdv_perfect_store_pct) }} des {{ fmtNombre(global.pdv_scores) }} points de vente visités · {{ periodeLabel }}
             </p>
           </div>
 
-          <!-- Ventilation par niveau, remontée de l'onglet « niveaux » -->
-          <div v-if="niveauBreakdown.length" class="flex flex-wrap items-center gap-x-5 gap-y-2">
-            <span v-for="n in niveauBreakdown" :key="n.niveau" class="inline-flex items-baseline gap-1.5">
-              <span class="h-2 w-2 shrink-0 self-center rounded-full" :class="tierDotClass(n.niveau)" />
-              <strong class="text-lg font-semibold tabular-nums text-slate-900 dark:text-white">{{ n.nb_pdv }}</strong>
-              <span class="text-xs text-slate-500 dark:text-slate-400">{{ n.label }}</span>
-            </span>
-            <span v-if="global.pdv_non_conformes" class="inline-flex items-baseline gap-1.5">
-              <span class="h-2 w-2 shrink-0 self-center rounded-full bg-slate-300 dark:bg-slate-600" />
-              <strong class="text-lg font-semibold tabular-nums text-slate-400">{{ global.pdv_non_conformes }}</strong>
-              <span class="text-xs text-slate-400">Non conformes</span>
-            </span>
-          </div>
-
-          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-fc-red dark:bg-red-950/30">
-            <UIcon name="i-heroicons-trophy" class="h-5 w-5" />
+          <!-- Répartition par niveau : échelle ordonnée, du plus exigeant au non conforme. -->
+          <div v-if="repartitionNiveaux.length" class="w-full min-w-0 lg:w-auto lg:max-w-2xl lg:flex-1">
+            <div class="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full" aria-hidden="true">
+              <span
+                v-for="n in repartitionNiveaux.filter(x => x.nb > 0)"
+                :key="n.cle"
+                class="h-full first:rounded-l-full last:rounded-r-full"
+                :style="{ width: `${n.part}%`, minWidth: '4px', backgroundColor: n.couleur }"
+              />
+            </div>
+            <ul class="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+              <li v-for="n in repartitionNiveaux" :key="n.cle" class="inline-flex items-baseline gap-1.5">
+                <span class="h-2.5 w-2.5 shrink-0 self-center rounded-full" :style="{ backgroundColor: n.couleur }" aria-hidden="true" />
+                <strong class="text-base font-semibold tabular-nums text-slate-900 dark:text-white">{{ fmtNombre(n.nb) }}</strong>
+                <span class="text-sm text-slate-600 dark:text-slate-300">{{ n.libelle }}</span>
+              </li>
+            </ul>
           </div>
         </div>
+      </section>
+
+      <!-- Quatre indicateurs. Couverture = PDV UNIQUES visités sur le parc actif ;
+           les passages (doublons compris) passent dans « Autres mesures ». -->
+      <div class="space-y-3">
+        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <StatsCard title="Points de vente visités" :value="coverageLabel" :subtitle="coverageSub" format="none" icon="i-heroicons-map-pin" color="blue" />
+          <StatsCard title="Disponibilité en rayon" :value="fmtPct(global.osa_moyen_pct)" subtitle="références relevées « Disponible »" format="none" icon="i-heroicons-cube" color="green" />
+          <StatsCard title="Assortiment moyen" :value="fmtPct(global.assortiment_moyen_pct)" subtitle="références attendues présentes" format="none" icon="i-heroicons-list-bullet" color="blue" />
+          <StatsCard title="Score global moyen" :value="fmtPct(global.score_global_moyen_pct)" subtitle="tous piliers confondus" format="none" icon="i-heroicons-chart-bar" color="blue" />
+        </div>
+        <dl class="flex flex-wrap items-baseline gap-x-6 gap-y-2 px-1 text-sm">
+          <div v-for="m in mesuresSecondaires" :key="m.libelle" class="inline-flex items-baseline gap-1.5">
+            <dt class="text-slate-600 dark:text-slate-300">{{ m.libelle }}</dt>
+            <dd class="font-semibold tabular-nums text-slate-900 dark:text-white">
+              {{ m.valeur }}<template v-if="m.detail">{{ ' ' }}<span class="font-normal text-slate-600 dark:text-slate-300">{{ m.detail }}</span></template>
+            </dd>
+          </div>
+        </dl>
       </div>
 
-      <!-- Liste des PDV Perfect Store (tâche 1.3 : disponible dès la page 1) -->
+      <!-- À traiter : ce qui manque aux points de vente pour monter d'un niveau. -->
+      <section class="admin-surface overflow-hidden" aria-labelledby="manques-heading">
+        <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+          <div class="min-w-0">
+            <h2 id="manques-heading" class="text-lg font-semibold text-slate-900 dark:text-white">Passer au niveau supérieur</h2>
+            <p class="mt-1 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
+              Les points de vente les moins conformes d'abord, et ce qui leur manque à la dernière visite pour atteindre le niveau suivant.
+            </p>
+          </div>
+          <UButton
+            v-if="peutOuvrir('/admin/perfect-store/gaps')"
+            to="/admin/perfect-store/gaps"
+            size="xs"
+            variant="outline"
+            trailing-icon="i-heroicons-arrow-right"
+          >
+            Tous les écarts au standard
+          </UButton>
+        </div>
+
+        <ChargementContenu
+          v-if="(vague2EnCours || rechargement.manques) && !manques.length"
+          variante="lignes"
+          :nombre="5"
+          libelle="Chargement des points de vente à faire progresser…"
+          class="px-5 py-4"
+        />
+        <AdminErreurBloc
+          v-else-if="erreurs.manques"
+          titre="Les points de vente à faire progresser n’ont pas pu être chargés."
+          :erreur="erreurs.manques"
+          :en-cours="rechargement.manques"
+          @reessayer="recharger('manques')"
+        />
+        <div v-else-if="!filteredManques.length" class="px-5 py-10 text-center">
+          <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">Aucun point de vente à faire progresser</p>
+          <p class="mx-auto mt-1 max-w-md text-sm text-slate-600 dark:text-slate-300">
+            Aucune visite évaluée sur cette période et ce périmètre. Élargissez la période ou retirez un filtre.
+          </p>
+        </div>
+        <template v-else>
+          <div class="overflow-x-auto">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Point de vente</th>
+                  <th>Niveau actuel</th>
+                  <th>Niveau visé</th>
+                  <th>Critères manquants</th>
+                  <th><span class="sr-only">Actions</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="m in manquesPage" :key="m.visite_id">
+                  <td>
+                    <span class="block font-medium text-slate-900 dark:text-white">{{ m.nom_pdv || 'Point de vente sans nom' }}</span>
+                    <span class="block text-xs text-slate-600 dark:text-slate-300">{{ typePdvLabel(m.type_pdv) }}<template v-if="m.zone"> · {{ m.zone }}</template></span>
+                  </td>
+                  <td class="whitespace-nowrap">
+                    <span class="inline-flex items-center gap-1.5">
+                      <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="{ backgroundColor: couleurNiveau(m.niveau_actuel) }" aria-hidden="true" />
+                      <!-- Sans disponibilité relevée, le niveau n'a pas pu être calculé. -->
+                      {{ m.dispo_rayon == null && estNonConforme(m.niveau_actuel) ? 'Non évalué' : niveauCourt(m.niveau_actuel) }}
+                    </span>
+                  </td>
+                  <td class="whitespace-nowrap font-semibold text-slate-900 dark:text-white">{{ niveauCourt(m.niveau_cible) }}</td>
+                  <td>
+                    <div v-if="manqueBadges(m).length" class="flex flex-wrap gap-1.5">
+                      <span
+                        v-for="b in manqueBadges(m)"
+                        :key="b"
+                        class="rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950/30 dark:text-amber-200"
+                      >{{ b }}</span>
+                    </div>
+                    <span
+                      v-else-if="m.dispo_rayon == null"
+                      class="inline-flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300"
+                      title="Aucune quantité relevée en rayon à la dernière visite : le niveau ne peut pas être calculé."
+                    >
+                      <UIcon name="i-heroicons-information-circle" class="h-4 w-4 shrink-0" aria-hidden="true" />
+                      Disponibilité non relevée
+                    </span>
+                    <span v-else class="inline-flex items-center gap-1.5 text-sm text-emerald-700 dark:text-emerald-300">
+                      <UIcon name="i-heroicons-check-circle" class="h-4 w-4 shrink-0" aria-hidden="true" />
+                      Aucun critère manquant relevé
+                    </span>
+                  </td>
+                  <td class="whitespace-nowrap text-right">
+                    <div class="inline-flex items-center gap-1">
+                      <UButton
+                        size="xs"
+                        color="gray"
+                        variant="ghost"
+                        :loading="visiteEnOuverture === m.visite_id"
+                        :aria-label="`Voir la dernière visite chez ${m.nom_pdv || 'ce point de vente'}`"
+                        @click="openStoreDetail(m)"
+                      >
+                        Dernière visite
+                      </UButton>
+                      <UButton
+                        v-if="peutOuvrir('/admin/pdv/historique')"
+                        size="xs"
+                        color="gray"
+                        variant="ghost"
+                        :to="{ path: '/admin/pdv/historique', query: { pdv_id: m.pdv_id } }"
+                        :aria-label="`Historique de ${m.nom_pdv || 'ce point de vente'}`"
+                      >
+                        Historique
+                      </UButton>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-if="filteredManques.length > manquesParPage" class="border-t border-slate-200 px-5 py-3 dark:border-slate-700">
+            <AdminPagination
+              :total="filteredManques.length"
+              :page="manquesPageNo"
+              :page-size="manquesParPage"
+              :item-label="pluriel(filteredManques.length, 'point de vente', 'points de vente')"
+              @update:page="manquesPageNo = $event"
+            />
+          </div>
+        </template>
+      </section>
+
+      <!-- Points de vente au standard, tous niveaux ou un seul (une seule liste
+           au lieu de la liste globale + quatre listes par niveau). -->
       <section class="admin-surface overflow-hidden" aria-labelledby="ps-liste-heading">
-        <div class="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-700">
-          <h2 id="ps-liste-heading" class="font-bold text-gray-900 dark:text-gray-100">Points de vente Perfect Store</h2>
-          <span class="text-xs text-slate-400">{{ psList.total }} PDV · {{ periodeLabel }}</span>
+        <div class="border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+          <h2 id="ps-liste-heading" class="text-lg font-semibold text-slate-900 dark:text-white">Points de vente Perfect Store</h2>
+          <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Dernière visite de chaque point de vente au standard · {{ periodeLabel }}</p>
+          <div class="mt-3 inline-flex flex-wrap rounded-md border border-slate-300 bg-white p-0.5 dark:border-slate-600 dark:bg-slate-800" role="group" aria-label="Niveau affiché">
+            <button
+              v-for="opt in optionsNiveauListe"
+              :key="opt.code || 'tous'"
+              type="button"
+              class="inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors"
+              :class="niveauListe === opt.code
+                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700'"
+              :aria-pressed="niveauListe === opt.code"
+              @click="niveauListe = opt.code"
+            >
+              <span v-if="opt.couleur" class="h-2 w-2 shrink-0 rounded-full" :style="{ backgroundColor: opt.couleur }" aria-hidden="true" />
+              {{ opt.libelle }}
+              <span v-if="opt.total != null" class="tabular-nums opacity-80">{{ fmtNombre(opt.total) }}</span>
+            </button>
+          </div>
         </div>
 
-        <div v-if="psList.loading" class="space-y-2 px-5 py-4">
-          <div v-for="i in 4" :key="i" class="h-12 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-700/60" />
-        </div>
+        <ChargementContenu v-if="listeAffichee.loading" variante="lignes" :nombre="4" libelle="Chargement des points de vente…" class="px-5 py-4" />
 
-        <ul v-else-if="psList.items.length" class="divide-y divide-slate-100 dark:divide-slate-700">
-          <li v-for="store in psList.items" :key="store.pdv_id">
+        <AdminErreurBloc
+          v-else-if="listeAffichee.erreur"
+          titre="La liste des points de vente n’a pas pu être chargée."
+          :erreur="listeAffichee.erreur"
+          @reessayer="changerPageListe(listeAffichee.page)"
+        />
+
+        <ul v-else-if="listeAffichee.items.length" class="divide-y divide-slate-200 dark:divide-slate-700">
+          <li v-for="store in listeAffichee.items" :key="store.pdv_id">
             <button
               type="button"
-              class="flex w-full items-center justify-between gap-4 px-5 py-3 text-left transition hover:bg-slate-50 focus-visible:bg-slate-50 dark:hover:bg-slate-700/40 dark:focus-visible:bg-slate-700/40"
+              class="flex w-full items-center justify-between gap-4 px-5 py-3 text-left transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 dark:hover:bg-slate-700/40 dark:focus-visible:bg-slate-700/40"
               @click="openStoreDetail(store)"
             >
               <span class="min-w-0 flex-1">
                 <span class="flex items-center gap-2">
-                  <span class="h-2 w-2 shrink-0 rounded-full" :class="tierDotClass(store.niveau)" />
-                  <span class="truncate text-sm font-semibold text-slate-900 dark:text-white">{{ store.nom_pdv || store.pdv_id }}</span>
+                  <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="{ backgroundColor: couleurNiveau(store.niveau) }" aria-hidden="true" />
+                  <span class="truncate text-sm font-semibold text-slate-900 dark:text-white">{{ store.nom_pdv || 'Point de vente sans nom' }}</span>
                 </span>
-                <span class="mt-1 block truncate pl-4 text-xs text-slate-500 dark:text-slate-400">
+                <span class="mt-1 block truncate pl-[18px] text-xs text-slate-600 dark:text-slate-300">
                   {{ niveauCourt(store.niveau) }} · {{ typePdvLabel(store.type_pdv) }}<template v-if="store.zone"> · {{ store.zone }}</template>
                 </span>
               </span>
               <span class="shrink-0 text-right">
                 <span class="block text-sm font-semibold tabular-nums text-slate-900 dark:text-white">{{ fmtPct(store.score_global) }}</span>
-                <span class="mt-1 block text-xs text-slate-400">{{ formatDate(store.date_visite) }}</span>
+                <span class="mt-1 block text-xs text-slate-600 dark:text-slate-300">{{ formatDate(store.date_visite) }}</span>
               </span>
             </button>
           </li>
         </ul>
 
-        <div v-else class="px-5 py-10 text-center text-sm text-slate-400">
-          Aucun Perfect Store sur cette période et ce périmètre.
+        <div v-else class="px-5 py-10 text-center text-sm text-slate-600 dark:text-slate-300">
+          <template v-if="niveauListe">Aucun point de vente à ce niveau sur cette période et ce périmètre.</template>
+          <template v-else>Aucun Perfect Store sur cette période et ce périmètre.</template>
+          Élargissez la période ou retirez un filtre.
         </div>
 
-        <div v-if="psList.total > psListPerPage" class="border-t border-slate-100 px-5 py-3 dark:border-slate-700">
+        <div v-if="listeAffichee.total > listeAffichee.parPage" class="border-t border-slate-200 px-5 py-3 dark:border-slate-700">
           <AdminPagination
-            :total="psList.total"
-            :page="psList.page"
-            :page-size="psListPerPage"
-            :loading="psList.loading"
-            item-label="magasin(s)"
-            @update:page="loadPerfectStoreList"
+            :total="listeAffichee.total"
+            :page="listeAffichee.page"
+            :page-size="listeAffichee.parPage"
+            :loading="listeAffichee.loading"
+            :item-label="pluriel(listeAffichee.total, 'point de vente', 'points de vente')"
+            @update:page="changerPageListe"
           />
         </div>
       </section>
 
-      <!-- KPI prioritaires.
-           Deux couvertures distinctes, volontairement côte à côte :
-           - effective = combien de PDV du parc ont été touchés (PDV uniques) ;
-           - des visites = combien de passages ont été faits (doublons compris),
-             seule mesure qui reflète l'activité quotidienne d'un merchandiser. -->
-      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <StatsCard title="Couverture effective" :value="coverageLabel" :subtitle="coverageSub" format="none" :icon="MapPinned" color="purple" />
-        <StatsCard title="Couverture des visites" :value="String(global.visites_total)" :subtitle="visitesSub" format="none" :icon="Footprints" color="red" />
-        <StatsCard title="Taux de présence" :value="fmtPct(global.presence_moyenne_pct)" subtitle="produit relevé (qté ≥ 1)" format="none" :icon="PackageCheck" color="orange" />
-        <StatsCard title="Taux de disponibilité" :value="fmtPct(global.osa_moyen_pct)" subtitle="qté ≥ seuil paramétré" format="none" :icon="Package" color="green" />
-        <StatsCard title="Score global moyen" :value="fmtPct(global.score_global_moyen_pct)" format="none" :icon="BarChart3" color="blue" />
-        <StatsCard title="Assortiment moyen" :value="fmtPct(global.assortiment_moyen_pct)" format="none" :icon="ListChecks" color="purple" />
-      </div>
+      <!-- Évolution du taux de Perfect Stores -->
+      <section v-if="erreurs.evolution" class="admin-surface" aria-labelledby="evolution-erreur-heading">
+        <h2 id="evolution-erreur-heading" class="border-b border-slate-200 px-5 py-4 text-base font-semibold text-slate-900 dark:border-slate-700 dark:text-white">Évolution du taux de Perfect Stores (%)</h2>
+        <AdminErreurBloc
+          titre="La courbe n’a pas pu être chargée."
+          :erreur="erreurs.evolution"
+          :en-cours="rechargement.evolution"
+          @reessayer="recharger('evolution')"
+        />
+      </section>
+      <ClientOnly v-else>
+        <ChartsVisitesLineChart
+          title="Évolution du taux de Perfect Stores (%)"
+          subtitle="Part des points de vente visités au standard, jour par jour."
+          series-label="Perfect Stores (%)"
+          :data="evolution"
+        />
+      </ClientOnly>
 
-      <!-- Présence vs disponibilité : d'abord la catégorie, puis les SKU clés
-           (tâche 3.3). Présence = le produit est là ; disponibilité = il est là
-           en quantité suffisante. L'écart entre les deux est l'information. -->
+      <!-- Présence vs disponibilité : d'abord la catégorie, puis les références
+           clés (tâche 3.3). Présence = le produit est là ; disponibilité = il est
+           là en quantité suffisante. L'écart entre les deux est l'information. -->
       <section class="admin-surface overflow-hidden" aria-labelledby="presence-heading">
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-700">
-          <h2 id="presence-heading" class="font-bold text-gray-900 dark:text-gray-100">Présence et disponibilité</h2>
-          <div class="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
-            <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-amber-500" />Présence (qté ≥ 1)</span>
-            <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-emerald-500" />Disponibilité (qté ≥ seuil)</span>
+        <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+          <div>
+            <h2 id="presence-heading" class="text-lg font-semibold text-slate-900 dark:text-white">Présence et disponibilité</h2>
+            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">L'écart entre les deux montre les produits présents mais en quantité insuffisante.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-300">
+            <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm" :style="{ backgroundColor: COULEUR_PRESENCE }" aria-hidden="true" />Présence (quantité ≥ 1)</span>
+            <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm" :style="{ backgroundColor: COULEUR_DISPO }" aria-hidden="true" />Disponibilité (quantité ≥ seuil)</span>
           </div>
         </div>
 
         <div class="grid gap-x-8 gap-y-6 p-5 lg:grid-cols-2">
           <div>
-            <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Par catégorie</h3>
-            <ul class="space-y-3">
+            <h3 class="mb-3 text-base font-semibold text-slate-900 dark:text-white">Par catégorie</h3>
+            <ul class="space-y-4">
               <li v-for="c in global.par_categorie" :key="c.categorie">
-                <div class="mb-1 flex items-baseline justify-between gap-3">
-                  <span class="text-sm font-medium uppercase text-slate-700 dark:text-slate-300">{{ c.categorie }}</span>
-                  <span class="text-xs tabular-nums text-slate-500 dark:text-slate-400">
-                    <span class="text-amber-600">{{ fmtPct(c.presence_pct) }}</span>
-                    <span class="mx-1 text-slate-300">/</span>
-                    <span class="text-emerald-600">{{ fmtPct(c.disponibilite_pct) }}</span>
+                <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                  <span class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ libelleCategorie(c.categorie) }}</span>
+                  <span class="text-sm tabular-nums text-slate-700 dark:text-slate-200">
+                    <span class="sr-only">Présence </span>{{ fmtPct(c.presence_pct) }}
+                    <span class="mx-1 text-slate-500" aria-hidden="true">/</span>
+                    <span class="sr-only">, disponibilité </span><strong class="font-semibold text-slate-900 dark:text-white">{{ fmtPct(c.disponibilite_pct) }}</strong>
                   </span>
                 </div>
-                <div class="relative h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
-                  <div class="absolute inset-y-0 left-0 rounded-full bg-amber-400" :style="{ width: (c.presence_pct ?? 0) + '%' }" />
-                  <div class="absolute inset-y-0 left-0 rounded-full bg-emerald-500" :style="{ width: (c.disponibilite_pct ?? 0) + '%' }" />
+                <div class="relative h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700" aria-hidden="true">
+                  <div class="absolute inset-y-0 left-0 rounded-full" :style="{ width: (c.presence_pct ?? 0) + '%', backgroundColor: COULEUR_PRESENCE }" />
+                  <div class="absolute inset-y-0 left-0 rounded-full" :style="{ width: (c.disponibilite_pct ?? 0) + '%', backgroundColor: COULEUR_DISPO }" />
                 </div>
               </li>
-              <li v-if="!global.par_categorie?.length" class="text-sm text-slate-400">Aucune donnée sur cette période.</li>
+              <li v-if="!global.par_categorie?.length" class="text-sm text-slate-600 dark:text-slate-300">
+                Aucun relevé sur cette période. Élargissez la période ou retirez un filtre.
+              </li>
             </ul>
           </div>
 
-          <div>
-            <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">SKU clés et gamme Délice</h3>
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="text-xs uppercase text-slate-400">
-                  <th class="pb-2 text-left font-medium">Référence</th>
-                  <th class="pb-2 text-right font-medium">Présence</th>
-                  <th class="pb-2 text-right font-medium">Dispo.</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
-                <tr v-for="sku in presenceSkus" :key="sku.reference_nom">
-                  <td class="py-2">
-                    <span class="font-medium text-slate-900 dark:text-white">{{ sku.reference_nom }}</span>
-                    <span class="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] uppercase text-slate-500 dark:bg-slate-700 dark:text-slate-400">
-                      {{ sku.role === 'phare' ? 'SKU clé' : 'Délice' }}
-                    </span>
-                  </td>
-                  <td class="py-2 text-right tabular-nums text-amber-600">{{ fmtPct(sku.presence_pct) }}</td>
-                  <td class="py-2 text-right tabular-nums text-emerald-600">{{ fmtPct(sku.disponibilite_pct) }}</td>
-                </tr>
-                <tr v-if="vague2EnCours && !presenceSkus.length">
-                  <td colspan="3" class="py-4"><ChargementContenu variante="compact" libelle="Chargement des relevés SKU…" /></td>
-                </tr>
-                <tr v-else-if="!presenceSkus.length">
-                  <td colspan="3" class="py-4 text-center text-sm text-slate-400">Aucun relevé sur cette période.</td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="min-w-0">
+            <h3 class="mb-3 text-base font-semibold text-slate-900 dark:text-white">Références clés et gamme Délice</h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-slate-200 dark:border-slate-700">
+                    <th class="pb-2 text-left text-xs font-semibold text-slate-600 dark:text-slate-300">Référence</th>
+                    <th class="pb-2 pl-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300">Présence</th>
+                    <th class="pb-2 pl-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300">Disponibilité</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                  <tr v-for="sku in presenceSkus" :key="sku.reference_nom">
+                    <td class="py-2 text-slate-700 dark:text-slate-200">
+                      <span class="font-medium text-slate-900 dark:text-white">{{ sku.reference_nom }}</span>
+                      <span class="ml-2 whitespace-nowrap rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+                        {{ sku.role === 'phare' ? 'Référence clé' : 'Délice' }}
+                      </span>
+                    </td>
+                    <td class="py-2 pl-3 text-right tabular-nums text-slate-700 dark:text-slate-200">{{ fmtPct(sku.presence_pct) }}</td>
+                    <td class="py-2 pl-3 text-right font-semibold tabular-nums text-slate-900 dark:text-white">{{ fmtPct(sku.disponibilite_pct) }}</td>
+                  </tr>
+                  <tr v-if="(vague2EnCours || rechargement.presenceSkus) && !presenceSkus.length">
+                    <td colspan="3" class="py-4"><ChargementContenu variante="compact" libelle="Chargement des relevés par référence…" /></td>
+                  </tr>
+                  <tr v-else-if="erreurs.presenceSkus">
+                    <td colspan="3" class="py-4">
+                      <AdminErreurBloc
+                        compact
+                        titre="Les relevés par référence n’ont pas pu être chargés."
+                        :erreur="erreurs.presenceSkus"
+                        :en-cours="rechargement.presenceSkus"
+                        @reessayer="recharger('presenceSkus')"
+                      />
+                    </td>
+                  </tr>
+                  <tr v-else-if="!presenceSkus.length">
+                    <td colspan="3" class="py-4 text-center text-slate-600 dark:text-slate-300">Aucun relevé sur cette période. Élargissez la période ou retirez un filtre.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- Détail des visites par merchandiser (tâche 2.2) -->
+      <!-- Ventilation par type de PDV (accordéons, un seul ouvert à la fois) -->
+      <section class="admin-surface overflow-hidden" aria-labelledby="par-type-heading">
+        <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+          <div>
+            <h2 id="par-type-heading" class="text-lg font-semibold text-slate-900 dark:text-white">Perfect Store par type de magasin</h2>
+            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Ouvrez un type pour voir ses points de vente.</p>
+          </div>
+          <span v-if="!erreurs.parType" class="text-sm text-slate-600 dark:text-slate-300">{{ compte(parType.length, 'type') }}</span>
+        </div>
+
+        <AdminErreurBloc
+          v-if="erreurs.parType"
+          titre="La répartition par type de magasin n’a pas pu être chargée."
+          :erreur="erreurs.parType"
+          :en-cours="rechargement.parType"
+          @reessayer="recharger('parType')"
+        />
+        <div v-else-if="!parType.length" class="px-5 py-10 text-center text-sm text-slate-600 dark:text-slate-300">
+          Aucune visite évaluée sur cette période et ce périmètre. Élargissez la période ou retirez un filtre.
+        </div>
+
+        <div v-else class="divide-y divide-slate-200 dark:divide-slate-700">
+          <div v-for="(row, index) in parType" :key="row.type_pdv">
+            <button
+              :id="`type-entete-${index}`"
+              type="button"
+              class="flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 dark:hover:bg-slate-700/40 dark:focus-visible:bg-slate-700/40"
+              :aria-expanded="isTypeOpen(row.type_pdv)"
+              :aria-controls="`type-panneau-${index}`"
+              @click="toggleType(row.type_pdv)"
+            >
+              <UIcon
+                name="i-heroicons-chevron-right"
+                class="h-4 w-4 shrink-0 text-slate-600 transition-transform duration-200 dark:text-slate-300"
+                :class="isTypeOpen(row.type_pdv) ? 'rotate-90' : ''"
+                aria-hidden="true"
+              />
+              <span class="min-w-0 flex-1">
+                <span class="block truncate text-sm font-semibold text-slate-900 dark:text-white">{{ typePdvLabel(row.type_pdv) }}</span>
+                <span class="mt-0.5 block text-xs text-slate-600 dark:text-slate-300">
+                  {{ compte(row.pdv_scores, 'point de vente', 'points de vente') }} · {{ compte(row.pdv_perfect_stores, 'Perfect Store') }} · {{ compte(row.visites_scorees, 'visite') }}
+                </span>
+              </span>
+              <span class="hidden w-48 shrink-0 sm:block">
+                <span class="flex items-baseline justify-between gap-2 text-xs text-slate-600 dark:text-slate-300">
+                  <span>Perfect Stores</span>
+                  <span class="font-semibold tabular-nums text-slate-900 dark:text-white">{{ fmtPct(row.perfect_store_pct) }}</span>
+                </span>
+                <span class="mt-1 block h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700" aria-hidden="true">
+                  <span class="block h-full rounded-full bg-slate-600 dark:bg-slate-300" :style="{ width: (row.perfect_store_pct ?? 0) + '%' }" />
+                </span>
+              </span>
+              <span class="w-20 shrink-0 text-right">
+                <span class="block text-sm font-semibold tabular-nums text-slate-900 dark:text-white">{{ fmtPct(row.score_global_moyen_pct) }}</span>
+                <span class="block text-xs text-slate-600 dark:text-slate-300">score moyen</span>
+              </span>
+            </button>
+
+            <!-- Panneau : liste paginée -->
+            <div
+              v-show="isTypeOpen(row.type_pdv)"
+              :id="`type-panneau-${index}`"
+              role="region"
+              :aria-labelledby="`type-entete-${index}`"
+              class="border-t border-slate-200 bg-slate-50 px-5 pb-4 dark:border-slate-700 dark:bg-slate-900/20"
+            >
+              <ChargementContenu v-if="typeState(row.type_pdv).loading" variante="lignes" :nombre="3" libelle="Chargement des points de vente…" class="pt-3" />
+
+              <AdminErreurBloc
+                v-else-if="typeState(row.type_pdv).erreur"
+                compact
+                class="pt-4"
+                titre="Les points de vente de ce type n’ont pas pu être chargés."
+                :erreur="typeState(row.type_pdv).erreur"
+                @reessayer="loadTypeStores(row.type_pdv, typeState(row.type_pdv).page)"
+              />
+
+              <ul v-else-if="typeState(row.type_pdv).items.length" class="divide-y divide-slate-200 dark:divide-slate-700">
+                <li v-for="store in typeState(row.type_pdv).items" :key="store.visite_id">
+                  <button
+                    type="button"
+                    class="flex w-full items-center justify-between gap-4 rounded-md px-2 py-3 text-left transition-colors hover:bg-white focus-visible:bg-white dark:hover:bg-slate-700/40 dark:focus-visible:bg-slate-700/40"
+                    @click="openStoreDetail(store)"
+                  >
+                    <span class="min-w-0 flex-1">
+                      <span class="flex items-center gap-2">
+                        <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="{ backgroundColor: couleurNiveau(store.niveau) }" aria-hidden="true" />
+                        <span class="truncate text-sm font-semibold text-slate-900 dark:text-white">{{ store.nom_pdv || 'Point de vente sans nom' }}</span>
+                      </span>
+                      <span class="mt-1 block truncate pl-[18px] text-xs text-slate-600 dark:text-slate-300">
+                        {{ niveauCourt(store.niveau) }}<template v-if="store.zone"> · {{ store.zone }}</template><template v-if="store.commercial"> · {{ store.commercial }}</template>
+                      </span>
+                    </span>
+                    <span class="shrink-0 text-right">
+                      <span class="block text-sm font-semibold tabular-nums text-slate-900 dark:text-white">{{ fmtPct(store.score_global) }}</span>
+                      <span class="mt-1 block text-xs text-slate-600 dark:text-slate-300">{{ formatDate(store.date_visite) }}</span>
+                    </span>
+                  </button>
+                </li>
+              </ul>
+
+              <p v-else class="pb-2 pt-6 text-center text-sm text-slate-600 dark:text-slate-300">Aucun point de vente de ce type sur la période.</p>
+
+              <div v-if="typeState(row.type_pdv).total > typePerPage" class="mt-3 border-t border-slate-200 pt-3 dark:border-slate-700">
+                <AdminPagination
+                  :total="typeState(row.type_pdv).total"
+                  :page="typeState(row.type_pdv).page"
+                  :page-size="typePerPage"
+                  :loading="typeState(row.type_pdv).loading"
+                  :item-label="pluriel(typeState(row.type_pdv).total, 'point de vente', 'points de vente')"
+                  @update:page="(p) => changeTypePage(row.type_pdv, p)"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Détail des visites par merchandiser (tâche 2.2), un seul ouvert à la fois -->
       <section class="admin-surface overflow-hidden" aria-labelledby="couverture-merch-heading">
-        <div class="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-700">
-          <h2 id="couverture-merch-heading" class="font-bold text-gray-900 dark:text-gray-100">Visites par merchandiser</h2>
-          <span class="text-xs text-slate-400">{{ periodeLabel }}</span>
+        <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+          <div>
+            <h2 id="couverture-merch-heading" class="text-lg font-semibold text-slate-900 dark:text-white">Visites par merchandiser</h2>
+            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Ouvrez un nom pour voir les points de vente visités · {{ periodeLabel }}</p>
+          </div>
         </div>
 
         <ChargementContenu
-          v-if="vague2EnCours && !couvertureCommerciaux.length"
+          v-if="(vague2EnCours || rechargement.couvertureCommerciaux) && !couvertureCommerciaux.length"
           variante="lignes"
           :nombre="5"
           libelle="Chargement des visites par merchandiser…"
           class="px-5 py-4"
         />
-        <div v-else-if="!couvertureCommerciaux.length" class="px-5 py-10 text-center text-sm text-slate-400">
-          Aucune visite sur cette période et ce périmètre.
+        <AdminErreurBloc
+          v-else-if="erreurs.couvertureCommerciaux"
+          titre="Les visites par merchandiser n’ont pas pu être chargées."
+          :erreur="erreurs.couvertureCommerciaux"
+          :en-cours="rechargement.couvertureCommerciaux"
+          @reessayer="recharger('couvertureCommerciaux')"
+        />
+        <div v-else-if="!couvertureCommerciaux.length" class="px-5 py-10 text-center text-sm text-slate-600 dark:text-slate-300">
+          Aucune visite sur cette période et ce périmètre. Élargissez la période ou retirez un filtre.
         </div>
 
-        <div v-else class="divide-y divide-slate-100 dark:divide-slate-700">
-          <div v-for="c in couvertureCommerciaux" :key="c.commercial">
+        <div v-else class="divide-y divide-slate-200 dark:divide-slate-700">
+          <div v-for="(c, index) in couvertureCommerciaux" :key="c.commercial">
             <button
+              :id="`merch-entete-${index}`"
               type="button"
-              class="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-slate-50 dark:hover:bg-slate-700/40"
+              class="flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 dark:hover:bg-slate-700/40 dark:focus-visible:bg-slate-700/40"
               :aria-expanded="openCommerciaux.has(c.commercial)"
+              :aria-controls="`merch-panneau-${index}`"
               @click="toggleCommercial(c.commercial)"
             >
               <UIcon
                 name="i-heroicons-chevron-right"
-                class="h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200"
-                :class="openCommerciaux.has(c.commercial) ? 'rotate-90 text-fc-red' : ''"
+                class="h-4 w-4 shrink-0 text-slate-600 transition-transform duration-200 dark:text-slate-300"
+                :class="openCommerciaux.has(c.commercial) ? 'rotate-90' : ''"
+                aria-hidden="true"
               />
               <span class="min-w-0 flex-1">
                 <span class="block truncate text-sm font-semibold text-slate-900 dark:text-white">{{ c.commercial }}</span>
-                <span class="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">
-                  {{ c.nb_pdv }} PDV distincts · {{ c.nb_jours }} jour(s) travaillé(s)
+                <span class="mt-0.5 block text-xs text-slate-600 dark:text-slate-300">
+                  {{ compte(c.nb_pdv, 'point de vente différent', 'points de vente différents') }} · {{ compte(c.nb_jours, 'jour travaillé', 'jours travaillés') }}
                 </span>
               </span>
               <span class="shrink-0 text-right">
-                <span class="block text-sm font-semibold tabular-nums text-slate-900 dark:text-white">{{ c.nb_visites }} visite(s)</span>
-                <span class="mt-0.5 block text-xs tabular-nums text-slate-400">{{ c.visites_par_jour ?? '—' }} / jour</span>
+                <span class="block text-sm font-semibold tabular-nums text-slate-900 dark:text-white">{{ compte(c.nb_visites, 'visite') }}</span>
+                <span class="mt-0.5 block text-xs tabular-nums text-slate-600 dark:text-slate-300">{{ c.visites_par_jour == null ? '—' : Number(c.visites_par_jour).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) }} par jour</span>
               </span>
             </button>
 
-            <div v-show="openCommerciaux.has(c.commercial)" class="bg-slate-50/60 px-5 pb-4 dark:bg-slate-900/20">
-              <ul class="divide-y divide-slate-100 dark:divide-slate-700">
+            <div
+              v-show="openCommerciaux.has(c.commercial)"
+              :id="`merch-panneau-${index}`"
+              role="region"
+              :aria-labelledby="`merch-entete-${index}`"
+              class="border-t border-slate-200 bg-slate-50 px-5 pb-3 dark:border-slate-700 dark:bg-slate-900/20"
+            >
+              <ul class="divide-y divide-slate-200 dark:divide-slate-700">
                 <li v-for="p in c.pdv_visites" :key="p.pdv_id" class="flex items-center justify-between gap-4 py-2">
-                  <span class="min-w-0 flex-1 truncate text-sm text-slate-700 dark:text-slate-300">{{ p.nom_pdv }}</span>
-                  <span class="shrink-0 text-xs text-slate-400">
-                    <span v-if="p.passages > 1" class="mr-2 font-medium text-amber-600">{{ p.passages }} passages</span>
+                  <span class="min-w-0 flex-1 truncate text-sm text-slate-700 dark:text-slate-200">{{ p.nom_pdv || 'Point de vente sans nom' }}</span>
+                  <span class="shrink-0 text-xs text-slate-600 dark:text-slate-300">
+                    <span v-if="p.passages > 1" class="mr-2 font-semibold text-amber-800 dark:text-amber-200">{{ p.passages }} passages</span>
                     {{ formatDate(p.derniere_visite) }}
                   </span>
                 </li>
@@ -274,291 +605,92 @@
           </div>
         </div>
       </section>
-
-      <!-- Indicateurs secondaires, conservés sans ajouter deux cartes hautes -->
-      <div class="admin-surface flex flex-wrap items-center gap-x-8 gap-y-3 px-4 py-3 sm:px-5">
-        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">Autres piliers</p>
-        <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-          <span class="inline-flex items-center gap-2">
-            <span class="h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />
-            <span class="text-slate-500 dark:text-slate-400">Visibilité</span>
-            <strong class="tabular-nums text-slate-900 dark:text-white">{{ fmtPct(global.visibilite_moyenne_pct) }}</strong>
-          </span>
-          <span class="inline-flex items-center gap-2">
-            <span class="h-2 w-2 rounded-full bg-fc-red" aria-hidden="true" />
-            <span class="text-slate-500 dark:text-slate-400">Promotion</span>
-            <strong class="tabular-nums text-slate-900 dark:text-white">{{ fmtPct(global.promotion_moyenne_pct) }}</strong>
-          </span>
-        </div>
-      </div>
-
-      <!-- Évolution du taux de Perfect Stores -->
-      <div v-if="evolution.length">
-        <ClientOnly>
-          <ChartsVisitesLineChart
-            title="Évolution du taux de Perfect Stores (%)"
-            subtitle="Taux de Perfect Stores par jour sur la période disponible."
-            series-label="Perfect Stores (%)"
-            :data="evolution"
-          />
-        </ClientOnly>
-      </div>
-
-      <!-- Ventilation par type de PDV (accordéons) -->
-      <div class="admin-surface overflow-hidden">
-        <div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-gray-100 dark:border-gray-700">
-          <h2 class="font-bold text-gray-900 dark:text-gray-100">Perfect Store par type de magasin</h2>
-          <span class="text-xs text-gray-400">{{ parType.length }} type(s)</span>
-        </div>
-
-        <div v-if="!parType.length" class="px-4 py-8 text-center text-sm text-gray-400">Aucune visite scorée.</div>
-
-        <div v-else class="divide-y divide-gray-100 dark:divide-gray-700">
-          <div v-for="row in parType" :key="row.type_pdv">
-            <!-- En-tête accordéon -->
-            <button
-              type="button"
-              class="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-gray-50 dark:hover:bg-gray-700/40"
-              :aria-expanded="isTypeOpen(row.type_pdv)"
-              @click="toggleType(row.type_pdv)"
-            >
-              <UIcon
-                name="i-heroicons-chevron-right"
-                class="h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200"
-                :class="isTypeOpen(row.type_pdv) ? 'rotate-90 text-fc-red' : ''"
-              />
-              <span class="min-w-0 flex-1">
-                <span class="block truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{{ typePdvLabel(row.type_pdv) }}</span>
-                <span class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
-                  {{ row.pdv_scores }} PDV · <span class="text-emerald-600 font-medium">{{ row.pdv_perfect_stores }} perfect</span>
-                  <span class="text-gray-400"> · {{ row.visites_scorees }} visite(s)</span>
-                </span>
-              </span>
-              <span class="hidden w-44 items-center gap-2 sm:flex">
-                <span class="h-2 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
-                  <span
-                    class="block h-full rounded-full transition-all"
-                    :class="(row.perfect_store_pct ?? 0) >= 50 ? 'bg-emerald-500' : (row.perfect_store_pct ?? 0) > 0 ? 'bg-amber-500' : 'bg-red-500'"
-                    :style="{ width: (row.perfect_store_pct ?? 0) + '%' }"
-                  />
-                </span>
-                <span class="w-10 text-right text-xs text-gray-500 dark:text-gray-400">{{ fmtPct(row.perfect_store_pct) }}</span>
-              </span>
-              <span class="w-16 shrink-0 text-right text-sm font-medium tabular-nums text-gray-600 dark:text-gray-300">{{ fmtPct(row.score_global_moyen_pct) }}</span>
-            </button>
-
-            <!-- Panneau : liste paginée (client, sans rechargement) -->
-            <div v-show="isTypeOpen(row.type_pdv)" class="bg-gray-50/60 px-4 pb-4 dark:bg-gray-900/20">
-              <div v-if="typeState(row.type_pdv).loading" class="space-y-2 pt-3">
-                <div v-for="i in 3" :key="i" class="h-14 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-700/60" />
-              </div>
-
-              <ul v-else-if="typeState(row.type_pdv).items.length" class="divide-y divide-gray-100 dark:divide-gray-700">
-                <li v-for="store in typeState(row.type_pdv).items" :key="store.visite_id">
-                  <button
-                    type="button"
-                    class="flex w-full items-center justify-between gap-4 rounded-lg px-2 py-3 text-left transition hover:bg-white focus-visible:bg-white dark:hover:bg-gray-700/40 dark:focus-visible:bg-gray-700/40"
-                    @click="openStoreDetail(store)"
-                  >
-                    <span class="min-w-0 flex-1">
-                      <span class="flex items-center gap-2">
-                        <span class="h-2 w-2 shrink-0 rounded-full" :class="tierDotClass(store.niveau)" />
-                        <span class="truncate text-sm font-semibold text-gray-900 dark:text-white">{{ store.nom_pdv || store.pdv_id }}</span>
-                      </span>
-                      <span class="mt-1 block truncate pl-4 text-xs text-gray-500 dark:text-gray-400">
-                        {{ store.niveau }}<template v-if="store.zone"> · {{ store.zone }}</template><template v-if="store.commercial"> · {{ store.commercial }}</template>
-                      </span>
-                    </span>
-                    <span class="shrink-0 text-right">
-                      <span class="block text-sm font-semibold tabular-nums text-gray-900 dark:text-white">{{ fmtPct(store.score_global) }}</span>
-                      <span class="mt-1 block text-xs text-gray-400">{{ formatDate(store.date_visite) }}</span>
-                    </span>
-                  </button>
-                </li>
-              </ul>
-
-              <div v-else class="pt-6 pb-2 text-center text-sm text-gray-400">Aucun magasin dans ce type.</div>
-
-              <div v-if="typeState(row.type_pdv).total > typePerPage" class="mt-3 border-t border-gray-100 pt-3 dark:border-gray-700">
-                <AdminPagination
-                  :total="typeState(row.type_pdv).total"
-                  :page="typeState(row.type_pdv).page"
-                  :page-size="typePerPage"
-                  :loading="typeState(row.type_pdv).loading"
-                  item-label="magasin(s)"
-                  @update:page="(p) => changeTypePage(row.type_pdv, p)"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- PDV classés par niveau -->
-      <section class="admin-surface overflow-hidden" aria-labelledby="stores-by-tier-heading">
-        <div class="border-b border-slate-100 px-5 py-4 dark:border-slate-700">
-          <h2 id="stores-by-tier-heading" class="font-bold text-gray-900 dark:text-gray-100">Points de vente par niveau</h2>
-        </div>
-
-        <div class="grid xl:grid-cols-2">
-          <article
-            v-for="tier in tierStoreLists"
-            :key="tier.code"
-            class="border-b border-slate-100 p-5 odd:xl:border-r dark:border-slate-700"
-          >
-            <div class="mb-4 flex items-center justify-between gap-3">
-              <div class="flex items-center gap-2">
-                <span class="h-2.5 w-2.5 rounded-full" :class="tierDotClass(tier.code)" />
-                <h3 class="font-semibold text-slate-900 dark:text-white">{{ tier.code }}</h3>
-              </div>
-              <span class="text-xs font-medium text-slate-400">{{ tier.total }} magasin(s)</span>
-            </div>
-
-            <div v-if="tier.loading" class="space-y-2">
-              <div v-for="i in 3" :key="i" class="h-16 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-700/60" />
-            </div>
-
-            <ul v-else-if="tier.items.length" class="divide-y divide-slate-100 dark:divide-slate-700">
-              <li v-for="store in tier.items" :key="store.pdv_id">
-                <button
-                  type="button"
-                  class="flex w-full items-center justify-between gap-4 rounded-lg py-3 text-left transition hover:bg-slate-50 focus-visible:bg-slate-50 dark:hover:bg-slate-700/40 dark:focus-visible:bg-slate-700/40"
-                  @click="openStoreDetail(store)"
-                >
-                  <div class="min-w-0 px-2">
-                    <p class="truncate text-sm font-semibold text-slate-900 dark:text-white">{{ store.nom_pdv || store.pdv_id }}</p>
-                    <p class="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">
-                      {{ typePdvLabel(store.type_pdv) }}<template v-if="store.zone"> · {{ store.zone }}</template>
-                    </p>
-                  </div>
-                  <div class="shrink-0 px-2 text-right">
-                    <p class="text-sm font-semibold tabular-nums text-slate-900 dark:text-white">{{ fmtPct(store.score_global) }}</p>
-                    <p class="mt-1 text-xs text-slate-400">{{ formatDate(store.date_visite) }}</p>
-                  </div>
-                </button>
-              </li>
-            </ul>
-
-            <div v-else class="rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-400 dark:bg-slate-700/30">
-              Aucun magasin dans ce niveau.
-            </div>
-
-            <div v-if="tier.total > storesPerPage" class="mt-4 border-t border-slate-100 pt-3 dark:border-slate-700">
-              <AdminPagination
-                :total="tier.total"
-                :page="tier.page"
-                :page-size="storesPerPage"
-                :loading="tier.loading"
-                item-label="magasin(s)"
-                @update:page="(p) => changeTierPage(tier.code, p)"
-              />
-            </div>
-          </article>
-        </div>
-
-        <div v-if="storesError" class="border-t border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-700 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-300">
-          La liste détaillée sera disponible après l’application de la migration Perfect Store la plus récente.
-        </div>
-      </section>
-
-      <!-- Critères manquants pour le niveau supérieur -->
-      <section v-if="manques.length" class="admin-surface overflow-hidden" aria-labelledby="manques-heading">
-        <div class="border-b border-slate-100 px-5 py-4 dark:border-slate-700">
-          <h2 id="manques-heading" class="font-bold text-gray-900 dark:text-gray-100">Passer au niveau supérieur</h2>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="admin-table w-full text-sm">
-            <thead class="bg-gray-50 dark:bg-gray-700/50">
-              <tr>
-                <th class="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Point de vente</th>
-                <th class="px-4 py-2 text-center text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Actuel</th>
-                <th class="px-4 py-2 text-center text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Cible</th>
-                <th class="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Critères manquants</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-              <tr v-if="!filteredManques.length">
-                <td colspan="4" class="px-4 py-6 text-center text-sm text-gray-400">Aucun PDV pour ce filtre.</td>
-              </tr>
-              <tr v-for="m in filteredManques" :key="m.visite_id">
-                <td class="px-4 py-2">
-                  <span class="block font-medium text-gray-900 dark:text-white">{{ m.nom_pdv || m.pdv_id }}</span>
-                  <span class="block text-xs text-gray-400">{{ typePdvLabel(m.type_pdv) }}<template v-if="m.zone"> · {{ m.zone }}</template></span>
-                </td>
-                <td class="px-4 py-2 text-center">
-                  <span class="inline-flex items-center gap-1.5">
-                    <span class="h-2 w-2 rounded-full" :class="tierDotClass(m.niveau_actuel || '')" />
-                    <span class="text-xs text-gray-600 dark:text-gray-300">{{ niveauCourt(m.niveau_actuel) }}</span>
-                  </span>
-                </td>
-                <td class="px-4 py-2 text-center text-xs font-semibold text-gray-700 dark:text-gray-200">{{ niveauCourt(m.niveau_cible) }}</td>
-                <td class="px-4 py-2">
-                  <div v-if="manqueBadges(m).length" class="flex flex-wrap gap-1.5">
-                    <span v-for="b in manqueBadges(m)" :key="b" class="rounded-md bg-amber-50 px-2 py-0.5 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">{{ b }}</span>
-                  </div>
-                  <span v-else class="text-xs text-emerald-600">Aucun — prêt à monter de niveau</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
     </template>
 
-    <div v-else class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-6 text-sm text-amber-800 dark:text-amber-200">
-      <template v-if="dashboardTimeout">
-        <p class="font-semibold">La base de données a mis trop de temps à répondre (délai dépassé).</p>
-        <p class="mt-1">Le tableau de bord n'a pas pu être calculé : Supabase est saturé, aucune migration ne manque. Réessaie dans quelques secondes.</p>
-      </template>
-      <template v-else-if="dashboardError">
-        <p class="font-semibold">Tableau de bord indisponible.</p>
-        <p class="mt-1">{{ dashboardMessage }}</p>
-      </template>
-      <template v-else>
-        Vues Perfect Store indisponibles. Lance les migrations <code>supabase/nouveau</code> dans Supabase.
-      </template>
-      <UButton class="mt-3" size="xs" variant="soft" :loading="retrying" @click="retryDashboard">Réessayer</UButton>
+    <div v-else class="rounded-lg border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-100" role="alert">
+      <div class="flex items-start gap-3">
+        <UIcon name="i-heroicons-exclamation-triangle" class="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden="true" />
+        <div>
+          <template v-if="dashboardTimeout">
+            <p class="font-semibold">Le serveur a mis trop de temps à répondre.</p>
+            <p class="mt-1">Les indicateurs n'ont pas pu être calculés. Réessayez dans quelques secondes, ou choisissez une période plus courte.</p>
+          </template>
+          <template v-else-if="dashboardError">
+            <p class="font-semibold">Les indicateurs Perfect Store ne sont pas disponibles.</p>
+            <p class="mt-1">{{ dashboardMessage }}</p>
+          </template>
+          <template v-else>
+            <p class="font-semibold">Les indicateurs Perfect Store ne sont pas encore disponibles.</p>
+            <p class="mt-1">Réessayez dans quelques instants ; si le problème continue, prévenez l'administrateur technique.</p>
+          </template>
+          <UButton class="mt-3" size="xs" variant="outline" icon="i-heroicons-arrow-path" :loading="retrying" @click="retryDashboard">Réessayer</UButton>
+        </div>
+      </div>
     </div>
 
-    <!-- Seuils par niveau -->
-    <div class="admin-surface overflow-hidden">
-      <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
-        <h2 class="font-bold text-gray-900 dark:text-gray-100">Seuils par niveau</h2>
-      </div>
-      <div class="p-5 space-y-4">
-        <div class="overflow-x-auto border border-gray-100 dark:border-gray-700 rounded-lg">
-          <table class="admin-table text-sm">
-            <thead class="bg-gray-50 dark:bg-gray-700/50">
-              <tr>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Niveau</th>
-                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Disponibilité</th>
-                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Assortiment</th>
-                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Visibilité</th>
-                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Promotion</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-              <tr v-for="t in tiers" :key="t.ps_tier">
-                <td class="px-4 py-2 font-bold text-gray-900 dark:text-gray-100">{{ t.ps_tier }}</td>
-                <td class="px-4 py-2 text-center">{{ fmtRatio(t.osa_min) }}</td>
-                <td class="px-4 py-2 text-center">{{ fmtRatio(t.assort_min) }}</td>
-                <td class="px-4 py-2 text-center">{{ fmtRatio(t.visi_min) }}</td>
-                <td class="px-4 py-2 text-center text-gray-400">{{ t.promo_min == null ? 'Non évaluée' : fmtRatio(t.promo_min) }}</td>
-              </tr>
-              <tr v-if="!refsChargees && !tiers.length">
-                <td colspan="5" class="px-4 py-4"><ChargementContenu variante="compact" libelle="Chargement des seuils…" /></td>
-              </tr>
-              <tr v-else-if="!tiers.length">
-                <td colspan="5" class="px-4 py-6 text-center text-xs text-gray-400">Seuils indisponibles — lance les migrations Big Five.</td>
-              </tr>
-            </tbody>
-          </table>
+    <!-- Seuils par niveau (référence, en bas de page) -->
+    <section class="admin-surface overflow-hidden" aria-labelledby="seuils-heading">
+      <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+        <div>
+          <h2 id="seuils-heading" class="text-lg font-semibold text-slate-900 dark:text-white">Seuils par niveau</h2>
+          <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Le minimum à atteindre sur chaque pilier pour obtenir le niveau.</p>
         </div>
-        <p class="text-xs text-gray-400">
-          <NuxtLink to="/admin/perfect-store/standards" class="text-fc-red underline">Modifier les standards</NuxtLink>
-        </p>
+        <UButton
+          v-if="peutOuvrir('/admin/perfect-store/standards')"
+          to="/admin/perfect-store/standards"
+          size="xs"
+          variant="outline"
+          icon="i-heroicons-adjustments-horizontal"
+        >
+          Modifier les standards
+        </UButton>
       </div>
-    </div>
+      <div class="overflow-x-auto">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Niveau</th>
+              <th class="text-right">Disponibilité</th>
+              <th class="text-right">Assortiment</th>
+              <th class="text-right">Visibilité</th>
+              <th class="text-right">Promotion</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="t in tiers" :key="t.ps_tier">
+              <td class="font-semibold text-slate-900 dark:text-white">
+                <span class="inline-flex items-center gap-2">
+                  <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="{ backgroundColor: couleurNiveau(t.ps_tier) }" aria-hidden="true" />
+                  {{ niveauLibelle(t.ps_tier) }}
+                </span>
+              </td>
+              <td class="text-right tabular-nums">{{ fmtRatio(t.osa_min) }}</td>
+              <td class="text-right tabular-nums">{{ fmtRatio(t.assort_min) }}</td>
+              <td class="text-right tabular-nums">{{ fmtRatio(t.visi_min) }}</td>
+              <td class="text-right tabular-nums">{{ t.promo_min == null ? 'Non évaluée' : fmtRatio(t.promo_min) }}</td>
+            </tr>
+            <tr v-if="!refsChargees && !tiers.length">
+              <td colspan="5"><ChargementContenu variante="compact" libelle="Chargement des seuils…" /></td>
+            </tr>
+            <tr v-else-if="refsEnErreur">
+              <td colspan="5">
+                <AdminErreurBloc
+                  compact
+                  titre="Les seuils par niveau n’ont pas pu être chargés."
+                  :en-cours="rechargementRefs"
+                  @reessayer="rechargerRefs"
+                />
+              </td>
+            </tr>
+            <tr v-else-if="!tiers.length">
+              <td colspan="5" class="text-center text-slate-600 dark:text-slate-300">
+                Les seuils par niveau ne sont pas encore définis. Ils se règlent dans les standards Perfect Store.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
     <VisitDetailModal
       v-model="showStoreDetail"
@@ -569,8 +701,8 @@
 </template>
 
 <script setup lang="ts">
-import { BarChart3, Package, PackageCheck, MapPinned, ListChecks, Footprints } from 'lucide-vue-next'
 import type {
+  BlocPerfectStore,
   CouvertureCommercial,
   CoverageKpi,
   PerfectStoreDashboardKpi,
@@ -583,15 +715,20 @@ import type { PeriodeValue } from '~/components/PeriodFilter.vue'
 import type { Visite } from '~/types'
 import type { PerfectStoreResultB } from '~/utils/perfectStore'
 import { plageDePeriode, libellePlage } from '~/utils/periode'
-import { describeSupabaseError, isTimeoutError } from '~/utils/supabaseErrors'
+import { isTimeoutError, messageUtilisateur } from '~/utils/supabaseErrors'
+import { compte, pluriel } from '~/utils/pluriel'
+import { SERIES, NIVEAUX_PS as NIVEAUX, COULEUR_NON_CONFORME, niveauPerfectStore as niveauDe } from '~/utils/chartPalette'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const visitesStore = useVisitesStore()
+const toast = useToast()
+const { peutOuvrir } = useAdminNavigation()
 const { typePdvLabel, fetchTypePdvLabels } = useTypePdvLabels()
 const {
   refs,
   dashboardError,
+  erreurs,
   fetchRefs,
   scoreVisite,
   fetchKpiParType,
@@ -609,10 +746,20 @@ const loading = ref(true)
 // du chargement au lieu de s'afficher pendant.
 const vague2EnCours = ref(true)
 const refsChargees = ref(false)
+// fetchRefs() garde l'erreur pour lui : des référentiels absents une fois le
+// chargement fini veulent dire « échec », pas « aucun seuil défini ».
+const refsEnErreur = computed(() => refsChargees.value && !refs.value)
+const rechargementRefs = ref(false)
+async function rechargerRefs() {
+  rechargementRefs.value = true
+  try { await fetchRefs(true) }
+  catch (err) { console.error('Tableau de bord : référentiels indisponibles', err) }
+  finally { rechargementRefs.value = false }
+}
 const global = ref<PerfectStoreDashboardKpi | null>(null)
 // Cause de l'absence de KPI : base saturée (504 / 57014) ou vraie erreur.
 const dashboardTimeout = computed(() => isTimeoutError(dashboardError.value))
-const dashboardMessage = computed(() => describeSupabaseError(dashboardError.value))
+const dashboardMessage = computed(() => messageUtilisateur(dashboardError.value))
 const retrying = ref(false)
 async function retryDashboard() {
   retrying.value = true
@@ -623,6 +770,22 @@ async function retryDashboard() {
   finally {
     retrying.value = false
     loading.value = false
+  }
+}
+// Relance d'un seul bloc en échec (bouton « Réessayer » dans sa carte).
+const rechargement = reactive<Partial<Record<BlocPerfectStore, boolean>>>({})
+async function recharger(bloc: BlocPerfectStore) {
+  rechargement[bloc] = true
+  const f = dashFilters.value
+  try {
+    if (bloc === 'manques') manques.value = await fetchPerfectStoreManques(f)
+    else if (bloc === 'presenceSkus') presenceSkus.value = await fetchPresenceSkus(f)
+    else if (bloc === 'couvertureCommerciaux') couvertureCommerciaux.value = await fetchCouvertureParCommercial(f)
+    else if (bloc === 'parType') parType.value = await fetchKpiParType(f)
+    else if (bloc === 'evolution') evolution.value = (await fetchPerfectStoreEvolution(f)).map(p => ({ date: p.date, count: p.perfect_store_pct ?? 0 }))
+  }
+  finally {
+    rechargement[bloc] = false
   }
 }
 const parType = ref<PerfectStoreTypeKpi[]>([])
@@ -699,12 +862,18 @@ const filteredManques = computed(() => manques.value.filter(m =>
   && (!fArea.value || m.quartier === fArea.value)
   && (!fDistrib.value || m.distributor_name === fDistrib.value),
 ))
+// « Passer au niveau supérieur » en tête de page : dix lignes à la fois pour
+// que le reste de la page reste à portée.
+const manquesParPage = 10
+const manquesPageNo = ref(1)
+const manquesPage = computed(() => filteredManques.value.slice((manquesPageNo.value - 1) * manquesParPage, manquesPageNo.value * manquesParPage))
+watch(filteredManques, () => { manquesPageNo.value = 1 })
 function resetManqueFilters() { fDivision.value = ''; fTerritoire.value = ''; fArea.value = ''; fDistrib.value = '' }
 
 // Chips des filtres actifs — clic = retirer ce filtre seul (le watch refetch tout).
 const dashFilterChips = computed(() => {
   const chips: { key: string; label: string }[] = []
-  if (fDivision.value) chips.push({ key: 'division', label: `Division : ${fDivision.value}` })
+  if (fDivision.value) chips.push({ key: 'division', label: `Direction : ${fDivision.value}` })
   if (fTerritoire.value) chips.push({ key: 'territoire', label: `Territoire : ${fTerritoire.value}` })
   if (fArea.value) chips.push({ key: 'area', label: `Quartier : ${fArea.value}` })
   if (fDistrib.value) chips.push({ key: 'distributeur', label: `Distributeur : ${fDistrib.value}` })
@@ -777,7 +946,6 @@ async function applyDashboardFilters() {
   for (const type of openList) await loadTypeStores(type, 1)
 }
 watch([fDivision, fTerritoire, fArea, fDistrib, periode], applyDashboardFilters, { deep: true })
-const storesError = ref(false)
 const showStoreDetail = ref(false)
 const selectedStoreVisite = ref<Visite | null>(null)
 const selectedStorePerfect = ref<PerfectStoreResultB | null>(null)
@@ -786,6 +954,7 @@ const tierStoreState = reactive<Record<string, {
   total: number
   page: number
   loading: boolean
+  erreur?: unknown
 }>>({})
 
 // ---- Liste des PDV Perfect Store, en page 1 du dashboard (tâche 1.3) ----
@@ -796,6 +965,7 @@ const psList = reactive({
   total: 0,
   page: 1,
   loading: true,
+  erreur: null as unknown,
 })
 
 async function loadPerfectStoreList(page = 1) {
@@ -810,10 +980,14 @@ async function loadPerfectStoreList(page = 1) {
     psList.items = result.items
     psList.total = result.total
     psList.page = page
+    psList.erreur = null
   }
-  catch {
+  catch (err) {
+    // Échec ≠ liste vide : la carte affiche l'erreur et « Réessayer ».
     psList.items = []
     psList.total = 0
+    psList.page = page
+    psList.erreur = err
   }
   finally {
     psList.loading = false
@@ -828,15 +1002,43 @@ const presenceSkus = ref<PresenceSku[]>([])
 // ---- Visites par merchandiser (tâche 2.2) ----
 const couvertureCommerciaux = ref<CouvertureCommercial[]>([])
 const openCommerciaux = reactive(new Set<string>())
+// Un seul détail ouvert à la fois : la page ne s'allonge pas d'un bloc par clic.
 function toggleCommercial(nom: string) {
-  if (openCommerciaux.has(nom)) openCommerciaux.delete(nom)
-  else openCommerciaux.add(nom)
+  const etaitOuvert = openCommerciaux.has(nom)
+  openCommerciaux.clear()
+  if (!etaitOuvert) openCommerciaux.add(nom)
 }
 
-// Ventilation « 5 Flagship · 3 VIP · 2 Basic » remontée depuis la RPC.
-const niveauBreakdown = computed(() =>
-  (global.value?.par_niveau || []).map(n => ({ ...n, label: niveauCourt(n.niveau) })),
-)
+// Répartition « 5 Flagship · 3 VIP · 2 Basic · 40 Non conformes » remontée
+// depuis la RPC (niveaux du référentiel, du plus exigeant au moins exigeant).
+const repartitionNiveaux = computed(() => {
+  const g = global.value
+  if (!g) return []
+  const niveaux = (g.par_niveau || [])
+    .filter(n => n.niveau && !String(n.niveau).toUpperCase().startsWith('NON'))
+    .map(n => ({ cle: n.niveau, nb: Number(n.nb_pdv) || 0, libelle: niveauCourt(n.niveau), couleur: couleurNiveau(n.niveau) }))
+  if (!niveaux.length && !g.pdv_non_conformes) return []
+  const lignes = [
+    ...niveaux,
+    { cle: 'non-conforme', nb: Number(g.pdv_non_conformes) || 0, libelle: (Number(g.pdv_non_conformes) || 0) > 1 ? 'Non conformes' : 'Non conforme', couleur: COULEUR_NON_CONFORME },
+  ]
+  const total = lignes.reduce((t, l) => t + l.nb, 0) || 1
+  return lignes.map(l => ({ ...l, part: Math.round((l.nb / total) * 1000) / 10 }))
+})
+
+// Mesures gardées en texte sous les quatre indicateurs.
+const mesuresSecondaires = computed(() => {
+  const g = global.value
+  if (!g) return []
+  const passages = g.visites_total ?? 0
+  const pdv = g.pdv_vus ?? 0
+  return [
+    { libelle: 'Visites', valeur: fmtNombre(g.visites_total), detail: pdv && passages > pdv ? `sur ${fmtNombre(pdv)} points de vente, repassages compris` : 'repassages compris' },
+    { libelle: 'Présence en rayon', valeur: fmtPct(g.presence_moyenne_pct), detail: '' },
+    { libelle: 'Visibilité', valeur: fmtPct(g.visibilite_moyenne_pct), detail: '' },
+    { libelle: 'Promotion', valeur: fmtPct(g.promotion_moyenne_pct), detail: '' },
+  ]
+})
 
 const periodeLabel = computed(() => libellePlage({ debut: periode.value.debut, fin: periode.value.fin }))
 
@@ -847,15 +1049,39 @@ const tierStoreLists = computed(() => tiers.value.map(tier => ({
   ...(tierStoreState[tier.ps_tier] || { items: [], total: 0, page: 1, loading: true }),
 })))
 
+// Liste « Points de vente Perfect Store » : tous niveaux (liste CONFORMES) ou
+// un seul niveau (listes par niveau), au choix. '' = tous les niveaux.
+const niveauListe = ref('')
+const optionsNiveauListe = computed(() => [
+  { code: '', libelle: 'Tous les niveaux', couleur: '', total: psList.loading ? null : psList.total },
+  ...tierStoreLists.value.map(t => ({
+    code: t.code,
+    libelle: niveauCourt(t.code),
+    couleur: couleurNiveau(t.code),
+    total: t.loading ? null : t.total,
+  })),
+])
+const listeAffichee = computed(() => {
+  if (niveauListe.value) {
+    const t = tierStoreLists.value.find(x => x.code === niveauListe.value)
+    if (t) return { items: t.items, total: t.total, page: t.page, loading: t.loading, erreur: t.erreur ?? null, parPage: storesPerPage }
+  }
+  return { items: psList.items, total: psList.total, page: psList.page, loading: psList.loading, erreur: psList.erreur, parPage: psListPerPage }
+})
+function changerPageListe(page: number) {
+  if (niveauListe.value) changeTierPage(niveauListe.value, page)
+  else loadPerfectStoreList(page)
+}
+
 // Couverture effective : PDV UNIQUES visités sur l'univers assigné. Un PDV
 // visité trois fois compte une fois.
 const coverageLabel = computed(() =>
-  `${coverage.value?.pdv_vus ?? 0}/${coverage.value?.pdv_total ?? 0}`,
+  `${fmtNombre(coverage.value?.pdv_vus)} / ${fmtNombre(coverage.value?.pdv_total)}`,
 )
 const coverageSub = computed(() =>
   coverage.value?.couverture_pct != null
-    ? `${coverage.value.couverture_pct} % du parc · PDV uniques`
-    : 'PDV uniques visités / parc actif',
+    ? `${fmtPct(coverage.value.couverture_pct)} du parc actif, chacun compté une fois`
+    : 'sur le parc actif, chacun compté une fois',
 )
 // Couverture des visites : TOUS les passages. Mesure l'activité, pas la
 // couverture du parc.
@@ -869,39 +1095,60 @@ const visitesSub = computed(() => {
 })
 
 function fmtPct(v: number | null | undefined): string {
-  return v == null ? '—' : `${v}%`
+  return v == null ? '—' : `${Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`
+}
+const formatNombre = new Intl.NumberFormat('fr-FR')
+// Une valeur absente (non calculée) s'écrit « — », jamais 0.
+function fmtNombre(v: number | null | undefined): string {
+  return v == null || Number.isNaN(Number(v)) ? '—' : formatNombre.format(Number(v))
 }
 
-// "FLAGSHIP STORE" -> "Flagship", "VIP PERFECT STORE" -> "VIP", etc.
-function niveauCourt(code: string | null): string {
-  if (!code) return 'Non conforme'
-  if (code.startsWith('FLAGSHIP')) return 'Flagship'
-  if (code.startsWith('VIP')) return 'VIP'
-  if (code.startsWith('CORE')) return 'Core'
-  return 'Basic'
+function estNonConforme(code: string | null | undefined): boolean {
+  const c = String(code || '').trim().toUpperCase()
+  return !c || c.startsWith('NON')
+}
+// Valeur brute en casse normale pour un niveau inconnu du front.
+function casseNormale(code: string): string {
+  const c = code.trim().toLowerCase()
+  return c.charAt(0).toUpperCase() + c.slice(1)
+}
+// "FLAGSHIP STORE" -> "Flagship", "VIP PERFECT STORE" -> "VIP", null -> "Non conforme".
+function niveauCourt(code: string | null | undefined): string {
+  if (estNonConforme(code)) return 'Non conforme'
+  return niveauDe(code)?.court ?? casseNormale(String(code))
+}
+// "FLAGSHIP STORE" -> "Flagship Store", "VIP PERFECT STORE" -> "VIP Perfect Store".
+function niveauLibelle(code: string | null | undefined): string {
+  if (estNonConforme(code)) return 'Non conforme'
+  return niveauDe(code)?.long ?? casseNormale(String(code))
+}
+function couleurNiveau(code: string | null | undefined): string {
+  if (estNonConforme(code)) return COULEUR_NON_CONFORME
+  return niveauDe(code)?.couleur ?? COULEUR_NON_CONFORME
+}
+
+// Présence et disponibilité : deux séries de la palette commune.
+const COULEUR_PRESENCE = SERIES[1]
+const COULEUR_DISPO = SERIES[0]
+const LIBELLES_CATEGORIE: Record<string, string> = { evap: 'EVAP', imp: 'IMP', scm: 'SCM', uht: 'UHT', yaourt: 'Yaourt', cereales: 'Céréales' }
+function libelleCategorie(code: string): string {
+  return LIBELLES_CATEGORIE[String(code || '').toLowerCase()] ?? code
 }
 
 // Liste à plat des critères manquants pour le niveau cible (badges).
 function manqueBadges(m: PerfectStoreManqueItem): string[] {
   const out: string[] = []
-  if (m.dispo_manque) out.push(`Disponibilité ${m.dispo_rayon ?? 0}% < ${m.dispo_rayon_min ?? 0}%`)
-  if (m.assortiment_manque) out.push('Assortiment < 100%')
+  if (m.dispo_manque) out.push(`Disponibilité ${Math.round(Number(m.dispo_rayon ?? 0))} % (minimum ${m.dispo_rayon_min ?? 0} %)`)
+  if (m.assortiment_manque) out.push('Assortiment incomplet')
   out.push(...m.visibilite_manques, ...m.promotion_manques)
   return out
 }
 function fmtRatio(v: number | null | undefined): string {
-  return v == null ? 'off' : `${Math.round(v * 100)}%`
+  return v == null ? 'Non exigé' : `${Math.round(v * 100)} %`
 }
 
 function formatDate(value: string): string {
   return formatDateFr(value, { day: '2-digit', month: 'short', year: 'numeric' })
-}
-
-function tierDotClass(tier: string): string {
-  if (tier.startsWith('FLAGSHIP')) return 'bg-violet-500'
-  if (tier.startsWith('VIP')) return 'bg-emerald-500'
-  if (tier.startsWith('CORE')) return 'bg-blue-500'
-  return 'bg-amber-500'
 }
 
 function tierPageCount(total: number): number {
@@ -917,11 +1164,13 @@ async function loadTierStores(tier: string, page = 1) {
     state.items = result.items
     state.total = result.total
     state.page = page
+    state.erreur = null
   }
-  catch {
-    storesError.value = true
+  catch (err) {
     state.items = []
     state.total = 0
+    state.page = page
+    state.erreur = err
   }
   finally {
     state.loading = false
@@ -934,7 +1183,7 @@ function changeTierPage(tier: string, page: number) {
 
 // ---- Accordéons "par type de magasin" : liste paginée par 10, client-side ----
 const typePerPage = 10
-type TypeStore = { items: PerfectStoreListItem[]; total: number; page: number; loading: boolean }
+type TypeStore = { items: PerfectStoreListItem[]; total: number; page: number; loading: boolean; erreur?: unknown }
 const EMPTY_TYPE_STATE: TypeStore = { items: [], total: 0, page: 1, loading: false }
 const openTypes = reactive(new Set<string>())
 const typeStoreState = reactive<Record<string, TypeStore>>({})
@@ -958,21 +1207,26 @@ async function loadTypeStores(type: string, page = 1) {
     state.items = result.items
     state.total = result.total
     state.page = page
+    state.erreur = null
   }
-  catch {
+  catch (err) {
     state.items = []
     state.total = 0
+    state.page = page
+    state.erreur = err
   }
   finally {
     state.loading = false
   }
 }
 
+// Un seul type ouvert à la fois (même règle que les merchandisers).
 function toggleType(type: string) {
   if (openTypes.has(type)) {
     openTypes.delete(type)
     return
   }
+  openTypes.clear()
   openTypes.add(type)
   if (!typeStoreState[type]) loadTypeStores(type, 1)
 }
@@ -981,16 +1235,24 @@ function changeTypePage(type: string, page: number) {
   loadTypeStores(type, page)
 }
 
-async function openStoreDetail(store: PerfectStoreListItem) {
+// Ouvre la fiche d'une visite (liste Perfect Store ou dernière visite d'un
+// point de vente à faire progresser).
+const visiteEnOuverture = ref<string | null>(null)
+async function openStoreDetail(store: { visite_id: string }) {
+  visiteEnOuverture.value = store.visite_id
   try {
     const visite = await visitesStore.fetchVisiteByDatabaseId(store.visite_id)
     selectedStoreVisite.value = visite
     selectedStorePerfect.value = refs.value ? scoreVisite(visite.data, visite.pdv || {}) : null
     showStoreDetail.value = true
   }
-  catch {
+  catch (err) {
     selectedStoreVisite.value = null
     selectedStorePerfect.value = null
+    toast.add({ title: 'Visite non ouverte', description: messageUtilisateur(err), color: 'red' })
+  }
+  finally {
+    visiteEnOuverture.value = null
   }
 }
 

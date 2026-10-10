@@ -1,0 +1,256 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-10T12:00:00Z",
+  "title": "Design System: Bonnet Rouge — back-office",
+  "extensions": {
+    "colorMeta": {
+      "bonnet-rouge": {
+        "role": "primary",
+        "displayName": "Rouge Bonnet Rouge",
+        "canonical": "#C8102E",
+        "source": "tailwind.config.ts (brand 50-950)",
+        "tonalRamp": ["#0A0102", "#140305", "#41060F", "#6E0919", "#9B0D23", "#C8102E", "#D92040", "#F0516F", "#F58B9F", "#FAC5CF", "#FDE8EC"]
+      },
+      "encre": {
+        "role": "neutral",
+        "displayName": "Encre (slate)",
+        "canonical": "#0F172A",
+        "tonalRamp": ["#020617", "#0F172A", "#1E293B", "#334155", "#475569", "#64748B", "#94A3B8", "#CBD5E1", "#E2E8F0", "#F1F5F9", "#F8FAFC"]
+      },
+      "succes": {
+        "role": "tertiary",
+        "displayName": "Succès",
+        "canonical": "#047857",
+        "tonalRamp": ["#022C22", "#064E3B", "#065F46", "#047857", "#10B981", "#6EE7B7", "#D1FAE5", "#ECFDF5"]
+      },
+      "alerte": {
+        "role": "tertiary",
+        "displayName": "Alerte",
+        "canonical": "#B45309",
+        "tonalRamp": ["#451A03", "#78350F", "#92400E", "#B45309", "#F59E0B", "#FCD34D", "#FEF3C7", "#FFFBEB"]
+      },
+      "erreur": {
+        "role": "tertiary",
+        "displayName": "Erreur",
+        "canonical": "#B91C1C",
+        "tonalRamp": ["#450A0A", "#7F1D1D", "#991B1B", "#B91C1C", "#DC2626", "#FCA5A5", "#FEE2E2", "#FEF2F2"]
+      },
+      "niveau-flagship": {
+        "role": "tertiary",
+        "displayName": "Niveau Flagship",
+        "canonical": "#104281",
+        "tonalRamp": ["#104281", "#256ABF", "#5598E7", "#9EC5F4", "#CBD5E1"],
+        "note": "Échelle ordonnée des niveaux Perfect Store (NIVEAUX_PS) : Flagship, VIP, Core, Basic, puis Non conforme en slate-300. Toujours avec le mot."
+      }
+    },
+    "chartPalette": {
+      "source": "utils/chartPalette.ts",
+      "series": ["#C8102E", "#2A78D6", "#EB6834", "#1BAF7A", "#EDA100", "#E87BA4", "#008300", "#4A3AA7"],
+      "autre": "#64748B",
+      "remplissagePrincipal": "rgba(200, 16, 46, 0.08)",
+      "statut": { "bon": "#0CA30C", "alerte": "#FAB219", "serieux": "#EC835A", "critique": "#D03B3B", "neutre": "#94A3B8" },
+      "familles": { "evap": "#2A78D6", "imp": "#EB6834", "scm": "#1BAF7A", "uht": "#EDA100", "yaourt": "#E87BA4", "cereales": "#008300" },
+      "axes": { "texte": "#64748B", "taillePolice": 12, "grille": "#F1F5F9", "bordure": "#E2E8F0", "infobulleFond": "#0F172A", "infobulleTexte": "#FFFFFF" },
+      "niveauxPerfectStore": [
+        { "cle": "FLAGSHIP", "libelle": "Flagship Store", "couleur": "#104281" },
+        { "cle": "VIP", "libelle": "VIP Perfect Store", "couleur": "#256ABF" },
+        { "cle": "CORE", "libelle": "Core Perfect Store", "couleur": "#5598E7" },
+        { "cle": "BASIC", "libelle": "Basic Perfect Store", "couleur": "#9EC5F4" },
+        { "cle": "NON_CONFORME", "libelle": "Non conforme", "couleur": "#CBD5E1" }
+      ],
+      "notes": "Turquoise, jaune et rose sont sous 3:1 sur blanc : légende ou étiquettes visibles obligatoires. Au-delà de huit séries, regrouper en « Autre »."
+    },
+    "typographyMeta": {
+      "titre-page": { "displayName": "Titre de page", "purpose": "Unique h1 de chaque page, rendu par AdminPageHeader (titre de l'onglet par défaut)." },
+      "titre-section": { "displayName": "Titre de section", "purpose": "h2 des blocs d'une page, titre de modale." },
+      "titre-carte": { "displayName": "Titre de carte", "purpose": "h3 d'un graphique, d'un tableau, d'un bloc de la fiche de visite." },
+      "texte": { "displayName": "Texte", "purpose": "Texte courant, cellules, libellés de champ et de bouton (500)." },
+      "etiquette": { "displayName": "Étiquette", "purpose": "En-têtes de colonne, libellés d'indicateur, pastilles, familles du menu. Jamais sous 12 px, jamais en capitales." },
+      "chiffre": { "displayName": "Chiffre", "purpose": "Valeur d'un indicateur, chiffres tabulaires." }
+    },
+    "shadows": [
+      { "name": "fenetre-modale", "value": "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)", "purpose": "Modales et confirmations (Nuxt UI shadow-xl)." },
+      { "name": "menu-flottant", "value": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)", "purpose": "Menus déroulants, autocomplétion, notifications (shadow-lg)." },
+      { "name": "trace-bouton", "value": "0 1px 2px 0 rgb(0 0 0 / 0.05)", "purpose": "Boutons pleins et secondaires de Nuxt UI. Aucune autre surface n'a d'ombre." }
+    ],
+    "focus": [
+      { "name": "contour-focus", "value": "outline: 2px solid #C8102E; outline-offset: 2px", "purpose": "Règle globale :focus-visible de assets/css/main.css." },
+      { "name": "anneau-focus-nuxt-ui", "value": "box-shadow: 0 0 0 2px #C8102E (ring-2 ring-primary-500)", "purpose": "Boutons et champs Nuxt UI." }
+    ],
+    "motion": [
+      { "name": "transition-etat", "value": "150ms cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Changements de couleur au survol et au focus. Aucun déplacement." },
+      { "name": "menu-lateral", "value": "300ms transform / margin", "purpose": "Ouverture du tiroir et repli du menu latéral." },
+      { "name": "reflet-chargement", "value": "1.4s ease-in-out infinite", "purpose": "Squelettes de ChargementContenu ; coupé avec prefers-reduced-motion." }
+    ],
+    "layout": {
+      "menuLateral": "256px, 64px replié, tiroir sous 1024px",
+      "enTete": "56px, collant",
+      "colonneContenu": "1600px max",
+      "margesPage": "16px / 24px / 32px",
+      "indicateursParRangee": "1, 2 dès 640px, 4 dès 1280px ; jamais plus de 4"
+    },
+    "navigation": {
+      "source": "utils/adminNavigation.ts",
+      "familles": ["Piloter", "Terrain", "Marché", "Réglages"],
+      "niveaux": "Famille (intitulé) → domaine (menu latéral) → onglet (barre d'onglets). Deux niveaux cliquables.",
+      "acces": "Par onglet : access (section de la matrice), roles (restreint), ouvertA (ouvre au-delà de la matrice). Domaine sans onglet ouvrable masqué.",
+      "roleAgence": "Planning (Tournées, Règles récurrentes) en lecture seule ; Paramètres › Référentiels, Versions de l'app, Import / Export."
+    },
+    "voice": {
+      "registre": "Vouvoiement, phrases d'action.",
+      "francaisPlusSigle": ["boutiques (GT)", "supermarchés (MT)", "vendeur du distributeur (SSF)", "fichier du distributeur (DMS)", "référence (SKU)", "point de vente (PDV)", "écarts au standard", "rayon de visite", "zone commerciale", "direction (South / North)"],
+      "erreurs": "messageUtilisateur() dans utils/supabaseErrors.ts : cause + action, jamais de code.",
+      "confirmations": "Nom de l'élément entre guillemets + conséquence + bouton qui répète le verbe.",
+      "etatsVides": "Ce qui manque + quoi faire."
+    },
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Bouton principal",
+      "kind": "button",
+      "refersTo": "bouton-principal",
+      "description": "Action principale d'une zone d'écran ; un seul par zone.",
+      "html": "<button class=\"ds-btn-primary\">Nouveau PDV</button>",
+      "css": ".ds-btn-primary { background: #C8102E; color: #FFFFFF; font: 500 14px/20px 'Nunito Sans Variable', system-ui, sans-serif; padding: 6px 10px; height: 32px; border: 0; border-radius: 6px; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); cursor: pointer; transition: background-color 150ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-primary:hover { background: #9B0D23; } .ds-btn-primary:focus-visible { outline: 2px solid #C8102E; outline-offset: 2px; }"
+    },
+    {
+      "name": "Bouton secondaire",
+      "kind": "button",
+      "refersTo": "bouton-secondaire",
+      "description": "Actions de second rang, neutres : exporter, importer, actualiser.",
+      "html": "<button class=\"ds-btn-secondary\">Exporter</button>",
+      "css": ".ds-btn-secondary { background: #FFFFFF; color: #334155; font: 500 14px/20px 'Nunito Sans Variable', system-ui, sans-serif; padding: 6px 10px; height: 32px; border: 0; box-shadow: inset 0 0 0 1px #CBD5E1; border-radius: 6px; cursor: pointer; transition: background-color 150ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-secondary:hover { background: #F8FAFC; } .ds-btn-secondary:focus-visible { outline: 2px solid #C8102E; outline-offset: 2px; }"
+    },
+    {
+      "name": "Champ",
+      "kind": "input",
+      "refersTo": "champ",
+      "description": "Champ Nuxt UI taille sm, libellé au-dessus.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Rechercher un PDV</span><input class=\"ds-input\" placeholder=\"Nom du PDV…\"></label>",
+      "css": ".ds-field { display: grid; gap: 4px; font-family: 'Nunito Sans Variable', system-ui, sans-serif; } .ds-field-label { font-weight: 500; font-size: 14px; line-height: 20px; color: #334155; } .ds-input { height: 32px; padding: 6px 10px; border: 0; box-shadow: inset 0 0 0 1px #CBD5E1; border-radius: 6px; background: #FFFFFF; color: #0F172A; font: 400 14px/20px inherit; } .ds-input:focus { outline: none; box-shadow: inset 0 0 0 2px #C8102E; }"
+    },
+    {
+      "name": "Contrôle segmenté",
+      "kind": "control",
+      "refersTo": "segment-actif",
+      "description": "Choix d'une période ou d'une vue ; segment choisi en encre, jamais en rouge.",
+      "html": "<div class=\"ds-seg\" role=\"group\" aria-label=\"Période\"><button class=\"ds-seg-btn\" aria-pressed=\"false\">Jour</button><button class=\"ds-seg-btn\" aria-pressed=\"true\">Semaine</button><button class=\"ds-seg-btn\" aria-pressed=\"false\">Mois</button><button class=\"ds-seg-btn\" aria-pressed=\"false\">Personnalisé</button></div>",
+      "css": ".ds-seg { display: inline-flex; flex-wrap: wrap; padding: 2px; border: 1px solid #CBD5E1; border-radius: 6px; background: #FFFFFF; font-family: 'Nunito Sans Variable', system-ui, sans-serif; } .ds-seg-btn { border: 0; background: transparent; color: #334155; font: 500 12px/16px inherit; padding: 4px 10px; border-radius: 4px; cursor: pointer; transition: background-color 150ms; } .ds-seg-btn:hover { background: #F1F5F9; } .ds-seg-btn[aria-pressed='true'] { background: #0F172A; color: #FFFFFF; } .ds-seg-btn:focus-visible { outline: 2px solid #C8102E; outline-offset: 2px; }"
+    },
+    {
+      "name": "Entrée de menu latéral",
+      "kind": "nav",
+      "refersTo": "menu-entree-active",
+      "description": "Un domaine par entrée ; l'active porte le voile rouge et le texte rouge sombre.",
+      "html": "<nav class=\"ds-nav\"><p class=\"ds-nav-group\">Terrain</p><a class=\"ds-nav-item\">Planning</a><a class=\"ds-nav-item ds-nav-item--active\" aria-current=\"page\">Points de vente</a><a class=\"ds-nav-item\">Visites</a></nav>",
+      "css": ".ds-nav { display: grid; gap: 2px; width: 240px; font-family: 'Nunito Sans Variable', system-ui, sans-serif; } .ds-nav-group { margin: 0 0 4px; padding: 0 12px; font: 600 12px/16px inherit; color: #64748B; } .ds-nav-item { display: flex; align-items: center; min-height: 40px; padding: 8px 12px; border-radius: 6px; color: #334155; font: 500 14px/20px inherit; text-decoration: none; cursor: pointer; transition: background-color 150ms; } .ds-nav-item:hover { background: #F1F5F9; color: #0F172A; } .ds-nav-item--active { background: #FDE8EC; color: #6E0919; font-weight: 600; } .ds-nav-item:focus-visible { outline: 2px solid #C8102E; outline-offset: 2px; }"
+    },
+    {
+      "name": "Barre d'onglets",
+      "kind": "nav",
+      "refersTo": "onglet-actif",
+      "description": "Vues d'un domaine ; l'onglet actif est souligné de rouge.",
+      "html": "<div class=\"ds-tabs\"><a class=\"ds-tab ds-tab--active\" aria-current=\"page\">Liste</a><a class=\"ds-tab\">Répartition</a><a class=\"ds-tab\">Évolution</a></div>",
+      "css": ".ds-tabs { display: flex; gap: 4px; border-bottom: 1px solid #E2E8F0; font-family: 'Nunito Sans Variable', system-ui, sans-serif; } .ds-tab { display: inline-flex; align-items: center; min-height: 40px; padding: 8px 12px; margin-bottom: -1px; border-bottom: 2px solid transparent; color: #475569; font: 500 14px/20px inherit; text-decoration: none; cursor: pointer; transition: color 150ms, border-color 150ms; } .ds-tab:hover { color: #0F172A; border-bottom-color: #CBD5E1; } .ds-tab--active, .ds-tab--active:hover { color: #C8102E; border-bottom-color: #C8102E; font-weight: 600; } .ds-tab:focus-visible { outline: 2px solid #C8102E; outline-offset: 2px; }"
+    },
+    {
+      "name": "Indicateur",
+      "kind": "card",
+      "refersTo": "indicateur",
+      "description": "StatsCard : libellé, valeur, pastille d'icône, évolution ; quatre au plus par rangée.",
+      "html": "<div class=\"ds-kpi\"><div><p class=\"ds-kpi-label\">Points de vente visités</p><p class=\"ds-kpi-value\">1 240</p><span class=\"ds-kpi-delta\">4 %</span> <span class=\"ds-kpi-ref\">par rapport au mois dernier</span></div><span class=\"ds-kpi-icon\" aria-hidden=\"true\"></span></div>",
+      "css": ".ds-kpi { display: flex; justify-content: space-between; gap: 12px; width: 260px; padding: 16px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; font-family: 'Nunito Sans Variable', system-ui, sans-serif; } .ds-kpi-label { margin: 0; font: 600 12px/16px inherit; color: #475569; } .ds-kpi-value { margin: 6px 0 12px; font: 700 24px/1 inherit; font-variant-numeric: tabular-nums; color: #0F172A; } .ds-kpi-delta { display: inline-block; padding: 2px 8px; border-radius: 9999px; background: #ECFDF5; color: #047857; font: 600 12px/16px inherit; } .ds-kpi-ref { font: 400 12px/16px inherit; color: #475569; } .ds-kpi-icon { width: 32px; height: 32px; flex-shrink: 0; border-radius: 6px; background: #F1F5F9; }"
+    },
+    {
+      "name": "Tableau",
+      "kind": "table",
+      "refersTo": "tableau-entete",
+      "description": ".admin-table : en-tête slate-50 en casse normale, lignes séparées, nombres à droite.",
+      "html": "<table class=\"ds-table\"><thead><tr><th>Point de vente</th><th class=\"num\">Score</th><th>Niveau</th></tr></thead><tbody><tr><td>Boutique Koné</td><td class=\"num\">86</td><td><span class=\"ds-lvl\" style=\"--c:#256ABF\"></span>VIP</td></tr><tr><td>Supermarché Plateau</td><td class=\"num\">41</td><td><span class=\"ds-lvl\" style=\"--c:#9EC5F4\"></span>Basic</td></tr></tbody></table>",
+      "css": ".ds-table { width: 480px; border-collapse: collapse; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; font-family: 'Nunito Sans Variable', system-ui, sans-serif; font-variant-numeric: tabular-nums; } .ds-table th { padding: 12px 16px; background: #F8FAFC; text-align: left; font: 600 12px/16px inherit; color: #475569; } .ds-table td { padding: 12px 16px; font: 400 14px/20px inherit; color: #334155; border-top: 1px solid #E2E8F0; } .ds-table tbody tr:hover { background: #F8FAFC; } .ds-table .num { text-align: right; } .ds-lvl { display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 9999px; background: var(--c); }"
+    },
+    {
+      "name": "Pastille de filtre",
+      "kind": "chip",
+      "refersTo": "pastille",
+      "description": "Filtre actif ; toute la pastille retire le filtre.",
+      "html": "<button class=\"ds-chip\" title=\"Retirer le filtre Direction : South\">Direction : South <span class=\"ds-chip-x\" aria-hidden=\"true\"></span></button>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border: 0; border-radius: 9999px; background: #F1F5F9; color: #334155; font: 500 12px/16px 'Nunito Sans Variable', system-ui, sans-serif; cursor: pointer; transition: background-color 150ms, color 150ms; } .ds-chip:hover { background: #FDE8EC; color: #9B0D23; } .ds-chip-x { width: 14px; height: 14px; background: currentColor; -webkit-mask: linear-gradient(45deg, transparent 45%, #000 45%, #000 55%, transparent 55%), linear-gradient(-45deg, transparent 45%, #000 45%, #000 55%, transparent 55%); mask: linear-gradient(45deg, transparent 45%, #000 45%, #000 55%, transparent 55%), linear-gradient(-45deg, transparent 45%, #000 45%, #000 55%, transparent 55%); } .ds-chip:focus-visible { outline: 2px solid #C8102E; outline-offset: 2px; }"
+    },
+    {
+      "name": "Confirmation nommée",
+      "kind": "dialog",
+      "refersTo": "carte",
+      "description": "Nom de l'élément + conséquence ; le bouton répète le verbe.",
+      "html": "<div class=\"ds-dialog\" role=\"dialog\" aria-labelledby=\"ds-d-t\"><h2 id=\"ds-d-t\">Supprimer « Boutique Koné » ?</h2><p>Il n'apparaîtra plus dans les listes ni dans les tournées. Cette suppression ne peut pas être annulée.</p><div class=\"ds-dialog-actions\"><button class=\"ds-ghost\">Annuler</button><button class=\"ds-danger\">Supprimer le point de vente</button></div></div>",
+      "css": ".ds-dialog { width: 440px; padding: 24px; background: #FFFFFF; border-radius: 8px; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1); font-family: 'Nunito Sans Variable', system-ui, sans-serif; } .ds-dialog h2 { margin: 0 0 8px; font: 600 18px/1.4 inherit; color: #0F172A; } .ds-dialog p { margin: 0 0 20px; font: 400 14px/24px inherit; color: #334155; } .ds-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; } .ds-ghost, .ds-danger { height: 32px; padding: 6px 10px; border: 0; border-radius: 6px; font: 500 14px/20px inherit; cursor: pointer; } .ds-ghost { background: transparent; color: #334155; } .ds-ghost:hover { background: #F1F5F9; } .ds-danger { background: #B91C1C; color: #FFFFFF; } .ds-danger:hover { background: #991B1B; } .ds-ghost:focus-visible, .ds-danger:focus-visible { outline: 2px solid #C8102E; outline-offset: 2px; }"
+    },
+    {
+      "name": "État vide",
+      "kind": "empty-state",
+      "refersTo": "carte",
+      "description": "Ce qui manque, puis quoi faire.",
+      "html": "<div class=\"ds-empty\">Aucun point de vente actif. Ajoutez-en depuis l'onglet Liste.</div>",
+      "css": ".ds-empty { width: 420px; padding: 32px 16px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; text-align: center; font: 400 14px/20px 'Nunito Sans Variable', system-ui, sans-serif; color: #475569; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Le registre du chef de secteur",
+    "overview": "Le back-office est l'outil de bureau de ceux qui pilotent le terrain. Ils l'ouvrent entre deux réunions pour répondre à une question précise puis le referment. Le système se comporte comme un registre bien tenu : des colonnes nettes, des chiffres alignés, des titres qui disent ce qu'on regarde, et une seule couleur qui appelle l'action. On vouvoie, on écrit « français + sigle », et aucun code interne n'atteint l'écran.",
+    "keyCharacteristics": [
+      "Une seule couleur d'action, le rouge Bonnet Rouge (#C8102E), sur fond slate froid.",
+      "Surfaces blanches plates, trait de 1 px (#E2E8F0), aucune ombre hors des couches flottantes.",
+      "Navigation à deux niveaux : un domaine dans le menu latéral (sous quatre familles), une vue dans la barre d'onglets.",
+      "Une seule famille, Nunito Sans, en échelle fixe ; chiffres tabulaires.",
+      "Français simple et vouvoyé, « français + sigle » ; le détail technique reste dans la console."
+    ],
+    "rules": [
+      { "name": "The Red Means Act Rule", "body": "Le rouge signale une action ou la position courante, rien d'autre. Un seul bouton rouge plein par zone ; actions secondaires neutres.", "section": "colors" },
+      { "name": "The No Default Green Rule", "body": "Nuxt UI prend primary = brand et gray = slate dans app.config.ts. Aucun composant ne retombe sur le vert par défaut.", "section": "colors" },
+      { "name": "The One Gray Rule", "body": "Une seule famille de gris : slate.", "section": "colors" },
+      { "name": "The Ordered Scale Rule", "body": "Les niveaux Perfect Store prennent une seule teinte bleue, du foncé au clair, toujours avec le mot.", "section": "colors" },
+      { "name": "The Family Keeps Its Color Rule", "body": "Une famille de produits garde sa couleur quel que soit le filtre ; au-delà de huit séries, « Autre ».", "section": "colors" },
+      { "name": "The 12-Pixel Floor Rule", "body": "Aucun texte sous 12 px.", "section": "typography" },
+      { "name": "The No Shouting Rule", "body": "Pas de titres ni d'en-têtes de colonne en capitales ; pas de sur-titre au-dessus du titre de page.", "section": "typography" },
+      { "name": "The Fixed Scale Rule", "body": "Échelle fixe en rem : pas de clamp() sur les titres.", "section": "typography" },
+      { "name": "The French Plus Acronym Rule", "body": "Le mot français puis le sigle : boutiques (GT), supermarchés (MT), vendeur du distributeur (SSF), fichier du distributeur (DMS), référence (SKU).", "section": "typography" },
+      { "name": "The Vous Rule", "body": "On vouvoie et on dit quoi faire ; erreurs via messageUtilisateur(), jamais de code.", "section": "typography" },
+      { "name": "The Two Levels Rule", "body": "Domaine puis onglet, pas plus ; les familles sont des intitulés ; un registre unique, utils/adminNavigation.ts.", "section": "layout" },
+      { "name": "The Question First Rule", "body": "Le haut de chaque page répond à la question pour laquelle on l'ouvre.", "section": "layout" },
+      { "name": "The Four Across Rule", "body": "Au plus quatre indicateurs par rangée.", "section": "layout" },
+      { "name": "The Access Shapes The Menu Rule", "body": "On ne montre que ce qu'on peut ouvrir ; l'Agence voit une navigation réduite et le Planning en consultation.", "section": "layout" },
+      { "name": "The Flat-By-Default Rule", "body": "Cartes, tableaux, indicateurs, filtres, menu et en-tête n'ont aucune ombre et ne bougent pas au survol.", "section": "elevation" },
+      { "name": "The Named Confirmation Rule", "body": "Toute confirmation nomme l'élément et dit la conséquence.", "section": "components" },
+      { "name": "The Empty State Says What To Do Rule", "body": "Chaque graphique, tableau et liste dit pourquoi il est vide et quelle action le remplit.", "section": "components" }
+    ],
+    "dos": [
+      "Do réserver le rouge Bonnet Rouge aux actions principales, à la position courante et au focus.",
+      "Do passer par AdminPageHeader pour l'unique h1 et déclarer tout écran dans utils/adminNavigation.ts.",
+      "Do utiliser .admin-surface, .admin-table et .admin-toolbar / DashboardFilters.",
+      "Do employer le contrôle segmenté neutre pour choisir une vue ou une période.",
+      "Do afficher les niveaux Perfect Store avec NIVEAUX_PS, toujours avec le mot.",
+      "Do traduire chaque erreur avec messageUtilisateur().",
+      "Do nommer l'élément et la conséquence dans toute confirmation.",
+      "Do donner un état vide qui dit quoi faire, et un chargement qui dit ce qui se charge.",
+      "Do écrire « français + sigle » et vouvoyer."
+    ],
+    "donts": [
+      "Don't laisser un composant Nuxt UI retomber sur le vert par défaut.",
+      "Don't ajouter un troisième niveau de navigation.",
+      "Don't mettre plus de quatre indicateurs sur une rangée.",
+      "Don't colorer en rouge le segment choisi d'un contrôle segmenté.",
+      "Don't utiliser une palette catégorielle pour les niveaux, ni la couleur seule.",
+      "Don't utiliser d'emoji ni de caractère Unicode comme icône.",
+      "Don't afficher un identifiant interne, un code ou un message brut de la base.",
+      "Don't mettre d'ombre ou de déplacement au survol sur une carte.",
+      "Don't écrire sous 12 px ni en capitales pour les titres et en-têtes.",
+      "Don't montrer à un rôle un bouton qu'il ne peut pas utiliser."
+    ]
+  }
+}

@@ -1,36 +1,37 @@
 <template>
   <div class="space-y-6">
-    <AdminPageHeader
-      title="Versions de l'app"
-      eyebrow="Paramètres"
-      description="Qui a installé la version minimale exigée, qui est bloqué, qui tourne encore sur une ancienne version."
-    >
+    <AdminPageHeader description="La version minimale exigée, la publication d'une nouvelle version, et qui a installé quoi.">
       <template #actions>
-        <UButton icon="i-heroicons-arrow-path" variant="soft" color="gray" :loading="loading" @click="charger">Actualiser</UButton>
+        <UButton icon="i-heroicons-arrow-path" variant="outline" :loading="loading" @click="charger">Actualiser</UButton>
       </template>
     </AdminPageHeader>
 
-    <div v-if="erreur" class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+    <div v-if="erreur" class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-100">
       {{ erreur }}
     </div>
 
     <!-- Version exigée -->
     <div class="admin-surface flex flex-wrap items-center justify-between gap-3 p-4">
       <div>
-        <p class="text-xs uppercase tracking-wide text-gray-400">Version minimale exigée (Android)</p>
-        <p class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          {{ versionApp ? `${versionApp.version_nom_min || '?'} (code ${versionApp.version_code_min})` : '—' }}
+        <h2 class="text-base font-semibold text-slate-900 dark:text-white">Version minimale exigée (Android)</h2>
+        <p class="text-lg font-semibold tabular-nums text-slate-900 dark:text-white">
+          {{ versionApp ? `${versionApp.version_nom_min || 'Version sans nom'} (numéro interne ${versionApp.version_code_min})` : 'Non définie' }}
         </p>
-        <p class="text-xs text-gray-400">Modifiable dans Référentiels › Application mobile › Version minimale.</p>
+        <p class="text-sm text-slate-600 dark:text-slate-300">En dessous, l'application affiche un écran de mise à jour obligatoire.</p>
       </div>
-      <UButton
-        v-if="versionApp?.url_telechargement"
-        icon="i-heroicons-clipboard-document"
-        variant="soft"
-        @click="copierLien"
-      >
-        Copier le lien de l'APK
-      </UButton>
+      <div class="flex flex-wrap gap-2">
+        <UButton
+          v-if="versionApp?.url_telechargement"
+          icon="i-heroicons-clipboard-document"
+          variant="outline"
+          @click="copierLien"
+        >
+          Copier le lien de l'APK
+        </UButton>
+        <UButton v-if="authStore.isAdmin && versionApp" icon="i-heroicons-pencil-square" variant="outline" @click="ouvrirVersionMin">
+          Modifier la version minimale
+        </UButton>
+      </div>
     </div>
 
     <ChargementContenu v-if="loading && !lignes.length" variante="lignes" libelle="Chargement des versions…" />
@@ -38,65 +39,80 @@
     <template v-else>
       <!-- Synthèse (sur la direction, l'employeur et le rôle choisis) -->
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Adoption" :value="`${synthese.taux} %`" :subtitle="`${synthese.a_jour} / ${synthese.total} comptes à jour`" format="none" :icon="Smartphone" color="green" />
-        <StatsCard title="À jour" :value="synthese.a_jour" :icon="CheckCircle2" color="blue" />
-        <StatsCard title="Bloqués" :value="synthese.bloquee" subtitle="Écran de mise à jour affiché" :icon="Lock" color="orange" />
-        <StatsCard title="Non déclarés" :value="synthese.non_declaree" subtitle="Avant 1.0.10 ou jamais ouverte" :icon="HelpCircle" color="red" />
+        <StatsCard title="Adoption" :value="`${synthese.taux} %`" :subtitle="`${synthese.a_jour} / ${synthese.total} comptes à jour`" format="none" icon="i-heroicons-device-phone-mobile" color="green" />
+        <StatsCard title="À jour" :value="synthese.a_jour" icon="i-heroicons-check-circle" color="blue" />
+        <StatsCard title="Bloqués" :value="synthese.bloquee" subtitle="Écran de mise à jour affiché" icon="i-heroicons-lock-closed" color="orange" />
+        <StatsCard title="Non déclarés" :value="synthese.non_declaree" subtitle="Version trop ancienne pour être déclarée (avant 1.0.10), ou application jamais ouverte" icon="i-heroicons-question-mark-circle" color="red" />
       </div>
 
-      <div v-if="synthese.non_declaree" class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900/50 dark:bg-blue-900/10 dark:text-blue-200">
-        « Non déclarée » : l'app ne déclare sa version et n'affiche l'écran de mise à jour obligatoire que depuis la 1.0.10.
-        Un téléphone en 1.0.9 ou avant n'est donc <strong>ni visible ni bloqué</strong> : il faut que la personne mette à jour
-        depuis le Play Store ou le lien de l'APK. Triez par « Dernière visite » pour relancer d'abord ceux qui travaillent.
+      <div v-if="synthese.non_declaree" class="admin-surface flex gap-3 p-4 text-sm leading-6 text-slate-700 dark:text-slate-300">
+        <UIcon name="i-heroicons-information-circle" class="mt-0.5 h-5 w-5 shrink-0 text-slate-500" aria-hidden="true" />
+        <p>
+          « Non déclarée » : l'application ne déclare sa version, et n'affiche l'écran de mise à jour obligatoire, que depuis la 1.0.10.
+          Un téléphone en 1.0.9 ou avant n'est donc <strong class="text-slate-900 dark:text-white">ni visible ni bloqué</strong> : la personne doit mettre à jour
+          depuis le Play Store ou le lien de l'APK. Triez par « Dernière visite » pour relancer d'abord ceux qui travaillent.
+        </p>
       </div>
 
       <!-- Filtres -->
       <div class="flex flex-wrap items-center gap-2">
-        <UInput v-model="recherche" icon="i-heroicons-magnifying-glass" size="sm" placeholder="Nom ou email…" aria-label="Rechercher un compte" class="w-56" />
+        <UInput v-model="recherche" icon="i-heroicons-magnifying-glass" size="sm" placeholder="Nom ou email…" aria-label="Rechercher un compte" class="w-full sm:w-56" />
         <USelect v-model="filtreStatut" :options="optionsStatut" size="sm" aria-label="Filtrer par statut" />
         <USelect v-model="filtreDirection" :options="optionsDirection" size="sm" aria-label="Filtrer par direction" />
         <USelect v-model="filtreEmployeur" :options="optionsEmployeur" size="sm" aria-label="Filtrer par employeur" />
         <USelect v-model="filtreRole" :options="optionsRole" size="sm" aria-label="Filtrer par rôle" />
-        <span class="text-xs text-gray-400">{{ lignesFiltrees.length }} compte(s)</span>
+        <span class="text-xs tabular-nums text-slate-600 dark:text-slate-300" aria-live="polite">{{ lignesFiltrees.length }} compte{{ lignesFiltrees.length > 1 ? 's' : '' }}</span>
       </div>
 
       <!-- Comptes -->
       <div class="admin-surface overflow-x-auto">
         <table class="admin-table">
-          <thead class="bg-gray-50 dark:bg-gray-700/50">
+          <thead>
             <tr>
-              <th class="th-l">Compte</th>
-              <th class="th-l">Rôle</th>
-              <th class="th-l">Employeur</th>
-              <th class="th-l">Direction</th>
-              <th class="th-l">Statut</th>
-              <th class="th-l">Version</th>
-              <th class="th-l cursor-pointer select-none" @click="tri = 'ouverture'">Dernière ouverture {{ tri === 'ouverture' ? '↓' : '' }}</th>
-              <th class="th-l cursor-pointer select-none" @click="tri = 'visite'">Dernière visite (30 j) {{ tri === 'visite' ? '↓' : '' }}</th>
+              <th scope="col">Compte</th>
+              <th scope="col">Rôle</th>
+              <th scope="col">Employeur</th>
+              <th scope="col">Direction</th>
+              <th scope="col">Statut</th>
+              <th scope="col">Version</th>
+              <th scope="col" :aria-sort="tri === 'ouverture' ? 'descending' : 'none'">
+                <button type="button" class="tri-colonne" @click="tri = 'ouverture'">
+                  Dernière ouverture
+                  <UIcon v-if="tri === 'ouverture'" name="i-heroicons-arrow-down" class="h-3.5 w-3.5" aria-hidden="true" />
+                  <span v-if="tri === 'ouverture'" class="sr-only">(tri : plus récente d'abord)</span>
+                </button>
+              </th>
+              <th scope="col" :aria-sort="tri === 'visite' ? 'descending' : 'none'">
+                <button type="button" class="tri-colonne" @click="tri = 'visite'">
+                  Dernière visite (30 derniers jours)
+                  <UIcon v-if="tri === 'visite'" name="i-heroicons-arrow-down" class="h-3.5 w-3.5" aria-hidden="true" />
+                  <span v-if="tri === 'visite'" class="sr-only">(tri : plus récente d'abord)</span>
+                </button>
+              </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-            <tr v-for="l in lignesFiltrees" :key="l.user_id" class="row">
-              <td class="px-4 py-2.5 text-sm">
-                <p class="font-medium text-gray-900 dark:text-gray-100">{{ l.nom || l.email }}</p>
-                <p v-if="l.nom" class="text-xs text-gray-400">{{ l.email }}</p>
+          <tbody>
+            <tr v-for="l in lignesFiltrees" :key="l.user_id">
+              <td>
+                <p class="font-medium text-slate-900 dark:text-white">{{ l.nom || l.email }}</p>
+                <p v-if="l.nom" class="text-xs text-slate-500 dark:text-slate-400">{{ l.email }}</p>
               </td>
-              <td class="px-4 py-2.5 text-sm"><UBadge variant="soft" color="gray" size="xs">{{ l.role }}</UBadge></td>
-              <td class="px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300">{{ nomAgence(l.employeur) }}</td>
-              <td class="px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300">{{ libelleDirection(l.direction, true) }}</td>
-              <td class="px-4 py-2.5 text-sm">
+              <td><UBadge variant="soft" color="gray" size="xs">{{ libelleRole(l.role) }}</UBadge></td>
+              <td>{{ nomAgence(l.employeur) }}</td>
+              <td>{{ libelleDirection(l.direction, true) }}</td>
+              <td>
                 <UBadge variant="soft" :color="couleurStatut[l.statut]" size="xs">{{ libelleCourt[l.statut] }}</UBadge>
               </td>
-              <td class="px-4 py-2.5 font-mono text-sm text-gray-700 dark:text-gray-200">
-                {{ l.version_code != null ? `${l.version_nom || '?'} (${l.version_code})` : '—' }}
+              <td class="whitespace-nowrap tabular-nums">
+                {{ l.version_code != null ? `${l.version_nom || 'Sans nom'} (${l.version_code})` : '—' }}
               </td>
-              <td class="px-4 py-2.5 text-sm text-gray-500">{{ formaterDate(l.vu_le) }}</td>
-              <td class="px-4 py-2.5 text-sm text-gray-500">
-                {{ l.derniere_visite ? `${formaterDate(l.derniere_visite)} · il y a ${joursDepuis(l.derniere_visite)} j` : '—' }}
+              <td class="whitespace-nowrap tabular-nums">{{ formaterDate(l.vu_le) }}</td>
+              <td class="whitespace-nowrap tabular-nums">
+                {{ l.derniere_visite ? `${formaterDate(l.derniere_visite)} · ${ilYa(l.derniere_visite)}` : 'Aucune' }}
               </td>
             </tr>
             <tr v-if="!lignesFiltrees.length">
-              <td colspan="8" class="px-4 py-8 text-center text-sm text-gray-400">Aucun compte pour ces filtres.</td>
+              <td colspan="8" class="py-8 text-center text-slate-600 dark:text-slate-300">Aucun compte pour ces filtres. Élargissez le statut, la direction, l'employeur ou le rôle.</td>
             </tr>
           </tbody>
         </table>
@@ -106,38 +122,70 @@
       <div class="admin-surface p-4">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Comptes par direction et par rôle</h2>
-            <p class="text-xs text-gray-500 dark:text-gray-400">
-              {{ inventaire.total }} compte(s) actif(s), comptes de test exclus ({{ inventaire.tests }}).
+            <h2 class="text-base font-semibold text-slate-900 dark:text-white">Comptes par direction et par rôle</h2>
+            <p class="text-sm text-slate-600 dark:text-slate-300">
+              {{ inventaire.total }} compte{{ inventaire.total > 1 ? 's' : '' }} actif{{ inventaire.total > 1 ? 's' : '' }}, hors comptes de test ({{ inventaire.tests }}).
               Direction : celle du compte (Paramètres › Utilisateurs), sinon déduite de ses territoires.
             </p>
           </div>
-          <UButton size="sm" variant="soft" color="gray" icon="i-heroicons-arrow-down-tray" @click="exporterInventaire">Exporter les comptes</UButton>
+          <UButton size="sm" variant="outline" icon="i-heroicons-arrow-down-tray" @click="exporterInventaire">Exporter les comptes</UButton>
         </div>
         <div class="mt-3 overflow-x-auto">
           <table class="admin-table">
-            <thead class="bg-gray-50 dark:bg-gray-700/50">
+            <thead>
               <tr>
-                <th class="th-l">Direction</th>
-                <th v-for="r in ROLES_INVENTAIRE" :key="r" class="th-l text-right">{{ r }}</th>
-                <th class="th-l text-right">Total</th>
+                <th scope="col">Direction</th>
+                <th v-for="r in ROLES_INVENTAIRE" :key="r" scope="col" class="!text-right">{{ libelleRole(r) }}</th>
+                <th scope="col" class="!text-right">Total</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            <tbody>
               <tr v-for="l in inventaire.lignes" :key="l.direction || 'aucune'">
-                <td class="px-4 py-2 text-sm font-medium">{{ l.direction ? libelleDirection(l.direction) : 'Non renseignée' }}</td>
-                <td v-for="r in ROLES_INVENTAIRE" :key="r" class="px-4 py-2 text-right text-sm tabular-nums">{{ l.parRole[r] || 0 }}</td>
-                <td class="px-4 py-2 text-right text-sm font-semibold tabular-nums">{{ l.total }}</td>
+                <td class="font-medium text-slate-900 dark:text-white">{{ l.direction ? libelleDirection(l.direction) : 'Non renseignée' }}</td>
+                <td v-for="r in ROLES_INVENTAIRE" :key="r" class="text-right tabular-nums">{{ l.parRole[r] || 0 }}</td>
+                <td class="text-right font-semibold tabular-nums text-slate-900 dark:text-white">{{ l.total }}</td>
+              </tr>
+              <tr v-if="!inventaire.lignes.length">
+                <td :colspan="ROLES_INVENTAIRE.length + 2" class="py-6 text-center text-slate-600 dark:text-slate-300">Aucun compte actif à compter.</td>
               </tr>
             </tbody>
           </table>
         </div>
-        <p v-if="inventaire.doubles.length" class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+        <p v-if="inventaire.doubles.length" class="mt-3 text-sm text-slate-600 dark:text-slate-300">
           Personnes avec plusieurs comptes (comptées une fois par compte) :
-          {{ inventaire.doubles.map(cs => `${cs[0].nom} (${cs.map(c => c.role).join(' + ')})`).join(' ; ') }}.
+          {{ inventaire.doubles.map(cs => `${cs[0].nom} (${cs.map(c => libelleRole(c.role)).join(' + ')})`).join(' ; ') }}.
         </p>
       </div>
     </template>
+
+    <!-- Publier une version : réservé à l'administrateur (dépôt de l'APK,
+         vérifications, version obligatoire ou non). -->
+    <section v-if="authStore.isAdmin" id="publier" class="space-y-3">
+      <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Publier une nouvelle version</h2>
+      <AdminPublierVersion />
+    </section>
+
+    <AdminFormModal
+      v-model="modaleVersionMin"
+      title="Modifier la version minimale"
+      description="Les téléphones sous cette version verront un écran de mise à jour obligatoire. Vérifiez d'abord dans le tableau ci-dessus que la plupart des comptes l'ont installée."
+      icon="i-heroicons-device-phone-mobile"
+      required-note
+    >
+      <UFormGroup label="Numéro interne de la version minimale" required help="Chaque version a un numéro interne : 1.0.10 = 13, 1.0.12 = 15…" size="md">
+        <UInput v-model.number="formVersionMin.version_code_min" type="number" min="1" size="md" class="w-full" />
+      </UFormGroup>
+      <UFormGroup label="Version affichée" help="Le nom que voient les utilisateurs, ex. 1.0.12." size="md">
+        <UInput v-model="formVersionMin.version_nom_min" size="md" class="w-full" />
+      </UFormGroup>
+      <UFormGroup label="Message affiché sur l'écran de mise à jour" size="md">
+        <UInput v-model="formVersionMin.message" size="md" class="w-full" />
+      </UFormGroup>
+      <template #footer>
+        <UButton color="gray" variant="ghost" @click="modaleVersionMin = false">Annuler</UButton>
+        <UButton icon="i-heroicons-check" :loading="enregistrementVersionMin" :disabled="!(formVersionMin.version_code_min >= 1)" @click="enregistrerVersionMin">Enregistrer</UButton>
+      </template>
+    </AdminFormModal>
   </div>
 </template>
 
@@ -148,16 +196,51 @@
 // dernière visite (30 jours) sert à relancer d'abord ceux qui travaillent.
 // Lecture seule ; la RLS de version_installee réserve la lecture à l'admin et
 // au superviseur.
-import { CheckCircle2, HelpCircle, Lock, Smartphone } from 'lucide-vue-next'
 import { fetchAllRows } from '~/utils/fetchAll'
 import { LIBELLES_STATUT, ROLES_APP_MOBILE, estCompteTest, inventaireComptes, joursDepuis, statutVersion, syntheseAdoption, type StatutVersion } from '~/utils/adoptionApp'
 import { DIRECTIONS, libelleDirection } from '~/utils/agences'
-import { describeSupabaseError } from '~/utils/supabaseErrors'
+import { messageUtilisateur } from '~/utils/supabaseErrors'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const supabase = useSupabaseClient()
 const toast = useToast()
+const authStore = useAuthStore()
+
+// Version minimale (anciennement Référentiels › Application mobile › Version minimale).
+const modaleVersionMin = ref(false)
+const enregistrementVersionMin = ref(false)
+const formVersionMin = reactive({ version_code_min: 0, version_nom_min: '', message: '' })
+async function ouvrirVersionMin() {
+  const { data } = await (supabase.from('version_app') as any).select('version_code_min, version_nom_min, message').eq('plateforme', 'android').maybeSingle()
+  Object.assign(formVersionMin, {
+    version_code_min: data?.version_code_min ?? versionApp.value?.version_code_min ?? 1,
+    version_nom_min: data?.version_nom_min ?? '',
+    message: data?.message ?? '',
+  })
+  modaleVersionMin.value = true
+}
+async function enregistrerVersionMin() {
+  enregistrementVersionMin.value = true
+  try {
+    const { error } = await (supabase.from('version_app') as any).update({
+      version_code_min: formVersionMin.version_code_min,
+      version_nom_min: formVersionMin.version_nom_min || null,
+      message: formVersionMin.message || null,
+      updated_at: new Date().toISOString(),
+    }).eq('plateforme', 'android')
+    if (error) throw error
+    toast.add({ title: 'Version minimale enregistrée', color: 'green' })
+    modaleVersionMin.value = false
+    await charger()
+  }
+  catch (error) {
+    toast.add({ title: 'Version minimale non enregistrée', description: messageUtilisateur(error), color: 'red' })
+  }
+  finally {
+    enregistrementVersionMin.value = false
+  }
+}
 
 interface Ligne {
   user_id: string
@@ -191,10 +274,23 @@ const filtreRole = ref('tous')
 const tri = ref<'visite' | 'ouverture'>('visite')
 
 const libelleCourt: Record<StatutVersion, string> = { a_jour: 'À jour', bloquee: 'Bloquée', non_declaree: 'Non déclarée' }
+const LIBELLES_ROLES: Record<string, string> = {
+  admin: 'Administrateur',
+  superviseur: 'Superviseur',
+  commercial: 'Commercial',
+  merchandiser: 'Merchandiser',
+  agence: 'Agence',
+}
+function libelleRole(role: string) { return LIBELLES_ROLES[role] || role }
+// Libellés du filtre de statut : la version d'avant 1.0.10 dite en clair.
+const LIBELLES_FILTRE_STATUT: Record<StatutVersion, string> = {
+  ...LIBELLES_STATUT,
+  non_declaree: 'Non déclarée (version trop ancienne pour être déclarée, avant 1.0.10, ou jamais ouverte)',
+}
 const couleurStatut: Record<StatutVersion, 'green' | 'orange' | 'red'> = { a_jour: 'green', bloquee: 'orange', non_declaree: 'red' }
 const optionsStatut = [
   { label: 'Tous les statuts', value: 'tous' },
-  ...(Object.keys(LIBELLES_STATUT) as StatutVersion[]).map(s => ({ label: LIBELLES_STATUT[s], value: s })),
+  ...(Object.keys(LIBELLES_STATUT) as StatutVersion[]).map(s => ({ label: LIBELLES_FILTRE_STATUT[s], value: s })),
 ]
 const optionsEmployeur = computed(() => [{ label: 'Tous les employeurs', value: 'tous' }, ...optionsAgences.value])
 const optionsDirection = [
@@ -202,7 +298,7 @@ const optionsDirection = [
   ...DIRECTIONS.map(d => ({ label: d.label, value: d.value })),
   { label: 'Direction non renseignée', value: 'aucune' },
 ]
-const optionsRole = [{ label: 'Tous les rôles', value: 'tous' }, ...ROLES_APP_MOBILE.map(r => ({ label: r, value: r }))]
+const optionsRole = [{ label: 'Tous les rôles', value: 'tous' }, ...ROLES_APP_MOBILE.map(r => ({ label: libelleRole(r), value: r }))]
 
 // Périmètre choisi (direction, employeur, rôle) : la synthèse le suit, pour
 // répondre à « à Abidjan, qui a installé et qui n'a pas encore installé ».
@@ -237,6 +333,12 @@ const lignesFiltrees = computed(() => {
     .sort((a, b) => (b[cle] || '').localeCompare(a[cle] || ''))
 })
 
+function ilYa(iso: string) {
+  const n = joursDepuis(iso) ?? 0
+  if (n <= 0) return 'aujourd\'hui'
+  return `il y a ${n} jour${n > 1 ? 's' : ''}`
+}
+
 function formaterDate(iso: string | null) {
   return iso ? new Date(iso).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '—'
 }
@@ -245,7 +347,7 @@ async function copierLien() {
   if (!versionApp.value?.url_telechargement) return
   try {
     await navigator.clipboard.writeText(versionApp.value.url_telechargement)
-    toast.add({ title: 'Lien copié', description: 'À envoyer aux agents non à jour.', color: 'green' })
+    toast.add({ title: 'Lien copié', description: 'À envoyer aux personnes dont l\'application n\'est pas à jour.', color: 'green' })
   }
   catch {
     toast.add({ title: 'Copie impossible', description: versionApp.value.url_telechargement, color: 'amber' })
@@ -303,7 +405,7 @@ async function charger() {
       })
   }
   catch (e: any) {
-    erreur.value = describeSupabaseError(e)
+    erreur.value = messageUtilisateur(e, 'Les versions installées n\'ont pas pu être chargées. Réessayez ; si le problème continue, prévenez l\'administrateur.')
   }
   finally {
     loading.value = false
@@ -312,3 +414,10 @@ async function charger() {
 
 onMounted(() => { void chargerAgences(); void charger() })
 </script>
+
+<style scoped>
+/* En-tête de colonne triable : bouton au clavier, même étiquette que les autres en-têtes. */
+.tri-colonne {
+  @apply inline-flex items-center gap-1 rounded text-left font-semibold hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:hover:text-white;
+}
+</style>

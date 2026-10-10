@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">VISITES — ÉVOLUTION PAR CATÉGORIE</h1>
+    <AdminPageHeader description="Où ont lieu les visites : boutiques (GT) ou supermarchés (MT), et par catégorie de point de vente." />
 
     <DashboardFilters
       v-model="dashboard.filters.value"
@@ -8,102 +8,152 @@
       @filter="dashboard.fetchVisites()"
     />
 
-    <div v-if="dashboard.loading.value" class="flex items-center justify-center py-12">
-      <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-fc-blue" />
-    </div>
+    <ChargementContenu v-if="dashboard.loading.value" variante="cartes" :nombre="2" classe-carte="admin-surface" libelle="Chargement des visites…" />
 
     <template v-else>
-      <!-- KPI -->
-      <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatsCard title="Total visites" :value="String(dashboard.totalVisites.value)" icon="i-heroicons-clipboard-document-list" color="blue" />
-        <StatsCard title="General trade" :value="String(gtCount)" icon="i-heroicons-shopping-bag" color="green" />
-        <StatsCard title="Modern trade" :value="String(mtCount)" icon="i-heroicons-building-storefront" color="purple" />
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatsCard title="Visites" :value="dashboard.totalVisites.value" icon="i-heroicons-clipboard-document-list" color="red" />
+        <StatsCard title="En boutiques (GT)" :value="gtCount" :subtitle="part(gtCount)" icon="i-heroicons-shopping-bag" />
+        <StatsCard title="En supermarchés (MT)" :value="mtCount" :subtitle="part(mtCount)" icon="i-heroicons-building-storefront" />
       </div>
 
-      <!-- Pie Chart: GT vs MT -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-          <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Répartition par canal</h3>
+      <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <section class="admin-surface p-5">
+          <h2 class="text-base font-semibold text-slate-900 dark:text-white">Répartition par canal</h2>
           <ClientOnly>
             <ChartsPieChart
-              :labels="['General trade', 'Modern trade', 'Autre']"
-              :values="[gtCount, mtCount, autreCount]"
-              :colors="['#3B82F6', '#10B981', '#9CA3AF']"
+              v-if="canalPie.values.length"
+              class="mt-4"
+              bare
+              :labels="canalPie.labels"
+              :values="canalPie.values"
+              :colors="canalPie.colors"
               height="md"
-              :show-percentages="true"
             />
           </ClientOnly>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-          <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Répartition par catégorie PDV</h3>
+          <p v-if="!canalPie.values.length" class="mt-4 flex h-40 items-center justify-center rounded-md bg-slate-50 px-4 text-center text-sm text-slate-600 dark:bg-slate-700/40 dark:text-slate-300">
+            Aucune visite sur la période. Élargissez les dates ou retirez des filtres.
+          </p>
+        </section>
+        <section class="admin-surface p-5">
+          <h2 class="text-base font-semibold text-slate-900 dark:text-white">Répartition par catégorie de point de vente</h2>
           <ClientOnly>
             <ChartsPieChart
-              v-if="categorieBreakdown.labels.length"
-              :labels="categorieBreakdown.labels"
-              :values="categorieBreakdown.values"
+              v-if="categoriePie.labels.length"
+              class="mt-4"
+              bare
+              :labels="categoriePie.labels"
+              :values="categoriePie.values"
+              :colors="categoriePie.colors"
               height="md"
-              :show-percentages="true"
             />
           </ClientOnly>
-        </div>
+          <p v-if="!categoriePie.labels.length" class="mt-4 flex h-40 items-center justify-center rounded-md bg-slate-50 px-4 text-center text-sm text-slate-600 dark:bg-slate-700/40 dark:text-slate-300">
+            Aucune visite sur la période. Élargissez les dates ou retirez des filtres.
+          </p>
+        </section>
       </div>
 
-      <!-- Stacked bar: Evolution par canal par semaine -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Évolution des visites par canal</h3>
+      <section class="admin-surface p-5">
+        <h2 class="text-base font-semibold text-slate-900 dark:text-white">Évolution des visites par canal</h2>
+        <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">Visites de chaque semaine, repérée par son premier jour.</p>
         <ClientOnly>
-          <Bar v-if="evoChartData" :data="evoChartData" :options="chartOptions" />
+          <div v-if="evoChartData" class="mt-4 h-72">
+            <Bar :data="evoChartData" :options="chartOptions" />
+          </div>
         </ClientOnly>
-      </div>
+        <p v-if="!evoChartData" class="mt-4 flex h-40 items-center justify-center rounded-md bg-slate-50 px-4 text-center text-sm text-slate-600 dark:bg-slate-700/40 dark:text-slate-300">
+          Aucune visite sur la période. Élargissez les dates ou retirez des filtres.
+        </p>
+      </section>
 
-      <!-- Table: par catégorie PDV -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-        <div class="p-4 border-b">
-          <h3 class="font-bold text-gray-900 dark:text-gray-100">Détail par catégorie de PDV</h3>
+      <section class="admin-surface overflow-hidden">
+        <div class="border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+          <h2 class="text-base font-semibold text-slate-900 dark:text-white">Détail par catégorie de point de vente</h2>
         </div>
-        <table class="w-full">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="text-left text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">Catégorie PDV</th>
-              <th class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">Nb visites</th>
-              <th class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-3">%</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100">
-            <tr v-for="row in categorieRows" :key="row.name" class="hover:bg-gray-50 dark:hover:bg-gray-700">
-              <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">{{ row.name }}</td>
-              <td class="px-4 py-3 text-center text-sm font-bold text-fc-blue">{{ row.count }}</td>
-              <td class="px-4 py-3 text-center">
-                <div class="flex items-center justify-center gap-2">
-                  <div class="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div class="h-full bg-fc-blue rounded-full" :style="{ width: row.pct + '%' }" />
+        <div class="overflow-x-auto">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Catégorie</th>
+                <th class="text-right">Visites</th>
+                <th>Part des visites</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in categorieRows" :key="row.name">
+                <td class="font-medium text-slate-900 dark:text-white">{{ row.name }}</td>
+                <td class="text-right font-semibold tabular-nums text-slate-900 dark:text-white">{{ row.count.toLocaleString('fr-FR') }}</td>
+                <td>
+                  <div class="flex items-center gap-2">
+                    <div class="h-2 w-24 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700" aria-hidden="true">
+                      <div class="h-full rounded-full" :style="{ width: row.pct + '%', backgroundColor: SERIES[0] }" />
+                    </div>
+                    <span class="text-sm tabular-nums text-slate-700 dark:text-slate-200">{{ row.pct }} %</span>
                   </div>
-                  <span class="text-xs font-medium text-gray-600">{{ row.pct }}%</span>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+                </td>
+              </tr>
+              <tr v-if="!categorieRows.length">
+                <td colspan="3" class="py-8 text-center text-slate-600 dark:text-slate-300">
+                  Aucune visite sur la période. Élargissez les dates ou retirez des filtres.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
 import { Bar } from 'vue-chartjs'
+import { AUTRE, SERIES } from '~/utils/chartPalette'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const dashboard = useDashboardDirection()
+const { categoriePdvLabel, fetchTypePdvLabels } = useTypePdvLabels()
+
+// Libellés d'affichage : les valeurs de base restent General trade / Modern trade.
+const LIBELLE_GT = 'Boutiques (GT)'
+const LIBELLE_MT = 'Supermarchés (MT)'
+const COULEUR_GT = SERIES[0]
+const COULEUR_MT = SERIES[1]
+const NON_RENSEIGNE = 'Non renseignée'
 
 const gtCount = computed(() => dashboard.countWhere(v => v.pdv?.canal === 'General trade'))
 const mtCount = computed(() => dashboard.countWhere(v => v.pdv?.canal === 'Modern trade'))
 const autreCount = computed(() => dashboard.totalVisites.value - gtCount.value - mtCount.value)
 
+function part(n: number): string {
+  const total = dashboard.totalVisites.value
+  return total ? `${Math.round(n / total * 100)} % des visites` : ''
+}
+
+// Parts nulles retirées : la légende ne montre que ce qui existe.
+const canalPie = computed(() => {
+  const parts = [
+    { label: LIBELLE_GT, value: gtCount.value, color: COULEUR_GT },
+    { label: LIBELLE_MT, value: mtCount.value, color: COULEUR_MT },
+    { label: 'Canal non renseigné', value: autreCount.value, color: AUTRE },
+  ].filter(p => p.value > 0)
+  return { labels: parts.map(p => p.label), values: parts.map(p => p.value), colors: parts.map(p => p.color) }
+})
+
+const categoriePie = computed(() => {
+  let i = 0
+  return {
+    labels: categorieBreakdown.value.labels,
+    values: categorieBreakdown.value.values,
+    colors: categorieBreakdown.value.labels.map(l => (l === NON_RENSEIGNE ? AUTRE : SERIES[i++] ?? AUTRE)),
+  }
+})
+
 const categorieBreakdown = computed(() => {
   const counts = new Map<string, number>()
   dashboard.visites.value.forEach(v => {
-    const cat = v.pdv?.categorie_pdv || 'Non défini'
+    const cat = v.pdv?.categorie_pdv ? categoriePdvLabel(v.pdv.categorie_pdv) : NON_RENSEIGNE
     counts.set(cat, (counts.get(cat) || 0) + 1)
   })
   const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1])
@@ -145,23 +195,32 @@ const evoChartData = computed(() => {
   return {
     labels: sorted.map(([k]) => new Date(k).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' })),
     datasets: [
-      { label: 'General trade', data: sorted.map(([, v]) => v.gt), backgroundColor: '#3B82F6' },
-      { label: 'Modern trade', data: sorted.map(([, v]) => v.mt), backgroundColor: '#10B981' },
-      { label: 'Autre', data: sorted.map(([, v]) => v.autre), backgroundColor: '#9CA3AF' },
+      { label: LIBELLE_GT, data: sorted.map(([, v]) => v.gt), backgroundColor: COULEUR_GT },
+      { label: LIBELLE_MT, data: sorted.map(([, v]) => v.mt), backgroundColor: COULEUR_MT },
+      { label: 'Canal non renseigné', data: sorted.map(([, v]) => v.autre), backgroundColor: AUTRE },
     ],
   }
 })
 
-const chartOptions = {
+const axes = useAxesGraphique()
+const chartOptions = computed(() => ({
   responsive: true,
-  plugins: { legend: { position: 'top' as const } },
-  scales: {
-    x: { stacked: true },
-    y: { stacked: true, beginAtZero: true },
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      position: 'bottom' as const,
+      labels: { usePointStyle: true, pointStyle: 'circle', font: { size: axes.value.taillePolice }, color: axes.value.texte },
+    },
+    tooltip: { backgroundColor: axes.value.infobulleFond, titleColor: axes.value.infobulleTexte, bodyColor: axes.value.infobulleTexte, padding: 10, cornerRadius: 8 },
   },
-}
+  scales: {
+    x: { stacked: true, grid: { display: false }, ticks: { font: { size: axes.value.taillePolice }, color: axes.value.texte } },
+    y: { stacked: true, beginAtZero: true, grid: { color: axes.value.grille }, ticks: { font: { size: axes.value.taillePolice }, color: axes.value.texte } },
+  },
+}))
 
 onMounted(() => {
+  fetchTypePdvLabels()
   Promise.all([dashboard.fetchVisites()])
 })
 </script>

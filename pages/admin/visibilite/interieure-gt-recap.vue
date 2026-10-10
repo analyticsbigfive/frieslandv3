@@ -1,12 +1,8 @@
 <template>
   <div class="space-y-6">
-    <header class="space-y-1">
-      <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-fc-red">Perfect Store · Visibilité</p>
-      <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Visibilité intérieure (GT) — récapitulatif</h1>
-      <p class="max-w-2xl text-sm text-slate-500 dark:text-slate-400">
-        Détail par PDV des éléments intérieurs mesurés (General trade · référentiel Perfect Store).
-      </p>
-    </header>
+    <AdminPageHeader
+      description="Une ligne par visite de boutique : présence de chaque élément intérieur prévu pour le type de point de vente."
+    />
 
     <DashboardFilters
       v-model="dashboard.filters.value"
@@ -15,74 +11,123 @@
 
     <ChargementContenu v-if="dashboard.loading.value" libelle="Chargement des visites…" />
     <template v-else>
+      <section class="admin-surface overflow-hidden">
+        <div class="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
+          <div class="min-w-0">
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Détail par visite</h2>
+            <p class="mt-0.5 text-sm tabular-nums text-slate-600 dark:text-slate-300">
+              {{ nombre(filteredRows.length) }} visite{{ filteredRows.length > 1 ? 's' : '' }} de boutique
+              <template v-if="nbFiltresActifs"> sur {{ nombre(allRows.length) }}, filtrées par élément</template>
+            </p>
+          </div>
+          <div v-if="intColumns.length" class="flex flex-wrap items-center gap-2">
+            <UButton v-if="nbFiltresActifs" color="gray" variant="ghost" size="sm" icon="i-heroicons-x-mark" @click="effacerFiltres">
+              Effacer les filtres
+            </UButton>
+            <UButton
+              variant="outline"
+              size="sm"
+              icon="i-heroicons-funnel"
+              :aria-expanded="filtresOuverts"
+              aria-controls="filtres-elements"
+              @click="filtresOuverts = !filtresOuverts"
+            >
+              Filtrer par élément<span v-if="nbFiltresActifs" class="tabular-nums">&nbsp;({{ nbFiltresActifs }})</span>
+            </UButton>
+          </div>
+        </div>
 
-    <!-- Filtres par élément -->
-    <div class="admin-toolbar">
-      <p class="mb-3 text-xs font-medium uppercase tracking-wide text-slate-400">Filtrer par élément</p>
-      <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-        <UFormGroup v-for="col in intColumns" :key="col.code" :label="col.label" size="sm">
-          <USelectMenu v-model="colFilters[col.code]" :options="['', 'Présent', 'Absent']" placeholder="Tous" size="sm" />
-        </UFormGroup>
-      </div>
-      <p v-if="!intColumns.length" class="text-sm text-slate-400">Aucun élément intérieur pour les segments GT chargés.</p>
-    </div>
+        <div
+          v-if="filtresOuverts && intColumns.length"
+          id="filtres-elements"
+          class="border-t border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-700 dark:bg-slate-900/30"
+        >
+          <p class="mb-3 text-sm text-slate-600 dark:text-slate-300">
+            Gardez seulement les visites où un élément est présent, ou celles où il est absent.
+          </p>
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+            <UFormGroup v-for="col in intColumns" :key="col.code" :label="col.label" size="sm">
+              <USelectMenu
+                v-model="colFilters[col.code]"
+                :options="optionsPresence"
+                value-attribute="value"
+                option-attribute="label"
+                placeholder="Tous"
+                size="sm"
+              />
+            </UFormGroup>
+          </div>
+        </div>
 
-    <!-- Table -->
-    <section class="admin-surface overflow-hidden">
-      <div class="flex items-center justify-between px-5 py-4">
-        <h2 class="text-base font-semibold text-slate-900 dark:text-white">Détail par PDV</h2>
-        <span class="text-xs tabular-nums text-slate-400">{{ filteredRows.length }} PDV</span>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="admin-table" data-no-column-tools>
-          <thead>
-            <tr>
-              <th class="whitespace-nowrap">Nom du PDV</th>
-              <th>Région</th>
-              <th>Zone</th>
-              <th>Quartier</th>
-              <th>Sous-cat.</th>
-              <th>Merchandiser</th>
-              <th v-for="col in intColumns" :key="col.code" class="whitespace-nowrap text-center">{{ col.label }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(row, idx) in paginatedRows" :key="idx">
-              <td class="font-medium text-slate-900 dark:text-slate-100">
-                <div class="flex items-center gap-1.5">
-                  <span class="max-w-[180px] truncate">{{ row.nom }}</span>
-                  <PDVPhotoModal :pdv-id="row.pdv_id" :image-url="row.image_url" :pdv-name="row.nom" />
-                </div>
-              </td>
-              <td>{{ row.region }}</td>
-              <td>{{ row.zone }}</td>
-              <td>{{ row.quartier }}</td>
-              <td>{{ row.sousCategorie }}</td>
-              <td>{{ row.commercial }}</td>
-              <td v-for="col in intColumns" :key="col.code + idx" class="text-center">
-                <span v-if="!row.applicable[col.code]" class="text-slate-300 dark:text-slate-600">—</span>
-                <UIcon
-                  v-else
-                  :name="row.standards[col.code] ? 'i-heroicons-check-circle-20-solid' : 'i-heroicons-x-mark-20-solid'"
-                  class="h-4 w-4"
-                  :class="row.standards[col.code] ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600'"
-                />
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <ul
+          v-if="intColumns.length"
+          class="flex flex-wrap gap-x-5 gap-y-1 border-t border-slate-200 px-5 py-2.5 text-xs text-slate-600 dark:border-slate-700 dark:text-slate-300"
+          aria-label="Légende du tableau"
+        >
+          <li v-for="e in legende" :key="e.libelle" class="inline-flex items-center gap-1.5">
+            <UIcon :name="e.icone" class="h-4 w-4" :class="e.classe" aria-hidden="true" />
+            {{ e.libelle }}
+          </li>
+        </ul>
 
-      <div class="border-t border-slate-100 px-5 py-3 dark:border-slate-700">
-        <AdminPagination
-          :total="filteredRows.length"
-          :page="page"
-          :page-size="100"
-          item-label="ligne(s)"
-          @update:page="(p) => page = p"
-        />
-      </div>
-    </section>
+        <!-- Tableau large : trois colonnes fixes (le nom reste visible au
+             défilement), puis une colonne par élément, en-têtes sur deux lignes. -->
+        <div class="overflow-x-auto border-t border-slate-200 dark:border-slate-700">
+          <table class="admin-table" data-no-column-tools>
+            <thead>
+              <tr>
+                <th class="sticky left-0 z-10 bg-slate-50 dark:bg-slate-800">Point de vente</th>
+                <th>Localisation</th>
+                <th>Merchandiser</th>
+                <th v-for="col in intColumns" :key="col.code" class="text-center align-bottom">
+                  <span class="mx-auto block w-28 leading-snug">{{ col.label }}</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="!paginatedRows.length">
+                <td :colspan="3 + intColumns.length" class="py-8 text-center text-slate-600 dark:text-slate-300">
+                  {{ nbFiltresActifs
+                    ? 'Aucune visite ne correspond à ces filtres. Effacez les filtres par élément pour tout revoir.'
+                    : 'Aucune visite de boutique (GT) sur la période. Élargissez la période ou changez les filtres.' }}
+                </td>
+              </tr>
+              <tr v-for="(row, idx) in paginatedRows" :key="idx" class="group">
+                <td class="sticky left-0 z-10 bg-white group-hover:bg-slate-50 dark:bg-slate-800 dark:group-hover:bg-slate-700">
+                  <div class="flex items-center gap-1.5">
+                    <span class="max-w-[200px] truncate font-medium text-slate-900 dark:text-white" :title="row.nom">{{ row.nom }}</span>
+                    <PDVPhotoModal :pdv-id="row.pdv_id" :image-url="row.image_url" :pdv-name="row.nom" />
+                  </div>
+                  <p v-if="row.sousCategorie" class="text-xs text-slate-500 dark:text-slate-400">{{ row.sousCategorie }}</p>
+                </td>
+                <td>
+                  <p>{{ row.zone || 'Territoire non renseigné' }}</p>
+                  <p v-if="row.quartier || row.region" class="text-xs text-slate-500 dark:text-slate-400">
+                    {{ [row.quartier, row.region].filter(Boolean).join(' · ') }}
+                  </p>
+                </td>
+                <td class="whitespace-nowrap">{{ row.commercial || 'Non renseigné' }}</td>
+                <td v-for="col in intColumns" :key="col.code + idx" class="text-center">
+                  <span class="inline-flex" :title="etat(row, col.code).libelle">
+                    <UIcon :name="etat(row, col.code).icone" class="h-5 w-5" :class="etat(row, col.code).classe" aria-hidden="true" />
+                    <span class="sr-only">{{ etat(row, col.code).libelle }}</span>
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="border-t border-slate-200 px-5 py-3 dark:border-slate-700">
+          <AdminPagination
+            :total="filteredRows.length"
+            :page="page"
+            :page-size="100"
+            item-label="visite(s)"
+            @update:page="(p) => page = p"
+          />
+        </div>
+      </section>
     </template>
   </div>
 </template>
@@ -95,6 +140,9 @@ const { typePdvLabel, fetchTypePdvLabels } = useTypePdvLabels()
 const { fetchElements, columns, applicable, standardsOf } = useVisibilityAggregation()
 const page = ref(1)
 
+// Nombres à la française (« 9 587 »).
+const nombre = (n: number) => n.toLocaleString('fr-FR')
+
 const gtVisites = computed(() =>
   dashboard.visites.value.filter(v => !v.pdv?.canal || v.pdv.canal === 'General trade')
 )
@@ -102,8 +150,32 @@ const gtVisites = computed(() =>
 const intColumns = computed(() => columns(gtVisites.value, 'interieure'))
 const colFilters = reactive<Record<string, string>>({})
 
+// Filtres par élément : repliés par défaut, valeurs inchangées ('' = tous).
+const optionsPresence = [
+  { value: '', label: 'Tous' },
+  { value: 'Présent', label: 'Présent' },
+  { value: 'Absent', label: 'Absent' },
+]
+const filtresOuverts = ref(false)
+const nbFiltresActifs = computed(() => intColumns.value.filter(c => colFilters[c.code]).length)
+function effacerFiltres() {
+  for (const code of Object.keys(colFilters)) colFilters[code] = ''
+}
+
+// État d'une cellule : icône + libellé (jamais la couleur seule).
+const ETATS = {
+  present: { icone: 'i-heroicons-check-circle-20-solid', classe: 'text-emerald-700 dark:text-emerald-400', libelle: 'Présent' },
+  absent: { icone: 'i-heroicons-x-circle', classe: 'text-red-600 dark:text-red-400', libelle: 'Absent' },
+  nonPrevu: { icone: 'i-heroicons-minus-20-solid', classe: 'text-slate-500 dark:text-slate-400', libelle: 'Non prévu pour ce type de point de vente' },
+}
+const legende = [ETATS.present, ETATS.absent, ETATS.nonPrevu]
+function etat(row: { applicable: Record<string, boolean>; standards: Record<string, boolean> }, code: string) {
+  if (!row.applicable[code]) return ETATS.nonPrevu
+  return row.standards[code] ? ETATS.present : ETATS.absent
+}
+
 const allRows = computed(() => gtVisites.value.map(v => ({
-  nom: v.pdv?.nom_pdv || '',
+  nom: v.pdv?.nom_pdv || 'Point de vente sans nom',
   pdv_id: v.pdv?.pdv_id || '',
   image_url: (v.pdv as any)?.image_url || null,
   region: v.pdv?.region || '',
@@ -125,6 +197,7 @@ const filteredRows = computed(() => allRows.value.filter(row => {
 }))
 
 const paginatedRows = computed(() => filteredRows.value.slice((page.value - 1) * 100, page.value * 100))
+watch(filteredRows, () => { page.value = 1 })
 
 onMounted(() => {
   Promise.all([dashboard.fetchVisites(), fetchElements(), fetchTypePdvLabels()])

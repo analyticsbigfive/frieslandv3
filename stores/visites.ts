@@ -12,6 +12,14 @@ export const useVisitesStore = defineStore('visites', () => {
   const loading = ref(false)
   const total = ref(0)
   const stats = ref<DashboardStats | null>(null)
+  /**
+   * Échecs du dernier chargement des statistiques, par partie (null si chargée).
+   * `stats` est rempli de zéros en cas d'échec pour que la page s'affiche :
+   * sans ce relevé, un échec se lisait « 0 visite ».
+   */
+  const statsErreurs = ref<{ global: unknown; parc: unknown; performance: unknown; parJour: unknown; distribution: unknown }>({
+    global: null, parc: null, performance: null, parJour: null, distribution: null,
+  })
 
   // Stats cache: TTL 5 minutes + deduplication
   const statsCacheTTL = 5 * 60 * 1000
@@ -223,8 +231,10 @@ export const useVisitesStore = defineStore('visites', () => {
 
         // Fallback: si v_stats_visites manquante, calculer les stats de base
         let fallbackStats: any = null
+        let erreurRepli: unknown = null
         if (!statsData) {
-          const { count } = await supabase.from('visites').select('*', { count: 'exact', head: true })
+          const { count, error: errCount } = await supabase.from('visites').select('*', { count: 'exact', head: true })
+          erreurRepli = errCount
           const { count: monthCount } = await supabase.from('visites')
             .select('*', { count: 'exact', head: true })
             .gte('date_visite', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
@@ -293,11 +303,23 @@ export const useVisitesStore = defineStore('visites', () => {
           })),
         }
 
+        // Une erreur sous forme de texte (« view missing ») n'est pas montrable :
+        // objet vide = message générique de messageUtilisateur().
+        const montrable = (e: unknown) => (e == null ? null : typeof e === 'string' ? {} : e)
+        statsErreurs.value = {
+          global: statsResult.error && erreurRepli ? montrable(erreurRepli) : null,
+          parc: montrable((countResult as any).error),
+          performance: options.leger ? statsErreurs.value.performance : montrable(perfResult.error),
+          parJour: options.leger ? statsErreurs.value.parJour : montrable(jourResult.error),
+          distribution: distResult.error && !fallbackDist.length ? montrable(distResult.error) : null,
+        }
+
         statsCacheTimestamp = Date.now()
         statsComplet = !options.leger
       }
       catch (err) {
         console.error('Erreur chargement stats:', err)
+        statsErreurs.value = { global: err, parc: err, performance: err, parJour: err, distribution: err }
         // Initialize with empty stats so the page still renders
         if (!stats.value) {
           stats.value = {
@@ -335,6 +357,7 @@ export const useVisitesStore = defineStore('visites', () => {
     loading,
     total,
     stats,
+    statsErreurs,
     filters,
     fetchVisites,
     fetchVisitesForExport,

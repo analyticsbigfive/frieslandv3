@@ -1,49 +1,51 @@
 <template>
   <div>
-    <!-- Trigger button -->
+    <!-- Déclencheur : icône seule dans une cellule de tableau, nommée pour les lecteurs d'écran. -->
     <button
       type="button"
-      class="inline-flex items-center justify-center w-6 h-6 rounded-md text-gray-400 hover:text-fc-red hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-      :title="pdvName ? `Photo de ${pdvName}` : 'Voir la photo'"
+      class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white dark:focus-visible:ring-brand-400"
+      :title="libelleOuvrir"
+      :aria-label="libelleOuvrir"
       @click.stop="openModal"
     >
-      <UIcon name="i-heroicons-camera" class="w-4 h-4" />
+      <UIcon name="i-heroicons-camera" class="h-4 w-4" aria-hidden="true" />
     </button>
 
-    <!-- Modal -->
-    <UModal v-model="isOpen" :ui="{ width: 'max-w-lg' }">
-      <div class="p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">
-            {{ pdvName || 'Photo du PDV' }}
-          </h3>
-          <UButton variant="ghost" size="xs" icon="i-heroicons-x-mark" @click="isOpen = false" />
-        </div>
-
-        <!-- Loading -->
-        <div v-if="loading" class="flex items-center justify-center py-12">
-          <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-fc-red" />
-        </div>
-
-        <!-- Photo -->
-        <div v-else-if="resolvedUrl" class="relative">
-          <img
-            :src="resolvedUrl"
-            :alt="pdvName || 'Photo PDV'"
-            class="w-full rounded-xl object-cover max-h-[400px] bg-gray-100 dark:bg-gray-700"
-            @error="imgError = true"
-          />
-          <div v-if="imgError" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-xl">
-            <UIcon name="i-heroicons-photo" class="w-16 h-16 text-gray-300 dark:text-gray-600" />
-            <p class="text-sm text-gray-400 mt-2">Image indisponible</p>
+    <UModal v-model="isOpen" :ui="{ width: 'w-full sm:max-w-lg' }" :aria-label="titre">
+      <div class="p-5 sm:p-6">
+        <div class="mb-4 flex items-start justify-between gap-4">
+          <div class="min-w-0">
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">{{ titre }}</h2>
+            <p v-if="pdvName" class="mt-0.5 text-sm text-slate-600 dark:text-slate-300">Photo du point de vente</p>
           </div>
+          <UButton aria-label="Fermer" color="gray" variant="ghost" size="xs" icon="i-heroicons-x-mark" @click="isOpen = false" />
         </div>
 
-        <!-- No photo -->
-        <div v-else class="flex flex-col items-center justify-center py-12 text-gray-400">
-          <UIcon name="i-heroicons-camera-slash" class="w-16 h-16 text-gray-300 dark:text-gray-600 mb-3" />
-          <p class="text-sm font-medium">Aucune photo disponible</p>
-          <p class="text-xs mt-1">Ce point de vente n'a pas encore de photo associée.</p>
+        <ChargementContenu v-if="loading" variante="compact" libelle="Chargement de la photo…" class="flex justify-center py-10" />
+
+        <!-- Photo enregistrée mais impossible à afficher (fichier introuvable, connexion) -->
+        <div v-else-if="imgError || erreurChargement" class="flex flex-col items-center justify-center rounded-lg bg-slate-50 px-4 py-10 text-center dark:bg-slate-700/40" role="alert">
+          <UIcon name="i-heroicons-exclamation-triangle" class="mb-3 h-10 w-10 text-amber-700 dark:text-amber-400" aria-hidden="true" />
+          <p class="text-sm font-semibold text-slate-900 dark:text-white">La photo n'a pas pu s'afficher</p>
+          <p class="mt-1 max-w-sm text-sm text-slate-600 dark:text-slate-300">
+            Vérifiez votre connexion, puis rouvrez la photo. Si le problème continue, le fichier n'est peut-être plus disponible.
+          </p>
+        </div>
+
+        <img
+          v-else-if="resolvedUrl"
+          :src="resolvedUrl"
+          :alt="pdvName ? `Photo du point de vente ${pdvName}` : 'Photo du point de vente'"
+          class="max-h-[400px] w-full rounded-lg bg-slate-100 object-cover dark:bg-slate-700"
+          @error="imgError = true"
+        />
+
+        <div v-else class="flex flex-col items-center justify-center rounded-lg bg-slate-50 px-4 py-10 text-center dark:bg-slate-700/40">
+          <UIcon name="i-heroicons-camera" class="mb-3 h-10 w-10 text-slate-500 dark:text-slate-400" aria-hidden="true" />
+          <p class="text-sm font-semibold text-slate-900 dark:text-white">Pas de photo pour ce point de vente</p>
+          <p class="mt-1 max-w-sm text-sm text-slate-600 dark:text-slate-300">
+            Les photos prises pendant les visites restent visibles dans le détail de chaque visite.
+          </p>
         </div>
       </div>
     </UModal>
@@ -67,6 +69,11 @@ const isOpen = ref(false)
 const loading = ref(false)
 const fetchedUrl = ref<string | null>(null)
 const imgError = ref(false)
+// Lecture de la photo en base impossible (réseau, droits) : distinct de « pas de photo ».
+const erreurChargement = ref(false)
+
+const titre = computed(() => props.pdvName || 'Photo du point de vente')
+const libelleOuvrir = computed(() => props.pdvName ? `Voir la photo de ${props.pdvName}` : 'Voir la photo du point de vente')
 
 const resolvedUrl = computed(() => {
   if (imgError.value) return null
@@ -78,19 +85,24 @@ const resolvedUrl = computed(() => {
 async function openModal() {
   isOpen.value = true
   imgError.value = false
+  erreurChargement.value = false
 
   // Si pas d'imageUrl fourni, charger depuis la base par pdv_id
   if (!props.imageUrl && props.pdvId && !fetchedUrl.value) {
     loading.value = true
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('pdv')
         .select('image_url')
         .eq('pdv_id', props.pdvId)
         .single()
+      // PGRST116 : point de vente introuvable, traité comme « pas de photo ».
+      if (error && error.code !== 'PGRST116') throw error
       fetchedUrl.value = (data as any)?.image_url || null
-    } catch {
+    } catch (err) {
+      console.error('Photo du point de vente illisible', err)
       fetchedUrl.value = null
+      erreurChargement.value = true
     } finally {
       loading.value = false
     }
@@ -101,6 +113,7 @@ async function openModal() {
 watch(() => props.pdvId, () => {
   fetchedUrl.value = null
   imgError.value = false
+  erreurChargement.value = false
 })
 
 // Expose openModal pour usage programmatique (ex: carte Leaflet)

@@ -1,16 +1,18 @@
 <template>
   <div class="flex flex-wrap items-end gap-x-3 gap-y-2">
     <div>
-      <p v-if="label" class="mb-1 text-xs font-medium text-slate-500 dark:text-slate-400">{{ label }}</p>
-      <div class="inline-flex rounded-lg border border-slate-200 p-0.5 dark:border-slate-700" role="group" :aria-label="label || 'Période'">
+      <p v-if="label" class="mb-1 text-xs font-medium text-slate-600 dark:text-slate-300">{{ label }}</p>
+      <!-- Contrôle segmenté (même style que les bascules d'affichage) ; passe à
+           la ligne sur petit écran au lieu de déborder. -->
+      <div class="inline-flex flex-wrap rounded-md border border-slate-300 bg-white p-0.5 dark:border-slate-600 dark:bg-slate-800" role="group" :aria-label="label || 'Période'">
         <button
           v-for="opt in options"
           :key="opt.value"
           type="button"
-          class="rounded-md px-2.5 py-1 text-xs font-medium transition"
+          class="rounded px-2.5 py-1 text-xs font-medium transition-colors"
           :class="model.preset === opt.value
-            ? 'bg-fc-red text-white'
-            : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700'"
+            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+            : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700'"
           :aria-pressed="model.preset === opt.value"
           @click="choisir(opt.value)"
         >

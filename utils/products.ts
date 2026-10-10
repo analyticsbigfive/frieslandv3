@@ -138,7 +138,41 @@ export function getSkuLabel(categoryKey: string, skuKey: string): string {
 }
 
 // Statuts hérités considérés comme "produit présent" (anciennes visites).
-const LEGACY_PRESENT = new Set<string>(['Présent', 'Disponible , Prix respecté', 'Présent , Prix respecté'])
+// Ancien format (avant les quantités, presque toutes les visites) : un texte par
+// référence qui cumule les cases cochées, ex. « Présent , Disponible , Prix respecté »
+// ou « En rupture ». Une référence absente du relevé n'a pas été renseignée.
+// « Présent » seul (sans « Disponible ») : référencé mais pas disponible en
+// rayon (règle du 10/10/2026, la même que le calcul Perfect Store en base).
+export type DisponibiliteReleve = 'disponible' | 'present' | 'rupture' | 'contradictoire' | 'indetermine' | 'non_renseigne'
+export type PrixReleve = 'respecte' | 'non_respecte' | 'contradictoire' | null
+
+export interface ReleveSku {
+  /** Quantité relevée (nouveau format), sinon null. */
+  quantite: number | null
+  disponibilite: DisponibiliteReleve
+  prix: PrixReleve
+}
+
+/** Lit le relevé d'une référence, quel que soit le format de la visite. */
+export function releveSku(catData: any, skuKey: string): ReleveSku {
+  const quantite = skuQuantity(catData, skuKey)
+  const brut = catData?.[skuKey]
+  const cases = typeof brut === 'string' ? brut.split(',').map(t => t.trim().toLowerCase()).filter(Boolean) : []
+  const dispo = cases.includes('disponible')
+  const present = cases.includes('présent')
+  const rupture = cases.includes('en rupture')
+  const prixOk = cases.includes('prix respecté')
+  const prixKo = cases.includes('prix non respecté')
+  let disponibilite: DisponibiliteReleve
+  if (quantite !== null) disponibilite = quantite > 0 ? 'disponible' : 'rupture'
+  else if ((dispo || present) && rupture) disponibilite = 'contradictoire'
+  else if (dispo) disponibilite = 'disponible'
+  else if (present) disponibilite = 'present'
+  else if (rupture) disponibilite = 'rupture'
+  else disponibilite = cases.length ? 'indetermine' : 'non_renseigne'
+  const prix: PrixReleve = prixOk && prixKo ? 'contradictoire' : prixOk ? 'respecte' : prixKo ? 'non_respecte' : null
+  return { quantite, disponibilite, prix }
+}
 
 /**
  * Quantité numérique d'un SKU à partir d'une valeur de visite.
@@ -151,12 +185,9 @@ export function skuQuantity(catData: any, skuKey: string): number | null {
   return null
 }
 
-/** Disponible: quantité ≥ 1, ou (legacy) statut présent. */
+/** Disponible : quantité ≥ 1, ou statut « Disponible » sans « En rupture ». */
 export function skuIsAvailable(catData: any, skuKey: string): boolean {
-  const q = skuQuantity(catData, skuKey)
-  if (q !== null) return q > 0
-  const legacy = catData?.[skuKey]
-  return typeof legacy === 'string' && LEGACY_PRESENT.has(legacy)
+  return releveSku(catData, skuKey).disponibilite === 'disponible'
 }
 
 export type StockLevel = 'oos' | 'low' | 'ok' | 'unknown'
@@ -173,10 +204,13 @@ export function skuStockLevel(catData: any, skuKey: string, seuilBas: number): S
   return 'ok'
 }
 
-/** Catégorie "présente" = au moins un SKU disponible (SKU retirés compris). */
+/** Catégorie "présente" = au moins un SKU présent ou disponible (SKU retirés compris). */
 export function categoryPresent(catData: any, categoryKey: string): boolean {
   if (!catData) return false
-  return getSkus(categoryKey, { inclureInactifs: true }).some(s => skuIsAvailable(catData, s.key))
+  return getSkus(categoryKey, { inclureInactifs: true }).some((s) => {
+    const d = releveSku(catData, s.key).disponibilite
+    return d === 'disponible' || d === 'present'
+  })
 }
 
 /** Quantité totale (SKU à quantité connue) d'une catégorie. */

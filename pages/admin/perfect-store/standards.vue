@@ -1,198 +1,216 @@
 <template>
   <div class="space-y-6">
-    <div class="flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Standards Perfect Store</h1>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Disponibilité, assortiment, visibilité et promotion issus du fichier BIG FIVE KPI.
-        </p>
-        <p class="mt-1 text-xs text-gray-400">
-          {{ canEdit ? 'Votre rôle permet de modifier les paramètres.' : 'Consultation seule : rôle admin ou superviseur requis pour modifier.' }}
-        </p>
-      </div>
-      <UButton
-        v-if="canEdit"
-        icon="i-heroicons-arrow-path"
-        :loading="recalculating"
-        color="red"
-        @click="recalculateAll"
-      >
-        Recalculer toutes les visites
-      </UButton>
-      <!-- Le recalcul dure plusieurs dizaines de secondes : sans progression,
-           l'écran paraîtrait figé et l'opérateur relancerait. -->
-      <span v-if="recalculating && recalculTotal" class="text-xs tabular-nums text-slate-500 dark:text-slate-400">
-        {{ recalculProgression }} / {{ recalculTotal }} visites
-      </span>
+    <AdminPageHeader description="Les règles qui classent chaque point de vente : seuils des niveaux, assortiment, poids des références, visibilité exigée et rattachement des types de PDV.">
+      <template #actions>
+        <UButton
+          v-if="canEdit"
+          icon="i-heroicons-arrow-path"
+          :loading="recalculating"
+          color="gray"
+          variant="solid"
+          @click="confirmationRecalcul = true"
+        >
+          Recalculer toutes les visites
+        </UButton>
+      </template>
+    </AdminPageHeader>
+
+    <p v-if="!canEdit" class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+      <UIcon name="i-heroicons-eye" class="h-4 w-4" aria-hidden="true" />
+      Consultation seule : seuls un administrateur ou un superviseur peuvent modifier les standards.
+    </p>
+
+    <!-- Les scores des visites ne changent qu'après le recalcul : on le rappelle
+         tant qu'il n'a pas été lancé depuis la dernière modification. -->
+    <div
+      v-if="canEdit && (recalculEnAttente || recalculating)"
+      class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-100"
+      role="status"
+    >
+      <p v-if="recalculating">
+        Recalcul en cours<span v-if="recalculTotal"> : <strong class="tabular-nums">{{ recalculProgression }} / {{ recalculTotal }}</strong> visites</span>. Gardez cette page ouverte.
+      </p>
+      <p v-else>Vous avez modifié des standards. Les scores des visites et les tableaux de bord ne changeront qu'après le recalcul.</p>
+      <UButton v-if="!recalculating" size="sm" icon="i-heroicons-arrow-path" @click="confirmationRecalcul = true">Recalculer maintenant</UButton>
     </div>
 
-    <div v-if="loading" class="flex justify-center py-12">
-      <UIcon name="i-heroicons-arrow-path" class="h-8 w-8 animate-spin text-fc-red" />
-    </div>
+    <ChargementContenu v-if="loading" variante="cartes" libelle="Chargement des standards…" />
 
-    <template v-else>
-      <!-- Onglets : une seule section visible à la fois (plus lisible) -->
-      <div class="admin-surface px-4 py-3">
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="t in tabs"
-            :key="t.key"
-            type="button"
-            class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
-            :class="activeTab === t.key ? 'bg-fc-red text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300'"
-            @click="activeTab = t.key"
-          >
-            {{ t.label }}
-          </button>
-        </div>
-        <p class="mt-2.5 text-sm text-gray-500 dark:text-gray-400">{{ activeHelp }}</p>
-      </div>
-
-      <div v-show="activeTab === 'niveaux'" class="admin-surface overflow-hidden">
-        <div class="border-b border-gray-100 px-5 py-3 dark:border-gray-700">
-          <h2 class="font-bold text-gray-900 dark:text-gray-100">Seuils des niveaux</h2>
-          <p class="mt-1 text-xs text-gray-400">La visibilité parfaite est exigée à 100 %. La promotion est contrôlée uniquement lorsqu’elle est applicable.</p>
+    <div v-else class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_13rem]">
+      <div class="min-w-0 space-y-6">
+      <section id="niveaux" class="admin-surface scroll-mt-24 overflow-hidden" aria-labelledby="titre-niveaux">
+        <div class="border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+          <h2 id="titre-niveaux" class="text-base font-semibold text-slate-900 dark:text-white">Seuils des niveaux</h2>
+          <p class="mt-1 max-w-3xl text-sm text-slate-600 dark:text-slate-300">Les seuils de disponibilité, de visibilité et de promotion pour qu’un magasin soit classé Flagship, VIP, Core ou Basic. La visibilité parfaite est exigée à 100 % ; la promotion n’est contrôlée que lorsqu’elle s’applique.</p>
         </div>
         <div class="overflow-x-auto">
-          <table class="w-full">
-            <thead class="bg-gray-50 dark:bg-gray-700/50">
+          <table class="admin-table">
+            <thead>
               <tr>
-                <th class="th-l">Niveau</th>
-                <th class="th-c">Disponibilité min.</th>
-                <th class="th-c">Visibilité min.</th>
-                <th class="th-c">Promotion min.</th>
-                <th v-if="canEdit" class="th-c">Action</th>
+                <th scope="col">Niveau</th>
+                <th scope="col" class="!text-right">Disponibilité minimale</th>
+                <th scope="col" class="!text-right">Visibilité minimale</th>
+                <th scope="col" class="!text-right">Promotion minimale</th>
+                <th v-if="canEdit" scope="col"><span class="sr-only">Enregistrer</span></th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            <tbody>
               <tr v-for="niveau in niveaux" :key="niveau.code">
-                <td class="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100">{{ niveau.code }}</td>
-                <td class="px-4 py-3 text-center text-sm">
-                  <UInput v-if="canEdit" v-model.number="niveau.dispo_rayon_min" type="number" min="0" max="100" size="sm" class="mx-auto w-24" />
+                <td class="font-semibold text-slate-900 dark:text-white">{{ libelleNiveau(niveau.code) }}</td>
+                <td class="text-right tabular-nums">
+                  <UInput v-if="canEdit" v-model.number="niveau.dispo_rayon_min" type="number" min="0" max="100" size="sm" class="ml-auto w-24" :aria-label="`Disponibilité minimale, niveau ${libelleNiveau(niveau.code)} (%)`" />
                   <span v-else>{{ pct(niveau.dispo_rayon_min) }}</span>
                 </td>
-                <td class="px-4 py-3 text-center text-sm">
-                  <UInput v-if="canEdit" v-model.number="niveau.visibilite_min" type="number" min="0" max="100" size="sm" class="mx-auto w-24" />
+                <td class="text-right tabular-nums">
+                  <UInput v-if="canEdit" v-model.number="niveau.visibilite_min" type="number" min="0" max="100" size="sm" class="ml-auto w-24" :aria-label="`Visibilité minimale, niveau ${libelleNiveau(niveau.code)} (%)`" />
                   <span v-else>{{ pct(niveau.visibilite_min) }}</span>
                 </td>
-                <td class="px-4 py-3 text-center text-sm">
-                  <UInput v-if="canEdit" v-model.number="niveau.promotion_min" type="number" min="0" max="100" size="sm" class="mx-auto w-24" />
-                  <span v-else>{{ pct(niveau.promotion_min) }} <span class="text-xs text-gray-400">(si active)</span></span>
+                <td class="text-right tabular-nums">
+                  <UInput v-if="canEdit" v-model.number="niveau.promotion_min" type="number" min="0" max="100" size="sm" class="ml-auto w-24" :aria-label="`Promotion minimale, niveau ${libelleNiveau(niveau.code)} (%)`" />
+                  <span v-else>{{ pct(niveau.promotion_min) }} <span class="text-xs text-slate-600 dark:text-slate-300">(si elle s’applique)</span></span>
                 </td>
-                <td v-if="canEdit" class="px-4 py-3 text-center">
-                  <UButton size="xs" :loading="savingKey === `niveau:${niveau.code}`" @click="saveNiveau(niveau)">Enregistrer</UButton>
+                <td v-if="canEdit" class="text-right">
+                  <UButton size="xs" variant="outline" :loading="savingKey === `niveau:${niveau.code}`" :aria-label="`Enregistrer le niveau ${libelleNiveau(niveau.code)}`" @click="saveNiveau(niveau)">Enregistrer</UButton>
                 </td>
+              </tr>
+              <tr v-if="!niveaux.length">
+                <td :colspan="canEdit ? 5 : 4" class="py-8 text-center text-slate-600 dark:text-slate-300">Aucun niveau défini. Ajoutez les niveaux Perfect Store avant de fixer leurs seuils.</td>
               </tr>
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
 
-      <div v-show="activeTab === 'assortiment'" class="admin-surface overflow-hidden">
-        <div class="border-b border-gray-100 px-5 py-3 dark:border-gray-700">
-          <h2 class="font-bold text-gray-900 dark:text-gray-100">Standards d’assortiment</h2>
-          <p class="mt-1 text-xs text-gray-400">Minimum de SKU présents et contrôle obligatoire des Hero SKU, selon le type et le grade du PDV.</p>
+      <section id="assortiment" class="admin-surface scroll-mt-24 overflow-hidden" aria-labelledby="titre-assortiment">
+        <div class="border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+          <h2 id="titre-assortiment" class="text-base font-semibold text-slate-900 dark:text-white">Assortiment</h2>
+          <p class="mt-1 max-w-3xl text-sm text-slate-600 dark:text-slate-300">Le nombre minimum de références présentes et le contrôle des références prioritaires (hero SKU), selon le type et le grade du point de vente.</p>
         </div>
         <div class="overflow-x-auto">
-          <table class="w-full">
-            <thead class="bg-gray-50 dark:bg-gray-700/50">
+          <table class="admin-table">
+            <thead>
               <tr>
-                <th class="th-l">Segment</th>
-                <th class="th-c">Grade</th>
-                <th class="th-c">SKU cibles</th>
-                <th class="th-c">Minimum présents</th>
-                <th class="th-c">Hero SKU</th>
-                <th v-if="canEdit" class="th-c">Action</th>
+                <th scope="col">Segment</th>
+                <th scope="col" class="!text-center">Grade</th>
+                <th scope="col" class="!text-right">Références cibles (SKU)</th>
+                <th scope="col" class="!text-right">Références présentes, minimum</th>
+                <th scope="col" class="!text-center">Références prioritaires (hero SKU) obligatoires</th>
+                <th v-if="canEdit" scope="col"><span class="sr-only">Enregistrer</span></th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            <tbody>
               <tr v-for="row in assortiments" :key="`${row.segment}-${row.grade}`">
-                <td class="px-4 py-3 text-sm font-medium">{{ row.segment }}</td>
-                <td class="px-4 py-3 text-center text-sm">{{ row.grade }}</td>
-                <td class="px-4 py-3 text-center text-sm">
-                  <UInput v-if="canEdit" v-model.number="row.sku_cibles" type="number" min="1" size="sm" class="mx-auto w-20" />
+                <td class="font-medium text-slate-900 dark:text-white">{{ row.segment }}</td>
+                <td class="text-center">{{ row.grade }}</td>
+                <td class="text-right tabular-nums">
+                  <UInput v-if="canEdit" v-model.number="row.sku_cibles" type="number" min="1" size="sm" class="ml-auto w-20" :aria-label="`Références cibles, ${row.segment} ${row.grade}`" />
                   <span v-else>{{ row.sku_cibles }}</span>
                 </td>
-                <td class="px-4 py-3 text-center text-sm font-semibold">
-                  <UInput v-if="canEdit" v-model.number="row.min_sku_presents" type="number" min="1" size="sm" class="mx-auto w-20" />
+                <td class="text-right font-semibold tabular-nums">
+                  <UInput v-if="canEdit" v-model.number="row.min_sku_presents" type="number" min="1" size="sm" class="ml-auto w-20" :aria-label="`Références présentes minimum, ${row.segment} ${row.grade}`" />
                   <span v-else>{{ row.min_sku_presents }}</span>
                 </td>
-                <td class="px-4 py-3 text-center">
-                  <input v-if="canEdit" v-model="row.heros_obligatoires" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-fc-red" />
+                <td class="text-center">
+                  <UCheckbox
+                    v-if="canEdit"
+                    v-model="row.heros_obligatoires"
+                    class="inline-flex justify-center"
+                    :aria-label="`Références prioritaires obligatoires, ${row.segment} ${row.grade}`"
+                  />
                   <UBadge v-else :color="row.heros_obligatoires ? 'green' : 'gray'" variant="soft" size="xs">
-                    {{ row.heros_obligatoires ? 'Obligatoires' : 'Non bloquants' }}
+                    {{ row.heros_obligatoires ? 'Obligatoires' : 'Non bloquantes' }}
                   </UBadge>
                 </td>
-                <td v-if="canEdit" class="px-4 py-3 text-center">
-                  <UButton size="xs" :loading="savingKey === `assort:${row.segment}:${row.grade}`" @click="saveAssortiment(row)">Enregistrer</UButton>
+                <td v-if="canEdit" class="text-right">
+                  <UButton size="xs" variant="outline" :loading="savingKey === `assort:${row.segment}:${row.grade}`" :aria-label="`Enregistrer l’assortiment ${row.segment} ${row.grade}`" @click="saveAssortiment(row)">Enregistrer</UButton>
                 </td>
+              </tr>
+              <tr v-if="!assortiments.length">
+                <td :colspan="canEdit ? 6 : 5" class="py-8 text-center text-slate-600 dark:text-slate-300">Aucun standard d’assortiment défini.</td>
               </tr>
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
 
-      <div v-show="activeTab === 'disponibilite'" class="admin-surface overflow-hidden">
-        <div class="border-b border-gray-100 px-5 py-3 dark:border-gray-700">
-          <h2 class="font-bold text-gray-900 dark:text-gray-100">Taux cibles de disponibilité par variante (taux revu)</h2>
-          <p class="mt-1 text-xs text-gray-400">
-            Poids de chaque variante dans la disponibilité pondérée, par canal (ligne TAUX REVU du fichier BIG FIVE).
-            La somme par famille et par canal doit faire 100 %.
-          </p>
+      <section id="poids" class="admin-surface scroll-mt-24 overflow-hidden" aria-labelledby="titre-poids">
+        <div class="border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+          <h2 id="titre-poids" class="text-base font-semibold text-slate-900 dark:text-white">Poids des références dans la disponibilité</h2>
+          <div class="mt-1 max-w-3xl space-y-1 text-sm text-slate-600 dark:text-slate-300">
+            <p>
+              Le poids de chaque référence dans le score de disponibilité, pour les boutiques (GT) et les supermarchés (MT).
+              Le total par famille et par canal doit faire 100 %.
+            </p>
+            <p>
+              Les poids de ce tableau sont les poids cibles, appelés « taux revus » dans le fichier du client. Ils sont distincts
+              des poids calculés sur les ventes (« taux de vente »). Pour ajouter une référence au calcul : Paramètres › Référentiels › Poids des références.
+            </p>
+          </div>
         </div>
         <div class="overflow-x-auto">
-          <table class="w-full">
-            <thead class="bg-gray-50 dark:bg-gray-700/50">
+          <table class="admin-table">
+            <thead>
               <tr>
-                <th class="th-l">Famille</th>
-                <th class="th-l">Variante</th>
-                <th class="th-c">Cible GT</th>
-                <th class="th-c">Cible MT</th>
-                <th v-if="canEdit" class="th-c">Action</th>
+                <th scope="col">Famille</th>
+                <th scope="col">Référence</th>
+                <th scope="col" class="!text-right">Poids cible, boutiques (GT)</th>
+                <th scope="col" class="!text-right">Poids cible, supermarchés (MT)</th>
+                <th v-if="canEdit" scope="col"><span class="sr-only">Enregistrer</span></th>
               </tr>
             </thead>
-            <tbody v-for="famille in tauxCiblesParFamille" :key="famille.code" class="divide-y divide-gray-100 dark:divide-gray-700">
-              <tr v-for="(row, idx) in famille.rows" :key="row.reference_produit_id" class="border-t border-gray-100 dark:border-gray-700">
-                <td class="px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-gray-100">
-                  <span v-if="idx === 0">{{ famille.code }} <span class="text-xs font-normal text-gray-400">({{ famille.nom }})</span></span>
+            <tbody v-for="famille in tauxCiblesParFamille" :key="famille.code">
+              <tr v-for="(row, idx) in famille.rows" :key="row.reference_produit_id">
+                <td class="font-medium text-slate-900 dark:text-white">
+                  <span v-if="idx === 0">{{ famille.code }} <span class="text-xs font-normal text-slate-600 dark:text-slate-300">({{ famille.nom }})</span></span>
                 </td>
-                <td class="px-4 py-2.5 text-sm">{{ row.variante }}</td>
-                <td class="px-4 py-2.5 text-center text-sm tabular-nums">
-                  <UInput v-if="canEdit" v-model.number="row.gt" type="number" min="0" max="100" step="0.1" size="sm" class="mx-auto w-24" />
+                <td>{{ row.variante }}</td>
+                <td class="text-right tabular-nums">
+                  <UInput v-if="canEdit" v-model.number="row.gt" type="number" min="0" max="100" step="0.1" size="sm" class="ml-auto w-24" :aria-label="`Poids cible de ${row.variante} dans les boutiques (GT), en %`" />
                   <span v-else>{{ pctFine(row.gt) }}</span>
                 </td>
-                <td class="px-4 py-2.5 text-center text-sm tabular-nums">
-                  <UInput v-if="canEdit" v-model.number="row.mt" type="number" min="0" max="100" step="0.1" size="sm" class="mx-auto w-24" />
+                <td class="text-right tabular-nums">
+                  <UInput v-if="canEdit" v-model.number="row.mt" type="number" min="0" max="100" step="0.1" size="sm" class="ml-auto w-24" :aria-label="`Poids cible de ${row.variante} dans les supermarchés (MT), en %`" />
                   <span v-else>{{ pctFine(row.mt) }}</span>
                 </td>
-                <td v-if="canEdit" class="px-4 py-2.5 text-center">
-                  <UButton size="xs" :loading="savingKey === `taux:${row.reference_produit_id}`" @click="saveTauxCible(row)">Enregistrer</UButton>
+                <td v-if="canEdit" class="text-right">
+                  <UButton size="xs" variant="outline" :loading="savingKey === `taux:${row.reference_produit_id}`" :aria-label="`Enregistrer les poids de ${row.variante}`" @click="saveTauxCible(row)">Enregistrer</UButton>
                 </td>
               </tr>
-              <tr class="bg-gray-50/60 dark:bg-gray-700/30">
-                <td class="px-4 py-2 text-xs font-medium uppercase text-gray-400" colspan="2">Total {{ famille.code }}</td>
-                <td class="px-4 py-2 text-center">
-                  <UBadge size="xs" variant="soft" :color="sumOk(famille.sumGT) ? 'green' : 'red'">{{ famille.sumGT.toFixed(1) }} %</UBadge>
+              <tr class="bg-slate-50 dark:bg-slate-700/30">
+                <td class="!py-2 text-xs font-semibold text-slate-700 dark:text-slate-200" colspan="2">Total {{ famille.code }}</td>
+                <td class="!py-2 text-right">
+                  <UBadge size="xs" variant="soft" :color="sumOk(famille.sumGT) ? 'green' : 'red'" class="tabular-nums">
+                    {{ pctTotal(famille.sumGT) }} · {{ sumOk(famille.sumGT) ? 'complet' : 'doit faire 100 %' }}
+                  </UBadge>
                 </td>
-                <td class="px-4 py-2 text-center">
-                  <UBadge size="xs" variant="soft" :color="sumOk(famille.sumMT) ? 'green' : 'red'">{{ famille.sumMT.toFixed(1) }} %</UBadge>
+                <td class="!py-2 text-right">
+                  <UBadge size="xs" variant="soft" :color="sumOk(famille.sumMT) ? 'green' : 'red'" class="tabular-nums">
+                    {{ pctTotal(famille.sumMT) }} · {{ sumOk(famille.sumMT) ? 'complet' : 'doit faire 100 %' }}
+                  </UBadge>
                 </td>
                 <td v-if="canEdit" />
               </tr>
             </tbody>
+            <tbody v-if="!tauxCiblesParFamille.length">
+              <tr>
+                <td :colspan="canEdit ? 5 : 4" class="py-8 text-center text-slate-600 dark:text-slate-300">
+                  Aucun poids cible défini. Ajoutez des références dans Paramètres › Référentiels › Poids des références.
+                </td>
+              </tr>
+            </tbody>
           </table>
         </div>
-      </div>
+      </section>
 
-      <div v-show="activeTab === 'visibilite'" class="admin-surface overflow-hidden">
-        <div class="border-b border-gray-100 px-5 py-3 dark:border-gray-700">
-          <h2 class="font-bold text-gray-900 dark:text-gray-100">Matrice des standards de visibilité</h2>
-          <p class="mt-1 text-xs text-gray-400">
-            Une coche = l'élément est exigé pour atteindre ce niveau. Ces exigences alimentent directement le score
-            visibilité/promotion de chaque visite (fonction de calcul Perfect Store).
+      <section id="visibilite" class="admin-surface scroll-mt-24 overflow-hidden" aria-labelledby="titre-visibilite">
+        <div class="border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+          <h2 id="titre-visibilite" class="text-base font-semibold text-slate-900 dark:text-white">Visibilité exigée</h2>
+          <p class="mt-1 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
+            Les éléments de PLV exigés à chaque niveau, par type de magasin : une case cochée veut dire « exigé ». Ces exigences
+            alimentent le score de visibilité et de promotion de chaque visite.
           </p>
         </div>
-        <div class="border-b border-gray-100 px-5 py-3 dark:border-gray-700">
+        <div class="border-b border-slate-200 px-5 py-4 dark:border-slate-700">
           <div class="grid gap-3 sm:grid-cols-2">
             <UFormGroup label="Segment" size="sm">
               <USelectMenu v-model="segmentFilter" :options="matrixSegmentOptions" option-attribute="label" value-attribute="value" size="sm" />
@@ -203,69 +221,85 @@
           </div>
         </div>
         <div class="overflow-x-auto">
-          <table class="w-full">
-            <thead class="bg-gray-50 dark:bg-gray-700/50">
+          <table class="admin-table">
+            <thead>
               <tr>
-                <th class="th-l">Élément</th>
-                <th v-for="niveau in NIVEAUX" :key="niveau" class="th-c">{{ niveau.toUpperCase() }}</th>
-                <th class="th-c">Optionnel</th>
-                <th v-if="canEdit" class="th-c">Action</th>
+                <th scope="col">Élément</th>
+                <th v-for="niveau in NIVEAUX" :key="niveau" scope="col" class="!text-center">{{ libelleNiveau(niveau) }}</th>
+                <th scope="col" class="!text-center">Optionnel</th>
+                <th v-if="canEdit" scope="col"><span class="sr-only">Enregistrer</span></th>
               </tr>
             </thead>
-            <tbody v-for="group in matrixByEmplacement" :key="group.key" class="divide-y divide-gray-100 dark:divide-gray-700">
-              <tr class="bg-gray-50/70 dark:bg-gray-700/40">
-                <td :colspan="canEdit ? 7 : 6" class="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            <tbody v-for="group in matrixByEmplacement" :key="group.key">
+              <tr class="bg-slate-50 dark:bg-slate-700/40">
+                <th :colspan="canEdit ? 7 : 6" scope="colgroup" class="!py-2 text-xs font-semibold text-slate-700 dark:text-slate-200">
                   {{ group.label }}
-                </td>
+                </th>
               </tr>
               <tr v-for="row in group.rows" :key="row.element_id">
-                <td class="px-4 py-2.5 text-sm text-gray-900 dark:text-gray-100">{{ row.nom }}</td>
-                <td v-for="niveau in NIVEAUX" :key="niveau" class="px-4 py-2.5 text-center">
-                  <input v-if="canEdit" v-model="row.requis[niveau]" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-fc-red" />
-                  <UIcon v-else-if="row.requis[niveau]" name="i-heroicons-check-circle-20-solid" class="h-4 w-4 text-emerald-500" />
-                  <span v-else class="text-gray-300 dark:text-gray-600">—</span>
+                <td class="text-slate-900 dark:text-white">{{ row.nom }}</td>
+                <td v-for="niveau in NIVEAUX" :key="niveau" class="text-center">
+                  <UCheckbox
+                    v-if="canEdit"
+                    v-model="row.requis[niveau]"
+                    class="inline-flex justify-center"
+                    :aria-label="`${row.nom} exigé au niveau ${libelleNiveau(niveau)}`"
+                  />
+                  <template v-else-if="row.requis[niveau]">
+                    <UIcon name="i-heroicons-check-circle-20-solid" class="h-4 w-4 text-emerald-700 dark:text-emerald-400" aria-hidden="true" />
+                    <span class="sr-only">Exigé</span>
+                  </template>
+                  <span v-else class="sr-only">Non exigé</span>
                 </td>
-                <td class="px-4 py-2.5 text-center">
-                  <input v-if="canEdit" v-model="row.optionnel" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-amber-500" />
+                <td class="text-center">
+                  <UCheckbox
+                    v-if="canEdit"
+                    v-model="row.optionnel"
+                    class="inline-flex justify-center"
+                    :aria-label="`${row.nom} optionnel`"
+                  />
                   <UBadge v-else-if="row.optionnel" size="xs" variant="soft" color="amber">Oui</UBadge>
-                  <span v-else class="text-gray-300 dark:text-gray-600">—</span>
+                  <span v-else class="sr-only">Non</span>
                 </td>
-                <td v-if="canEdit" class="px-4 py-2.5 text-center">
-                  <UButton size="xs" :loading="savingKey === `standard:${row.element_id}`" @click="saveStandard(row)">Enregistrer</UButton>
+                <td v-if="canEdit" class="text-right">
+                  <UButton size="xs" variant="outline" :loading="savingKey === `standard:${row.element_id}`" :aria-label="`Enregistrer ${row.nom}`" @click="saveStandard(row)">Enregistrer</UButton>
                 </td>
               </tr>
             </tbody>
             <tbody v-if="!matrixByEmplacement.length">
               <tr>
-                <td :colspan="canEdit ? 7 : 6" class="px-4 py-8 text-center text-sm text-gray-400">Aucun élément pour ce segment.</td>
+                <td :colspan="canEdit ? 7 : 6" class="py-8 text-center text-slate-600 dark:text-slate-300">
+                  Aucun élément de visibilité pour ce segment{{ pillarFilter === 'all' ? '' : ' et ce pilier' }}. Choisissez un autre segment{{ pillarFilter === 'all' ? '' : ' ou « Tous les piliers »' }}.
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
 
-      <div v-show="activeTab === 'types'" class="admin-surface overflow-hidden">
-        <div class="border-b border-gray-100 px-5 py-3 dark:border-gray-700">
-          <h2 class="font-bold text-gray-900 dark:text-gray-100">Affectation des types de PDV</h2>
-          <p class="mt-1 text-xs text-gray-400">
-            Un type sans segment de visibilité produit le message « Aucun standard paramétré ». Affectez ici sa matrice et, si disponible, son segment/grade de disponibilité.
+      <section id="types-pdv" class="admin-surface scroll-mt-24 overflow-hidden" aria-labelledby="titre-types-pdv">
+        <div class="border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+          <h2 id="titre-types-pdv" class="text-base font-semibold text-slate-900 dark:text-white">Types de PDV</h2>
+          <p class="mt-1 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
+            Relier chaque type de point de vente à sa grille de visibilité et, si elle existe, à son segment et son grade de disponibilité.
+            Un type sans grille affiche « Aucun standard paramétré » sur le terrain.
           </p>
         </div>
         <div class="max-h-[34rem] overflow-auto">
-          <table class="w-full">
-            <thead class="sticky top-0 bg-gray-50 dark:bg-gray-700">
+          <table class="admin-table">
+            <thead class="sticky top-0 z-10">
               <tr>
-                <th class="th-l">Type de PDV</th>
-                <th class="th-l">Matrice visibilité</th>
-                <th class="th-l">Segment disponibilité</th>
-                <th class="th-c">Grade</th>
-                <th v-if="canEdit" class="th-c">Action</th>
+                <th scope="col">Type de PDV</th>
+                <th scope="col">Grille de visibilité</th>
+                <th scope="col">Segment de disponibilité</th>
+                <th scope="col">Grade</th>
+                <th v-if="canEdit" scope="col"><span class="sr-only">Enregistrer</span></th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            <tbody>
               <tr v-for="row in typeMappings" :key="row.type_pdv_id">
-                <td class="px-4 py-2.5 text-sm font-medium">{{ row.nom }}</td>
-                <td class="px-4 py-2.5">
+                <td class="font-medium text-slate-900 dark:text-white">{{ row.nom }}</td>
+                <td>
                   <USelectMenu
                     v-if="canEdit"
                     v-model="row.visibility_segment"
@@ -273,10 +307,11 @@
                     value-attribute="value"
                     option-attribute="label"
                     size="sm"
+                    :aria-label="`Grille de visibilité de ${row.nom}`"
                   />
-                  <span v-else class="text-sm">{{ segmentLabel(row.visibility_segment) || 'Non paramétré' }}</span>
+                  <span v-else>{{ segmentLabel(row.visibility_segment) || 'Non paramétré' }}</span>
                 </td>
-                <td class="px-4 py-2.5">
+                <td>
                   <USelectMenu
                     v-if="canEdit"
                     v-model="row.availability_segment"
@@ -284,10 +319,11 @@
                     value-attribute="value"
                     option-attribute="label"
                     size="sm"
+                    :aria-label="`Segment de disponibilité de ${row.nom}`"
                   />
-                  <span v-else class="text-sm">{{ row.availability_segment || 'Non paramétré' }}</span>
+                  <span v-else>{{ row.availability_segment || 'Non paramétré' }}</span>
                 </td>
-                <td class="px-4 py-2.5">
+                <td>
                   <USelectMenu
                     v-if="canEdit"
                     v-model="row.grade"
@@ -295,22 +331,68 @@
                     value-attribute="value"
                     option-attribute="label"
                     size="sm"
+                    :aria-label="`Grade de ${row.nom}`"
                   />
-                  <span v-else class="text-sm">{{ row.grade || '—' }}</span>
+                  <span v-else>{{ row.grade || 'Aucun' }}</span>
                 </td>
-                <td v-if="canEdit" class="px-4 py-2.5 text-center">
-                  <UButton size="xs" :loading="savingKey === `mapping:${row.type_pdv_id}`" @click="saveTypeMapping(row)">Enregistrer</UButton>
+                <td v-if="canEdit" class="text-right">
+                  <UButton size="xs" variant="outline" :loading="savingKey === `mapping:${row.type_pdv_id}`" :aria-label="`Enregistrer le rattachement de ${row.nom}`" @click="demanderSaveTypeMapping(row)">Enregistrer</UButton>
                 </td>
+              </tr>
+              <tr v-if="!typeMappings.length">
+                <td :colspan="canEdit ? 5 : 4" class="py-8 text-center text-slate-600 dark:text-slate-300">Aucun type de PDV. Ajoutez-en dans Paramètres › Référentiels › Types de PDV.</td>
               </tr>
             </tbody>
           </table>
         </div>
+      </section>
       </div>
-    </template>
+
+      <aside class="hidden xl:block" aria-label="Sur cette page">
+        <nav class="sticky top-24 space-y-1 text-sm">
+          <p class="mb-2 text-xs font-semibold text-slate-600 dark:text-slate-400">Sur cette page</p>
+          <a v-for="sec in sommaire" :key="sec.id" :href="`#${sec.id}`" class="block rounded-md px-2 py-1 text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">{{ sec.label }}</a>
+        </nav>
+      </aside>
+    </div>
+
+    <UModal v-model="confirmationRecalcul">
+      <div class="space-y-4 p-6">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Recalculer toutes les visites ?</h2>
+        <p class="text-sm leading-6 text-slate-700 dark:text-slate-200">
+          Le score Perfect Store de chaque visite enregistrée sera recalculé avec les standards actuels. Les tableaux de bord
+          et les niveaux des points de vente changeront en conséquence. Le calcul prend plusieurs minutes : gardez la page ouverte.
+        </p>
+        <div class="flex justify-end gap-2">
+          <UButton color="gray" variant="ghost" @click="confirmationRecalcul = false">Annuler</UButton>
+          <UButton icon="i-heroicons-arrow-path" @click="lancerRecalcul">Lancer le recalcul</UButton>
+        </div>
+      </div>
+    </UModal>
+
+    <!-- Vider une liste supprime le rattachement : on le dit avant d'écrire. -->
+    <UModal v-model="retrait.ouvert">
+      <div class="space-y-4 p-6">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Retirer le rattachement de « {{ retrait.row?.nom }} » ?</h2>
+        <div class="space-y-2 text-sm leading-6 text-slate-700 dark:text-slate-200">
+          <p>Vous avez vidé {{ retrait.quoi.join(' et ') }}. En enregistrant, ce rattachement sera supprimé :</p>
+          <ul class="list-disc space-y-1 pl-5">
+            <li v-if="retrait.quoi.includes('la grille de visibilité')">ce type de PDV n’aura plus de grille de visibilité, et le terrain affichera « Aucun standard paramétré » ;</li>
+            <li v-if="retrait.quoi.includes('le segment et le grade de disponibilité')">sa disponibilité ne sera plus comparée à un seuil de segment et de grade.</li>
+          </ul>
+        </div>
+        <div class="flex justify-end gap-2">
+          <UButton color="gray" variant="ghost" @click="retrait.ouvert = false">Annuler</UButton>
+          <UButton color="red" icon="i-heroicons-link-slash" @click="confirmerRetrait">Retirer le rattachement</UButton>
+        </div>
+      </div>
+    </UModal>
   </div>
 </template>
 
 <script setup lang="ts">
+import { messageUtilisateur } from '~/utils/supabaseErrors'
+
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const supabase = useSupabaseClient()
@@ -328,28 +410,37 @@ const segmentFilter = ref('boutique')
 const pillarFilter = ref('all')
 const canEdit = computed(() => authStore.isAdmin || authStore.isSuperviseur)
 
-// Onglets : découpe l'écran en sections simples, une à la fois.
-const tabs = [
-  { key: 'niveaux', label: 'Niveaux', help: 'Les seuils de disponibilité, visibilité et promotion pour qu’un magasin soit classé FLAGSHIP, VIP, CORE ou BASIC.' },
-  { key: 'assortiment', label: 'Assortiment', help: 'Le nombre de produits minimum à présenter selon le type et le grade du point de vente.' },
-  { key: 'disponibilite', label: 'Disponibilité', help: 'Le poids de chaque variante produit dans le score. Le total par famille doit faire 100 %.' },
-  { key: 'visibilite', label: 'Visibilité', help: 'Les éléments PLV exigés à chaque niveau, par type de magasin. Une coche = exigé.' },
-  { key: 'types', label: 'Types de PDV', help: 'Relier chaque type de point de vente à sa grille de standards (visibilité et disponibilité).' },
+// Sections empilées (plus d'onglets dans l'onglet Paramètres) ; sommaire sur grand écran.
+const sommaire = [
+  { id: 'niveaux', label: 'Seuils des niveaux' },
+  { id: 'assortiment', label: 'Assortiment' },
+  { id: 'poids', label: 'Poids des références' },
+  { id: 'visibilite', label: 'Visibilité exigée' },
+  { id: 'types-pdv', label: 'Types de PDV' },
 ]
-const activeTab = ref('niveaux')
-const activeHelp = computed(() => tabs.find(t => t.key === activeTab.value)?.help || '')
+
+// Une modification ne change les scores qu'après le recalcul global : on le
+// rappelle (bandeau) jusqu'à ce qu'il soit lancé. Gardé pour la session.
+const recalculEnAttente = useState('standards-recalcul-en-attente', () => false)
+const confirmationRecalcul = ref(false)
+function lancerRecalcul() {
+  confirmationRecalcul.value = false
+  void recalculateAll()
+}
 
 const segmentOptions = [
   { value: 'all', label: 'Tous les segments' },
   { value: 'boutique', label: 'Boutique' },
   { value: 'superette', label: 'Superette' },
-  { value: 'mt', label: 'Modern Trade (supermarchés)' },
-  { value: 'table_top', label: 'Table Top' },
+  { value: 'mt', label: 'Supermarchés (MT)' },
+  { value: 'table_top', label: 'Table-top' },
   { value: 'pushcart', label: 'Pushcart' },
   { value: 'porridge', label: 'Porridge' },
-  { value: 'kiosque_aboki', label: 'Kiosque / Aboki' },
+  { value: 'kiosque_aboki', label: 'Kiosque et aboki' },
 ]
 const NIVEAUX = ['basic', 'core', 'vip', 'flagship']
+const LIBELLES_NIVEAU: Record<string, string> = { basic: 'Basic', core: 'Core', vip: 'VIP', flagship: 'Flagship' }
+const libelleNiveau = (code: string) => LIBELLES_NIVEAU[String(code || '').toLowerCase()] || code
 const matrixSegmentOptions = segmentOptions.filter(option => option.value !== 'all')
 const pillarOptions = [
   { value: 'all', label: 'Tous les piliers' },
@@ -366,7 +457,7 @@ const availabilitySegmentOptions = [
     .map(value => ({ value, label: value })),
 ]
 const gradeOptions = [
-  { value: '', label: '—' },
+  { value: '', label: 'Aucun' },
   { value: 'A', label: 'A' },
   { value: 'B', label: 'B' },
   { value: 'C', label: 'C' },
@@ -387,8 +478,9 @@ const matrixByEmplacement = computed(() => {
     .filter(group => group.rows.length)
 })
 
-const pct = (value: number | null) => value == null ? '—' : `${Number(value)} %`
-const pctFine = (value: number | null) => value == null ? '—' : `${Number(value).toFixed(1).replace(/\.0$/, '')} %`
+const pct = (value: number | null) => value == null ? 'Non défini' : `${Number(value).toLocaleString('fr-FR')} %`
+const pctFine = (value: number | null) => value == null ? 'Non défini' : `${Number(value).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`
+const pctTotal = (value: number) => `${value.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`
 const sumOk = (sum: number) => Math.abs(sum - 100) < 0.5
 
 const familleOrder = ['EVAP', 'IMP', 'SCM']
@@ -426,10 +518,11 @@ async function saveNiveau(row: any) {
       promotion_min: Number(row.promotion_min),
     }).eq('code', row.code)
     if (error) throw error
-    toast.add({ title: 'Niveau enregistré', description: 'Lancez le recalcul global pour actualiser les visites.', color: 'green' })
+    toast.add({ title: 'Niveau enregistré', description: libelleNiveau(row.code), color: 'green' })
+    recalculEnAttente.value = true
   }
   catch (error: any) {
-    toast.add({ title: 'Modification refusée', description: error.message, color: 'red' })
+    toast.add({ title: 'Modification refusée', description: messageUtilisateur(error), color: 'red' })
   }
   finally {
     savingKey.value = null
@@ -441,7 +534,7 @@ async function saveAssortiment(row: any) {
   const target = Number(row.sku_cibles)
   const minimum = Number(row.min_sku_presents)
   if (!Number.isInteger(target) || !Number.isInteger(minimum) || minimum < 1 || target < minimum) {
-    toast.add({ title: 'Valeur invalide', description: 'Le minimum doit être positif et inférieur ou égal au nombre de SKU cibles.', color: 'red' })
+    toast.add({ title: 'Valeur invalide', description: 'Le minimum doit être positif et inférieur ou égal au nombre de références cibles.', color: 'red' })
     return
   }
   savingKey.value = `assort:${row.segment}:${row.grade}`
@@ -452,10 +545,11 @@ async function saveAssortiment(row: any) {
       heros_obligatoires: !!row.heros_obligatoires,
     }).eq('segment', row.segment).eq('grade', row.grade)
     if (error) throw error
-    toast.add({ title: 'Assortiment enregistré', description: 'Lancez le recalcul global pour actualiser les visites.', color: 'green' })
+    toast.add({ title: 'Assortiment enregistré', description: `${row.segment} ${row.grade}`, color: 'green' })
+    recalculEnAttente.value = true
   }
   catch (error: any) {
-    toast.add({ title: 'Modification refusée', description: error.message, color: 'red' })
+    toast.add({ title: 'Modification refusée', description: messageUtilisateur(error), color: 'red' })
   }
   finally {
     savingKey.value = null
@@ -465,7 +559,7 @@ async function saveAssortiment(row: any) {
 async function saveTauxCible(row: any) {
   if (!canEdit.value) return
   if (![row.gt, row.mt].every(validPercent)) {
-    toast.add({ title: 'Valeur invalide', description: 'Les cibles doivent être comprises entre 0 et 100.', color: 'red' })
+    toast.add({ title: 'Valeur invalide', description: 'Les poids cibles doivent être compris entre 0 et 100.', color: 'red' })
     return
   }
   savingKey.value = `taux:${row.reference_produit_id}`
@@ -484,10 +578,11 @@ async function saveTauxCible(row: any) {
     ])
     if (gtResult.error) throw gtResult.error
     if (mtResult.error) throw mtResult.error
-    toast.add({ title: 'Cibles enregistrées', description: 'Lancez le recalcul global pour actualiser les visites.', color: 'green' })
+    toast.add({ title: 'Poids cibles enregistrés', description: row.variante, color: 'green' })
+    recalculEnAttente.value = true
   }
   catch (error: any) {
-    toast.add({ title: 'Modification refusée', description: error.message, color: 'red' })
+    toast.add({ title: 'Modification refusée', description: messageUtilisateur(error), color: 'red' })
   }
   finally {
     savingKey.value = null
@@ -514,22 +609,54 @@ async function saveStandard(row: any) {
     ])
     if (standardResult.error) throw standardResult.error
     if (elementResult.error) throw elementResult.error
-    toast.add({ title: 'Standard enregistré', description: 'Lancez le recalcul global pour actualiser les visites.', color: 'green' })
+    toast.add({ title: 'Visibilité exigée enregistrée', description: row.nom, color: 'green' })
+    recalculEnAttente.value = true
   }
   catch (error: any) {
-    toast.add({ title: 'Modification refusée', description: error.message, color: 'red' })
+    toast.add({ title: 'Modification refusée', description: messageUtilisateur(error), color: 'red' })
   }
   finally {
     savingKey.value = null
   }
 }
 
-async function saveTypeMapping(row: any) {
+// Vider une liste supprime le rattachement correspondant : on demande
+// confirmation en le disant, au lieu de supprimer en silence.
+const retrait = reactive<{ ouvert: boolean, row: any, quoi: string[] }>({ ouvert: false, row: null, quoi: [] })
+
+function rattachementIncomplet(row: any) {
+  return (row.availability_segment && !row.grade) || (!row.availability_segment && row.grade)
+}
+
+function demanderSaveTypeMapping(row: any) {
   if (!canEdit.value) return
-  if ((row.availability_segment && !row.grade) || (!row.availability_segment && row.grade)) {
-    toast.add({ title: 'Mapping incomplet', description: 'Choisissez ensemble le segment de disponibilité et le grade.', color: 'red' })
+  if (rattachementIncomplet(row)) {
+    toast.add({ title: 'Rattachement incomplet', description: 'Choisissez ensemble le segment de disponibilité et le grade.', color: 'red' })
     return
   }
+  const quoi: string[] = []
+  if (!row.visibility_segment && row.initial_visibility) quoi.push('la grille de visibilité')
+  if (!row.availability_segment && row.initial_availability) quoi.push('le segment et le grade de disponibilité')
+  if (quoi.length) {
+    Object.assign(retrait, { ouvert: true, row, quoi })
+    return
+  }
+  void saveTypeMapping(row)
+}
+
+function confirmerRetrait() {
+  const row = retrait.row
+  retrait.ouvert = false
+  if (row) void saveTypeMapping(row)
+}
+
+async function saveTypeMapping(row: any) {
+  if (!canEdit.value) return
+  if (rattachementIncomplet(row)) {
+    toast.add({ title: 'Rattachement incomplet', description: 'Choisissez ensemble le segment de disponibilité et le grade.', color: 'red' })
+    return
+  }
+  const retire = (!row.visibility_segment && !!row.initial_visibility) || (!row.availability_segment && !!row.initial_availability)
   savingKey.value = `mapping:${row.type_pdv_id}`
   try {
     const visibilityResult = row.visibility_segment
@@ -549,10 +676,16 @@ async function saveTypeMapping(row: any) {
       : await supabase.from('segment_grade_type_pdv').delete().eq('type_pdv_id', row.type_pdv_id)
     if (availabilityResult.error) throw availabilityResult.error
 
-    toast.add({ title: 'Type de PDV paramétré', description: 'Le formulaire terrain utilisera cette matrice lors de son prochain chargement.', color: 'green' })
+    row.initial_visibility = row.visibility_segment
+    row.initial_availability = row.availability_segment
+    toast.add({
+      title: retire ? 'Rattachement retiré' : 'Rattachement enregistré',
+      description: `${row.nom} : le formulaire terrain en tiendra compte à son prochain chargement.`,
+      color: 'green',
+    })
   }
   catch (error: any) {
-    toast.add({ title: 'Modification refusée', description: error.message, color: 'red' })
+    toast.add({ title: 'Modification refusée', description: messageUtilisateur(error), color: 'red' })
   }
   finally {
     savingKey.value = null
@@ -590,13 +723,14 @@ async function recalculateAll() {
       recalculProgression.value = traitees
       if (n < LOT) break
     }
-    toast.add({ title: 'Recalcul terminé', description: `${traitees} visite(s) recalculée(s).`, color: 'green' })
+    toast.add({ title: 'Recalcul terminé', description: `${traitees.toLocaleString('fr-FR')} visite${traitees > 1 ? 's' : ''} recalculée${traitees > 1 ? 's' : ''}.`, color: 'green' })
+    recalculEnAttente.value = false
   }
   catch (error: any) {
     // Dire où le recalcul s'est arrêté : un recalcul partiel laisse des scores
     // incohérents entre eux, il faut savoir qu'il est à reprendre.
     const ou = recalculProgression.value ? ` Arrêté après ${recalculProgression.value} visite(s) : à relancer.` : ''
-    toast.add({ title: 'Recalcul impossible', description: `${error.message}${ou}`, color: 'red' })
+    toast.add({ title: 'Recalcul interrompu', description: `${messageUtilisateur(error)}${ou}`, color: 'red' })
   }
   finally {
     recalculating.value = false
@@ -686,10 +820,13 @@ async function loadData() {
       visibility_segment: visibilityByType.get(row.id) || '',
       availability_segment: availabilityByType.get(row.id)?.segment || '',
       grade: availabilityByType.get(row.id)?.grade || '',
+      // Valeurs lues en base : servent à prévenir avant de retirer un rattachement.
+      initial_visibility: visibilityByType.get(row.id) || '',
+      initial_availability: availabilityByType.get(row.id)?.segment || '',
     }))
   }
   catch (error: any) {
-    toast.add({ title: 'Chargement impossible', description: error.message, color: 'red' })
+    toast.add({ title: 'Standards non chargés', description: messageUtilisateur(error), color: 'red' })
   }
   finally {
     loading.value = false
@@ -698,8 +835,3 @@ async function loadData() {
 
 onMounted(loadData)
 </script>
-
-<style scoped>
-.th-l { @apply px-4 py-2.5 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400; }
-.th-c { @apply px-4 py-2.5 text-center text-xs font-medium uppercase text-gray-500 dark:text-gray-400; }
-</style>

@@ -1,67 +1,71 @@
 <template>
   <div class="space-y-5">
     <!-- Version en service -->
-    <section class="admin-surface space-y-4 p-5">
-      <div class="flex items-center justify-between gap-3">
-        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Version en service (Android)</h2>
+    <section class="admin-surface space-y-4 p-5" aria-labelledby="titre-version-service">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h3 id="titre-version-service" class="text-base font-semibold text-slate-900 dark:text-white">Version en service (Android)</h3>
         <UButton size="xs" color="gray" variant="ghost" icon="i-heroicons-arrow-path" :loading="chargement" @click="charger">Actualiser</UButton>
       </div>
       <dl class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
-          <dt class="text-xs font-semibold uppercase text-gray-500">Version minimale (obligatoire)</dt>
-          <dd class="mt-1 text-lg font-bold text-gray-900 dark:text-gray-100">{{ actuelle?.version_nom_min || '—' }}</dd>
-          <dd class="text-xs text-gray-500">versionCode {{ actuelle?.version_code_min ?? '—' }}</dd>
+        <div class="rounded-md bg-slate-50 p-3 dark:bg-slate-900/40">
+          <dt class="text-xs font-semibold text-slate-600 dark:text-slate-300">Version minimale (obligatoire)</dt>
+          <dd class="mt-1 text-lg font-bold tabular-nums text-slate-900 dark:text-white">{{ actuelle?.version_nom_min || 'Non définie' }}</dd>
+          <dd v-if="actuelle?.version_code_min != null" class="text-xs tabular-nums text-slate-600 dark:text-slate-300">Numéro interne {{ actuelle.version_code_min }}</dd>
         </div>
-        <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
-          <dt class="text-xs font-semibold uppercase text-gray-500">Dernière version publiée</dt>
-          <dd class="mt-1 text-lg font-bold text-gray-900 dark:text-gray-100">{{ actuelle?.version_nom_dispo || actuelle?.version_nom_min || '—' }}</dd>
-          <dd class="text-xs text-gray-500">versionCode {{ actuelle?.version_code_dispo ?? actuelle?.version_code_min ?? '—' }}</dd>
+        <div class="rounded-md bg-slate-50 p-3 dark:bg-slate-900/40">
+          <dt class="text-xs font-semibold text-slate-600 dark:text-slate-300">Dernière version publiée</dt>
+          <dd class="mt-1 text-lg font-bold tabular-nums text-slate-900 dark:text-white">{{ actuelle?.version_nom_dispo || actuelle?.version_nom_min || 'Aucune' }}</dd>
+          <dd v-if="(actuelle?.version_code_dispo ?? actuelle?.version_code_min) != null" class="text-xs tabular-nums text-slate-600 dark:text-slate-300">Numéro interne {{ actuelle.version_code_dispo ?? actuelle.version_code_min }}</dd>
         </div>
-        <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
-          <dt class="text-xs font-semibold uppercase text-gray-500">Lien de téléchargement</dt>
-          <dd class="mt-1 break-all text-xs text-gray-700 dark:text-gray-300">{{ actuelle?.url_telechargement || '—' }}</dd>
+        <div class="rounded-md bg-slate-50 p-3 dark:bg-slate-900/40">
+          <dt class="text-xs font-semibold text-slate-600 dark:text-slate-300">Lien de téléchargement</dt>
+          <dd class="mt-1 break-all text-xs text-slate-700 dark:text-slate-300">{{ actuelle?.url_telechargement || 'Aucun lien publié' }}</dd>
         </div>
       </dl>
       <div v-if="installees.length">
-        <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">Versions ouvertes par les utilisateurs</p>
+        <p class="text-sm font-semibold text-slate-900 dark:text-white">Versions ouvertes par les utilisateurs</p>
         <div class="mt-2 flex flex-wrap gap-2">
           <UBadge v-for="v in installees" :key="v.cle" :color="v.code >= (actuelle?.version_code_min || 0) ? 'green' : 'red'" variant="soft">
-            {{ v.nom }} (code {{ v.code }}) : {{ v.nombre }} utilisateur(s)
+            {{ v.nom }} ({{ v.code }}) : {{ v.nombre }} utilisateur{{ v.nombre > 1 ? 's' : '' }} · {{ v.code >= (actuelle?.version_code_min || 0) ? 'à jour' : 'sous le minimum' }}
           </UBadge>
         </div>
-        <p class="mt-1 text-xs text-gray-500">Détail par utilisateur : onglet « Versions installées ».</p>
+        <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">Le détail par utilisateur est dans le tableau en haut de cette page.</p>
       </div>
     </section>
 
     <!-- Publication -->
-    <section class="admin-surface space-y-4 p-5">
+    <section class="admin-surface space-y-4 p-5" aria-labelledby="titre-publication">
       <div>
-        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Publier une nouvelle version (APK direct)</h2>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <h3 id="titre-publication" class="text-base font-semibold text-slate-900 dark:text-white">Fichier de la nouvelle version (APK direct)</h3>
+        <p class="mt-1 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
           L’APK publié ici est celui qu’on télécharge depuis le lien ci-dessus, pour les téléphones installés sans le Play Store.
           Le Play Store se met à jour séparément, dans la Play Console (guide « Publier une mise à jour »).
         </p>
       </div>
 
-      <UFormGroup label="Fichier APK (release signé)" help="Fichier produit par le build : friesland-bonnet-rouge-<version>-release.apk">
+      <div>
+        <label for="publier-version-fichier" class="block text-sm font-medium text-slate-700 dark:text-slate-200">Fichier APK (version finale signée)</label>
         <input
+          id="publier-version-fichier"
           ref="champFichier"
           type="file"
+          aria-describedby="publier-version-fichier-aide"
           accept=".apk,application/vnd.android.package-archive"
-          class="block w-full text-sm text-gray-700 file:mr-3 file:rounded-lg file:border-0 file:bg-fc-blue file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white dark:text-gray-300"
+          class="mt-1 block w-full rounded-md text-sm text-slate-700 file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-solid file:border-slate-300 file:bg-white file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-slate-300 dark:file:border-slate-600 dark:file:bg-slate-800 dark:file:text-slate-200"
           @change="choisir"
         >
-      </UFormGroup>
+        <p id="publier-version-fichier-aide" class="mt-2 text-sm text-slate-600 dark:text-slate-300">Le fichier de la nouvelle version, nommé friesland-bonnet-rouge-&lt;version&gt;-release.apk.</p>
+      </div>
 
-      <div v-if="lecture" class="text-sm text-gray-500"><UIcon name="i-heroicons-arrow-path" class="mr-1 h-4 w-4 animate-spin" />Lecture de l’APK…</div>
-      <div v-if="erreurFichier" class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300">{{ erreurFichier }}</div>
+      <ChargementContenu v-if="lecture" variante="compact" libelle="Lecture de l’APK…" />
+      <UAlert v-if="erreurFichier" color="red" variant="soft" icon="i-heroicons-exclamation-circle" title="Fichier refusé" :description="erreurFichier" />
 
-      <div v-if="manifeste" class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
-        <p class="text-sm text-gray-900 dark:text-gray-100">
-          Version <strong>{{ manifeste.versionName }}</strong> · versionCode <strong>{{ manifeste.versionCode }}</strong>
-          · <span class="font-mono text-xs">{{ manifeste.package }}</span>
+      <div v-if="manifeste" class="rounded-md border border-slate-200 p-4 dark:border-slate-700">
+        <p class="text-sm text-slate-900 dark:text-white">
+          Version <strong>{{ manifeste.versionName }}</strong> · numéro interne <strong class="tabular-nums">{{ manifeste.versionCode }}</strong>
         </p>
-        <ul v-if="blocages.length" class="mt-2 list-disc pl-5 text-sm text-red-600">
+        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Identifiant de l’application : <span class="font-mono">{{ manifeste.package }}</span></p>
+        <ul v-if="blocages.length" class="mt-2 list-disc space-y-1 pl-5 text-sm text-red-700 dark:text-red-300">
           <li v-for="b in blocages" :key="b">{{ b }}</li>
         </ul>
       </div>
@@ -71,20 +75,24 @@
         <UFormGroup v-if="obligatoire" label="Message affiché sur l’écran de mise à jour" help="Facultatif.">
           <UInput v-model="message" placeholder="Une nouvelle version est disponible : installez-la pour continuer." />
         </UFormGroup>
-        <UButton class="bg-fc-blue" icon="i-heroicons-cloud-arrow-up" :loading="envoi" :disabled="envoi" @click="publier">
+        <UButton icon="i-heroicons-cloud-arrow-up" :loading="envoi" :disabled="envoi" @click="publier">
           Publier {{ manifeste.versionName }}{{ obligatoire ? ' (obligatoire)' : '' }}
         </UButton>
-        <p v-if="etape" class="text-xs text-gray-500">{{ etape }}</p>
+        <p v-if="etape" class="text-sm text-slate-600 dark:text-slate-300" aria-live="polite">{{ etape }}</p>
       </div>
     </section>
+
+    <AdminConfirmation v-bind="confirmation" @confirmer="confirmer" @annuler="annuler" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { lireManifesteApk, PACKAGE_APP, type ManifesteApk } from '~/utils/apkManifest'
+import { messageUtilisateur } from '~/utils/supabaseErrors'
 
 const supabase = useSupabaseClient()
 const toast = useToast()
+const { confirmation, demanderConfirmation, confirmer, annuler } = useConfirmation()
 
 const actuelle = ref<any>(null)
 const installees = ref<{ cle: string, nom: string, code: number, nombre: number }[]>([])
@@ -105,10 +113,10 @@ const blocages = computed(() => {
   const m = manifeste.value
   if (!m) return []
   const out: string[] = []
-  if (m.package !== PACKAGE_APP) out.push(`Ce n’est pas l’app Bonnet Rouge (package ${m.package}).`)
-  if (!m.versionName || !/^\d+\.\d+\.\d+$/.test(m.versionName)) out.push(`Version « ${m.versionName} » illisible.`)
-  if (!Number.isInteger(m.versionCode)) out.push('versionCode illisible.')
-  else if (m.versionCode <= derniereCode.value) out.push(`Le versionCode ${m.versionCode} n’est pas supérieur à la dernière version publiée (${derniereCode.value}) : incrémentez versionCode avant le build.`)
+  if (m.package !== PACKAGE_APP) out.push(`Ce fichier n’est pas l’application Bonnet Rouge (identifiant ${m.package}).`)
+  if (!m.versionName || !/^\d+\.\d+\.\d+$/.test(m.versionName)) out.push(`Le nom de version « ${m.versionName} » n’est pas lisible (attendu : 1.0.12, par exemple).`)
+  if (!Number.isInteger(m.versionCode)) out.push('Le numéro interne de la version n’est pas lisible.')
+  else if (m.versionCode <= derniereCode.value) out.push(`Le numéro interne ${m.versionCode} n’est pas supérieur à celui de la dernière version publiée (${derniereCode.value}) : il faut un fichier compilé avec un numéro plus élevé.`)
   return out
 })
 
@@ -128,7 +136,7 @@ async function charger() {
     installees.value = [...parVersion.values()].sort((a, b) => b.code - a.code)
   }
   catch (e: any) {
-    toast.add({ title: 'Version indisponible', description: e.message, color: 'red' })
+    toast.add({ title: 'Version en service non chargée', description: messageUtilisateur(e), color: 'red' })
   }
   finally {
     chargement.value = false
@@ -147,38 +155,42 @@ async function choisir(event: Event) {
     manifeste.value = await lireManifesteApk(f)
   }
   catch (e: any) {
-    erreurFichier.value = e.message
+    console.error('[apk] lecture du manifeste', e)
+    erreurFichier.value = 'Ce fichier n’est pas un APK lisible. Choisissez le fichier de la nouvelle version (extension .apk).'
   }
   finally {
     lecture.value = false
   }
 }
 
-const messageErreur = (e: any) => e?.data?.statusMessage || e?.data?.message || e?.message || 'Erreur inconnue'
-
 async function publier() {
   const m = manifeste.value
   if (!fichier.value || !m || blocages.value.length) return
-  if (obligatoire.value && !confirm(`Rendre la version ${m.versionName} obligatoire ? Les téléphones en version plus ancienne seront bloqués jusqu’à la mise à jour.`)) return
+  if (obligatoire.value && !(await demanderConfirmation({
+    titre: `Rendre la version ${m.versionName} obligatoire ?`,
+    message: 'Les téléphones en version plus ancienne seront bloqués jusqu’à la mise à jour.',
+    libelleAction: `Publier ${m.versionName} (obligatoire)`,
+    destructif: false,
+  }))) return
   envoi.value = true
   try {
-    etape.value = '1/3 — Préparation de l’envoi…'
+    etape.value = 'Étape 1 sur 3 : préparation de l’envoi…'
     const { chemin, jeton } = await $fetch<{ chemin: string, jeton: string }>('/api/admin/apk/url-envoi', {
       method: 'POST', body: { versionName: m.versionName, versionCode: m.versionCode },
     })
-    etape.value = `2/3 — Envoi de l’APK (${(fichier.value.size / 1e6).toFixed(1)} Mo)…`
+    etape.value = `Étape 2 sur 3 : envoi de l’APK (${(fichier.value.size / 1e6).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} Mo)…`
     const { error } = await supabase.storage.from('apk').uploadToSignedUrl(chemin, jeton, fichier.value, {
       contentType: 'application/vnd.android.package-archive', cacheControl: '60',
     })
     if (error) throw error
-    etape.value = '3/3 — Vérification du fichier et publication…'
+    etape.value = 'Étape 3 sur 3 : vérification du fichier et publication…'
     const res = await $fetch<{ url: string }>('/api/admin/apk/publier', {
       method: 'POST', body: { versionName: m.versionName, versionCode: m.versionCode, obligatoire: obligatoire.value, message: message.value },
     })
-    etape.value = `Publiée : ${res.url}`
+    etape.value = `Version publiée. Lien de téléchargement : ${res.url}`
     toast.add({
       title: `Version ${m.versionName} publiée`,
-      description: obligatoire.value ? 'Elle est obligatoire : les anciennes versions sont bloquées.' : 'Les téléphones 1.0.12+ proposent la mise à jour sans bloquer.',
+      description: obligatoire.value ? 'Elle est obligatoire : les anciennes versions sont bloquées.' : 'Les téléphones en 1.0.12 ou plus récente proposent la mise à jour sans bloquer.',
       color: 'green',
     })
     fichier.value = null
@@ -190,7 +202,7 @@ async function publier() {
   }
   catch (e: any) {
     etape.value = ''
-    toast.add({ title: 'Publication impossible', description: messageErreur(e), color: 'red' })
+    toast.add({ title: 'Version non publiée', description: messageUtilisateur(e), color: 'red' })
   }
   finally {
     envoi.value = false

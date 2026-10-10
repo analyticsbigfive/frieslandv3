@@ -3,21 +3,21 @@
     v-model="isOpen"
     :ui="{
       width: `w-full ${width}`,
-      rounded: 'rounded-2xl',
-      shadow: 'shadow-2xl shadow-slate-900/15',
+      rounded: 'rounded-lg',
+      shadow: 'shadow-[0_10px_30px_-12px_rgba(15,23,42,0.25)]',
     }"
   >
     <div class="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden">
-      <header class="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 bg-slate-50/80 px-5 py-5 sm:px-7 dark:border-slate-700 dark:bg-slate-800/80">
+      <header class="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 bg-white px-5 py-5 sm:px-7 dark:border-slate-700 dark:bg-slate-800">
         <div class="flex min-w-0 items-start gap-3.5">
-          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-fc-blue-50 text-fc-blue-600 ring-1 ring-inset ring-fc-blue-100 dark:bg-fc-blue-900/30 dark:text-fc-blue-300 dark:ring-fc-blue-800">
-            <UIcon :name="icon" class="h-5 w-5" />
+          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+            <UIcon :name="icon" class="h-5 w-5" aria-hidden="true" />
           </div>
           <div class="min-w-0">
-            <h2 class="text-lg font-semibold tracking-tight text-slate-950 dark:text-white">
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">
               {{ title }}
             </h2>
-            <p v-if="description" class="mt-1 max-w-2xl text-sm leading-5 text-slate-500 dark:text-slate-400">
+            <p v-if="description" class="mt-1 max-w-2xl text-sm leading-5 text-slate-600 dark:text-slate-300">
               {{ description }}
             </p>
           </div>

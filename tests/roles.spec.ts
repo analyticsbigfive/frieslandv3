@@ -80,6 +80,7 @@ describe('accueil par rôle', () => {
     expect(homePathForRole('superviseur')).toBe('/admin')
     expect(homePathForRole('commercial')).toBe('/mobile/equipe')
     expect(homePathForRole('merchandiser')).toBe('/mobile')
+    expect(homePathForRole('agence')).toBe('/admin/routing')
     expect(homePathForRole(undefined)).toBe('/mobile')
   })
 })

@@ -34,7 +34,7 @@
  * le pied de page « page X / Y »). CHROME_PATH permet d'indiquer un autre binaire.
  */
 import { spawn } from 'node:child_process'
-import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises'
+import { copyFile, mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
@@ -51,9 +51,9 @@ const VERSION_APP = JSON.parse(await readFile(join(RACINE, 'package.json'), 'utf
 const ROLES = {
   admin: {
     fichier: 'GUIDE-ADMIN',
-    titre: 'Guide de l’administrateur',
-    libelleRole: 'Administrateur · back-office web',
-    intro: 'Ce guide accompagne les administrateurs du back-office Perfect Store : suivi de la performance, gestion des utilisateurs et des équipes, référentiels, standards et actions commerciales.',
+    titre: 'Guide du back-office',
+    libelleRole: 'Administrateur, superviseur, commercial · back-office web',
+    intro: 'Ce guide accompagne les utilisateurs du back-office Perfect Store, sans connaissance technique : se repérer, suivre la performance des points de vente, préparer les tournées, analyser le marché et tenir les réglages à jour.',
   },
   commercial: {
     fichier: 'GUIDE-COMMERCIAL',
@@ -70,9 +70,9 @@ const ROLES = {
   admin_atom: {
     fichier: 'GUIDE-ADMIN-ATOM',
     source: 'admin-atom',
-    titre: 'Guide de l’administrateur Atom',
-    libelleRole: 'Agence Atom · routing mensuel',
-    intro: 'Ce guide accompagne le responsable du routing de l’agence Atom dans le back-office : les règles du client, le fichier du mois avec ses points GPS, l’import, les corrections en cours de mois et le contrôle des tournées.',
+    titre: 'Guide du compte agence',
+    libelleRole: 'Agence · routing mensuel des merchandisers',
+    intro: 'Ce guide accompagne le responsable du routing d’une agence (Atom BTL…) dans le back-office : ce que voit le compte agence, les règles du client, le fichier du mois avec ses points GPS, l’import, les corrections en cours de mois et le contrôle des tournées.',
   },
   merchandiser_atom: {
     fichier: 'GUIDE-MERCHANDISER-ATOM',
@@ -383,6 +383,14 @@ try {
     const pdf = join(SORTIE, `${ROLES[role].fichier}.pdf`)
     await imprimer(chrome, html, pdf, ROLES[role].titre)
     console.log(`✅ ${pdf.replace(`${RACINE}/`, '')}`)
+  }
+
+  // Le bouton « Aide » du back-office sert ces deux guides
+  // (server/routes/guides/[nom].get.ts) : copie dans les assets du serveur.
+  const ASSETS_GUIDES = join(RACINE, 'server', 'assets', 'guides')
+  await mkdir(ASSETS_GUIDES, { recursive: true })
+  for (const fichier of ['GUIDE-ADMIN.pdf', 'GUIDE-ADMIN-ATOM.pdf']) {
+    await copyFile(join(SORTIE, fichier), join(ASSETS_GUIDES, fichier))
   }
 
   if (emailAdmin) {

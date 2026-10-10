@@ -1,4 +1,8 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { readFileSync } from 'node:fs'
+
+// Version affichée dans le pied de page du back-office (package.json).
+const appVersion = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version as string
 const isProduction = process.env.NODE_ENV === 'production'
 const devtoolsEnabled = process.env.NUXT_DEVTOOLS === 'true'
 // Build natif Capacitor : SPA statique, sans service worker PWA
@@ -130,6 +134,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
+      appVersion,
       // Vrai dans le bundle de l'APK. Connu dès la compilation, donc utilisable
       // au prérendu : un écran réservé au web n'apparaît jamais, même le temps
       // d'une hydratation (voir composables/usePlateforme.ts).

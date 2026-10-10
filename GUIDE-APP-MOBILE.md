@@ -10,7 +10,7 @@
 |---|---|
 | **URL** | `https://frieslandv3.vercel.app/login` |
 | **Email** | `merchandiser@friesland.ci` |
-| **Mot de passe** | `Test1234!` |
+| **Mot de passe** | fourni par l'administrateur |
 
 Après connexion, vous arrivez sur la **page d'accueil Visites**.
 

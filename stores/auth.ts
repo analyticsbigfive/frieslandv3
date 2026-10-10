@@ -2,6 +2,7 @@
 import { defineStore, skipHydrate } from 'pinia'
 import { markRaw } from 'vue'
 import type { Profile, UserRole, Employeur } from '~/types'
+import { marquerDeconnexionVolontaire } from '~/utils/sessionExpiree'
 
 export const useAuthStore = defineStore('auth', () => {
   const supabase = skipHydrate(markRaw(useSupabaseClient()))
@@ -18,6 +19,9 @@ export const useAuthStore = defineStore('auth', () => {
   // Commercial : consultation en lecture seule (lot 2, 1.0.4). Merchandiser : saisie terrain.
   const isCommercial = computed(() => profile.value?.role === 'commercial')
   const isMerchandiser = computed(() => profile.value?.role === 'merchandiser')
+  // Agence : responsable du routing d'une agence (profiles.employeur), limité à ses merchandisers.
+  const isAgence = computed(() => profile.value?.role === 'agence')
+  const agenceCourante = computed(() => (isAgence.value ? profile.value?.employeur || null : null))
   const userRole = computed(() => profile.value?.role || 'merchandiser')
 
   async function fetchProfile(options: { force?: boolean } = {}) {
@@ -45,7 +49,8 @@ export const useAuthStore = defineStore('auth', () => {
       try {
         const { data, error: err } = await supabase
           .from('profiles')
-          .select('id, email, nom, telephone, role, zone_assignee, territoires_assignes, quartiers_assignes, region, avatar_url, is_active, created_at, updated_at')
+          // employeur et direction : programme d'agence (mobile), portée du compte agence (admin).
+          .select('id, email, nom, telephone, role, employeur, direction, zone_assignee, territoires_assignes, quartiers_assignes, region, avatar_url, is_active, created_at, updated_at')
           .eq('id', requestedUserId)
           .single()
 
@@ -189,7 +194,15 @@ export const useAuthStore = defineStore('auth', () => {
       await retirerAppareil().catch(() => {})
     }
 
-    await supabase.auth.signOut()
+    // Déconnexion voulue : le plugin session-expiree ne doit pas afficher
+    // « Votre session a expiré ».
+    marquerDeconnexionVolontaire(true)
+    try {
+      await supabase.auth.signOut()
+    }
+    finally {
+      setTimeout(() => marquerDeconnexionVolontaire(false), 0)
+    }
     profile.value = null
     profileRequest.value = null
 
@@ -284,6 +297,8 @@ export const useAuthStore = defineStore('auth', () => {
     isSuperviseur,
     isCommercial,
     isMerchandiser,
+    isAgence,
+    agenceCourante,
     userRole,
     login,
     register,
