@@ -290,7 +290,7 @@ const LIBELLES_PRIX: Record<Exclude<PrixReleve, null>, string> = {
   contradictoire: 'Contradictoire',
 }
 import type { Visite } from '~/types'
-import { tradeTypeForCanal, type PerfectStoreResultB } from '~/utils/perfectStore'
+import { statutNiveauVisite, tradeTypeForCanal, type PerfectStoreResultB } from '~/utils/perfectStore'
 import { visibilityElementObserved, visibilitySegmentForPdv, FALLBACK_VISIBILITY_ELEMENTS } from '~/utils/visibilityStandards'
 import { photosAffichables } from '~/utils/visitePhotos'
 import { catalogueProduits, categoriesProduitsActives, getCategoryDef, releveSku, type DisponibiliteReleve, type PrixReleve } from '~/utils/products'
@@ -479,8 +479,12 @@ const niveau = computed(() => {
   const code = props.perfectStore?.tierAtteint
   const connu = niveauPerfectStore(code)
   if (connu) return { libelle: connu.long, couleur: connu.couleur }
-  if (!code || /^non/i.test(code.trim())) return { libelle: 'Non conforme', couleur: COULEUR_NON_CONFORME }
-  const court = code.trim()
+  // Sans disponibilité relevée, la visite n'a pas pu être évaluée : ce n'est
+  // pas un échec du point de vente.
+  const statut = statutNiveauVisite(props.perfectStore)
+  if (statut === 'non_evalue') return { libelle: 'Non évalué (relevé incomplet)', couleur: COULEUR_NON_CONFORME }
+  if (statut === 'non_conforme') return { libelle: 'Non conforme', couleur: COULEUR_NON_CONFORME }
+  const court = String(code).trim()
   return { libelle: court.charAt(0).toUpperCase() + court.slice(1).toLowerCase(), couleur: COULEUR_NON_CONFORME }
 })
 

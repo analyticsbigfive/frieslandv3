@@ -103,7 +103,10 @@
           </tr>
           <tr v-if="!chargement && !lignes.length">
             <td :colspan="plusieursAgences ? 9 : 8" class="!py-10 text-center">
-              Aucun merchandiser actif dans une agence {{ libelleDirection(direction, true) }}<template v-if="!agencesTexte"> : créez ou rattachez l’agence dans Référentiels › Agences, puis ses merchandisers dans Paramètres › Utilisateurs</template>.
+              Aucun merchandiser actif dans une agence {{ libelleDirection(direction, true) }}<template v-if="!agencesTexte"> : créez ou rattachez l’agence dans
+                <AdminLienEcran chemin="/admin/referentiels" liste="agence">Référentiels › Agences</AdminLienEcran>,
+                puis ses merchandisers dans
+                <AdminLienEcran chemin="/admin/users">Paramètres › Utilisateurs</AdminLienEcran></template>.
             </td>
           </tr>
         </tbody>
@@ -115,10 +118,10 @@
       Réglages :
       <template v-if="!authStore.isAgence">
         la grille des quotas, commune aux directions (elle fixe aussi l'objectif du mois), dans
-        <NuxtLink to="/admin/referentiels?liste=quotas_atom" class="font-semibold text-brand-600 underline underline-offset-2">Référentiels › Quotas</NuxtLink> ;
-        les agences dans <NuxtLink to="/admin/referentiels?liste=agence" class="font-semibold text-brand-600 underline underline-offset-2">Référentiels › Agences</NuxtLink> ;
+        <AdminLienEcran chemin="/admin/referentiels" liste="quotas_atom">Référentiels › Quotas du programme merchandiser</AdminLienEcran> ;
+        les agences dans <AdminLienEcran chemin="/admin/referentiels" liste="agence">Référentiels › Agences</AdminLienEcran> ;
       </template>
-      le routing mensuel de l’agence dans <NuxtLink to="/admin/referentiels?liste=routing_mensuel" class="font-semibold text-brand-600 underline underline-offset-2">Référentiels › Routing mensuel</NuxtLink>.
+      le routing mensuel de l’agence dans <AdminLienEcran chemin="/admin/referentiels" liste="routing_mensuel">Référentiels › Routing mensuel</AdminLienEcran>.
     </p>
   </div>
 </template>

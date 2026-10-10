@@ -437,3 +437,18 @@ export function scoreVisiteB(
     tierAtteint: niveau,
   }
 }
+
+/**
+ * Statut d'affichage d'un résultat Perfect Store. `tierAtteint` vaut null aussi
+ * bien pour une visite sous les seuils que pour un relevé sans disponibilité
+ * mesurée : seule la seconde est « non évaluée » — la dire « non conforme »
+ * accusait le point de vente d'un relevé incomplet.
+ */
+export type StatutNiveauVisite = 'atteint' | 'non_conforme' | 'non_evalue'
+export function statutNiveauVisite(r: Pick<PerfectStoreResultB, 'tierAtteint' | 'osaPondere'> | null | undefined): StatutNiveauVisite {
+  if (!r) return 'non_evalue'
+  const code = String(r.tierAtteint ?? '').trim()
+  if (code && !/^non/i.test(code)) return 'atteint'
+  if (r.osaPondere == null) return 'non_evalue'
+  return 'non_conforme'
+}

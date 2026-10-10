@@ -100,6 +100,15 @@
 
       <div class="rapport-import max-h-[32rem] overflow-y-auto rounded-md border border-slate-200 p-4 text-sm dark:border-slate-700" v-html="rapportHtml" />
 
+      <!-- Le rapport cite des listes à corriger : on y mène directement. -->
+      <p v-if="LISTES_LIEES[resultat.type]?.length" class="text-sm text-slate-600 dark:text-slate-300">
+        Pour corriger ce que le rapport signale :
+        <template v-for="(l, i) in LISTES_LIEES[resultat.type]" :key="l.liste">
+          <template v-if="i"> · </template>
+          <AdminLienEcran chemin="/admin/referentiels" :liste="l.liste">Référentiels › {{ l.libelle }}</AdminLienEcran>
+        </template>
+      </p>
+
       <div class="flex flex-wrap items-center gap-3">
         <UButton
           icon="i-heroicons-check-circle"
@@ -167,6 +176,8 @@
         </table>
       </div>
     </div>
+
+    <AdminConfirmation v-bind="confirmation" @confirmer="confirmerFenetre" @annuler="annulerFenetre" />
   </section>
 </template>
 
@@ -174,6 +185,7 @@
 import { fetchAllRows } from '~/utils/fetchAll'
 import { markdownVersHtml } from '~/utils/markdownSimple'
 import { messageUtilisateur } from '~/utils/supabaseErrors'
+import { compte, pluriel } from '~/utils/pluriel'
 // @ts-ignore modules JS partagés avec les scripts (sans types)
 import { decouperOperations } from '~/scripts/lib/imports/operations.mjs'
 
@@ -230,6 +242,18 @@ const IMPORTS: DefImport[] = [
 const TITRES: Record<string, string> = { 'ssf-sous-zones': 'Sous-zones SSF (ancien import)', ...Object.fromEntries(IMPORTS.map(i => [i.type, i.titre])) }
 const STATUTS: Record<string, string> = { en_cours: 'En cours', applique: 'Appliqué', erreur: 'Erreur', annulation: 'Annulation en cours', annule: 'Annulé' }
 const COULEURS_STATUT: Record<string, any> = { en_cours: 'blue', applique: 'green', erreur: 'red', annulation: 'amber', annule: 'gray' }
+// Listes des référentiels que cite le rapport de simulation (scripts/lib/imports).
+const LISTES_LIEES: Partial<Record<TypeImport, { liste: string, libelle: string }[]>> = {
+  'merch-dms': [
+    { liste: 'alias_import', libelle: 'Alias d’import (orthographes)' },
+    { liste: 'maintenance', libelle: 'Tâches automatiques' },
+  ],
+  'routing-mensuel': [
+    { liste: 'routing_mensuel', libelle: 'Routing mensuel' },
+    { liste: 'alias_import', libelle: 'Alias d’import (orthographes)' },
+  ],
+  'routing-ssf-dms': [{ liste: 'ssf', libelle: 'Vendeurs des distributeurs (SSF)' }],
+}
 
 // Libellés des chiffres du rapport : les scripts d'import (scripts/lib/imports)
 // renvoient des clés internes (lignesDms, ssfACreer…) qu'on traduit ici.
@@ -305,6 +329,7 @@ const LIBELLES_CSV: Record<string, string> = {
 const supabase = useSupabaseClient()
 const toast = useToast()
 const authStore = useAuthStore()
+const { confirmation, demanderConfirmation, confirmer: confirmerFenetre, annuler: annulerFenetre } = useConfirmation()
 // Compte agence : seulement le routing mensuel de ses merchandisers ; la route
 // serveur (requireAdminOuAgence) vérifie chaque opération.
 const importsVisibles = computed(() => (authStore.isAgence ? IMPORTS.filter(i => i.type === 'routing-mensuel') : IMPORTS))
@@ -433,7 +458,14 @@ async function envoyer(type: TypeImport, operations: any[], lotId: string, sens:
 async function appliquer() {
   const r = resultat.value
   if (!r || !r.res.operations.length) return
-  if (!confirm(`Appliquer « ${r.titre} » ?\n\n${r.res.operations.length.toLocaleString('fr-FR')} écritures seront faites. Vous pourrez annuler ce lot depuis l’historique.`)) return
+  const n = r.res.operations.length
+  const ok = await demanderConfirmation({
+    titre: `Appliquer l’import « ${r.titre} » ?`,
+    message: `${compte(n, 'écriture')} ${pluriel(n, 'sera faite', 'seront faites')}${r.fichier ? ` à partir de « ${r.fichier} »` : ''}. Vous pourrez annuler ce lot depuis l’historique des imports.`,
+    libelleAction: 'Appliquer l’import',
+    destructif: false,
+  })
+  if (!ok) return
   application.value = true
   try {
     const { data: lot, error } = await (supabase.from('import_lot' as any) as any).insert({
@@ -460,7 +492,13 @@ async function appliquer() {
 }
 
 async function annuler(lot: any) {
-  if (!confirm(`Annuler le lot « ${TITRES[lot.type] || lot.type} » du ${new Date(lot.cree_le).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })} ?\n\nLes écritures de ce lot seront défaites.`)) return
+  const ok = await demanderConfirmation({
+    titre: `Annuler le lot « ${TITRES[lot.type] || lot.type} » du ${new Date(lot.cree_le).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })} ?`,
+    message: `Les écritures de ce lot seront défaites${lot.fichier ? ` (fichier « ${lot.fichier} »)` : ''}.`,
+    libelleAction: 'Annuler le lot',
+    libelleRetour: 'Garder le lot',
+  })
+  if (!ok) return
   annulation.value = lot.id
   try {
     await (supabase.from('import_lot' as any) as any).update({ statut: 'annulation' }).eq('id', lot.id)

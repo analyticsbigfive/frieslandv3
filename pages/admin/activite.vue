@@ -56,7 +56,7 @@
                 <span class="mt-0.5 block text-sm text-slate-600 dark:text-slate-300">{{ alert.description }}</span>
               </span>
               <span class="shrink-0 text-lg font-semibold tabular-nums text-slate-900 dark:text-white">{{ alert.value }}</span>
-              <span v-if="peutOuvrir(alert.to)" class="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-fc-red">
+              <span v-if="peutOuvrir(alert.to)" class="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-brand-600 dark:text-brand-300">
                 Ouvrir
                 <UIcon name="i-heroicons-arrow-right" class="h-4 w-4" aria-hidden="true" />
               </span>
@@ -65,8 +65,25 @@
         </ul>
       </section>
 
-      <section v-if="psGlobal" aria-labelledby="performance-heading" class="grid gap-5 lg:grid-cols-12">
+      <section aria-labelledby="performance-heading" class="grid gap-5 lg:grid-cols-12">
+        <div v-if="!psGlobal" class="admin-surface flex flex-col p-5 lg:col-span-7">
+          <h2 id="performance-heading" class="text-base font-semibold text-slate-900 dark:text-white">Performance Perfect Store</h2>
+          <ChargementContenu v-if="psEtat === 'chargement'" variante="compact" libelle="Chargement du résultat Perfect Store…" class="mt-4" />
+          <AdminErreurBloc
+            v-else-if="psEtat === 'erreur'"
+            compact
+            class="mt-4"
+            titre="Le résultat Perfect Store n’a pas pu être chargé."
+            :erreur="psErreur"
+            :en-cours="psRechargement"
+            @reessayer="chargerPerfectStore"
+          />
+          <p v-else class="mt-4 text-sm text-slate-600 dark:text-slate-300">
+            Aucune visite évaluée pour l’instant. Le résultat apparaîtra dès les premières visites avec un relevé de disponibilité.
+          </p>
+        </div>
         <NuxtLink
+          v-else
           to="/admin"
           class="admin-surface group flex flex-col justify-between gap-6 p-5 transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 dark:hover:bg-slate-700/40 lg:col-span-7"
         >
@@ -79,18 +96,18 @@
               <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">des visites évaluées sont au standard</p>
             </div>
             <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300" aria-hidden="true">
-              <Trophy class="h-4 w-4" />
+              <UIcon name="i-heroicons-trophy" class="h-4 w-4" />
             </div>
           </div>
           <div>
             <div class="mb-2 flex flex-wrap items-center justify-between gap-2 text-sm text-slate-600 dark:text-slate-300">
-              <span><strong class="font-semibold tabular-nums text-slate-900 dark:text-white">{{ numberFormatter.format(psGlobal.perfect_stores ?? 0) }}</strong> visites conformes</span>
-              <span><strong class="font-semibold tabular-nums text-slate-900 dark:text-white">{{ numberFormatter.format(psGlobal.visites_scorees ?? 0) }}</strong> évaluées</span>
+              <span><strong class="font-semibold tabular-nums text-slate-900 dark:text-white">{{ formatNombre(psGlobal.perfect_stores) }}</strong> {{ pluriel(psGlobal.perfect_stores, 'visite conforme', 'visites conformes') }}</span>
+              <span><strong class="font-semibold tabular-nums text-slate-900 dark:text-white">{{ formatNombre(psGlobal.visites_scorees) }}</strong> {{ pluriel(psGlobal.visites_scorees, 'évaluée') }}</span>
             </div>
             <div class="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700" aria-hidden="true">
               <div class="h-full rounded-full bg-slate-700 transition-all duration-700 dark:bg-slate-200" :style="{ width: perfectStoreProgress }" />
             </div>
-            <p class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-fc-red">
+            <p class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-600 dark:text-brand-300">
               Ouvrir l'analyse détaillée
               <UIcon name="i-heroicons-arrow-right" class="h-4 w-4" aria-hidden="true" />
             </p>
@@ -98,21 +115,31 @@
         </NuxtLink>
 
         <div class="grid grid-cols-2 gap-4 lg:col-span-5">
-          <component
-            :is="peutOuvrir(metric.to) ? LienNuxt : 'div'"
-            v-for="metric in activityMetrics"
-            :key="metric.label"
-            :to="peutOuvrir(metric.to) ? metric.to : undefined"
-            class="admin-metric-tile"
-            :class="peutOuvrir(metric.to) ? 'transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 dark:hover:bg-slate-700/40' : ''"
-          >
-            <div class="flex items-start justify-between gap-3">
-              <p class="text-xs font-semibold text-slate-600 dark:text-slate-300">{{ metric.label }}</p>
-              <component :is="metric.icon" class="h-4 w-4 shrink-0 text-slate-600 dark:text-slate-300" aria-hidden="true" />
+          <template v-for="metric in activityMetrics" :key="metric.label">
+            <!-- Échec : tuile non cliquable, cause et « Réessayer » dans la tuile. -->
+            <div v-if="metric.erreur" class="admin-metric-tile">
+              <div class="flex items-start justify-between gap-3">
+                <p class="text-xs font-semibold text-slate-600 dark:text-slate-300">{{ metric.label }}</p>
+                <UIcon :name="metric.icon" class="h-4 w-4 shrink-0 text-slate-600 dark:text-slate-300" aria-hidden="true" />
+              </div>
+              <p class="mt-3 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">—</p>
+              <AdminErreurBloc compact class="mt-2" titre="Non chargé." :erreur="metric.erreur" :en-cours="metric.enCours" @reessayer="metric.reessayer" />
             </div>
-            <p class="mt-3 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{{ metric.value }}</p>
-            <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">{{ metric.hint }}</p>
-          </component>
+            <component
+              :is="peutOuvrir(metric.to) ? LienNuxt : 'div'"
+              v-else
+              :to="peutOuvrir(metric.to) ? metric.to : undefined"
+              class="admin-metric-tile"
+              :class="peutOuvrir(metric.to) ? 'transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 dark:hover:bg-slate-700/40' : ''"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <p class="text-xs font-semibold text-slate-600 dark:text-slate-300">{{ metric.label }}</p>
+                <UIcon :name="metric.icon" class="h-4 w-4 shrink-0 text-slate-600 dark:text-slate-300" aria-hidden="true" />
+              </div>
+              <p class="mt-3 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{{ metric.value }}</p>
+              <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">{{ metric.hint }}</p>
+            </component>
+          </template>
         </div>
       </section>
 
@@ -125,16 +152,16 @@
           <NuxtLink
             v-if="peutOuvrir('/admin/perfect-store/standards')"
             to="/admin/perfect-store/standards"
-            class="text-sm font-semibold text-fc-red underline-offset-4 hover:underline"
+            class="text-sm font-semibold text-brand-600 dark:text-brand-300 underline-offset-4 hover:underline"
           >
             Voir les standards
           </NuxtLink>
         </div>
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatsCard title="Disponibilité en rayon (pondérée)" :value="formatPercent(psGlobal.osa_moyen_pct ?? 0)" format="none" subtitle="Quantité au moins égale au seuil" :icon="Package" color="green" />
-          <StatsCard title="Assortiment" :value="formatPercent(psGlobal.assortiment_moyen_pct ?? 0)" format="none" subtitle="Références minimum et prioritaires" :icon="ListChecks" color="blue" />
-          <StatsCard title="Visibilité" :value="formatPercent(psGlobal.visibilite_moyenne_pct ?? 0)" format="none" subtitle="PLV requise présente" :icon="Eye" color="orange" />
-          <StatsCard title="Promotion" :value="formatPercent(psGlobal.promotion_moyenne_pct ?? 0)" format="none" subtitle="Quand une promotion est en cours" :icon="BadgePercent" color="red" />
+          <StatsCard title="Disponibilité en rayon (pondérée)" :value="formatPercent(psGlobal.osa_moyen_pct)" format="none" subtitle="Quantité au moins égale au seuil" icon="i-heroicons-cube" color="green" />
+          <StatsCard title="Assortiment" :value="formatPercent(psGlobal.assortiment_moyen_pct)" format="none" subtitle="Références minimum et prioritaires" icon="i-heroicons-list-bullet" color="blue" />
+          <StatsCard title="Visibilité" :value="formatPercent(psGlobal.visibilite_moyenne_pct)" format="none" subtitle="PLV requise présente" icon="i-heroicons-eye" color="orange" />
+          <StatsCard title="Promotion" :value="formatPercent(psGlobal.promotion_moyenne_pct)" format="none" subtitle="Quand une promotion est en cours" icon="i-heroicons-receipt-percent" color="red" />
         </div>
       </section>
 
@@ -144,7 +171,15 @@
             <h3 id="dispo-categorie-heading" class="text-base font-semibold text-slate-900 dark:text-white">Disponibilité par catégorie</h3>
             <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">Part des visites où la catégorie est présente. Seuil d'alerte : 40 %.</p>
           </div>
-          <ul v-if="productCategories.length" class="space-y-5">
+          <AdminErreurBloc
+            v-if="statsErreurs.global"
+            compact
+            titre="La disponibilité par catégorie n’a pas pu être chargée."
+            :erreur="statsErreurs.global"
+            :en-cours="statsRechargement"
+            @reessayer="chargerStats"
+          />
+          <ul v-else-if="productCategories.length" class="space-y-5">
             <li v-for="cat in productCategories" :key="cat.key">
               <div class="mb-2 flex items-center justify-between gap-3">
                 <span class="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
@@ -162,7 +197,11 @@
         </article>
 
         <div class="xl:col-span-7">
-          <ClientOnly>
+          <article v-if="statsErreurs.parJour" class="admin-surface h-full" aria-labelledby="evolution-visites-erreur">
+            <h3 id="evolution-visites-erreur" class="border-b border-slate-200 px-5 py-4 text-base font-semibold text-slate-900 dark:border-slate-700 dark:text-white">Évolution des visites</h3>
+            <AdminErreurBloc titre="La courbe des visites n’a pas pu être chargée." :erreur="statsErreurs.parJour" :en-cours="statsRechargement" @reessayer="chargerStats" />
+          </article>
+          <ClientOnly v-else>
             <ChartsVisitesLineChart title="Évolution des visites" :data="stats?.visites_par_jour ?? []" />
           </ClientOnly>
         </div>
@@ -170,7 +209,11 @@
 
       <section class="grid gap-6 xl:grid-cols-12">
         <div class="xl:col-span-5">
-          <ClientOnly>
+          <article v-if="statsErreurs.distribution" class="admin-surface h-full" aria-labelledby="distribution-erreur">
+            <h3 id="distribution-erreur" class="border-b border-slate-200 px-5 py-4 text-base font-semibold text-slate-900 dark:border-slate-700 dark:text-white">Répartition des points de vente</h3>
+            <AdminErreurBloc titre="La répartition n’a pas pu être chargée." :erreur="statsErreurs.distribution" :en-cours="statsRechargement" @reessayer="chargerStats" />
+          </article>
+          <ClientOnly v-else>
             <ChartsDistributionChart title="Répartition des points de vente" :data="stats?.distribution_pdv ?? []" />
           </ClientOnly>
         </div>
@@ -183,7 +226,14 @@
             </div>
             <UButton size="xs" variant="outline" icon="i-heroicons-arrow-down-tray" class="print:hidden" :disabled="!stats?.performance_commerciaux?.length" @click="exportPerformance">Exporter (CSV)</UButton>
           </div>
-          <div v-if="stats?.performance_commerciaux?.length" class="overflow-x-auto">
+          <AdminErreurBloc
+            v-if="statsErreurs.performance"
+            titre="L’activité des commerciaux n’a pas pu être chargée."
+            :erreur="statsErreurs.performance"
+            :en-cours="statsRechargement"
+            @reessayer="chargerStats"
+          />
+          <div v-else-if="stats?.performance_commerciaux?.length" class="overflow-x-auto">
             <table class="admin-table">
               <thead>
                 <tr>
@@ -218,7 +268,7 @@
             </table>
           </div>
           <div v-else class="px-6 py-14 text-center">
-            <ClipboardList class="mx-auto h-9 w-9 text-slate-300 dark:text-slate-600" aria-hidden="true" />
+            <UIcon name="i-heroicons-clipboard-document-list" class="mx-auto h-9 w-9 text-slate-300 dark:text-slate-600" aria-hidden="true" />
             <p class="mt-3 text-sm font-semibold text-slate-700 dark:text-slate-200">Aucune visite enregistrée pour l'instant</p>
             <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Les commerciaux apparaîtront ici dès leurs premières visites.</p>
           </div>
@@ -244,12 +294,21 @@
           />
         </div>
         <ChargementContenu v-if="loadingRecentVisits" variante="lignes" :nombre="3" libelle="Chargement des dernières visites…" class="px-5 py-5 sm:px-6" />
+        <AdminErreurBloc
+          v-else-if="recentErreur"
+          titre="Les dernières visites n’ont pas pu être chargées."
+          :erreur="recentErreur"
+          @reessayer="fetchRecentVisits"
+        />
         <div v-else-if="recentVisits.length" class="divide-y divide-slate-200 dark:divide-slate-700">
-          <NuxtLink
+          <!-- Chaque ligne ouvre la fiche de SA visite dans Visites › Toutes les visites. -->
+          <component
+            :is="peutOuvrir('/admin/visites') ? LienNuxt : 'div'"
             v-for="visit in recentVisits"
             :key="visit.id"
-            to="/admin/visites"
-            class="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 dark:hover:bg-slate-800/70 sm:px-6"
+            :to="peutOuvrir('/admin/visites') ? { path: '/admin/visites', query: { visite: visit.id } } : undefined"
+            class="flex items-center gap-3 px-5 py-3 sm:px-6"
+            :class="peutOuvrir('/admin/visites') ? 'transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 dark:hover:bg-slate-800/70' : ''"
           >
             <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200" aria-hidden="true">
               <UIcon name="i-heroicons-clipboard-document-check" class="h-4 w-4" />
@@ -259,7 +318,7 @@
               <span class="mt-0.5 block truncate text-xs text-slate-600 dark:text-slate-300">{{ visit.commercial || 'Commercial non renseigné' }}</span>
             </span>
             <time class="shrink-0 text-xs tabular-nums text-slate-600 dark:text-slate-300" :datetime="visit.date_visite">{{ formatRecentDate(visit.date_visite) }}</time>
-          </NuxtLink>
+          </component>
         </div>
         <div v-else class="px-5 py-8 text-center sm:px-6">
           <UIcon name="i-heroicons-inbox" class="mx-auto h-7 w-7 text-slate-300 dark:text-slate-600" aria-hidden="true" />
@@ -267,7 +326,7 @@
           <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Les nouvelles visites apparaîtront ici dès leur envoi depuis le terrain.</p>
         </div>
         <div class="border-t border-slate-200 px-5 py-3 dark:border-slate-700 sm:px-6">
-          <NuxtLink to="/admin/visites" class="inline-flex items-center gap-1 text-sm font-semibold text-fc-red underline-offset-4 hover:underline">
+          <NuxtLink to="/admin/visites" class="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 dark:text-brand-300 underline-offset-4 hover:underline">
             Voir toutes les visites
             <UIcon name="i-heroicons-arrow-right" class="h-4 w-4" aria-hidden="true" />
           </NuxtLink>
@@ -278,8 +337,8 @@
 </template>
 
 <script setup lang="ts">
-import { ClipboardList, Calendar, MapPin, Users, Trophy, Package, Eye, BadgePercent, ListChecks } from 'lucide-vue-next'
 import { couleurFamille } from '~/utils/chartPalette'
+import { pluriel } from '~/utils/pluriel'
 
 definePageMeta({
   middleware: ['auth', 'admin'],
@@ -297,8 +356,19 @@ const LienNuxt = resolveComponent('NuxtLink')
 
 const loadingDashboard = ref(true)
 const stats = computed(() => visitesStore.stats)
+// Échecs de chargement des statistiques, par partie : un échec affiche « — »
+// et « Réessayer », jamais 0.
+const statsErreurs = computed(() => visitesStore.statsErreurs)
+const statsRechargement = ref(false)
 const psGlobal = ref<Awaited<ReturnType<typeof fetchGlobalKpi>> | null>(null)
 const coverage = ref<Awaited<ReturnType<typeof fetchCoverage>> | null>(null)
+// Résultat Perfect Store et couverture : chargement, erreur ou donnée (null = aucune ligne).
+const psEtat = ref<'chargement' | 'erreur' | 'pret'>('chargement')
+const psErreur = ref<unknown>(null)
+const psRechargement = ref(false)
+const coverageErreur = ref<unknown>(null)
+const coverageRechargement = ref(false)
+const recentErreur = ref<unknown>(null)
 const loadingRecentVisits = ref(true)
 const recentVisits = ref<Array<{
   id: string
@@ -316,7 +386,7 @@ const dashboardAlerts = computed(() => {
   if (lowCategories.length > 0) {
     alerts.push({ key: 'products-low', title: 'Disponibilité', description: `${lowCategories.map(category => category.label).join(', ')} sous le seuil de 40 %.`, value: String(lowCategories.length), to: '/admin/produits/recap', level: 'critical' })
   }
-  if (psGlobal.value && Number(psGlobal.value.perfect_store_pct ?? 0) < 40) {
+  if (psGlobal.value?.perfect_store_pct != null && Number(psGlobal.value.perfect_store_pct) < 40) {
     alerts.push({ key: 'perfect-store-low', title: 'Perfect Store', description: 'Le score global est sous le seuil critique.', value: formatPercent(psGlobal.value.perfect_store_pct), to: '/admin', level: 'critical' })
   }
   return alerts.slice(0, 4)
@@ -329,16 +399,19 @@ const lastRefreshLabel = computed(() => {
 
 async function fetchRecentVisits() {
   loadingRecentVisits.value = true
+  recentErreur.value = null
   try {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('visites')
       .select('id, date_visite, commercial, pdv:pdv_id(nom_pdv)')
       .order('date_visite', { ascending: false })
       .limit(4)
+    if (error) throw error
     recentVisits.value = (data || [])
   }
-  catch {
+  catch (err) {
     recentVisits.value = []
+    recentErreur.value = err
   }
   finally {
     loadingRecentVisits.value = false
@@ -350,36 +423,59 @@ function formatRecentDate(value: string) {
   return formatDateFr(value, { day: '2-digit', month: 'short' })
 }
 
-const activityMetrics = computed(() => [
+interface Metrique {
+  label: string
+  value: string
+  hint: string
+  icon: string
+  to: string
+  erreur?: unknown
+  enCours?: boolean
+  reessayer?: () => void
+}
+const activityMetrics = computed<Metrique[]>(() => [
   {
     label: 'Couverture du mois',
-    value: `${numberFormatter.format(coverage.value?.pdv_vus ?? 0)} / ${numberFormatter.format(coverage.value?.pdv_total ?? 0)}`,
+    // Pas de ligne pour le mois (aucune visite) : « — », pas « 0 / 0 ».
+    value: coverage.value ? `${formatNombre(coverage.value.pdv_vus)} / ${formatNombre(coverage.value.pdv_total)}` : '—',
     hint: coverage.value?.couverture_pct != null
       ? `${formatPercent(coverage.value.couverture_pct)} du parc visité`
-      : 'points de vente visités sur le parc actif',
-    icon: MapPin,
+      : coverage.value ? 'points de vente visités sur le parc actif' : 'Aucune visite ce mois-ci pour l’instant',
+    icon: 'i-heroicons-map-pin',
     to: '/admin/pdv',
+    erreur: coverageErreur.value,
+    enCours: coverageRechargement.value,
+    reessayer: chargerCouverture,
   },
   {
     label: 'Visites ce mois',
-    value: numberFormatter.format(stats.value?.visites_month ?? 0),
+    value: formatNombre(stats.value?.visites_month),
     hint: 'Activité de la période',
-    icon: Calendar,
+    icon: 'i-heroicons-calendar',
     to: '/admin/visites',
+    erreur: statsErreurs.value.global,
+    enCours: statsRechargement.value,
+    reessayer: chargerStats,
   },
   {
     label: 'Parc actif',
-    value: numberFormatter.format(stats.value?.total_pdv ?? 0),
+    value: formatNombre(stats.value?.total_pdv),
     hint: 'Points de vente',
-    icon: MapPin,
+    icon: 'i-heroicons-building-storefront',
     to: '/admin/pdv',
+    erreur: statsErreurs.value.parc,
+    enCours: statsRechargement.value,
+    reessayer: chargerStats,
   },
   {
     label: 'Équipe active',
-    value: numberFormatter.format(stats.value?.total_commerciaux ?? 0),
-    hint: `${numberFormatter.format(stats.value?.total_visites ?? 0)} visites cumulées`,
-    icon: Users,
+    value: formatNombre(stats.value?.total_commerciaux),
+    hint: `${formatNombre(stats.value?.total_visites)} ${pluriel(stats.value?.total_visites, 'visite cumulée', 'visites cumulées')}`,
+    icon: 'i-heroicons-users',
     to: '/admin/visites/commerciaux',
+    erreur: statsErreurs.value.global,
+    enCours: statsRechargement.value,
+    reessayer: chargerStats,
   },
 ])
 
@@ -396,6 +492,11 @@ const productCategories = computed(() => filtrerCategoriesReleve([
   { key: 'uht', label: 'UHT', value: stats.value?.taux_uht ?? 0 },
   { key: 'yaourt', label: 'Yaourt', value: stats.value?.taux_yaourt ?? 0 },
 ], c => c.key))
+
+// Valeur absente : « — », jamais 0.
+function formatNombre(value: number | null | undefined) {
+  return value == null ? '—' : numberFormatter.format(value)
+}
 
 function formatPercent(value: number | null | undefined) {
   if (value == null) return '—'
@@ -502,19 +603,63 @@ function handlePrint() {
   window.print()
 }
 
+async function chargerPerfectStore() {
+  psRechargement.value = true
+  try {
+    psGlobal.value = await fetchGlobalKpi()
+    psErreur.value = null
+    psEtat.value = 'pret'
+  }
+  catch (err) {
+    psGlobal.value = null
+    psErreur.value = err
+    psEtat.value = 'erreur'
+  }
+  finally {
+    psRechargement.value = false
+  }
+}
+
+async function chargerCouverture() {
+  coverageRechargement.value = true
+  try {
+    coverage.value = await fetchCoverage()
+    coverageErreur.value = null
+  }
+  catch (err) {
+    coverage.value = null
+    coverageErreur.value = err
+  }
+  finally {
+    coverageRechargement.value = false
+  }
+}
+
+// Relance après un échec : on ignore le cache de 5 minutes du store.
+async function chargerStats() {
+  statsRechargement.value = true
+  try {
+    await visitesStore.fetchStats({ force: true })
+    lastRefreshAt.value = new Date()
+  }
+  finally {
+    statsRechargement.value = false
+  }
+}
+
 // Load stats on mount
 onMounted(async () => {
   loadingDashboard.value = true
   void chargerCategoriesReleve()
   fetchRecentVisits()
-  fetchGlobalKpi().then(g => { psGlobal.value = g }).catch(() => {})
-  fetchCoverage().then(c => { coverage.value = c }).catch(() => {})
+  void chargerPerfectStore()
+  void chargerCouverture()
   try {
     await visitesStore.fetchStats()
     lastRefreshAt.value = new Date()
     // Statistiques vides : normal pour un compte agence (elles portent sur tout
     // le parc, pas sur son agence) ; sinon on le signale sans jargon.
-    if (!stats.value?.total_visites && !stats.value?.total_pdv && !authStore.isAgence) {
+    if (!statsErreurs.value.global && !stats.value?.total_visites && !stats.value?.total_pdv && !authStore.isAgence) {
       toast.add({
         title: 'Aucune statistique pour l’instant',
         description: 'Les chiffres apparaîtront dès que des visites auront été enregistrées. Si ce n’est pas normal, prévenez l’administrateur technique.',

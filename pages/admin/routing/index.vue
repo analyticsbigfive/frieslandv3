@@ -38,7 +38,12 @@
     </AdminPageHeader>
     <p v-if="lectureSeule" class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
       <UIcon name="i-heroicons-eye" class="h-4 w-4 shrink-0" aria-hidden="true" />
-      Consultation : le routing de vos merchandisers se charge dans Paramètres › Import / Export, et se corrige dans Paramètres › Référentiels › Routing mensuel.
+      <span>
+        Consultation : le routing de vos merchandisers se charge dans
+        <AdminLienEcran chemin="/admin/import-export">Paramètres › Import / Export</AdminLienEcran>,
+        et se corrige dans
+        <AdminLienEcran chemin="/admin/referentiels" liste="routing_mensuel">Référentiels › Routing mensuel</AdminLienEcran>.
+      </span>
     </p>
 
     <!-- ==================== TAB 1: ROUTINGS PONCTUELS ==================== -->
@@ -143,7 +148,7 @@
 
         <template v-else>
           <p class="text-sm text-slate-600 dark:text-slate-300">
-            {{ tourneesParPersonne.length }} personne(s) · {{ routings.length }} tournée(s). Cliquez sur une personne pour voir ses tournées.
+            {{ compte(tourneesParPersonne.length, 'personne') }} · {{ compte(routings.length, 'tournée') }}. Cliquez sur une personne pour voir ses tournées.
           </p>
 
           <div
@@ -186,7 +191,7 @@
               </div>
 
               <div class="text-sm tabular-nums sm:text-right">
-                <p class="font-semibold text-slate-900 dark:text-white">{{ p.routings.length }} tournée(s)</p>
+                <p class="font-semibold text-slate-900 dark:text-white">{{ compte(p.routings.length, 'tournée') }}</p>
                 <p class="text-xs text-slate-600 dark:text-slate-300">{{ p.nbFaits }}/{{ p.nbPdv }} PDV faits</p>
               </div>
 
@@ -266,7 +271,8 @@
         <UIcon name="i-heroicons-calendar" class="mx-auto mb-3 h-10 w-10 text-slate-400" aria-hidden="true" />
         <p class="font-semibold text-slate-900 dark:text-white">Aucune règle récurrente</p>
         <p v-if="lectureSeule" class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-          Aucune règle pour vos merchandisers : le routing se charge dans Paramètres › Import / Export.
+          Aucune règle pour vos merchandisers : le routing se charge dans
+          <AdminLienEcran chemin="/admin/import-export">Paramètres › Import / Export</AdminLienEcran>.
         </p>
         <p v-else class="mt-1 text-sm text-slate-600 dark:text-slate-300">
           Créez une règle (« ce merchandiser visite ces points de vente chaque lundi et jeudi ») : les tournées se génèrent ensuite toutes seules.
@@ -276,7 +282,7 @@
       <!-- Règles regroupées par personne : une carte dépliable par merchandiser -->
       <div v-else class="space-y-4">
         <p class="text-sm text-slate-600 dark:text-slate-300">
-          {{ reglesParPersonne.length }} personne(s) · {{ groupedTemplates.length }} règle(s). Cliquez sur une personne pour {{ lectureSeule ? 'voir' : 'voir et modifier' }} ses règles.
+          {{ compte(reglesParPersonne.length, 'personne') }} · {{ compte(groupedTemplates.length, 'règle') }}. Cliquez sur une personne pour {{ lectureSeule ? 'voir' : 'voir et modifier' }} ses règles.
         </p>
 
         <div
@@ -319,7 +325,7 @@
             </div>
 
             <div class="text-sm tabular-nums sm:text-right">
-              <p class="font-semibold text-slate-900 dark:text-white">{{ p.regles.length }} règle(s)</p>
+              <p class="font-semibold text-slate-900 dark:text-white">{{ compte(p.regles.length, 'règle') }}</p>
               <p class="text-xs text-slate-600 dark:text-slate-300">
                 {{ p.nbPdv }} PDV
                 <span v-if="p.nbSansGps" class="font-semibold text-red-700 dark:text-red-300">· {{ p.nbSansGps }} sans GPS</span>
@@ -536,7 +542,7 @@
         </div>
           <div class="flex items-center justify-between mb-2">
             <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Points de vente de la tournée <span class="text-red-700 dark:text-red-300" aria-hidden="true">*</span></span>
-            <span class="text-xs tabular-nums text-slate-600 dark:text-slate-300">{{ newRouting.pdvItems.length }} sélectionné(s)</span>
+            <span class="text-xs tabular-nums text-slate-600 dark:text-slate-300">{{ newRouting.pdvItems.length }} {{ pluriel(newRouting.pdvItems.length, 'sélectionné') }}</span>
           </div>
 
           <!-- Périmètre : on ne peut cocher que les PDV des territoires du merchandiser choisi. -->
@@ -551,7 +557,8 @@
             class="mb-3 rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2.5 text-xs text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
           >
             Aucun point de vente dans le périmètre de cette personne
-            ({{ profileTerritories(selectedMerchandiser).join(', ') || 'aucun territoire assigné' }}) : assignez-lui un territoire dans Paramètres › Utilisateurs.
+            ({{ profileTerritories(selectedMerchandiser).join(', ') || 'aucun territoire assigné' }}) : assignez-lui un territoire dans
+            <AdminLienEcran chemin="/admin/users">Paramètres › Utilisateurs</AdminLienEcran>.
           </div>
 
           <!-- Préselection par colonnes PDV -->
@@ -562,7 +569,7 @@
             <USelectMenu v-model="pdvFilter.quartier" :options="pdvFilterQuartierOptions" option-attribute="label" value-attribute="value" placeholder="Quartier" size="sm" />
           </div>
           <div class="flex items-center justify-between mb-2">
-            <span class="text-xs tabular-nums text-slate-600 dark:text-slate-300">{{ filteredAvailablePdv.length }} point(s) de vente disponible(s)</span>
+            <span class="text-xs tabular-nums text-slate-600 dark:text-slate-300">{{ compte(filteredAvailablePdv.length, 'point de vente disponible', 'points de vente disponibles') }}</span>
             <div class="flex flex-wrap gap-2">
               <UButton v-if="hasPdvFilter" size="xs" variant="ghost" icon="i-heroicons-x-mark" @click="clearPdvFilter">
                 Réinitialiser
@@ -731,7 +738,7 @@
       v-model="showTemplateCreateModal"
       :title="regleEditionId ? 'Modifier la règle' : 'Nouvelle règle récurrente'"
       :description="regleEditionId
-        ? 'Les tournées déjà générées ne changent pas ; Paramètres › Référentiels › « Tâches automatiques » › « Recalculer les tournées à venir » applique tout de suite la règle modifiée.'
+        ? 'Les tournées déjà générées ne changent pas.'
         : '« Ce merchandiser visite ces PDV chaque lundi et chaque jeudi. » La règle se répète d’elle-même, mois suivant compris.'"
       icon="i-heroicons-arrow-path-rounded-square"
       width="sm:max-w-2xl"
@@ -808,10 +815,13 @@
 
         <UFormGroup
           label="Composition de la tournée du jour"
-          help="Le nombre de points de vente par canal se règle dans Référentiels › Quotas."
           size="md"
           class="sm:col-span-2"
         >
+          <template #help>
+            Le nombre de points de vente par canal se règle dans
+            <AdminLienEcran chemin="/admin/referentiels" liste="quotas_atom">Référentiels › Quotas du programme merchandiser</AdminLienEcran>.
+          </template>
           <USelectMenu
             v-model="newTemplate.mode"
             :options="modeOptions"
@@ -832,6 +842,11 @@
         <UFormGroup label="Notes" size="md" class="sm:col-span-2">
           <UTextarea v-model="newTemplate.notes" placeholder="Instructions récurrentes…" :rows="2" />
         </UFormGroup>
+
+        <p v-if="regleEditionId" class="text-sm text-slate-600 sm:col-span-2 dark:text-slate-300">
+          Pour appliquer la règle aux tournées déjà générées, enregistrez-la puis lancez « Recalculer les tournées à venir » dans
+          <AdminLienEcran chemin="/admin/referentiels" liste="maintenance">Référentiels › Tâches automatiques</AdminLienEcran>.
+        </p>
 
       <template #footer>
           <UButton type="button" color="gray" variant="ghost" @click="showTemplateCreateModal = false">Annuler</UButton>
@@ -1018,7 +1033,7 @@
         <div class="flex flex-wrap items-center gap-3">
           <UInput v-model="rechercheGestion" icon="i-heroicons-magnifying-glass" placeholder="Filtrer par nom, code, zone ou quartier" size="sm" class="min-w-[14rem] flex-1" aria-label="Filtrer les points de vente de la règle" />
           <span class="text-xs tabular-nums text-slate-600 dark:text-slate-300">
-            {{ pdvGestionFiltres.length }} affiché(s) sur {{ regleGestion.routing_template_pdv?.length || 0 }} chargé(s), {{ regleGestion.nb_pdv ?? 0 }} au total
+            {{ pdvGestionFiltres.length }} {{ pluriel(pdvGestionFiltres.length, 'affiché') }} sur {{ regleGestion.routing_template_pdv?.length || 0 }} {{ pluriel(regleGestion.routing_template_pdv?.length, 'chargé') }}, {{ regleGestion.nb_pdv ?? 0 }} au total
           </span>
         </div>
         <p v-if="rechercheGestion && !lectureSeule" class="text-xs text-slate-600 dark:text-slate-300">Le filtre porte sur les points de vente chargés ; videz-le pour changer l'ordre.</p>
@@ -1164,7 +1179,8 @@
         <template v-else>
           <p v-if="jourModal.regle?.mode === 'quota'">
             Règle <strong>par quotas</strong> : la liste du jour est choisie au moment de la génération, parmi les points de vente
-            du portefeuille pas encore prévus ni visités ce mois-ci. Le nombre par canal se règle dans Référentiels › Quotas.
+            du portefeuille pas encore prévus ni visités ce mois-ci. Le nombre par canal se règle dans
+            <AdminLienEcran chemin="/admin/referentiels" liste="quotas_atom">Référentiels › Quotas du programme merchandiser</AdminLienEcran>.
           </p>
           <p v-else-if="jourModal.regle">
             Règle <strong>tout le portefeuille</strong> : ses {{ jourModal.regle.nb_pdv ?? 0 }} points de vente seront à visiter ce jour-là, sauf exceptions.
@@ -1250,10 +1266,10 @@
         <!-- Résultat import -->
         <div v-if="importSummary" class="space-y-2 rounded-md bg-slate-50 p-3 dark:bg-slate-700/50" role="status">
           <div class="flex flex-wrap gap-3 text-sm tabular-nums">
-            <span class="font-medium text-slate-900 dark:text-white">{{ importSummary.created }} créée(s)</span>
-            <span class="font-medium text-slate-900 dark:text-white">{{ importSummary.updated }} mise(s) à jour</span>
-            <span class="text-slate-600 dark:text-slate-300">{{ importSummary.pdvCount }} point(s) de vente</span>
-            <span v-if="importSummary.errors.length" class="font-medium text-red-700 dark:text-red-300">{{ importSummary.errors.length }} ligne(s) à corriger</span>
+            <span class="font-medium text-slate-900 dark:text-white">{{ importSummary.created }} {{ pluriel(importSummary.created, 'créée') }}</span>
+            <span class="font-medium text-slate-900 dark:text-white">{{ importSummary.updated }} {{ pluriel(importSummary.updated, 'mise à jour', 'mises à jour') }}</span>
+            <span class="text-slate-600 dark:text-slate-300">{{ compte(importSummary.pdvCount, 'point de vente', 'points de vente') }}</span>
+            <span v-if="importSummary.errors.length" class="font-medium text-red-700 dark:text-red-300">{{ compte(importSummary.errors.length, 'ligne') }} à corriger</span>
           </div>
           <ul v-if="importSummary.errors.length" class="max-h-40 space-y-1 overflow-y-auto border-t border-slate-200 pt-2 dark:border-slate-600">
             <li v-for="(e, i) in importSummary.errors" :key="i" class="flex items-start gap-1.5 text-xs text-red-700 dark:text-red-300">
@@ -1271,6 +1287,8 @@
         </div>
       </div>
     </UModal>
+
+    <AdminConfirmation v-bind="confirmation" @confirmer="confirmer" @annuler="annuler" />
   </div>
 </template>
 
@@ -1280,6 +1298,7 @@ import { toIsoJour, debutDeSemaine } from '~/utils/periode'
 import { fetchAllRows } from '~/utils/fetchAll'
 import { JOURS_SEMAINE, joursDeRegle, libelleJours, datesDeRegle } from '~/utils/routingRecurrence'
 import { messageUtilisateur } from '~/utils/supabaseErrors'
+import { compte, pluriel } from '~/utils/pluriel'
 
 // Écran de PLANIFICATION : création et édition de routings, de templates et
 // d'exceptions. La matrice RBAC le range dans la section « principal », ouverte
@@ -1302,6 +1321,7 @@ const supabase = useSupabaseClient()
 const authStore = useAuthStore()
 const routingStore = useRoutingStore()
 const toast = useToast()
+const { confirmation, demanderConfirmation, confirmer, annuler } = useConfirmation()
 const { parseCsv } = useCsvExport()
 const { downloadRoutingExcelTemplate, readRoutingFile, exporterTournees } = useRoutingExcel()
 
@@ -1360,7 +1380,7 @@ async function handleExportTournees() {
       title: 'Export terminé',
       description: routings.value.length >= 200
         ? 'Limité aux 200 tournées les plus récentes : réduisez la période ou filtrez par utilisateur pour tout exporter.'
-        : `${lot.length} tournée(s), ${lot.reduce((n, t) => n + t.etapes.length, 0)} PDV.`,
+        : `${compte(lot.length, 'tournée')}, ${compte(lot.reduce((n, t) => n + t.etapes.length, 0), 'point de vente', 'points de vente')} (PDV).`,
       color: routings.value.length >= 200 ? 'amber' : 'green',
     })
   }
@@ -1382,7 +1402,7 @@ async function handleImportRoutings() {
     importSummary.value = result
     toast.add({
       title: 'Import terminé',
-      description: `${result.created} créé(s), ${result.updated} mis à jour, ${result.errors.length} erreur(s)`,
+      description: `${result.created} ${pluriel(result.created, 'créée')}, ${result.updated} ${pluriel(result.updated, 'mise à jour', 'mises à jour')}, ${compte(result.errors.length, 'erreur')}.`,
       color: result.errors.length ? 'amber' : 'green',
     })
     loadRoutings()
@@ -1485,7 +1505,7 @@ const ssfParId = computed(() => new Map(sousZonesSsf.value.map(s => [s.ssf_id, s
 const nomSsf = (id: number) => ssfParId.value.get(id)?.nom || `SSF ${id}`
 const quartiersSsfTexte = (id: number) => {
   const s = ssfParId.value.get(id)
-  return s?.quartiers?.length ? `Quartiers suivis${s.zone ? ` (${s.zone})` : ''} : ${s.quartiers.join(', ')}` : 'Quartiers non renseignés (Référentiels › Quartiers des vendeurs)'
+  return s?.quartiers?.length ? `Quartiers suivis${s.zone ? ` (${s.zone})` : ''} : ${s.quartiers.join(', ')}` : 'Quartiers non renseignés (liste « Quartiers des vendeurs (SSF) » des référentiels)'
 }
 const ssfOptions = computed(() => [
   { value: 0, label: 'Aucun vendeur' },
@@ -1621,9 +1641,14 @@ function exceptionLabel(e: RoutingTemplateException, tpl: RoutingTemplate): stri
 }
 
 // Retrait d'une exception : la tournée (ou le PDV) reprend sur la période.
-function retirerException(e: RoutingTemplateException, tpl: RoutingTemplate) {
+async function retirerException(e: RoutingTemplateException, tpl: RoutingTemplate) {
   const consequence = e.pdv_id ? 'Ce point de vente sera de nouveau prévu' : 'La tournée sera de nouveau générée'
-  if (!confirm(`Retirer l'exception « ${exceptionLabel(e, tpl)} » de la règle « ${titreRegle(tpl)} » ? ${consequence} sur cette période.`)) return
+  const ok = await demanderConfirmation({
+    titre: `Retirer l’exception « ${exceptionLabel(e, tpl)} » de la règle « ${titreRegle(tpl)} » ?`,
+    message: `${consequence} sur cette période.`,
+    libelleAction: 'Retirer l’exception',
+  })
+  if (!ok) return
   void handleRemoveException(e.id)
 }
 
@@ -1641,8 +1666,8 @@ async function handlePreGenerer() {
   try {
     const { users, tournees } = await routingStore.preGenererHorizon(7)
     toast.add({
-      title: `${tournees} tournée(s) générée(s)`,
-      description: `${users} personne(s) couverte(s) sur les 7 prochains jours.`,
+      title: `${compte(tournees, 'tournée')} ${pluriel(tournees, 'générée')}`,
+      description: `${compte(users, 'personne')} ${pluriel(users, 'couverte')} sur les 7 prochains jours.`,
       color: 'green',
     })
     loadRoutings()
@@ -2323,7 +2348,12 @@ function routingActions(routing: Routing) {
       icon: 'i-heroicons-trash',
       click: async () => {
         const nb = routing.nb_pdv ?? routing.routing_pdv?.length ?? 0
-        if (!confirm(`Supprimer la tournée de ${nomPersonne(routing.user)} du ${formatDate(routing.date_routing)} ? Ses ${nb} point(s) de vente prévu(s) disparaissent de son application ; les visites déjà faites restent enregistrées.`)) return
+        const ok = await demanderConfirmation({
+          titre: `Supprimer la tournée de ${nomPersonne(routing.user)} du ${formatDate(routing.date_routing)} ?`,
+          message: `${nb > 1 ? `Ses ${compte(nb, 'point de vente', 'points de vente')} prévus disparaissent` : nb === 1 ? 'Son point de vente prévu disparaît' : 'La tournée disparaît'} de son application ; les visites déjà faites restent enregistrées.`,
+          libelleAction: 'Supprimer la tournée',
+        })
+        if (!ok) return
         try {
           await routingStore.deleteRouting(routing.id)
           toast.add({ title: 'Tournée supprimée', color: 'green' })
@@ -2364,7 +2394,13 @@ function templateActions(tpl: RoutingTemplate) {
       icon: 'i-heroicons-trash',
       click: async () => {
         const nom = tpl.label ? `« ${titreRegle(tpl)} » (${libelleJours(tpl)})` : `du ${libelleJours(tpl)}`
-        if (!confirm(`Supprimer la règle ${nom} de ${nomPersonne(tpl.user)} et ses ${tpl.nb_pdv ?? tpl.routing_template_pdv?.length ?? 0} point(s) de vente ? Plus aucune tournée ne sera générée par cette règle ; les tournées déjà générées restent.`)) return
+        const nbPdv = tpl.nb_pdv ?? tpl.routing_template_pdv?.length ?? 0
+        const ok = await demanderConfirmation({
+          titre: `Supprimer la règle ${nom} de ${nomPersonne(tpl.user)} ?`,
+          message: `La règle et ${nbPdv > 1 ? `ses ${compte(nbPdv, 'point de vente', 'points de vente')}` : nbPdv === 1 ? 'son point de vente' : 'sa liste'} sont supprimés : plus aucune tournée ne sera générée par cette règle. Les tournées déjà générées restent.`,
+          libelleAction: 'Supprimer la règle',
+        })
+        if (!ok) return
         try {
           await routingStore.deleteTemplate(tpl.id)
           toast.add({ title: 'Règle supprimée', color: 'green' })
@@ -2434,7 +2470,12 @@ async function handleAddTemplatePDV(tpl: RoutingTemplate) {
 }
 
 async function handleRemoveTemplatePDV(tpl: RoutingTemplate, tp: RoutingTemplatePDV) {
-  if (!confirm(`Retirer « ${tp.pdv?.nom_pdv || 'ce point de vente'} » de la règle « ${titreRegle(tpl)} » ? Il ne sera plus prévu dans les prochaines tournées de cette règle ; les tournées déjà générées ne changent pas.`)) return
+  const ok = await demanderConfirmation({
+    titre: `Retirer « ${tp.pdv?.nom_pdv || 'ce point de vente'} » de la règle « ${titreRegle(tpl)} » ?`,
+    message: 'Il ne sera plus prévu dans les prochaines tournées de cette règle ; les tournées déjà générées ne changent pas.',
+    libelleAction: 'Retirer le point de vente',
+  })
+  if (!ok) return
   try {
     await routingStore.removeTemplatePDV(tpl.id, tp.id)
     toast.add({ title: 'Point de vente retiré de la règle', color: 'green' })
@@ -2554,10 +2595,10 @@ async function handleSaveRouting() {
         },
         newRouting.pdvItems,
       )
-      toast.add({ title: 'Tournée mise à jour', description: `${newRouting.pdvItems.length} point(s) de vente`, color: 'green' })
+      toast.add({ title: 'Tournée mise à jour', description: compte(newRouting.pdvItems.length, 'point de vente', 'points de vente'), color: 'green' })
     } else {
       await routingStore.createRouting(newRouting.userId, newRouting.date, newRouting.pdvItems, authStore.profile!.id, newRouting.notes)
-      toast.add({ title: 'Tournée créée', description: `${newRouting.pdvItems.length} point(s) de vente`, color: 'green' })
+      toast.add({ title: 'Tournée créée', description: compte(newRouting.pdvItems.length, 'point de vente', 'points de vente'), color: 'green' })
     }
     closeRoutingModal()
     loadRoutings()
@@ -2597,7 +2638,7 @@ async function handleCreateTemplate() {
         // Colonne ssf_id écrite seulement quand les SSF sont disponibles (migration appliquée).
         ...(sousZonesSsf.value.length ? { ssf_id: newTemplate.ssfId } : {}),
       })
-      toast.add({ title: 'Règle modifiée', description: 'Les tournées déjà générées ne changent pas : Paramètres › Référentiels › « Tâches automatiques » › « Recalculer les tournées à venir » les met à jour.', color: 'green' })
+      toast.add({ title: 'Règle modifiée', description: 'Les tournées déjà générées ne changent pas : « Recalculer les tournées à venir », dans Référentiels › Tâches automatiques, les met à jour.', color: 'green' })
       showTemplateCreateModal.value = false
       reinitialiserFormulaireRegle()
       loadTemplates()
@@ -2660,9 +2701,9 @@ async function handleGenerate() {
       generateConfig.dateTo,
     )
     generateMessage.value = crees
-      ? `${crees} tournée(s) créée(s). Les journées déjà planifiées n'ont pas été touchées.`
+      ? `${compte(crees, 'tournée')} ${pluriel(crees, 'créée')}. Les journées déjà planifiées n'ont pas été touchées.`
       : 'Aucune tournée à créer : soit elles existent déjà, soit aucune règle ne couvre cette période.'
-    toast.add({ title: `${crees} tournée(s) générée(s)`, color: 'green' })
+    toast.add({ title: `${compte(crees, 'tournée')} ${pluriel(crees, 'générée')}`, color: 'green' })
     loadRoutings()
   } catch (err: any) {
     toast.add({ title: 'Génération impossible', description: messageUtilisateur(err), color: 'red' })

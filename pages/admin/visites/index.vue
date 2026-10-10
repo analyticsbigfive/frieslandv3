@@ -4,7 +4,7 @@
 
     <AdminListToolbar
       :result-count="loading && !total ? undefined : total"
-      result-label="visite(s)"
+      :result-label="pluriel(total, 'visite')"
       :chips="filterChips"
       @reset="resetFilters"
       @remove-chip="removeFilterChip"
@@ -80,16 +80,21 @@
               <td>{{ visite.pdv?.distributor_name || '—' }}</td>
               <td class="whitespace-nowrap">
                 <div class="flex items-center gap-2">
-                  <UBadge v-if="scoreFor(visite)?.tierAtteint" color="green" variant="soft" size="xs">
+                  <span v-if="!scoreFor(visite)" class="text-slate-600 dark:text-slate-300">—</span>
+                  <UBadge v-else-if="statutNiveauVisite(scoreFor(visite)) === 'atteint'" color="green" variant="soft" size="xs">
                     {{ libelleNiveau(scoreFor(visite)?.tierAtteint) }}
                   </UBadge>
+                  <span
+                    v-else-if="statutNiveauVisite(scoreFor(visite)) === 'non_evalue'"
+                    class="text-slate-600 dark:text-slate-300"
+                    title="Disponibilité en rayon non relevée : la visite n’a pas pu être évaluée."
+                  >Non évalué</span>
                   <span v-else class="text-slate-600 dark:text-slate-300">Non conforme</span>
                   <span class="font-semibold tabular-nums text-slate-900 dark:text-white">{{ ratio(scoreFor(visite)?.scoreGlobal) }}</span>
                 </div>
               </td>
               <td class="text-right tabular-nums" :title="detailFamilles(visite)">
-                {{ famillesPresentes(visite) }} / {{ tableProductCategories.length }}
-                <span class="sr-only">. {{ detailFamilles(visite) }}</span>
+                {{ famillesPresentes(visite) }} / {{ tableProductCategories.length }}<span class="sr-only"> familles ({{ detailFamilles(visite) }})</span>
               </td>
               <td class="whitespace-nowrap">
                 <span class="inline-flex items-center gap-1">
@@ -109,7 +114,7 @@
                   color="gray"
                   variant="ghost"
                   icon="i-heroicons-photo"
-                  :aria-label="`Voir les ${photosAffichables(visite.image_urls).length} photo(s) de la visite chez ${nomPdv(visite)}`"
+                  :aria-label="`Voir ${compte(photosAffichables(visite.image_urls).length, 'photo')} de la visite chez ${nomPdv(visite)}`"
                   @click.stop="openPhotoGallery(visite)"
                 >
                   <span class="tabular-nums">{{ photosAffichables(visite.image_urls).length }}</span>
@@ -153,10 +158,12 @@
         :page="filters.page"
         :page-size="filters.perPage"
         :loading="loading"
-        item-label="visite(s)"
+        :item-label="pluriel(total, 'visite')"
         @update:page="(p) => { filters.page = p; loadVisites() }"
       />
     </div>
+
+    <AdminConfirmation v-bind="confirmation" @confirmer="confirmer" @annuler="annuler" />
 
     <VisitDetailModal
       v-model="showDetail"
@@ -212,6 +219,8 @@ import { photosAffichables } from '~/utils/visitePhotos'
 import { catalogueProduits, categoriesProduitsActives, getCategoryDef } from '~/utils/products'
 import { isModernTrade } from '~/utils/canal'
 import { messageUtilisateur } from '~/utils/supabaseErrors'
+import { statutNiveauVisite } from '~/utils/perfectStore'
+import { compte, pluriel } from '~/utils/pluriel'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
@@ -221,6 +230,7 @@ const authStore = useAuthStore()
 // l'administrateur et au superviseur.
 const peutSupprimer = computed(() => authStore.isSuperviseur)
 const toast = useToast()
+const { confirmation, demanderConfirmation, confirmer, annuler } = useConfirmation()
 const { exportVisitesToExcel } = useCsvExport()
 const { users: cachedUsers, fetchUsers: fetchCachedUsers, loading: usersLoading } = useUsersCache()
 const { refs, fetchRefs, scoreVisite } = usePerfectStore()
@@ -342,6 +352,17 @@ function viewVisite(visite: Visite) {
   showDetail.value = true
 }
 
+async function ouvrirVisiteParId(id: string) {
+  try {
+    viewVisite(await visitesStore.fetchVisiteByDatabaseId(id))
+  }
+  catch (err) {
+    toast.add({ title: 'Visite introuvable', description: (err as any)?.code === 'PGRST116'
+      ? 'Cette visite n’existe plus ou n’est pas dans votre périmètre.'
+      : messageUtilisateur(err), color: 'amber' })
+  }
+}
+
 function openPhotoGallery(visite: Visite) {
   galleryVisite.value = visite
   showPhotoGallery.value = true
@@ -360,7 +381,12 @@ function getVisiteActions(visite: Visite) {
 async function handleDelete(visite: Visite) {
   if (!peutSupprimer.value) return
   const quand = formatDateFr(visite.date_visite, { day: '2-digit', month: 'long', year: 'numeric' })
-  if (!confirm(`Supprimer la visite du ${quand} chez « ${nomPdv(visite)} » ?\n\nCette suppression est définitive : la visite et ses relevés ne pourront pas être récupérés.`)) return
+  const ok = await demanderConfirmation({
+    titre: `Supprimer la visite du ${quand} chez « ${nomPdv(visite)} » ?`,
+    message: 'La visite, ses relevés et ses photos disparaissent des listes, des indicateurs et des exports. Cette suppression ne peut pas être annulée.',
+    libelleAction: 'Supprimer la visite',
+  })
+  if (!ok) return
   try {
     await visitesStore.deleteVisite(visite.visite_id)
     showDetail.value = false
@@ -379,7 +405,7 @@ async function handleExport() {
     const { rows, tronque } = await visitesStore.fetchVisitesForExport()
     await exportVisitesToExcel(rows)
     toast.add({
-      title: `${rows.length.toLocaleString('fr-FR')} visite(s) exportée(s)`,
+      title: `${compte(rows.length, 'visite')} ${pluriel(rows.length, 'exportée')}`,
       description: tronque ? 'Plafond de 5 000 lignes atteint : réduisez la période pour tout obtenir.' : undefined,
       color: tronque ? 'amber' : 'green',
     })
@@ -437,8 +463,12 @@ onMounted(() => {
   // Le champ Email a été retiré de l'UI : purge d'un éventuel filtre persistant.
   filters.email = ''
   // Deep-link depuis le classement des commerciaux : /admin/visites?commercial=X
-  const qCommercial = useRoute().query.commercial
+  const route = useRoute()
+  const qCommercial = route.query.commercial
   if (typeof qCommercial === 'string' && qCommercial) filters.commercial = qCommercial
+  // Lien direct vers une visite (Activité › Dernières visites) : /admin/visites?visite=<id>
+  const qVisite = route.query.visite
+  if (typeof qVisite === 'string' && qVisite) void ouvrirVisiteParId(qVisite)
   fetchCachedUsers()
   fetchRefs()
   fetchTypePdvLabels()

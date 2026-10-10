@@ -76,6 +76,8 @@
         <span v-if="progression" class="text-sm text-slate-600 dark:text-slate-300" aria-live="polite">{{ progression }}</span>
       </div>
     </div>
+
+    <AdminConfirmation v-bind="confirmation" @confirmer="confirmer" @annuler="annuler" />
   </section>
 </template>
 
@@ -84,6 +86,7 @@ import { messageUtilisateur } from '~/utils/supabaseErrors'
 
 const supabase = useSupabaseClient()
 const toast = useToast()
+const { confirmation, demanderConfirmation, confirmer, annuler } = useConfirmation()
 const { charger: chargerAgences } = useAgences()
 
 const CANAUX = ['Superette', 'Boutique', 'Aboki & Kiosque', 'Pushcart', 'Porridge']
@@ -139,7 +142,13 @@ async function enregistrer() {
 }
 
 async function appliquer() {
-  if (!confirm('Recalculer les tournées des merchandisers d’agence pour les 7 prochains jours ?\n\nLes tournées qui n’ont pas commencé sont refaites avec la grille enregistrée ; celle du jour ne change pas.')) return
+  const ok = await demanderConfirmation({
+    titre: 'Recalculer les tournées des merchandisers d’agence pour les 7 prochains jours ?',
+    message: 'Les tournées qui n’ont pas commencé sont refaites avec la grille enregistrée ; celle du jour ne change pas.',
+    libelleAction: 'Recalculer les tournées',
+    destructif: false,
+  })
+  if (!ok) return
   application.value = true
   progression.value = ''
   try {

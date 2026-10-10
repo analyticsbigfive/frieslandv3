@@ -8,6 +8,8 @@
 // migrations » — faux, et l'admin cherchait un problème de schéma alors que
 // la base manquait de CPU. Ces helpers permettent d'afficher le bon message.
 
+import { estErreurSessionExpiree, signalerSessionExpiree } from './sessionExpiree'
+
 type AnyError = { message?: unknown; code?: unknown; status?: unknown; details?: unknown } | string | null | undefined
 
 /** Vrai si l'erreur est un dépassement de délai (PostgREST, Postgres ou réseau). */
@@ -68,6 +70,8 @@ export function messageUtilisateur(err: unknown, fallback = 'L\'opération n\'a 
   const code = String(e.code ?? '')
   const status = Number(e.status ?? e.statusCode ?? 0)
   if (code === 'PGRST301' || status === 401 || /jwt|session/i.test(String(e.message ?? ''))) {
+    // Sur le back-office, le plugin session-expiree renvoie vers /login.
+    if (estErreurSessionExpiree(e)) signalerSessionExpiree(e)
     return 'Votre session a expiré. Reconnectez-vous puis recommencez.'
   }
   if (code === '42501' || status === 403 || /permission denied|row-level security/i.test(String(e.message ?? ''))) {

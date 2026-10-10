@@ -105,7 +105,7 @@
             </td>
             <td class="!py-2.5 text-right">
               <UDropdown v-if="!activeDef.lectureSeule" :items="rowActions(row)" :popper="{ placement: 'bottom-end' }">
-                <UButton color="gray" variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" :aria-label="`Actions : ${activeDef.search(row)}`" />
+                <UButton color="gray" variant="ghost" size="xs" icon="i-heroicons-ellipsis-vertical" :aria-label="`Actions : ${designation(row)}`" />
               </UDropdown>
             </td>
           </tr>
@@ -121,7 +121,7 @@
           :total="filteredRows.length"
           :page="refPage"
           :page-size="refPerPage"
-          item-label="ligne(s)"
+          :item-label="pluriel(filteredRows.length, 'ligne')"
           @update:page="(p) => refPage = p"
         />
       </div>
@@ -209,6 +209,8 @@
         </UButton>
       </template>
     </AdminFormModal>
+
+    <AdminConfirmation v-bind="confirmation" @confirmer="confirmer" @annuler="annuler" />
   </div>
 </template>
 
@@ -217,6 +219,7 @@ import { fetchAllRows } from '~/utils/fetchAll'
 import { AGENCES_DEFAUT, DIRECTIONS, libelleDirection } from '~/utils/agences'
 import { catalogueProduits, getSkus, getSkuLabel } from '~/utils/products'
 import { messageUtilisateur } from '~/utils/supabaseErrors'
+import { pluriel } from '~/utils/pluriel'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
@@ -225,6 +228,7 @@ const supabase = useSupabaseClient()
 const table = (nom: string): any => (supabase as any).from(nom)
 const toast = useToast()
 const authStore = useAuthStore()
+const { confirmation, demanderConfirmation, confirmer, annuler } = useConfirmation()
 
 // Après une correction du routing mensuel : les règles du merchandiser sont
 // refaites depuis ses cases actives, puis ses tournées des 7 jours à venir
@@ -1728,13 +1732,34 @@ async function save() {
   }
 }
 
+// Nom lisible d'une ligne : la première colonne renseignée (code ou nom), puis
+// le détail des colonnes suivantes pour vérifier avant de supprimer.
+function valeurColonne(col: Col, row: any): string {
+  const v = col.cell(row)
+  if (col.kind === 'bool') return v ? 'Oui' : 'Non'
+  return v == null || v === '' ? '—' : String(v)
+}
+function designation(row: any): string {
+  const cols = activeDef.value.columns.filter(c => c.kind !== 'bool')
+  const valeurs = cols.map(c => valeurColonne(c, row)).filter(v => v !== '—')
+  return valeurs.slice(0, 2).join(' · ') || 'cette ligne'
+}
+function detailLigne(row: any): string {
+  return activeDef.value.columns.slice(0, 5).map(c => `${c.label} : ${valeurColonne(c, row)}`).join('\n')
+}
+
 async function remove(row: any) {
   // Nommer la ligne. Sur un retrait ciblé — les 17 seuils délistés de la V2,
   // au milieu de 125 lignes dont 42 SupermarcheMT à ne surtout pas toucher —
   // « Supprimer cet enregistrement ? » ne donnait aucun moyen de vérifier ce
   // qu'on s'apprête à supprimer.
-  const quoi = activeDef.value.search(row)
-  if (!confirm(`Supprimer définitivement cette ligne de la liste « ${activeDef.value.label} » ?\n\n${quoi}\n\nCette suppression ne peut pas être annulée.`)) return
+  const def = activeDef.value
+  const ok = await demanderConfirmation({
+    titre: `Supprimer « ${designation(row)} » de la liste « ${def.label} » ?`,
+    message: `${detailLigne(row)}\n\nCette ligne disparaît de la liste et des menus qui s’en servent. Cette suppression ne peut pas être annulée.`,
+    libelleAction: 'Supprimer la ligne',
+  })
+  if (!ok) return
   try {
     const { error: err } = await activeDef.value.del(row)
     if (err) throw err

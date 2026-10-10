@@ -102,6 +102,8 @@
         </table>
       </div>
     </section>
+
+    <AdminConfirmation v-bind="confirmation" @confirmer="confirmer" @annuler="annuler" />
   </div>
 </template>
 
@@ -110,6 +112,7 @@ import { messageUtilisateur } from '~/utils/supabaseErrors'
 
 const supabase = useSupabaseClient()
 const toast = useToast()
+const { confirmation, demanderConfirmation, confirmer, annuler } = useConfirmation()
 
 // Agences (Référentiels › Agences), puis « Tous ».
 const { options: optionsAgences, charger: chargerAgences } = useAgences()
@@ -175,7 +178,13 @@ async function merchandisers() {
 
 async function recalculer() {
   const qui = employeur.value === 'tous' ? 'de tous les merchandisers' : `des merchandisers de ${EMPLOYEURS.value.find(e => e.value === employeur.value)?.label || employeur.value}`
-  if (!confirm(`Recalculer les tournées ${qui} pour les 7 prochains jours ?\n\nLes tournées qui n’ont pas commencé sont refaites ; celle du jour ne change pas.`)) return
+  const ok = await demanderConfirmation({
+    titre: `Recalculer les tournées ${qui} pour les 7 prochains jours ?`,
+    message: 'Les tournées qui n’ont pas commencé sont refaites avec les règles actuelles ; celle du jour ne change pas.',
+    libelleAction: 'Recalculer les tournées',
+    destructif: false,
+  })
+  if (!ok) return
   enCours.value = 'recalcul'
   try {
     const agents = await merchandisers()

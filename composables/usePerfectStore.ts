@@ -225,8 +225,20 @@ export interface PerfectStoreDashboardRefs extends PerfectStoreRefsB {
   tierConfig: { ps_tier: string; osa_min: number; assort_min: number; visi_min: number; promo_min: number | null; rang: number }[]
 }
 
+/** Blocs du tableau de bord dont l'échec de chargement est signalé (voir `erreurs`). */
+export type BlocPerfectStore = 'parType' | 'evolution' | 'manques' | 'couvertureCommerciaux' | 'presenceSkus'
+
 export function usePerfectStore() {
   const supabase = useSupabaseClient()
+  /**
+   * Dernière erreur de chargement par bloc (absente si le dernier appel a
+   * réussi). Les fonctions de liste renvoient [] en cas d'échec pour ne pas
+   * casser les autres écrans ; sans ce relevé, la page affichait « Aucune
+   * visite sur cette période » alors que la requête avait échoué.
+   */
+  const erreurs = reactive<Partial<Record<BlocPerfectStore, unknown>>>({})
+  const noterErreur = (bloc: BlocPerfectStore, error: unknown) => { erreurs[bloc] = error }
+  const effacerErreur = (bloc: BlocPerfectStore) => { delete erreurs[bloc] }
 
   const refs = useState<PerfectStoreDashboardRefs | null>('ps-refs-b', () => null)
   const loaded = useState<boolean>('ps-refs-b-loaded', () => false)
@@ -330,9 +342,11 @@ export function usePerfectStore() {
     const { data, error } = await supabase.from('v_perfect_store_global')
       .select('visites_scorees, perfect_stores, perfect_store_pct, score_global_moyen_pct, osa_moyen_pct, assortiment_moyen_pct, visibilite_moyenne_pct, promotion_moyenne_pct')
       .maybeSingle()
+    // Une erreur remonte à l'appelant : renvoyer null la faisait passer pour
+    // « aucune visite évaluée ».
     if (error) {
       console.warn('v_perfect_store_global (B) indisponible', error.message)
-      return null
+      throw error
     }
     return data as PerfectStoreGlobalKpi | null
   }
@@ -378,7 +392,7 @@ export function usePerfectStore() {
   async function fetchKpiParType(filters?: DashFilters): Promise<PerfectStoreTypeKpi[]> {
     if (hasDashFilters(filters)) {
       const { data, error } = await (supabase.rpc as any)('perfect_store_par_type_filtre', dashFilterParams(filters!))
-      if (!error) return (data || []) as PerfectStoreTypeKpi[]
+      if (!error) { effacerErreur('parType'); return (data || []) as PerfectStoreTypeKpi[] }
       console.warn('perfect_store_par_type_filtre indisponible (migration 20260717140000 ?), repli non filtré', error.message)
     }
     // Repli sans filtre : la vue compte des visites, pas des PDV distincts.
@@ -387,8 +401,10 @@ export function usePerfectStore() {
       .select('type_pdv, visites_scorees, perfect_stores, perfect_store_pct, score_global_moyen_pct')
     if (error) {
       console.warn('v_perfect_store_par_categorie_pdv (B) indisponible', error.message)
+      noterErreur('parType', error)
       return []
     }
+    effacerErreur('parType')
     return (data || []).map((row: any) => ({
       type_pdv: row.type_pdv,
       pdv_scores: row.visites_scorees,
@@ -405,9 +421,10 @@ export function usePerfectStore() {
       .select('periode, pdv_vus, pdv_total, couverture_pct')
       .eq('periode', currentPeriod)
       .maybeSingle()
+    // Une erreur remonte à l'appelant : null s'affichait « 0 / 0 ».
     if (error) {
       console.warn('v_couverture_globale indisponible', error.message)
-      return null
+      throw error
     }
     return data as CoverageKpi | null
   }
@@ -494,7 +511,7 @@ export function usePerfectStore() {
   async function fetchPerfectStoreEvolution(filters?: DashFilters): Promise<PerfectStoreEvolutionPoint[]> {
     if (hasDashFilters(filters)) {
       const { data, error } = await (supabase.rpc as any)('perfect_store_evolution_filtre', dashFilterParams(filters!))
-      if (!error) return (data || []) as PerfectStoreEvolutionPoint[]
+      if (!error) { effacerErreur('evolution'); return (data || []) as PerfectStoreEvolutionPoint[] }
       console.warn('perfect_store_evolution_filtre indisponible (migration 20260717140000 ?), repli non filtré', error.message)
     }
     const { data, error } = await supabase
@@ -503,8 +520,10 @@ export function usePerfectStore() {
       .order('date', { ascending: true })
     if (error) {
       console.warn('v_perfect_store_evolution indisponible', error.message)
+      noterErreur('evolution', error)
       return []
     }
+    effacerErreur('evolution')
     return (data || []).map((row: any) => ({
       date: row.date,
       perfect_stores: row.perfect_stores,
@@ -608,8 +627,10 @@ export function usePerfectStore() {
     const { data, error } = await (supabase.rpc as any)('couverture_visites_par_commercial', dashFilterParams(f))
     if (error) {
       console.warn('couverture_visites_par_commercial indisponible', error.message)
+      noterErreur('couvertureCommerciaux', error)
       return []
     }
+    effacerErreur('couvertureCommerciaux')
     return (data || []) as CouvertureCommercial[]
   }
 
@@ -622,8 +643,10 @@ export function usePerfectStore() {
     const { data, error } = await (supabase.rpc as any)('dashboard_presence_skus', dashFilterParams(f))
     if (error) {
       console.warn('dashboard_presence_skus indisponible', error.message)
+      noterErreur('presenceSkus', error)
       return []
     }
+    effacerErreur('presenceSkus')
     return (data || []) as PresenceSku[]
   }
 
@@ -640,14 +663,17 @@ export function usePerfectStore() {
     })
     if (error) {
       console.warn('perfect_store_manques_filtre indisponible', error.message)
+      noterErreur('manques', error)
       return []
     }
+    effacerErreur('manques')
     return (data || []) as PerfectStoreManqueItem[]
   }
 
   return {
     refs,
     dashboardError,
+    erreurs,
     fetchRefs,
     scoreVisite,
     fetchGlobalKpi,

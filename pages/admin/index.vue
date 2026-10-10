@@ -90,10 +90,10 @@
            les passages (doublons compris) passent dans « Autres mesures ». -->
       <div class="space-y-3">
         <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <StatsCard title="Points de vente visités" :value="coverageLabel" :subtitle="coverageSub" format="none" :icon="MapPinned" color="blue" />
-          <StatsCard title="Disponibilité en rayon" :value="fmtPct(global.osa_moyen_pct)" subtitle="quantité au moins égale au seuil" format="none" :icon="Package" color="green" />
-          <StatsCard title="Assortiment moyen" :value="fmtPct(global.assortiment_moyen_pct)" subtitle="références attendues présentes" format="none" :icon="ListChecks" color="blue" />
-          <StatsCard title="Score global moyen" :value="fmtPct(global.score_global_moyen_pct)" subtitle="tous piliers confondus" format="none" :icon="BarChart3" color="blue" />
+          <StatsCard title="Points de vente visités" :value="coverageLabel" :subtitle="coverageSub" format="none" icon="i-heroicons-map-pin" color="blue" />
+          <StatsCard title="Disponibilité en rayon" :value="fmtPct(global.osa_moyen_pct)" subtitle="quantité au moins égale au seuil" format="none" icon="i-heroicons-cube" color="green" />
+          <StatsCard title="Assortiment moyen" :value="fmtPct(global.assortiment_moyen_pct)" subtitle="références attendues présentes" format="none" icon="i-heroicons-list-bullet" color="blue" />
+          <StatsCard title="Score global moyen" :value="fmtPct(global.score_global_moyen_pct)" subtitle="tous piliers confondus" format="none" icon="i-heroicons-chart-bar" color="blue" />
         </div>
         <dl class="flex flex-wrap items-baseline gap-x-6 gap-y-2 px-1 text-sm">
           <div v-for="m in mesuresSecondaires" :key="m.libelle" class="inline-flex items-baseline gap-1.5">
@@ -126,11 +126,18 @@
         </div>
 
         <ChargementContenu
-          v-if="vague2EnCours && !manques.length"
+          v-if="(vague2EnCours || rechargement.manques) && !manques.length"
           variante="lignes"
           :nombre="5"
           libelle="Chargement des points de vente à faire progresser…"
           class="px-5 py-4"
+        />
+        <AdminErreurBloc
+          v-else-if="erreurs.manques"
+          titre="Les points de vente à faire progresser n’ont pas pu être chargés."
+          :erreur="erreurs.manques"
+          :en-cours="rechargement.manques"
+          @reessayer="recharger('manques')"
         />
         <div v-else-if="!filteredManques.length" class="px-5 py-10 text-center">
           <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">Aucun point de vente à faire progresser</p>
@@ -147,6 +154,7 @@
                   <th>Niveau actuel</th>
                   <th>Niveau visé</th>
                   <th>Critères manquants</th>
+                  <th><span class="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -158,7 +166,8 @@
                   <td class="whitespace-nowrap">
                     <span class="inline-flex items-center gap-1.5">
                       <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="{ backgroundColor: couleurNiveau(m.niveau_actuel) }" aria-hidden="true" />
-                      {{ niveauCourt(m.niveau_actuel) }}
+                      <!-- Sans disponibilité relevée, le niveau n'a pas pu être calculé. -->
+                      {{ m.dispo_rayon == null && estNonConforme(m.niveau_actuel) ? 'Non évalué' : niveauCourt(m.niveau_actuel) }}
                     </span>
                   </td>
                   <td class="whitespace-nowrap font-semibold text-slate-900 dark:text-white">{{ niveauCourt(m.niveau_cible) }}</td>
@@ -170,14 +179,42 @@
                         class="rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950/30 dark:text-amber-200"
                       >{{ b }}</span>
                     </div>
-                    <span v-else-if="m.dispo_rayon == null" class="inline-flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300">
+                    <span
+                      v-else-if="m.dispo_rayon == null"
+                      class="inline-flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300"
+                      title="Aucune quantité relevée en rayon à la dernière visite : le niveau ne peut pas être calculé."
+                    >
                       <UIcon name="i-heroicons-information-circle" class="h-4 w-4 shrink-0" aria-hidden="true" />
-                      Données insuffisantes
+                      Disponibilité non relevée
                     </span>
                     <span v-else class="inline-flex items-center gap-1.5 text-sm text-emerald-700 dark:text-emerald-300">
                       <UIcon name="i-heroicons-check-circle" class="h-4 w-4 shrink-0" aria-hidden="true" />
                       Aucun critère manquant relevé
                     </span>
+                  </td>
+                  <td class="whitespace-nowrap text-right">
+                    <div class="inline-flex items-center gap-1">
+                      <UButton
+                        size="xs"
+                        color="gray"
+                        variant="ghost"
+                        :loading="visiteEnOuverture === m.visite_id"
+                        :aria-label="`Voir la dernière visite chez ${m.nom_pdv || 'ce point de vente'}`"
+                        @click="openStoreDetail(m)"
+                      >
+                        Dernière visite
+                      </UButton>
+                      <UButton
+                        v-if="peutOuvrir('/admin/pdv/historique')"
+                        size="xs"
+                        color="gray"
+                        variant="ghost"
+                        :to="{ path: '/admin/pdv/historique', query: { pdv_id: m.pdv_id } }"
+                        :aria-label="`Historique de ${m.nom_pdv || 'ce point de vente'}`"
+                      >
+                        Historique
+                      </UButton>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -188,7 +225,7 @@
               :total="filteredManques.length"
               :page="manquesPageNo"
               :page-size="manquesParPage"
-              item-label="point(s) de vente"
+              :item-label="pluriel(filteredManques.length, 'point de vente', 'points de vente')"
               @update:page="manquesPageNo = $event"
             />
           </div>
@@ -221,6 +258,13 @@
         </div>
 
         <ChargementContenu v-if="listeAffichee.loading" variante="lignes" :nombre="4" libelle="Chargement des points de vente…" class="px-5 py-4" />
+
+        <AdminErreurBloc
+          v-else-if="listeAffichee.erreur"
+          titre="La liste des points de vente n’a pas pu être chargée."
+          :erreur="listeAffichee.erreur"
+          @reessayer="changerPageListe(listeAffichee.page)"
+        />
 
         <ul v-else-if="listeAffichee.items.length" class="divide-y divide-slate-200 dark:divide-slate-700">
           <li v-for="store in listeAffichee.items" :key="store.pdv_id">
@@ -258,19 +302,23 @@
             :page="listeAffichee.page"
             :page-size="listeAffichee.parPage"
             :loading="listeAffichee.loading"
-            item-label="point(s) de vente"
+            :item-label="pluriel(listeAffichee.total, 'point de vente', 'points de vente')"
             @update:page="changerPageListe"
           />
-        </div>
-
-        <div v-if="storesError && niveauListe" class="flex items-start gap-2 border-t border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
-          <UIcon name="i-heroicons-exclamation-triangle" class="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          La liste par niveau n'a pas pu être chargée. Rechargez la page dans quelques instants ; si le problème continue, prévenez l'administrateur technique.
         </div>
       </section>
 
       <!-- Évolution du taux de Perfect Stores -->
-      <ClientOnly>
+      <section v-if="erreurs.evolution" class="admin-surface" aria-labelledby="evolution-erreur-heading">
+        <h2 id="evolution-erreur-heading" class="border-b border-slate-200 px-5 py-4 text-base font-semibold text-slate-900 dark:border-slate-700 dark:text-white">Évolution du taux de Perfect Stores (%)</h2>
+        <AdminErreurBloc
+          titre="La courbe n’a pas pu être chargée."
+          :erreur="erreurs.evolution"
+          :en-cours="rechargement.evolution"
+          @reessayer="recharger('evolution')"
+        />
+      </section>
+      <ClientOnly v-else>
         <ChartsVisitesLineChart
           title="Évolution du taux de Perfect Stores (%)"
           subtitle="Part des points de vente visités au standard, jour par jour."
@@ -340,8 +388,19 @@
                     <td class="py-2 pl-3 text-right tabular-nums text-slate-700 dark:text-slate-200">{{ fmtPct(sku.presence_pct) }}</td>
                     <td class="py-2 pl-3 text-right font-semibold tabular-nums text-slate-900 dark:text-white">{{ fmtPct(sku.disponibilite_pct) }}</td>
                   </tr>
-                  <tr v-if="vague2EnCours && !presenceSkus.length">
+                  <tr v-if="(vague2EnCours || rechargement.presenceSkus) && !presenceSkus.length">
                     <td colspan="3" class="py-4"><ChargementContenu variante="compact" libelle="Chargement des relevés par référence…" /></td>
+                  </tr>
+                  <tr v-else-if="erreurs.presenceSkus">
+                    <td colspan="3" class="py-4">
+                      <AdminErreurBloc
+                        compact
+                        titre="Les relevés par référence n’ont pas pu être chargés."
+                        :erreur="erreurs.presenceSkus"
+                        :en-cours="rechargement.presenceSkus"
+                        @reessayer="recharger('presenceSkus')"
+                      />
+                    </td>
                   </tr>
                   <tr v-else-if="!presenceSkus.length">
                     <td colspan="3" class="py-4 text-center text-slate-600 dark:text-slate-300">Aucun relevé sur cette période. Élargissez la période ou retirez un filtre.</td>
@@ -360,10 +419,17 @@
             <h2 id="par-type-heading" class="text-lg font-semibold text-slate-900 dark:text-white">Perfect Store par type de magasin</h2>
             <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Ouvrez un type pour voir ses points de vente.</p>
           </div>
-          <span class="text-sm text-slate-600 dark:text-slate-300">{{ parType.length }} type(s)</span>
+          <span v-if="!erreurs.parType" class="text-sm text-slate-600 dark:text-slate-300">{{ compte(parType.length, 'type') }}</span>
         </div>
 
-        <div v-if="!parType.length" class="px-5 py-10 text-center text-sm text-slate-600 dark:text-slate-300">
+        <AdminErreurBloc
+          v-if="erreurs.parType"
+          titre="La répartition par type de magasin n’a pas pu être chargée."
+          :erreur="erreurs.parType"
+          :en-cours="rechargement.parType"
+          @reessayer="recharger('parType')"
+        />
+        <div v-else-if="!parType.length" class="px-5 py-10 text-center text-sm text-slate-600 dark:text-slate-300">
           Aucune visite évaluée sur cette période et ce périmètre. Élargissez la période ou retirez un filtre.
         </div>
 
@@ -386,7 +452,7 @@
               <span class="min-w-0 flex-1">
                 <span class="block truncate text-sm font-semibold text-slate-900 dark:text-white">{{ typePdvLabel(row.type_pdv) }}</span>
                 <span class="mt-0.5 block text-xs text-slate-600 dark:text-slate-300">
-                  {{ row.pdv_scores }} point(s) de vente · {{ row.pdv_perfect_stores }} Perfect Store(s) · {{ row.visites_scorees }} visite(s)
+                  {{ compte(row.pdv_scores, 'point de vente', 'points de vente') }} · {{ compte(row.pdv_perfect_stores, 'Perfect Store') }} · {{ compte(row.visites_scorees, 'visite') }}
                 </span>
               </span>
               <span class="hidden w-48 shrink-0 sm:block">
@@ -413,6 +479,15 @@
               class="border-t border-slate-200 bg-slate-50 px-5 pb-4 dark:border-slate-700 dark:bg-slate-900/20"
             >
               <ChargementContenu v-if="typeState(row.type_pdv).loading" variante="lignes" :nombre="3" libelle="Chargement des points de vente…" class="pt-3" />
+
+              <AdminErreurBloc
+                v-else-if="typeState(row.type_pdv).erreur"
+                compact
+                class="pt-4"
+                titre="Les points de vente de ce type n’ont pas pu être chargés."
+                :erreur="typeState(row.type_pdv).erreur"
+                @reessayer="loadTypeStores(row.type_pdv, typeState(row.type_pdv).page)"
+              />
 
               <ul v-else-if="typeState(row.type_pdv).items.length" class="divide-y divide-slate-200 dark:divide-slate-700">
                 <li v-for="store in typeState(row.type_pdv).items" :key="store.visite_id">
@@ -446,7 +521,7 @@
                   :page="typeState(row.type_pdv).page"
                   :page-size="typePerPage"
                   :loading="typeState(row.type_pdv).loading"
-                  item-label="point(s) de vente"
+                  :item-label="pluriel(typeState(row.type_pdv).total, 'point de vente', 'points de vente')"
                   @update:page="(p) => changeTypePage(row.type_pdv, p)"
                 />
               </div>
@@ -465,11 +540,18 @@
         </div>
 
         <ChargementContenu
-          v-if="vague2EnCours && !couvertureCommerciaux.length"
+          v-if="(vague2EnCours || rechargement.couvertureCommerciaux) && !couvertureCommerciaux.length"
           variante="lignes"
           :nombre="5"
           libelle="Chargement des visites par merchandiser…"
           class="px-5 py-4"
+        />
+        <AdminErreurBloc
+          v-else-if="erreurs.couvertureCommerciaux"
+          titre="Les visites par merchandiser n’ont pas pu être chargées."
+          :erreur="erreurs.couvertureCommerciaux"
+          :en-cours="rechargement.couvertureCommerciaux"
+          @reessayer="recharger('couvertureCommerciaux')"
         />
         <div v-else-if="!couvertureCommerciaux.length" class="px-5 py-10 text-center text-sm text-slate-600 dark:text-slate-300">
           Aucune visite sur cette période et ce périmètre. Élargissez la période ou retirez un filtre.
@@ -494,11 +576,11 @@
               <span class="min-w-0 flex-1">
                 <span class="block truncate text-sm font-semibold text-slate-900 dark:text-white">{{ c.commercial }}</span>
                 <span class="mt-0.5 block text-xs text-slate-600 dark:text-slate-300">
-                  {{ c.nb_pdv }} point(s) de vente différents · {{ c.nb_jours }} jour(s) travaillé(s)
+                  {{ compte(c.nb_pdv, 'point de vente différent', 'points de vente différents') }} · {{ compte(c.nb_jours, 'jour travaillé', 'jours travaillés') }}
                 </span>
               </span>
               <span class="shrink-0 text-right">
-                <span class="block text-sm font-semibold tabular-nums text-slate-900 dark:text-white">{{ c.nb_visites }} visite(s)</span>
+                <span class="block text-sm font-semibold tabular-nums text-slate-900 dark:text-white">{{ compte(c.nb_visites, 'visite') }}</span>
                 <span class="mt-0.5 block text-xs tabular-nums text-slate-600 dark:text-slate-300">{{ c.visites_par_jour == null ? '—' : Number(c.visites_par_jour).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) }} par jour</span>
               </span>
             </button>
@@ -590,6 +672,16 @@
             <tr v-if="!refsChargees && !tiers.length">
               <td colspan="5"><ChargementContenu variante="compact" libelle="Chargement des seuils…" /></td>
             </tr>
+            <tr v-else-if="refsEnErreur">
+              <td colspan="5">
+                <AdminErreurBloc
+                  compact
+                  titre="Les seuils par niveau n’ont pas pu être chargés."
+                  :en-cours="rechargementRefs"
+                  @reessayer="rechargerRefs"
+                />
+              </td>
+            </tr>
             <tr v-else-if="!tiers.length">
               <td colspan="5" class="text-center text-slate-600 dark:text-slate-300">
                 Les seuils par niveau ne sont pas encore définis. Ils se règlent dans les standards Perfect Store.
@@ -609,8 +701,8 @@
 </template>
 
 <script setup lang="ts">
-import { BarChart3, Package, MapPinned, ListChecks } from 'lucide-vue-next'
 import type {
+  BlocPerfectStore,
   CouvertureCommercial,
   CoverageKpi,
   PerfectStoreDashboardKpi,
@@ -624,16 +716,19 @@ import type { Visite } from '~/types'
 import type { PerfectStoreResultB } from '~/utils/perfectStore'
 import { plageDePeriode, libellePlage } from '~/utils/periode'
 import { isTimeoutError, messageUtilisateur } from '~/utils/supabaseErrors'
+import { compte, pluriel } from '~/utils/pluriel'
 import { SERIES, NIVEAUX_PS as NIVEAUX, COULEUR_NON_CONFORME, niveauPerfectStore as niveauDe } from '~/utils/chartPalette'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
 const visitesStore = useVisitesStore()
+const toast = useToast()
 const { peutOuvrir } = useAdminNavigation()
 const { typePdvLabel, fetchTypePdvLabels } = useTypePdvLabels()
 const {
   refs,
   dashboardError,
+  erreurs,
   fetchRefs,
   scoreVisite,
   fetchKpiParType,
@@ -651,6 +746,16 @@ const loading = ref(true)
 // du chargement au lieu de s'afficher pendant.
 const vague2EnCours = ref(true)
 const refsChargees = ref(false)
+// fetchRefs() garde l'erreur pour lui : des référentiels absents une fois le
+// chargement fini veulent dire « échec », pas « aucun seuil défini ».
+const refsEnErreur = computed(() => refsChargees.value && !refs.value)
+const rechargementRefs = ref(false)
+async function rechargerRefs() {
+  rechargementRefs.value = true
+  try { await fetchRefs(true) }
+  catch (err) { console.error('Tableau de bord : référentiels indisponibles', err) }
+  finally { rechargementRefs.value = false }
+}
 const global = ref<PerfectStoreDashboardKpi | null>(null)
 // Cause de l'absence de KPI : base saturée (504 / 57014) ou vraie erreur.
 const dashboardTimeout = computed(() => isTimeoutError(dashboardError.value))
@@ -665,6 +770,22 @@ async function retryDashboard() {
   finally {
     retrying.value = false
     loading.value = false
+  }
+}
+// Relance d'un seul bloc en échec (bouton « Réessayer » dans sa carte).
+const rechargement = reactive<Partial<Record<BlocPerfectStore, boolean>>>({})
+async function recharger(bloc: BlocPerfectStore) {
+  rechargement[bloc] = true
+  const f = dashFilters.value
+  try {
+    if (bloc === 'manques') manques.value = await fetchPerfectStoreManques(f)
+    else if (bloc === 'presenceSkus') presenceSkus.value = await fetchPresenceSkus(f)
+    else if (bloc === 'couvertureCommerciaux') couvertureCommerciaux.value = await fetchCouvertureParCommercial(f)
+    else if (bloc === 'parType') parType.value = await fetchKpiParType(f)
+    else if (bloc === 'evolution') evolution.value = (await fetchPerfectStoreEvolution(f)).map(p => ({ date: p.date, count: p.perfect_store_pct ?? 0 }))
+  }
+  finally {
+    rechargement[bloc] = false
   }
 }
 const parType = ref<PerfectStoreTypeKpi[]>([])
@@ -825,7 +946,6 @@ async function applyDashboardFilters() {
   for (const type of openList) await loadTypeStores(type, 1)
 }
 watch([fDivision, fTerritoire, fArea, fDistrib, periode], applyDashboardFilters, { deep: true })
-const storesError = ref(false)
 const showStoreDetail = ref(false)
 const selectedStoreVisite = ref<Visite | null>(null)
 const selectedStorePerfect = ref<PerfectStoreResultB | null>(null)
@@ -834,6 +954,7 @@ const tierStoreState = reactive<Record<string, {
   total: number
   page: number
   loading: boolean
+  erreur?: unknown
 }>>({})
 
 // ---- Liste des PDV Perfect Store, en page 1 du dashboard (tâche 1.3) ----
@@ -844,6 +965,7 @@ const psList = reactive({
   total: 0,
   page: 1,
   loading: true,
+  erreur: null as unknown,
 })
 
 async function loadPerfectStoreList(page = 1) {
@@ -858,10 +980,14 @@ async function loadPerfectStoreList(page = 1) {
     psList.items = result.items
     psList.total = result.total
     psList.page = page
+    psList.erreur = null
   }
-  catch {
+  catch (err) {
+    // Échec ≠ liste vide : la carte affiche l'erreur et « Réessayer ».
     psList.items = []
     psList.total = 0
+    psList.page = page
+    psList.erreur = err
   }
   finally {
     psList.loading = false
@@ -907,7 +1033,7 @@ const mesuresSecondaires = computed(() => {
   const passages = g.visites_total ?? 0
   const pdv = g.pdv_vus ?? 0
   return [
-    { libelle: 'Visites', valeur: fmtNombre(passages), detail: pdv && passages > pdv ? `sur ${fmtNombre(pdv)} points de vente, repassages compris` : 'repassages compris' },
+    { libelle: 'Visites', valeur: fmtNombre(g.visites_total), detail: pdv && passages > pdv ? `sur ${fmtNombre(pdv)} points de vente, repassages compris` : 'repassages compris' },
     { libelle: 'Présence en rayon', valeur: fmtPct(g.presence_moyenne_pct), detail: '' },
     { libelle: 'Visibilité', valeur: fmtPct(g.visibilite_moyenne_pct), detail: '' },
     { libelle: 'Promotion', valeur: fmtPct(g.promotion_moyenne_pct), detail: '' },
@@ -938,9 +1064,9 @@ const optionsNiveauListe = computed(() => [
 const listeAffichee = computed(() => {
   if (niveauListe.value) {
     const t = tierStoreLists.value.find(x => x.code === niveauListe.value)
-    if (t) return { items: t.items, total: t.total, page: t.page, loading: t.loading, parPage: storesPerPage }
+    if (t) return { items: t.items, total: t.total, page: t.page, loading: t.loading, erreur: t.erreur ?? null, parPage: storesPerPage }
   }
-  return { items: psList.items, total: psList.total, page: psList.page, loading: psList.loading, parPage: psListPerPage }
+  return { items: psList.items, total: psList.total, page: psList.page, loading: psList.loading, erreur: psList.erreur, parPage: psListPerPage }
 })
 function changerPageListe(page: number) {
   if (niveauListe.value) changeTierPage(niveauListe.value, page)
@@ -972,8 +1098,9 @@ function fmtPct(v: number | null | undefined): string {
   return v == null ? '—' : `${Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`
 }
 const formatNombre = new Intl.NumberFormat('fr-FR')
+// Une valeur absente (non calculée) s'écrit « — », jamais 0.
 function fmtNombre(v: number | null | undefined): string {
-  return formatNombre.format(Number(v) || 0)
+  return v == null || Number.isNaN(Number(v)) ? '—' : formatNombre.format(Number(v))
 }
 
 function estNonConforme(code: string | null | undefined): boolean {
@@ -1037,11 +1164,13 @@ async function loadTierStores(tier: string, page = 1) {
     state.items = result.items
     state.total = result.total
     state.page = page
+    state.erreur = null
   }
-  catch {
-    storesError.value = true
+  catch (err) {
     state.items = []
     state.total = 0
+    state.page = page
+    state.erreur = err
   }
   finally {
     state.loading = false
@@ -1054,7 +1183,7 @@ function changeTierPage(tier: string, page: number) {
 
 // ---- Accordéons "par type de magasin" : liste paginée par 10, client-side ----
 const typePerPage = 10
-type TypeStore = { items: PerfectStoreListItem[]; total: number; page: number; loading: boolean }
+type TypeStore = { items: PerfectStoreListItem[]; total: number; page: number; loading: boolean; erreur?: unknown }
 const EMPTY_TYPE_STATE: TypeStore = { items: [], total: 0, page: 1, loading: false }
 const openTypes = reactive(new Set<string>())
 const typeStoreState = reactive<Record<string, TypeStore>>({})
@@ -1078,10 +1207,13 @@ async function loadTypeStores(type: string, page = 1) {
     state.items = result.items
     state.total = result.total
     state.page = page
+    state.erreur = null
   }
-  catch {
+  catch (err) {
     state.items = []
     state.total = 0
+    state.page = page
+    state.erreur = err
   }
   finally {
     state.loading = false
@@ -1103,16 +1235,24 @@ function changeTypePage(type: string, page: number) {
   loadTypeStores(type, page)
 }
 
-async function openStoreDetail(store: PerfectStoreListItem) {
+// Ouvre la fiche d'une visite (liste Perfect Store ou dernière visite d'un
+// point de vente à faire progresser).
+const visiteEnOuverture = ref<string | null>(null)
+async function openStoreDetail(store: { visite_id: string }) {
+  visiteEnOuverture.value = store.visite_id
   try {
     const visite = await visitesStore.fetchVisiteByDatabaseId(store.visite_id)
     selectedStoreVisite.value = visite
     selectedStorePerfect.value = refs.value ? scoreVisite(visite.data, visite.pdv || {}) : null
     showStoreDetail.value = true
   }
-  catch {
+  catch (err) {
     selectedStoreVisite.value = null
     selectedStorePerfect.value = null
+    toast.add({ title: 'Visite non ouverte', description: messageUtilisateur(err), color: 'red' })
+  }
+  finally {
+    visiteEnOuverture.value = null
   }
 }
 

@@ -2,6 +2,7 @@
 import { defineStore, skipHydrate } from 'pinia'
 import { markRaw } from 'vue'
 import type { Profile, UserRole, Employeur } from '~/types'
+import { marquerDeconnexionVolontaire } from '~/utils/sessionExpiree'
 
 export const useAuthStore = defineStore('auth', () => {
   const supabase = skipHydrate(markRaw(useSupabaseClient()))
@@ -193,7 +194,15 @@ export const useAuthStore = defineStore('auth', () => {
       await retirerAppareil().catch(() => {})
     }
 
-    await supabase.auth.signOut()
+    // Déconnexion voulue : le plugin session-expiree ne doit pas afficher
+    // « Votre session a expiré ».
+    marquerDeconnexionVolontaire(true)
+    try {
+      await supabase.auth.signOut()
+    }
+    finally {
+      setTimeout(() => marquerDeconnexionVolontaire(false), 0)
+    }
     profile.value = null
     profileRequest.value = null
 
