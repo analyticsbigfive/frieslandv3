@@ -1,5 +1,8 @@
 -- ============================================================================
 -- COMMERCIAL : LECTURE DES TOURNÉES DE SON ÉQUIPE (10/10/2026)
+-- APPLIQUÉE EN PRODUCTION le 10/10/2026 (MCP, apply_migration). Contrôle :
+-- le commercial le plus suivi (4 merchandisers) lit 34 tournées, 26 règles et
+-- 21 905 étapes, exactement celles de son équipe.
 --
 -- Décision du 10/10 : le commercial consulte Planning › Tournées et Règles
 -- récurrentes, sans rien modifier. Jusqu'ici il ne lisait que ses propres
