@@ -88,9 +88,9 @@ Les onglets ne tiennent pas compte du rôle : un superviseur voit « Utilisateur
 
 ## Ce que la refonte corrige, et ce qui reste technique
 
-**Corrigé par la refonte :** la navigation à deux niveaux construite selon le rôle (agence comprise), les couleurs et composants unifiés, le titre unique, le fil d'Ariane, les messages d'erreur, le jargon visible, les confirmations des actions lourdes, les états vides des graphiques, les textes trop petits, l'affichage à 375 px, l'aide accessible depuis l'en-tête et le guide réécrit.
+**Corrigé par la refonte :** les doublons (versions de l’app gérées à un seul endroit, listes couvertes par les Standards retirées des Référentiels), la navigation à deux niveaux construite selon le rôle (agence comprise), les couleurs et composants unifiés, le titre unique, le fil d'Ariane, les messages d'erreur, le jargon visible, les confirmations des actions lourdes, les états vides des graphiques, les textes trop petits, l'affichage à 375 px, l'aide accessible depuis l'en-tête et le guide réécrit.
 
-**À décider ensuite, hors de cette refonte :** une page d'accueil propre à chaque rôle (« à traiter » pour le trade marketing, « mon équipe cette semaine » pour le commercial, « mon routing du mois » pour l'agence), la fusion d'Activité et du Perfect Store dans un dictionnaire unique des indicateurs, la suppression des doublons (standards modifiables à deux endroits, versions gérées à deux endroits), le regroupement des onglets Visibilité intérieure boutiques / supermarchés.
+**À décider ensuite, hors de cette refonte :** une page d'accueil propre à chaque rôle (« à traiter » pour le trade marketing, « mon équipe cette semaine » pour le commercial, « mon routing du mois » pour l'agence), la fusion d'Activité et du Perfect Store dans un dictionnaire unique des indicateurs, le regroupement des onglets Visibilité intérieure boutiques / supermarchés.
 
 **Reste technique (équipe de développement) :** l'application des migrations de base de données, la maintenance des tâches planifiées, la publication du fichier APK, les imports en masse hors des écrans prévus.
 
@@ -129,4 +129,30 @@ Les onglets ne tiennent pas compte du rôle : un superviseur voit « Utilisateur
 Sur le site, le même détecteur injecté dans la page relève 36 défauts sur l'accueil, 61 sur la liste des PDV (dont 59 contrastes trop faibles, surtout les identifiants internes en gris clair sous chaque nom), 46 sur le Planning et 11 sur les Référentiels. Mesures : deux titres h1 sur chaque page ; couleur principale de la bibliothèque = vert ; contour de focus vert sur les boutons pleins, la pagination et le lien d'évitement ; boutons « Export », « Import CSV », « Réinitialiser » en vert à 2,3:1.
 
 ### Avant / après
-*Complété à la fin de la refonte.*
+
+Mesures du 9 octobre (avant) et du 10 octobre 2026 (après la refonte et la seconde critique), mêmes méthodes : deux examens indépendants, détecteur, navigateur sur le site réel.
+
+| Mesure | Avant | Après |
+|---|---|---|
+| Ergonomie (10 critères de Nielsen) | 17 / 40 | **22 / 40** |
+| Audit technique (5 critères) | 8 / 20 | **13 / 20** |
+| Détecteur, pages du back-office | 87 signalements sur 30 fichiers | **0** (1 avis sur une ombre en mode sombre) |
+| Niveaux de navigation | jusqu'à 4 (Référentiels : pastilles puis 44 onglets ; Planning : onglets, bascule, bascule par personne) | **2 partout** (menu, puis onglets) |
+| Listes qui décrivent le menu | 4, qui ne concordaient plus | **1 registre** (`utils/adminNavigation.ts`), testé pour les 5 rôles |
+| Titres h1 par page | 2 | **1** sur les 51 adresses vérifiées |
+| Couleur principale de la bibliothèque | vert | **rouge Bonnet Rouge** (#C8102E) |
+| Familles de gris dans les pages | `gray` (1 436 emplois) et `slate` | **slate seul** |
+| Palettes de graphiques | 7 | **1** (`utils/chartPalette.ts`) |
+| Textes de 10 et 11 px | 59 | **0** |
+| Messages d'erreur bruts (SQL, migrations) | 49 | **0** dans le back-office |
+| Accès refusé | renvoi silencieux | renvoi vers la page d'accueil du rôle, avec « Vous n'avez pas accès à… » |
+| Actions lourdes sans confirmation | recalcul global, désactivation d'un compte, import CSV, suppression d'une visite | **confirmations qui nomment l'élément et la conséquence** |
+| Débordement à 375 px | 69 px | **0** sur les 46 écrans (et 0 à 768 et 1 024 px) |
+| Focus clavier | vert sur les composants | **rouge, visible sur 100 % des éléments testés** |
+| Accueil Perfect Store | 8 757 px, 6 indicateurs, 11 blocs | environ 5 400 px, 4 indicateurs, « à traiter » en premier |
+| Synthèse produits | 12 camemberts | 1 tableau à barres |
+| Compte agence | inutilisable (administrateur ou rien) | menu réduit, routing chargeable et corrigeable, Planning en consultation |
+| Fiche d'une visite | quantités à 0 pour presque toutes les visites | disponibilité et prix relevés ; « aucun relevé » dit clairement |
+| Guides | sans capture, droits du superviseur faux, mot de passe en clair | réécrits pour la nouvelle navigation, sans identifiant |
+
+**Restent à traiter après la seconde critique** (corrections en cours ou à décider) : un échec de chargement qui s'affiche comme un zéro, « Non évalué » confondu avec « Non conforme », le mode sombre (bouton principal, focus, graphiques), les champs de choix dont la valeur « Tous » est trop pâle, les cinq confirmations encore natives, le parcours de l'agence réparti sur trois écrans et l'accès du commercial aux tournées de son équipe.
