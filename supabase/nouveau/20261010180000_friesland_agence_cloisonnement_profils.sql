@@ -1,8 +1,8 @@
 -- ============================================================================
 -- RÔLE « AGENCE » : CHAQUE AGENCE NE VOIT QUE SES MERCHANDISERS (10/10/2026)
--- À COLLER DANS L'ÉDITEUR SQL : testée en production dans une transaction annulée
--- (compte d'Elias : 15 merchandisers Atom + 7 commerciaux, 8 479 PDV sur la carte,
--- 0 hors d'Abidjan ; admin inchangé), application par le connecteur refusée.
+-- APPLIQUÉE EN PRODUCTION le 10/10/2026 (collée dans l'éditeur SQL). Testée avant
+-- dans une transaction annulée : compte d'Elias, 15 merchandisers Atom + 7
+-- commerciaux, 8 479 PDV sur la carte, 0 hors d'Abidjan ; admin inchangé.
 --
 -- Constat (compte d'Elias, Atom) : la lecture de `profiles` est ouverte à tout
 -- compte connecté (profiles_select_authenticated, USING true). Un compte
