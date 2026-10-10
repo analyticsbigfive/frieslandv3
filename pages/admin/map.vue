@@ -160,7 +160,9 @@ function isSafeImageUrl(u: unknown): u is string {
   }
 }
 
-function addMarkers() {
+// `cadrer` : ajuster la vue à tous les points. Pas quand un point précis est
+// demandé (?lat=&lng=) : l'animation de fitBounds écrasait le zoom sur ce point.
+function addMarkers(cadrer = true) {
   if (!map || !markerGroup) return
 
   // @ts-ignore
@@ -191,7 +193,7 @@ function addMarkers() {
     // La hauteur de la carte vient du CSS (calc + flex) : on la remesure avant de cadrer.
     map.invalidateSize()
     const bounds = markerGroup.getBounds()
-    if (bounds.isValid()) {
+    if (cadrer && bounds.isValid()) {
       map.fitBounds(bounds, { padding: [30, 30] })
     }
   }
@@ -259,13 +261,20 @@ function popupPdv(pdv: PDV) {
   return el
 }
 
-function focusTarget() {
-  if (!map) return
+// Point demandé dans l'URL (« Voir sur la carte » depuis une liste de PDV).
+function cible(): [number, number] | null {
   const latitude = Number(route.query.lat)
   const longitude = Number(route.query.lng)
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return
-  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return
-  map.setView([latitude, longitude], 16)
+  if (route.query.lat == null || route.query.lng == null) return null
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null
+  return [latitude, longitude]
+}
+
+function focusTarget() {
+  const c = cible()
+  if (!map || !c) return
+  map.setView(c, 17)
 }
 
 async function initMap() {
@@ -302,7 +311,7 @@ async function initMap() {
   finally {
     charge.value = true
   }
-  addMarkers()
+  addMarkers(!cible())
   focusTarget()
 
   // Listen for photo button clicks inside Leaflet popups

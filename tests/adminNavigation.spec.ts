@@ -7,6 +7,7 @@ import {
   ADMIN_DOMAINS,
   ADMIN_TABS,
   accessSectionForPath,
+  ecransOuvertsA,
   findTab,
   lienEntreOnglets,
   locate,
@@ -206,6 +207,15 @@ describe('droits par rôle', () => {
     expect(peut('agence', '/admin/users')).toBe(false)
     expect(peut('agence', '/admin/permissions')).toBe(false)
     expect(peut('agence', '/admin/perfect-store/standards')).toBe(false)
+  })
+
+  it('PDV de l’agence : ouvert à l’agence (sans le reste des Points de vente), au superviseur, pas au commercial', () => {
+    expect(peut('agence', '/admin/pdv/agence')).toBe(true)
+    expect(peut('agence', '/admin/pdv')).toBe(false)
+    expect(peut('agence', '/admin/pdv/repartition')).toBe(false)
+    expect(peut('superviseur', '/admin/pdv/agence')).toBe(true)
+    expect(peut('commercial', '/admin/pdv/agence')).toBe(false)
+    expect(ecransOuvertsA('agence')).toContain('Points de vente › PDV de l\'agence')
   })
 
   it('merchandiser : rien', () => {

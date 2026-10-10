@@ -133,6 +133,7 @@ export const ADMIN_DOMAINS: AdminDomain[] = [
       { id: 'pdv.repartition', label: 'Répartition', title: 'Répartition des points de vente', path: '/admin/pdv/repartition', access: 'pdv' },
       { id: 'pdv.evolution', label: 'Évolution', title: 'Évolution des points de vente', path: '/admin/pdv/evolution', access: 'pdv' },
       { id: 'pdv.historique', label: 'Historique', title: 'Historique d\'un point de vente', path: '/admin/pdv/historique', access: 'pdv' },
+      { id: 'pdv.agence', label: 'PDV de l\'agence', title: 'Points de vente de l\'agence', path: '/admin/pdv/agence', access: 'pdv', roles: ['admin', 'superviseur', 'agence'], ouvertA: ['agence'], aide: 'Les points de vente visités ou recensés par les merchandisers de l\'agence : à compléter, à revoir.' },
       { id: 'pdv.distributeurs', label: 'Distributeurs', path: '/admin/distributeurs', access: 'parametres' },
     ],
   },
