@@ -198,7 +198,11 @@ export const useAuthStore = defineStore('auth', () => {
     // « Votre session a expiré ».
     marquerDeconnexionVolontaire(true)
     try {
-      await supabase.auth.signOut()
+      // signOut() ne lève pas d'erreur : il la renvoie et garde alors la
+      // session locale (réseau coupé, serveur saturé). La déconnexion se fait
+      // quand même sur cet appareil.
+      const { error } = await supabase.auth.signOut()
+      if (error) await supabase.auth.signOut({ scope: 'local' })
     }
     finally {
       setTimeout(() => marquerDeconnexionVolontaire(false), 0)

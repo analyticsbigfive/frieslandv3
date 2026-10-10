@@ -212,9 +212,11 @@ const userMenuItems = [
   [{
     label: 'Se déconnecter',
     icon: 'i-heroicons-arrow-right-on-rectangle',
-    click: () => {
-      authStore.logout()
-      navigateTo('/login')
+    // Attendre la fin de la déconnexion : sinon /login voit encore la session
+    // et renvoie aussitôt vers le back-office.
+    click: async () => {
+      await authStore.logout()
+      await navigateTo('/login')
     },
   }],
 ]
