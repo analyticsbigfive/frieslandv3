@@ -5,7 +5,7 @@
       <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">{{ subtitle }}</p>
     </div>
     <div v-if="chartData" class="h-72">
-      <Line v-if="chartData" :data="chartData" :options="chartOptions" />
+      <Line :data="chartData" :options="chartOptions" />
     </div>
     <div v-else class="flex h-72 items-center justify-center rounded-lg bg-slate-50 px-4 text-center text-sm text-slate-600 dark:bg-slate-700/40 dark:text-slate-300">
       Aucune visite sur la période. Élargissez les dates ou retirez un filtre.
@@ -14,7 +14,7 @@
 </template>
 
 <script setup lang="ts">
-import { AXES, REMPLISSAGE_PRINCIPAL, SERIES } from '~/utils/chartPalette'
+import { REMPLISSAGE_PRINCIPAL, SERIES } from '~/utils/chartPalette'
 import { Line } from 'vue-chartjs'
 
 const props = withDefaults(defineProps<{
@@ -28,6 +28,8 @@ const props = withDefaults(defineProps<{
   subtitle: 'Volume quotidien sur la période disponible.',
   seriesLabel: 'Visites',
 })
+
+const axes = useAxesGraphique()
 
 const chartData = computed(() => {
   if (!props.data?.length) return null
@@ -61,13 +63,15 @@ const chartData = computed(() => {
   }
 })
 
-const chartOptions = {
+const chartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
     legend: { display: false },
     tooltip: {
-      backgroundColor: AXES.infobulleFond,
+      backgroundColor: axes.value.infobulleFond,
+      titleColor: axes.value.infobulleTexte,
+      bodyColor: axes.value.infobulleTexte,
       titleFont: { size: 12 },
       bodyFont: { size: 12 },
       padding: 10,
@@ -77,13 +81,15 @@ const chartOptions = {
   scales: {
     x: {
       grid: { display: false },
-      ticks: { font: { size: AXES.taillePolice }, color: AXES.texte },
+      border: { color: axes.value.bordure },
+      ticks: { font: { size: axes.value.taillePolice }, color: axes.value.texte },
     },
     y: {
       beginAtZero: true,
-      grid: { color: AXES.grille },
-      ticks: { font: { size: AXES.taillePolice }, color: AXES.texte },
+      grid: { color: axes.value.grille },
+      border: { color: axes.value.bordure },
+      ticks: { font: { size: axes.value.taillePolice }, color: axes.value.texte },
     },
   },
-}
+}))
 </script>

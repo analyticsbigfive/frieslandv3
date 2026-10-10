@@ -10,25 +10,15 @@
 :root {
   --admin-bg: #F8FAFC;
   --admin-ink: #0F172A;
-  --admin-muted: #64748B;
-  --admin-line: #E2E8F0;
-  --admin-panel: #ffffff;
-  --admin-panel-soft: #F1F5F9;
-  --admin-accent: #C8102E;
-  --admin-accent-dark: #9B0D23;
-  --admin-green: #2f7d52;
-  --admin-amber: #b36b16;
-  --fc-blue: #C8102E;
-  --fc-blue-dark: #9B0D23;
-  --fc-blue-light: #FDE8EC;
-  --fc-red: #C8102E;
-  --fc-red-dark: #9B0D23;
-  --fc-red-light: #FDE8EC;
-  --fc-green: #10B981;
-  --fc-green-light: #ECFDF5;
-  --fc-orange: #F59E0B;
-  --fc-gray: #64748B;
-  --fc-gray-light: #F1F5F9;
+  --admin-focus: #C8102E;
+}
+
+/* Mode sombre : fond slate-950 (celui du layout admin), texte slate-100,
+   anneau de focus brand-300 (4,3:1 sur slate-800, 5,9:1 sur slate-950). */
+.dark {
+  --admin-bg: #020617;
+  --admin-ink: #F1F5F9;
+  --admin-focus: #F0516F;
 }
 
 @layer base {
@@ -64,7 +54,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid #C8102E;
+    outline: 2px solid var(--admin-focus);
     outline-offset: 2px;
   }
 

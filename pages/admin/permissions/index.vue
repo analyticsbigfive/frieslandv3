@@ -2,7 +2,7 @@
   <div class="space-y-6">
     <AdminPageHeader
       title="Permissions"
-      description="Ce que chaque rôle peut ouvrir dans le back-office. Une case cochée ouvre tous les écrans listés sur la ligne. L'administrateur a toujours accès à tout."
+      description="Ce que chaque rôle peut ouvrir dans le back-office. Une case cochée ouvre les écrans listés sur la ligne, sauf ceux indiqués sous la case. L'administrateur a toujours accès à tout."
     />
 
     <div class="admin-surface overflow-hidden">
@@ -22,14 +22,30 @@
                 <p class="text-sm font-semibold text-slate-900 dark:text-white">{{ section.title }}</p>
                 <p class="mt-0.5 text-xs leading-5 text-slate-600 dark:text-slate-300">{{ section.ecrans.join(' · ') }}</p>
               </th>
-              <td v-for="role in MANAGED_ROLES" :key="role" class="text-center align-top">
-                <UCheckbox
-                  :model-value="isChecked(role, section.key)"
-                  :disabled="role === 'admin' || savingKey === `${role}:${section.key}`"
-                  :aria-label="`${LIBELLES_ROLES[role] || role} : ${section.title}`"
-                  class="inline-flex justify-center"
-                  @update:model-value="onToggle(role, section.key)"
-                />
+              <td v-for="role in MANAGED_ROLES" :key="role" class="p-1 text-center align-top">
+                <!-- Toute la cellule est cliquable (44 px au moins) : l'étiquette
+                     englobe la case. Cochée en encre, pas en rouge : cocher
+                     n'est pas l'action principale de l'écran. -->
+                <label
+                  class="flex min-h-11 min-w-11 flex-col items-center justify-start gap-1 rounded-md px-2 py-3"
+                  :class="role === 'admin' ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/60'"
+                >
+                  <UCheckbox
+                    :model-value="isChecked(role, section.key)"
+                    :disabled="role === 'admin' || savingKey === `${role}:${section.key}`"
+                    :aria-label="`${LIBELLES_ROLES[role] || role} : ${section.title}`"
+                    :aria-describedby="section.exclusParRole[role] ? `exclus-${section.key}-${role}` : undefined"
+                    input-class="text-slate-900 dark:text-slate-400"
+                    @update:model-value="onToggle(role, section.key)"
+                  />
+                  <span
+                    v-if="section.exclusParRole[role]"
+                    :id="`exclus-${section.key}-${role}`"
+                    class="max-w-40 text-xs leading-5 text-slate-600 dark:text-slate-300"
+                  >
+                    Sauf {{ section.exclusParRole[role]!.map(nomCourt).join(', ') }}
+                  </span>
+                </label>
               </td>
             </tr>
           </tbody>
@@ -80,6 +96,12 @@ const LIBELLES_ROLES: Record<string, string> = {
 const ecransAgence = ecransOuvertsA('agence')
 
 const savingKey = ref<string | null>(null)
+
+// « Paramètres › Utilisateurs » → « Utilisateurs » : sous la case, le domaine
+// est déjà dit par la ligne.
+function nomCourt(ecran: string): string {
+  return ecran.split(' › ').pop() || ecran
+}
 
 function isChecked(role: string, sectionKey: string): boolean {
   if (role === 'admin') return true

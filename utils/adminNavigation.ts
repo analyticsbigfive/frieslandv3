@@ -371,10 +371,16 @@ export function libelleEcran(path: string, query?: Query): string | null {
   return `${c.domain.label} › ${c.tab.label}`
 }
 
-/** Écrans couverts par une section, en « Domaine › Vue » (page Permissions). */
-export function sectionCoverage(section: AccessSection): string[] {
+/**
+ * Écrans couverts par une section, en « Domaine › Vue » (page Permissions).
+ * Avec un rôle : seulement ceux que ce rôle ouvre réellement quand la case est
+ * cochée (`peutOuvrirOnglet`) ; un onglet réservé (`roles`) disparaît de la
+ * liste, comme Utilisateurs pour le superviseur ou Tournées pour le commercial.
+ */
+export function sectionCoverage(section: AccessSection, role?: AdminRole): string[] {
   return ADMIN_TABS
     .filter(({ tab }) => tab.access === section)
+    .filter(({ tab }) => !role || peutOuvrirOnglet(tab, role, s => s === section))
     .map(({ domain, tab }) => (domain.tabs.length > 1 ? `${domain.label} › ${tab.label}` : domain.label))
 }
 

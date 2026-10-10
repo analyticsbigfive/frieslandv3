@@ -8,7 +8,7 @@
 </template>
 
 <script setup lang="ts">
-import { AXES, AUTRE, COULEURS_PRESENCE, SERIES } from '~/utils/chartPalette'
+import { AUTRE, COULEURS_PRESENCE, SERIES } from '~/utils/chartPalette'
 import { Doughnut } from 'vue-chartjs'
 
 const props = withDefaults(defineProps<{
@@ -33,6 +33,7 @@ const defaultColors = [...SERIES, AUTRE]
 // Couleurs Présent/Absent standard
 // Deux parts « absent / présent » : couleurs de statut (rupture, présent).
 const presenceColors = [...COULEURS_PRESENCE]
+const axes = useAxesGraphique()
 
 const heightClass = computed(() => {
   const map = { xs: 'h-24', sm: 'h-40', md: 'h-56', lg: 'h-72' }
@@ -53,7 +54,7 @@ const chartData = computed(() => {
       data: props.values,
       backgroundColor: props.colors || (props.labels.length === 2 ? presenceColors : defaultColors),
       borderWidth: 2,
-      borderColor: '#ffffff',
+      borderColor: axes.value.surface,
     }],
   }
 })
@@ -69,12 +70,15 @@ const mergedOptions = computed(() => ({
       labels: {
         usePointStyle: true,
         pointStyle: 'circle',
-        font: { size: AXES.taillePolice },
+        font: { size: axes.value.taillePolice },
+        color: axes.value.texte,
         padding: 12,
       },
     },
     tooltip: {
-      backgroundColor: AXES.infobulleFond,
+      backgroundColor: axes.value.infobulleFond,
+      titleColor: axes.value.infobulleTexte,
+      bodyColor: axes.value.infobulleTexte,
       padding: 10,
       cornerRadius: 8,
       callbacks: {

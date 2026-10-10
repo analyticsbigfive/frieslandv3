@@ -141,7 +141,7 @@
               <td>{{ pdv.distributor_name || '—' }}</td>
               <td class="whitespace-nowrap">
                 <div v-if="perfectStoreByPdv[pdv.pdv_id]" class="flex items-center gap-1.5">
-                  <span class="h-2 w-2 shrink-0 rounded-full" :class="tierDotClass(perfectStoreByPdv[pdv.pdv_id].niveau)" aria-hidden="true" />
+                  <span class="h-2 w-2 shrink-0 rounded-full" :style="{ backgroundColor: couleurNiveau(perfectStoreByPdv[pdv.pdv_id].niveau) }" aria-hidden="true" />
                   <span class="font-medium text-slate-900 dark:text-white">{{ libelleNiveau(perfectStoreByPdv[pdv.pdv_id].niveau) }}</span>
                   <span v-if="perfectStoreByPdv[pdv.pdv_id].score_global != null" class="text-xs tabular-nums text-slate-500 dark:text-slate-400">{{ perfectStoreByPdv[pdv.pdv_id].score_global }} %</span>
                 </div>
@@ -482,6 +482,7 @@ import { SANS_ZONE, type FiltreGps } from '~/stores/pdv'
 import { canWriteTerrain } from '~/utils/roles'
 import { isModernTrade } from '~/utils/canal'
 import { messageUtilisateur } from '~/utils/supabaseErrors'
+import { COULEUR_NON_CONFORME, niveauPerfectStore } from '~/utils/chartPalette'
 
 definePageMeta({
   middleware: ['auth', 'admin'],
@@ -945,11 +946,10 @@ async function handleImport() {
 // Dernier niveau Perfect Store connu par PDV (vue v_perfect_store_liste : 1 ligne/PDV, visite la plus récente).
 const perfectStoreByPdv = ref<Record<string, { niveau: string; score_global: number | null }>>({})
 
-function tierDotClass(tier: string): string {
-  if (tier?.startsWith('FLAGSHIP')) return 'bg-violet-500'
-  if (tier?.startsWith('VIP')) return 'bg-emerald-500'
-  if (tier?.startsWith('CORE')) return 'bg-blue-500'
-  return 'bg-amber-500'
+// Échelle ordonnée des niveaux (DESIGN.md, NIVEAUX_PS) : une teinte bleue du
+// foncé au clair, slate pour « Non conforme » ; le mot suit toujours le point.
+function couleurNiveau(tier: string): string {
+  return niveauPerfectStore(tier)?.couleur ?? COULEUR_NON_CONFORME
 }
 
 function hasCoordinates(pdv: PDV): boolean {

@@ -39,10 +39,10 @@
     <template v-else>
       <!-- Synthèse (sur la direction, l'employeur et le rôle choisis) -->
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Adoption" :value="`${synthese.taux} %`" :subtitle="`${synthese.a_jour} / ${synthese.total} comptes à jour`" format="none" :icon="Smartphone" color="green" />
-        <StatsCard title="À jour" :value="synthese.a_jour" :icon="CheckCircle2" color="blue" />
-        <StatsCard title="Bloqués" :value="synthese.bloquee" subtitle="Écran de mise à jour affiché" :icon="Lock" color="orange" />
-        <StatsCard title="Non déclarés" :value="synthese.non_declaree" subtitle="Version trop ancienne pour être déclarée (avant 1.0.10), ou application jamais ouverte" :icon="HelpCircle" color="red" />
+        <StatsCard title="Adoption" :value="`${synthese.taux} %`" :subtitle="`${synthese.a_jour} / ${synthese.total} comptes à jour`" format="none" icon="i-heroicons-device-phone-mobile" color="green" />
+        <StatsCard title="À jour" :value="synthese.a_jour" icon="i-heroicons-check-circle" color="blue" />
+        <StatsCard title="Bloqués" :value="synthese.bloquee" subtitle="Écran de mise à jour affiché" icon="i-heroicons-lock-closed" color="orange" />
+        <StatsCard title="Non déclarés" :value="synthese.non_declaree" subtitle="Version trop ancienne pour être déclarée (avant 1.0.10), ou application jamais ouverte" icon="i-heroicons-question-mark-circle" color="red" />
       </div>
 
       <div v-if="synthese.non_declaree" class="admin-surface flex gap-3 p-4 text-sm leading-6 text-slate-700 dark:text-slate-300">
@@ -196,7 +196,6 @@
 // dernière visite (30 jours) sert à relancer d'abord ceux qui travaillent.
 // Lecture seule ; la RLS de version_installee réserve la lecture à l'admin et
 // au superviseur.
-import { CheckCircle2, HelpCircle, Lock, Smartphone } from 'lucide-vue-next'
 import { fetchAllRows } from '~/utils/fetchAll'
 import { LIBELLES_STATUT, ROLES_APP_MOBILE, estCompteTest, inventaireComptes, joursDepuis, statutVersion, syntheseAdoption, type StatutVersion } from '~/utils/adoptionApp'
 import { DIRECTIONS, libelleDirection } from '~/utils/agences'

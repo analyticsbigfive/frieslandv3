@@ -133,6 +133,26 @@ describe('registre de navigation', () => {
     expect(sectionCoverage('principal')).toContain('Perfect Store › Vue d\'ensemble')
     expect(sectionCoverage('parametres')).toContain('Points de vente › Distributeurs')
   })
+
+  it('par rôle, ne promet que les écrans que la case ouvre vraiment', () => {
+    const reserves = ['Paramètres › Utilisateurs', 'Paramètres › Équipes', 'Paramètres › Permissions']
+    // L'admin ouvre toute la ligne.
+    expect(sectionCoverage('parametres', 'admin')).toEqual(sectionCoverage('parametres'))
+    for (const role of ['superviseur', 'commercial', 'agence', 'merchandiser'] as const) {
+      const ouverts = sectionCoverage('parametres', role)
+      for (const e of reserves) expect(ouverts).not.toContain(e)
+      expect(ouverts).toContain('Paramètres › Référentiels')
+    }
+    // Tournées et Règles récurrentes : admin, superviseur et agence seulement.
+    const planning = ['Planning › Tournées', 'Planning › Règles récurrentes']
+    for (const e of planning) {
+      expect(sectionCoverage('principal', 'commercial')).not.toContain(e)
+      expect(sectionCoverage('principal', 'merchandiser')).not.toContain(e)
+      expect(sectionCoverage('principal', 'superviseur')).toContain(e)
+      expect(sectionCoverage('principal', 'agence')).toContain(e)
+    }
+    expect(sectionCoverage('principal', 'commercial')).toContain('Planning › Programme merchandiser')
+  })
 })
 
 describe('droits par rôle', () => {

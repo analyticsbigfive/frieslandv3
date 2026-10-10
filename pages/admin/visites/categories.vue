@@ -108,7 +108,7 @@
 
 <script setup lang="ts">
 import { Bar } from 'vue-chartjs'
-import { AUTRE, AXES, SERIES } from '~/utils/chartPalette'
+import { AUTRE, SERIES } from '~/utils/chartPalette'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
@@ -202,21 +202,22 @@ const evoChartData = computed(() => {
   }
 })
 
-const chartOptions = {
+const axes = useAxesGraphique()
+const chartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
     legend: {
       position: 'bottom' as const,
-      labels: { usePointStyle: true, pointStyle: 'circle', font: { size: AXES.taillePolice }, color: AXES.texte },
+      labels: { usePointStyle: true, pointStyle: 'circle', font: { size: axes.value.taillePolice }, color: axes.value.texte },
     },
-    tooltip: { backgroundColor: AXES.infobulleFond, padding: 10, cornerRadius: 8 },
+    tooltip: { backgroundColor: axes.value.infobulleFond, titleColor: axes.value.infobulleTexte, bodyColor: axes.value.infobulleTexte, padding: 10, cornerRadius: 8 },
   },
   scales: {
-    x: { stacked: true, grid: { display: false }, ticks: { font: { size: AXES.taillePolice }, color: AXES.texte } },
-    y: { stacked: true, beginAtZero: true, grid: { color: AXES.grille }, ticks: { font: { size: AXES.taillePolice }, color: AXES.texte } },
+    x: { stacked: true, grid: { display: false }, ticks: { font: { size: axes.value.taillePolice }, color: axes.value.texte } },
+    y: { stacked: true, beginAtZero: true, grid: { color: axes.value.grille }, ticks: { font: { size: axes.value.taillePolice }, color: axes.value.texte } },
   },
-}
+}))
 
 onMounted(() => {
   fetchTypePdvLabels()

@@ -12,7 +12,8 @@
 // (en fin de libellé « NOM — e-mail ») et le code PDV (en fin de libellé
 // « NOM · CODE ») — les noms de PDV ne sont pas uniques, même dans un quartier.
 // Territoire et quartier ne servent qu'à filtrer les listes.
-import ExcelJS from 'exceljs'
+import type ExcelJS from 'exceljs'
+import { chargerExcelJS } from '~/utils/chargerExcel'
 import { fetchAllRows } from '~/utils/fetchAll'
 import { COLONNES_EXPORT, ROUTING_ACTIONS, SEP_MERCH, SEP_PDV, lignesExportTournees, normaliserLigneTournee, type EtapeExport, type TourneeExport } from '~/utils/routingImport'
 
@@ -89,7 +90,8 @@ export function useRoutingExcel() {
       .map(g => g.split('|') as [string, string])
       .sort((a, b) => a[0].localeCompare(b[0], 'fr') || a[1].localeCompare(b[1], 'fr'))
 
-    const wb = new ExcelJS.Workbook()
+    const Excel = await chargerExcelJS()
+    const wb = new Excel.Workbook()
     wb.creator = 'Friesland Bonnet Rouge'
 
     // ---- Mode d'emploi (1re feuille : c'est elle qui s'ouvre) ----
@@ -208,7 +210,8 @@ export function useRoutingExcel() {
     let brutes: { ligne: number, valeurs: Record<string, unknown> }[] = []
 
     if (/\.xlsx$/i.test(file.name)) {
-      const wb = new ExcelJS.Workbook()
+      const Excel = await chargerExcelJS()
+      const wb = new Excel.Workbook()
       await wb.xlsx.load(await file.arrayBuffer())
       const ws = wb.getWorksheet(FEUILLE_SAISIE) || wb.worksheets.find(s => s.state === 'visible' && s.name !== 'Mode d\'emploi')
       if (!ws) throw new Error('Onglet « Tournées » introuvable dans le fichier.')
@@ -237,7 +240,8 @@ export function useRoutingExcel() {
    * le fichier se corrige puis se réimporte tel quel.
    */
   async function exporterTournees(tournees: { tournee: TourneeExport; etapes: EtapeExport[] }[], nomFichier: string) {
-    const wb = new ExcelJS.Workbook()
+    const Excel = await chargerExcelJS()
+    const wb = new Excel.Workbook()
     const ws = wb.addWorksheet(FEUILLE_SAISIE, { views: [{ state: 'frozen', ySplit: 1 }] })
     ws.columns = COLONNES_EXPORT.map(h => ({
       header: h,

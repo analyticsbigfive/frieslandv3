@@ -114,11 +114,9 @@
 
     <!-- Légende (mêmes couleurs que le calendrier par personne) -->
     <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-300">
-      <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-sky-200 dark:bg-sky-500/40" aria-hidden="true" />À venir</span>
-      <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-emerald-200 dark:bg-emerald-500/40" aria-hidden="true" />Tout fait</span>
-      <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-amber-200 dark:bg-amber-500/40" aria-hidden="true" />Incomplète</span>
-      <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm border border-dashed border-slate-400" aria-hidden="true" />Prévue par une règle, à générer</span>
-      <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-slate-200 dark:bg-slate-600" aria-hidden="true" />Suspendue ou annulée</span>
+      <span v-for="l in LEGENDE" :key="l.libelle" class="inline-flex items-center gap-1.5">
+        <span class="h-3 w-3 rounded-sm" :class="l.pastille" aria-hidden="true" />{{ l.libelle }}
+      </span>
       <span>Sous le nombre de points de vente : le vendeur du distributeur (SSF) prévu ce jour-là.</span>
     </div>
   </div>
@@ -131,6 +129,16 @@ import { estMerchandiserProgramme } from '~/utils/agences'
 import { couvertureJour, decalerSemaine, etatJourTournee, joursSemaine, lundiDe, type EtatJourTournee } from '~/utils/calendrierTournees'
 import { CLASSES_ETAT_TOURNEE } from '~/composables/classesEtatTournee'
 import { messageUtilisateur } from '~/utils/supabaseErrors'
+
+// Légende : mêmes fonds que les cases (CLASSES_ETAT_TOURNEE), cerclés d'un
+// trait pour que les voiles clairs restent visibles à 12 px.
+const LEGENDE = [
+  { libelle: 'À venir', pastille: `${CLASSES_ETAT_TOURNEE.planifiee.fond} ring-1 ring-inset ring-sky-300 dark:ring-sky-500/60` },
+  { libelle: 'Tout fait', pastille: `${CLASSES_ETAT_TOURNEE.faite.fond} ring-1 ring-inset ring-emerald-300 dark:ring-emerald-500/60` },
+  { libelle: 'Incomplète', pastille: `${CLASSES_ETAT_TOURNEE.incomplete.fond} ring-1 ring-inset ring-amber-300 dark:ring-amber-500/60` },
+  { libelle: 'Prévue par une règle, à générer', pastille: 'border border-dashed border-slate-400 dark:border-slate-500' },
+  { libelle: 'Suspendue ou annulée', pastille: `${CLASSES_ETAT_TOURNEE.suspendue.fond} ring-1 ring-inset ring-slate-300 dark:ring-slate-600` },
+] as const
 
 const props = withDefaults(defineProps<{
   /** Toutes les règles de tournée (la page les a déjà chargées). */

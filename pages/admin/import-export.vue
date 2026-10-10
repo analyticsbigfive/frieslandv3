@@ -16,15 +16,19 @@
           </p>
         </div>
 
-        <UFormGroup label="Fichier CSV" help="Une ligne dont le PDV ID existe déjà met ce PDV à jour ; les autres lignes créent un PDV.">
+        <div>
+          <label for="import-pdv-fichier" class="block text-sm font-medium text-slate-700 dark:text-slate-200">Fichier CSV</label>
           <input
+            id="import-pdv-fichier"
             ref="fileInput"
             type="file"
+            aria-describedby="import-pdv-fichier-aide"
             accept=".csv"
-            class="block w-full rounded-md text-sm text-slate-700 file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-solid file:border-slate-300 file:bg-white file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-slate-300 dark:file:border-slate-600 dark:file:bg-slate-800 dark:file:text-slate-200"
+            class="mt-1 block w-full rounded-md text-sm text-slate-700 file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-solid file:border-slate-300 file:bg-white file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-slate-300 dark:file:border-slate-600 dark:file:bg-slate-800 dark:file:text-slate-200"
             @change="handleFileSelect"
           >
-        </UFormGroup>
+          <p id="import-pdv-fichier-aide" class="mt-2 text-sm text-slate-600 dark:text-slate-300">Une ligne dont le PDV ID existe déjà met ce PDV à jour ; les autres lignes créent un PDV.</p>
+        </div>
 
         <ChargementContenu v-if="lecture" variante="compact" libelle="Lecture du fichier…" />
 

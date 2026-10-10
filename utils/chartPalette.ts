@@ -58,13 +58,33 @@ export function couleurFamille(code: string | null | undefined): string {
 
 /** Axes, grille et info-bulle : discrets, en slate (DESIGN.md). */
 export const AXES = {
-  texte: '#64748B',
+  texte: '#64748B', // slate-500 : 4,8:1 sur blanc
   taillePolice: 12,
   grille: '#F1F5F9',
   bordure: '#E2E8F0',
+  /** Fond de la carte : trait de séparation des parts d'un camembert. */
+  surface: '#FFFFFF',
   infobulleFond: '#0F172A',
   infobulleTexte: '#FFFFFF',
 } as const
+
+/** Variante sombre, posée sur les cartes slate-800 (#1E293B). */
+export const AXES_SOMBRE = {
+  texte: '#94A3B8', // slate-400 : 5,7:1 sur slate-800
+  taillePolice: 12,
+  grille: '#334155',
+  bordure: '#475569',
+  surface: '#1E293B',
+  infobulleFond: '#F1F5F9',
+  infobulleTexte: '#0F172A',
+} as const
+
+export type AxesGraphique = typeof AXES | typeof AXES_SOMBRE
+
+/** Axes selon le thème : la variante sombre quand `sombre` est vrai. */
+export function axesPour(sombre: boolean): AxesGraphique {
+  return sombre ? AXES_SOMBRE : AXES
+}
 
 /** Couples de statut prêts à l'emploi pour les camemberts à deux parts. */
 export const COULEURS_PRESENCE = [STATUT.critique, STATUT.bon] as const // [rupture, présent]

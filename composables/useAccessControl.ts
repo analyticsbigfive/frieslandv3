@@ -1,13 +1,18 @@
 // composables/useAccessControl.ts
 // RBAC: contrôle d'accès par rôle aux sections du dashboard admin.
 import type { UserRole } from '~/types'
-import { accessSectionForPath, peutOuvrirChemin, sectionCoverage, type AccessSection } from '~/utils/adminNavigation'
+import { accessSectionForPath, peutOuvrirChemin, sectionCoverage, type AccessSection, type AdminRole } from '~/utils/adminNavigation'
 
 export interface DashboardSection {
   key: AccessSection
   title: string
   /** Écrans couverts, en « Domaine › Vue » (lus dans utils/adminNavigation.ts). */
   ecrans: string[]
+  /**
+   * Par rôle, les écrans de la ligne que la case n'ouvre PAS (onglets réservés
+   * à d'autres rôles). Absent quand la case ouvre toute la ligne.
+   */
+  exclusParRole: Partial<Record<UserRole, string[]>>
 }
 
 // Sections de la matrice role_section_access : les clés sont celles de la
@@ -24,9 +29,18 @@ const SECTIONS: { key: AccessSection, title: string }[] = [
   { key: 'actions', title: 'Actions' },
   { key: 'parametres', title: 'Paramètres' },
 ]
-export const DASHBOARD_SECTIONS: DashboardSection[] = SECTIONS.map(s => ({ ...s, ecrans: sectionCoverage(s.key) }))
-
 export const MANAGED_ROLES: UserRole[] = ['admin', 'superviseur', 'commercial', 'agence', 'merchandiser']
+
+export const DASHBOARD_SECTIONS: DashboardSection[] = SECTIONS.map((s) => {
+  const ecrans = sectionCoverage(s.key)
+  const exclusParRole: Partial<Record<UserRole, string[]>> = {}
+  for (const role of MANAGED_ROLES) {
+    const ouverts = new Set(sectionCoverage(s.key, role as AdminRole))
+    const exclus = ecrans.filter(e => !ouverts.has(e))
+    if (exclus.length) exclusParRole[role] = exclus
+  }
+  return { ...s, ecrans, exclusParRole }
+})
 
 // Section d'un chemin /admin/... : registre de navigation (le chemin d'onglet
 // ou d'alias le plus précis). null pour un chemin inconnu.
