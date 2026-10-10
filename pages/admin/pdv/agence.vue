@@ -42,9 +42,9 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-2 border-b border-slate-200 px-4 py-3 dark:border-slate-700">
-        <UInput v-model="recherche" icon="i-heroicons-magnifying-glass" size="sm" placeholder="Nom, téléphone, quartier…" aria-label="Rechercher un point de vente" class="w-full sm:w-64" />
-        <USelectMenu v-model="zone" :options="optionsZone" value-attribute="value" option-attribute="label" searchable searchable-placeholder="Rechercher…" size="sm" class="w-full sm:w-48" aria-label="Filtrer par zone" />
-        <USelectMenu v-model="merchandiser" :options="optionsMerchandiser" value-attribute="value" option-attribute="label" searchable searchable-placeholder="Rechercher…" size="sm" class="w-full sm:w-56" aria-label="Filtrer par merchandiser" />
+        <UInput v-model="recherche" icon="i-heroicons-magnifying-glass" size="sm" placeholder="Nom, quartier, repère, téléphone…" aria-label="Rechercher un point de vente" class="w-full sm:w-64" />
+        <USelect v-model="zone" :options="optionsZone" size="sm" class="w-full sm:w-48" aria-label="Filtrer par zone" />
+        <USelect v-model="merchandiser" :options="optionsMerchandiser" size="sm" class="w-full sm:w-56" aria-label="Filtrer par merchandiser" />
         <UButton v-if="filtresActifs" size="xs" variant="ghost" color="gray" icon="i-heroicons-x-mark" @click="reinitialiser">Effacer les filtres</UButton>
         <span class="ml-auto text-xs tabular-nums text-slate-600 dark:text-slate-300" aria-live="polite">{{ formatNombre(filtres.length) }} point{{ filtres.length > 1 ? 's' : '' }} de vente</span>
       </div>
@@ -56,7 +56,7 @@
               <th scope="col">Point de vente</th>
               <th scope="col">Zone › quartier</th>
               <th scope="col">Distributeur</th>
-              <th scope="col">Téléphone</th>
+              <th scope="col">Repère ou téléphone</th>
               <th scope="col">Position</th>
               <th scope="col">Visites</th>
               <th scope="col">Merchandiser</th>

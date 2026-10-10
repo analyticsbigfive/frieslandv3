@@ -160,7 +160,7 @@ export function useCsvExport() {
       { header: 'Zone', key: 'zone', width: 18 },
       { header: 'Quartier', key: 'quartier', width: 20 },
       { header: 'Distributeur', key: 'distributor_name', width: 28 },
-      { header: 'Téléphone', key: 'adressage', width: 18 },
+      { header: 'Repère ou téléphone', key: 'adressage', width: 24 },
       { header: 'GPS', key: 'gps', width: 8 },
       { header: 'Latitude', key: 'geolocation_lat', width: 12 },
       { header: 'Longitude', key: 'geolocation_lng', width: 12 },
