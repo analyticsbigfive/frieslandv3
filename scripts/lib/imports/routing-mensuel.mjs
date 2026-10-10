@@ -29,10 +29,15 @@
  *     n'importe quel ordre, alias, puis nom tolérant) ; SSF cherché d'abord
  *     parmi ceux du distributeur de la ligne ;
  *   - point GPS de la case (colonnes facultatives « Latitude », « Longitude »,
- *     « Rayon ») : la tournée prend les PDV du PORTEFEUILLE du merchandiser
- *     (son distributeur DMS, celui du SSF) à moins du rayon (500 m par
- *     défaut). Décision du 09/10 : 93 % des PDV n'ont pas d'area et les
- *     quartiers sont écrits autrement par l'agence ; le point évite ces trous ;
+ *     « Rayon ») : la tournée prend les PDV du DISTRIBUTEUR DE LA LIGNE
+ *     (colonne « Distributeur », pdv.distributor_name) à moins du rayon
+ *     (500 m par défaut), élargi à 1 000 puis 1 500 m s'il n'y en a aucun ;
+ *     sans distributeur reconnu ou sans PDV à 1 500 m : ceux du portefeuille
+ *     à moins du rayon. Décision du 10/10 : le portefeuille vient du premier
+ *     fichier DMS, peu fiable (52 journées Atom sur 214 sans aucun PDV à
+ *     500 m, 5 avec le distributeur à 1 500 m). Celle du 09/10 reste : 93 %
+ *     des PDV n'ont pas d'area et les quartiers sont écrits autrement par
+ *     l'agence ; le point évite ces trous ;
  *   - sans point : point de visite → quartier(s) des PDV, TOUJOURS dans le territoire de
  *     la ligne : zones de sa commune (colonne « Commune » ; à défaut, du
  *     secteur) et zones principales du portefeuille du merchandiser. Jamais
@@ -68,6 +73,8 @@ const entreParentheses = (s) => [...String(s || '').matchAll(/\(([^)]*)\)/g)].ma
 const MIN_PDV_ZONE_PORTEFEUILLE = 10
 const MAX_QUARTIERS_APPROCHES = 4
 const RAYON_DEFAUT_M = 500
+// Point GPS sans PDV du distributeur dans le rayon : on élargit, au plus près (10/10).
+const RAYONS_ELARGIS_M = [1000, 1500]
 const RAYON_MIN_M = 100
 const RAYON_MAX_M = 3000
 /** Nombre d'une cellule (« 5,3673 » ou « 5.3673 ») ; null si vide ou illisible. */
@@ -156,15 +163,22 @@ export function lireRoutingMensuel(feuilles) {
 // ---------------------------------------------------------------------------
 /**
  * Index des PDV : zones (clé normalisée : « Marcory » = « MARCORY »),
- * quartiers « ZONE›QUARTIER », quartiers par libellé, PDV par identifiant.
+ * quartiers « ZONE›QUARTIER », quartiers par libellé, PDV par identifiant,
+ * PDV actifs géolocalisés par distributeur (clé normalisée de distributor_name).
  */
 export function indexerPdv(pdvs) {
   const zones = new Map() // clé de zone → nombre de PDV actifs
   const quartiers = new Map() // « ZONE›QUARTIER » normalisé → { zone, quartier, cleZone, pdvs }
   const parQuartier = new Map() // libellé de quartier normalisé → [entrées]
   const parId = new Map()
+  const parDistributeur = new Map() // distributeur normalisé → [PDV actifs géolocalisés]
   for (const p of pdvs) {
     parId.set(p.pdv_id, p)
+    if (p.is_active !== false && p.distributor_name && aGps(p.geolocation_lat, p.geolocation_lng)) {
+      const kd = cleTexte(p.distributor_name)
+      if (!parDistributeur.has(kd)) parDistributeur.set(kd, [])
+      parDistributeur.get(kd).push(p)
+    }
     if (p.is_active === false || !p.zone) continue
     const cleZone = cleTexte(p.zone)
     zones.set(cleZone, (zones.get(cleZone) || 0) + 1)
@@ -179,7 +193,7 @@ export function indexerPdv(pdvs) {
     }
     quartiers.get(k).pdvs.push(p)
   }
-  return { zones, quartiers, parQuartier, parId }
+  return { zones, quartiers, parQuartier, parId, parDistributeur }
 }
 
 /** Clé d'un lieu « ZONE›QUARTIER » (casse, accents et ponctuation ignorés). */
@@ -250,8 +264,10 @@ export function approcherLieu(texte, admissibles, index) {
 
 /**
  * PDV d'une case :
- *   - avec un point GPS : ceux du portefeuille du merchandiser à moins du rayon ;
- *     aucun dans le rayon → on retombe sur les lieux ou la commune ;
+ *   - avec un point GPS : ceux du distributeur de la case à moins du rayon,
+ *     élargi à 1 000 puis 1 500 m s'il n'y en a aucun ; sans distributeur ou
+ *     sans PDV à 1 500 m, ceux du portefeuille à moins du rayon ; aucun →
+ *     on retombe sur les lieux ou la commune ;
  *   - sinon ceux de ses lieux « ZONE›QUARTIER » ; sans lieu mais avec une
  *     commune, ceux du portefeuille dans la commune (à défaut, les PDV de la
  *     commune dans les territoires du compte).
@@ -259,10 +275,19 @@ export function approcherLieu(texte, admissibles, index) {
 export function pdvsDeCase(c, { index, portefeuille = [], zonesPortefeuille = [], territoires = [] }) {
   if (c.latitude != null && c.longitude != null) {
     const rayon = c.rayon_m || RAYON_DEFAUT_M
-    const pdvs = portefeuille.map(id => index.parId.get(id))
-      .filter(p => p && p.is_active !== false && aGps(p.geolocation_lat, p.geolocation_lng)
-        && haversine(c.latitude, c.longitude, p.geolocation_lat, p.geolocation_lng) <= rayon)
-    if (pdvs.length) return { mode: 'point', cle: `point:${(+c.latitude).toFixed(5)},${(+c.longitude).toFixed(5)},${rayon}`, pdvs, rayon }
+    const point = `${(+c.latitude).toFixed(5)},${(+c.longitude).toFixed(5)}`
+    const autour = (liste, r) => liste.filter(p => p && p.is_active !== false && aGps(p.geolocation_lat, p.geolocation_lng)
+      && haversine(c.latitude, c.longitude, p.geolocation_lat, p.geolocation_lng) <= r)
+    const cleD = c.distributeur ? cleTexte(c.distributeur) : ''
+    const duDistributeur = cleD ? (index.parDistributeur?.get(cleD) || []) : []
+    if (duDistributeur.length) {
+      for (const r of [rayon, ...RAYONS_ELARGIS_M.filter(x => x > rayon)]) {
+        const pdvs = autour(duDistributeur, r)
+        if (pdvs.length) return { mode: 'point', source: 'distributeur', cle: `point:${point},${r},${cleD}`, pdvs, rayon: r, elargi: r > rayon }
+      }
+    }
+    const pdvs = autour(portefeuille.map(id => index.parId.get(id)), rayon)
+    if (pdvs.length) return { mode: 'point', source: 'portefeuille', cle: `point:${point},${rayon}`, pdvs, rayon }
   }
   const lieux = uniques((c.lieux || []).map(cleLieu))
   if (lieux.length) {
@@ -302,7 +327,7 @@ export function reglesDuRouting(cases, ctx) {
   return [...groupes.values()].map(({ c, res, semaines }) => {
     const sems = uniques(semaines).sort((a, b) => a - b)
     const lieux = res.mode === 'point'
-      ? `portefeuille à moins de ${res.rayon} m du point ${(+c.latitude).toFixed(5)}, ${(+c.longitude).toFixed(5)} (${res.pdvs.length} PDV)`
+      ? `${res.source === 'distributeur' ? `PDV de ${c.distributeur}` : 'portefeuille'} à moins de ${res.rayon} m du point ${(+c.latitude).toFixed(5)}, ${(+c.longitude).toFixed(5)}${res.elargi ? ' (rayon élargi faute de PDV plus près)' : ''} (${res.pdvs.length} PDV)`
       : res.mode === 'commune'
         ? `${c.commune} (quartier non trouvé : portefeuille dans la commune)`
         : uniques(res.pdvs.map(p => `${p.zone} › ${p.quartier}`)).join(', ')
@@ -329,7 +354,7 @@ export async function operationsDepuisRouting(sb, userId, { toutes = toutesLesLi
     toutes(() => sb.from('routing_mensuel').select('jour_semaine,semaine_du_mois,secteur,commune,point_visite,zone,lieux,latitude,longitude,rayon_m,ssf_id,distributeur')
       .eq('merchandiser_id', userId).eq('actif', true).order('id')),
     toutes(() => sb.from('routing_templates').select('id,user_id,label,is_active,ssf_id').eq('user_id', userId).order('id')),
-    toutes(() => sb.from('pdv').select('pdv_id,zone,quartier,is_active,geolocation_lat,geolocation_lng').order('pdv_id')),
+    toutes(() => sb.from('pdv').select('pdv_id,zone,quartier,is_active,geolocation_lat,geolocation_lng,distributor_name').order('pdv_id')),
   ])
   const base = regles.filter(r => r.is_active !== false && !r.ssf_id && !/^(SSF — |Routing mensuel — )/.test(r.label || '')).map(r => r.id)
   const reglesPdv = []
@@ -383,7 +408,7 @@ export async function chargerDonneesRoutingMensuel(sb, { onEtape, toutes = toute
   try { ssfs = await toutes(() => sb.from('ssf').select('id,nom,nom_brut,distributeur_id,commercial_id,actif').order('id')) }
   catch { ssfs = await toutes(() => sb.from('ssf').select('id,nom,nom_brut,distributeur_id,actif').order('id')) }
   etape('PDV')
-  const pdvs = await toutes(() => sb.from('pdv').select('pdv_id,zone,quartier,is_active,geolocation_lat,geolocation_lng').order('pdv_id'))
+  const pdvs = await toutes(() => sb.from('pdv').select('pdv_id,zone,quartier,is_active,geolocation_lat,geolocation_lng,distributor_name').order('pdv_id'))
   etape('Règles de tournée')
   const ids = profils.filter(p => p.is_active !== false).map(p => p.id)
   let migrationAppliquee = true
@@ -635,6 +660,9 @@ export function simulerRoutingMensuel(lignes, donnees, options = {}) {
       const r = pdvsDeCase(l, ctxPf)
       l.parPoint = r.mode === 'point'
       l.pdvPoint = r.mode === 'point' ? r.pdvs.length : null
+      l.rayonPoint = r.mode === 'point' ? r.rayon : null
+      l.pointElargi = r.mode === 'point' && !!r.elargi
+      l.pointPortefeuille = r.mode === 'point' && r.source === 'portefeuille'
       l.parCommune = !l.parPoint && !l.lieux.length && r.mode === 'commune'
     }
     regleOps.push({ type: 'regles_mensuelles.remplacer', user_id: userId, created_by: options.auteurId || null, regles: reglesNouvelles })
@@ -781,10 +809,22 @@ export function simulerRoutingMensuel(lignes, donnees, options = {}) {
     md.push('', '## Alias hors de la commune (appliqués, à vérifier)', '')
     for (const r of horsTerr) md.push(`- ${r.point} (${r.commune || r.secteur || '—'}) → ${qListe(r.horsTerritoire)}.`)
   }
-  const pointsMaigres = plannings.flatMap(p => p.liste.filter(l => l.parPoint && l.pdvPoint < 10).map(l => `${p.profil.nom} — ${JOURS[l.jour_semaine]} S${l.semaine_du_mois} — ${l.point_visite} : ${l.pdvPoint} PDV`))
+  const pointsElargis = plannings.flatMap(p => p.liste.filter(l => l.pointElargi).map(l => `${p.profil.nom} — ${JOURS[l.jour_semaine]} S${l.semaine_du_mois} — ${l.point_visite} : ${l.pdvPoint} PDV de ${l.distributeur} à ${l.rayonPoint} m`))
+  if (pointsElargis.length) {
+    md.push('', '## Points GPS sans PDV du distributeur dans le rayon (rayon élargi)', '')
+    md.push('Aucun PDV du distributeur de la ligne à moins du rayon : la tournée prend les plus proches jusqu’à 1 500 m. Vérifier le point avec l’agence.', '')
+    md.push(...pointsElargis.map(x => `- ${x}`))
+  }
+  const pointsSansPdv = plannings.flatMap(p => p.liste.filter(l => l.latitude != null && !l.parPoint).map(l => `${p.profil.nom} — ${JOURS[l.jour_semaine]} S${l.semaine_du_mois} — ${l.point_visite} (${(+l.latitude).toFixed(5)}, ${(+l.longitude).toFixed(5)})`))
+  if (pointsSansPdv.length) {
+    md.push('', '## Points GPS sans aucun PDV (ni du distributeur à 1 500 m, ni du portefeuille)', '')
+    md.push('La case retombe sur son lieu ou sa commune : corriger le point avec l’agence.', '')
+    md.push(...pointsSansPdv.map(x => `- ${x}`))
+  }
+  const pointsMaigres = plannings.flatMap(p => p.liste.filter(l => l.parPoint && !l.pointElargi && l.pdvPoint < 10).map(l => `${p.profil.nom} — ${JOURS[l.jour_semaine]} S${l.semaine_du_mois} — ${l.point_visite} : ${l.pdvPoint} PDV`))
   if (pointsMaigres.length) {
-    md.push('', '## Points GPS avec peu de PDV du portefeuille (moins de 10 dans le rayon)', '')
-    md.push('Ces jours-là, la tournée sera complétée par les PDV de son portefeuille les plus proches : vérifier le point, élargir le rayon (colonne « Rayon », 100 à 3 000 m) ou confirmer avec l’agence.', '')
+    md.push('', '## Points GPS avec peu de PDV (moins de 10 dans le rayon)', '')
+    md.push('Ces jours-là, la tournée sera complétée par les PDV les plus proches : vérifier le point, élargir le rayon (colonne « Rayon », 100 à 3 000 m) ou confirmer avec l’agence.', '')
     md.push(...pointsMaigres.map(x => `- ${x}`))
   }
   md.push('', '## Lieux à rattacher', '')
@@ -818,7 +858,7 @@ export function simulerRoutingMensuel(lignes, donnees, options = {}) {
   const csv = {
     'routing-mensuel.csv': csvTexte(['Merchandiser', 'Email', 'Jour', 'Semaine', 'Secteur', 'Commune', 'Point de visite', 'Rattachement', 'Quartiers retenus', 'SSF', 'Engin', 'Commercial', 'Distributeur'],
       plannings.flatMap(p => p.liste.map(l => [p.profil.nom, p.profil.email, JOURS[l.jour_semaine], l.semaine_du_mois, l.secteur || '', l.commune || '', l.point_visite || '',
-        l.parPoint ? `point (${l.pdvPoint} PDV à ${l.rayon_m} m)` : l.lieux.length ? l._case.lieu.statut : l.parCommune ? 'commune' : 'portefeuille', l.lieux.join(' | '), l.ssf?.nom || l.ssf_texte || '', l.type_engin || '', commerciaux.find(c => c.id === l.commercial_id)?.nom || '', l.distributeur || '']))),
+        l.parPoint ? `point (${l.pdvPoint} PDV ${l.pointPortefeuille ? 'du portefeuille' : 'du distributeur'} à ${l.rayonPoint} m)` : l.lieux.length ? l._case.lieu.statut : l.parCommune ? 'commune' : 'portefeuille', l.lieux.join(' | '), l.ssf?.nom || l.ssf_texte || '', l.type_engin || '', commerciaux.find(c => c.id === l.commercial_id)?.nom || '', l.distributeur || '']))),
     'lieux-a-rattacher.csv': csvTexte(['Secteur', 'Commune', 'Point de visite', 'Traitement', 'Propositions', 'Quartier confirmé (ZONE›QUARTIER)'],
       lieux.map(([, r]) => r).filter(r => ['commune', 'introuvable'].includes(r.statut))
         .map(r => [r.secteur || '', r.commune || '', r.point, r.statut === 'commune' ? 'commune' : 'portefeuille', (r.propositions || []).map(x => `${x.zone}›${x.quartier}`).join(' | '), ''])),
