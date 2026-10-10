@@ -1,6 +1,9 @@
 -- ============================================================================
 -- PERFECT STORE : LIRE LES STATUTS DES RELEVÉS, PAS SEULEMENT LES QUANTITÉS
 -- (10/10/2026)
+-- APPLIQUÉE EN PRODUCTION le 10/10/2026 (MCP), puis 36 349 visites recalculées
+-- par lots (resultat_perfect_store et visite_perfect_store). Après recalcul :
+-- disponibilité moyenne 53,6 % sur les visites avec relevé (0 % avant).
 --
 -- Constat : les 36 349 visites évaluées avaient une disponibilité, une présence
 -- et un assortiment à 0 %, donc aucun point de vente à un niveau Perfect Store.

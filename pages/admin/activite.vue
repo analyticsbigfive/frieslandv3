@@ -158,7 +158,7 @@
           </NuxtLink>
         </div>
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatsCard title="Disponibilité en rayon (pondérée)" :value="formatPercent(psGlobal.osa_moyen_pct)" format="none" subtitle="Quantité au moins égale au seuil" icon="i-heroicons-cube" color="green" />
+          <StatsCard title="Disponibilité en rayon (pondérée)" :value="formatPercent(psGlobal.osa_moyen_pct)" format="none" subtitle="Références relevées « Disponible »" icon="i-heroicons-cube" color="green" />
           <StatsCard title="Assortiment" :value="formatPercent(psGlobal.assortiment_moyen_pct)" format="none" subtitle="Références minimum et prioritaires" icon="i-heroicons-list-bullet" color="blue" />
           <StatsCard title="Visibilité" :value="formatPercent(psGlobal.visibilite_moyenne_pct)" format="none" subtitle="PLV requise présente" icon="i-heroicons-eye" color="orange" />
           <StatsCard title="Promotion" :value="formatPercent(psGlobal.promotion_moyenne_pct)" format="none" subtitle="Quand une promotion est en cours" icon="i-heroicons-receipt-percent" color="red" />

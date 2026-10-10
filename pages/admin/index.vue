@@ -91,7 +91,7 @@
       <div class="space-y-3">
         <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <StatsCard title="Points de vente visités" :value="coverageLabel" :subtitle="coverageSub" format="none" icon="i-heroicons-map-pin" color="blue" />
-          <StatsCard title="Disponibilité en rayon" :value="fmtPct(global.osa_moyen_pct)" subtitle="quantité au moins égale au seuil" format="none" icon="i-heroicons-cube" color="green" />
+          <StatsCard title="Disponibilité en rayon" :value="fmtPct(global.osa_moyen_pct)" subtitle="références relevées « Disponible »" format="none" icon="i-heroicons-cube" color="green" />
           <StatsCard title="Assortiment moyen" :value="fmtPct(global.assortiment_moyen_pct)" subtitle="références attendues présentes" format="none" icon="i-heroicons-list-bullet" color="blue" />
           <StatsCard title="Score global moyen" :value="fmtPct(global.score_global_moyen_pct)" subtitle="tous piliers confondus" format="none" icon="i-heroicons-chart-bar" color="blue" />
         </div>
