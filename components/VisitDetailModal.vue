@@ -278,6 +278,7 @@
 type StatutAffiche = DisponibiliteReleve | 'sous_seuil'
 const STATUTS_DISPO: Record<StatutAffiche, { libelle: string, icone: string, classe: string, aide?: string }> = {
   disponible: { libelle: 'Disponible', icone: 'i-heroicons-check-circle-solid', classe: 'font-medium text-emerald-700 dark:text-emerald-400' },
+  present: { libelle: 'Présent, pas disponible', icone: 'i-heroicons-eye', classe: 'font-medium text-amber-800 dark:text-amber-300', aide: '« Présent » coché sans « Disponible » : la référence ne compte pas comme disponible en rayon' },
   sous_seuil: { libelle: 'Sous le seuil', icone: 'i-heroicons-arrow-trending-down', classe: 'font-medium text-amber-800 dark:text-amber-300', aide: 'Présente en rayon, mais en quantité inférieure au seuil demandé' },
   rupture: { libelle: 'En rupture', icone: 'i-heroicons-x-circle', classe: 'font-medium text-red-700 dark:text-red-400' },
   contradictoire: { libelle: 'Relevé contradictoire', icone: 'i-heroicons-exclamation-triangle', classe: 'text-amber-800 dark:text-amber-300', aide: '« Disponible » et « En rupture » ont été cochés tous les deux' },
