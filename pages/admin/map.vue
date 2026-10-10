@@ -9,7 +9,11 @@
         <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600 dark:text-slate-300">
           <span class="inline-flex items-center gap-1.5">
             <span class="h-3 w-3 shrink-0 rounded-full border-2 border-white ring-1 ring-slate-300 dark:border-slate-800 dark:ring-slate-600" :style="{ backgroundColor: COULEUR_PDV }" aria-hidden="true" />
-            <span><strong class="font-semibold tabular-nums text-slate-900 dark:text-white">{{ formatNombre(markers.length) }}</strong> point(s) de vente géolocalisé(s)</span>
+            <span><strong class="font-semibold tabular-nums text-slate-900 dark:text-white">{{ formatNombre(markers.length) }}</strong> {{ markers.length > 1 ? 'points de vente géolocalisés' : 'point de vente géolocalisé' }}</span>
+          </span>
+          <span v-if="horsZone.length" class="inline-flex items-center gap-1 text-amber-800 dark:text-amber-300" :title="horsZone.map(p => p.nom_pdv || 'Point de vente sans nom').join(', ')">
+            <UIcon name="i-heroicons-exclamation-triangle" class="h-4 w-4 shrink-0" aria-hidden="true" />
+            {{ horsZone.length }} hors de la carte (coordonnées à corriger dans la fiche du point de vente)
           </span>
           <span class="hidden sm:inline">Cliquez sur un point pour voir sa fiche.</span>
         </div>
@@ -106,8 +110,20 @@ const mapPhotoModal = ref<any>(null)
 let map: any = null
 let markerGroup: any = null
 
+// Coordonnées plausibles pour la Côte d'Ivoire (marge comprise). Un seul point
+// aberrant (virgule décimale perdue, point de démonstration) faisait cadrer la
+// carte sur le monde entier et empêchait le dessin des points.
+function coordonneesPlausibles(p: PDV) {
+  const lat = Number(p.geolocation_lat)
+  const lng = Number(p.geolocation_lng)
+  return lat >= 3 && lat <= 12 && lng >= -10 && lng <= 0
+}
+
+const avecCoordonnees = computed(() => allPDV.value.filter(p => p.geolocation_lat && p.geolocation_lng))
+const horsZone = computed(() => avecCoordonnees.value.filter(p => !coordonneesPlausibles(p)))
+
 const markers = computed(() => {
-  let list = allPDV.value.filter(p => p.geolocation_lat && p.geolocation_lng)
+  let list = avecCoordonnees.value.filter(coordonneesPlausibles)
   if (zoneActive.value) {
     list = list.filter(p => p.zone === selectedZone.value)
   }
@@ -170,6 +186,8 @@ function addMarkers() {
   })
 
   if (markers.value.length > 0) {
+    // La hauteur de la carte vient du CSS (calc + flex) : on la remesure avant de cadrer.
+    map.invalidateSize()
     const bounds = markerGroup.getBounds()
     if (bounds.isValid()) {
       map.fitBounds(bounds, { padding: [30, 30] })
