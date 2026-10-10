@@ -35,7 +35,7 @@
         <section class="space-y-3">
           <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Disponibilité par référence</h2>
           <p class="text-sm text-slate-600 dark:text-slate-300">
-            Part des visites où la référence était en rayon, parmi celles où la famille {{ nomFamille }} a été relevée.
+            Part des visites où la référence était disponible en rayon (« Disponible » coché, sans « En rupture »), parmi celles où la famille {{ nomFamille }} a été relevée.
           </p>
           <div v-if="nbPresence === 0" class="admin-surface p-8 text-center text-sm text-slate-600 dark:text-slate-300">
             Aucune visite de la période n'a relevé la famille {{ nomFamille }}. Élargissez la période ou changez de famille.
@@ -45,7 +45,7 @@
               <div v-for="prod in prods" :key="`${famille}:${prod.key}`" class="admin-surface p-4">
                 <h3 class="mb-2 truncate text-center text-sm font-semibold text-slate-700 dark:text-slate-200" :title="prod.name">{{ prod.name }}</h3>
                 <ChartsPieChart
-                  :labels="['En rupture', 'Présent']"
+                  :labels="['Pas disponible', 'Disponible']"
                   :values="[prodRupture(prod.key), prodPresent(prod.key)]"
                   :colors="[...COULEURS_PRESENCE]"
                   height="sm"
@@ -167,7 +167,7 @@
                 <td class="text-center"><Indicateur :oui="!!donnees(row)?.present" /></td>
                 <td class="text-center"><Indicateur :oui="!!donnees(row)?.prix_respectes" /></td>
                 <td v-for="prod in prods" :key="`${prod.key}_v`" class="text-center">
-                  <Indicateur :oui="donnees(row)?.[prod.key] === 'Présent'" libelle-oui="En rayon" libelle-non="Absent" />
+                  <Indicateur :oui="skuIsAvailable(donnees(row), prod.key)" libelle-oui="Disponible" libelle-non="Pas disponible" />
                 </td>
               </tr>
             </tbody>
@@ -191,7 +191,7 @@
 // ?vue=). La famille de produits est un filtre (?famille=), plus un onglet :
 // deux niveaux de navigation, pas trois. Remplace /admin/produits/<famille>,
 // qui redirige ici.
-import { getSkus, getCategoryDef } from '~/utils/products'
+import { getSkus, getCategoryDef, skuIsAvailable } from '~/utils/products'
 import { COULEURS_PRESENCE, COULEURS_RESPECT } from '~/utils/chartPalette'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
@@ -240,8 +240,10 @@ const donnees = (v: any) => v?.data?.produits?.[famille.value]
 const nbPresence = computed(() => dashboard.countWhere(v => donnees(v)?.present))
 const pctPresence = computed(() => dashboard.pctWhere(v => donnees(v)?.present))
 
+// Le relevé d'une référence cumule les cases cochées (« Présent , Disponible ,
+// Prix respecté ») : disponible = « Disponible » sans « En rupture » (releveSku).
 function prodPresent(cle: string) {
-  return dashboard.visites.value.filter(v => donnees(v)?.present && donnees(v)?.[cle] === 'Présent').length
+  return dashboard.visites.value.filter(v => donnees(v)?.present && skuIsAvailable(donnees(v), cle)).length
 }
 function prodRupture(cle: string) {
   return nbPresence.value - prodPresent(cle)
