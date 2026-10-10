@@ -18,6 +18,13 @@
 --   2. dans l'éditeur SQL, lancer `select public.corriger_releves_2026_10(500);`
 --      jusqu'à ce qu'il renvoie 0 (≈ 50 appels), puis supprimer la table et la
 --      fonction (fin du fichier, en commentaire).
+--
+-- APPLIQUÉE EN PRODUCTION le 10/10/2026 : table et fonction par migration, liste
+-- chargée par la clé de service (fichier trop lourd pour l'éditeur), index
+-- temporaire sur left(visite_id, 8) pendant l'opération, 99 lots. Résultat :
+-- 46 537 cellules retirées (brd_15g 24 252 → 1 074 « En rupture », brd_350g
+-- 24 499 → 1 142) ; 2 400 lignes sans effet (visite absente de la base ou valeur
+-- déjà différente). Index, fonction et table supprimés ensuite. NE PAS REJOUER.
 -- ============================================================================
 
 create table if not exists public._correction_releves_2026_10 (
