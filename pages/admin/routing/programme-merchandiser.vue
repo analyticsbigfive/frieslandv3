@@ -152,7 +152,10 @@ const directionImposee = computed<Direction | null>(() => {
   return d === 'north' || d === 'south' ? d : null
 })
 watch(directionImposee, (d) => { if (d && direction.value !== d) direction.value = d }, { immediate: true })
-const agencesTexte = computed(() => programmes.value.filter(a => a.direction === direction.value).map(a => a.nom).join(', '))
+// Compte agence : sa seule agence, même si d'autres agences partagent sa direction.
+const agencesTexte = computed(() => programmes.value
+  .filter(a => (authStore.isAgence ? a.code === authStore.agenceCourante : a.direction === direction.value))
+  .map(a => a.nom).join(', '))
 const plusieursAgences = computed(() => new Set(lignes.value.map(r => r.agence).filter(Boolean)).size > 1)
 
 const maintenant = new Date()

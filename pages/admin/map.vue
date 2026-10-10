@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <AdminPageHeader />
+    <AdminPageHeader :description="authStore.isAgence ? 'Les points de vente visités ou recensés par les merchandisers de votre agence.' : undefined" />
 
     <!-- Hauteur : en-tête (56 px) + marges du contenu + onglets (41 px + 24 px)
          + titre de page et sa phrase d'aide + espacement ≈ 260 px. -->
@@ -58,6 +58,7 @@
             <p class="mt-2 text-sm font-semibold text-slate-900 dark:text-white">Aucun point de vente géolocalisé</p>
             <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
               <template v-if="zoneActive">Aucun point de vente de ce territoire n'a de position GPS. Choisissez un autre territoire.</template>
+              <template v-else-if="authStore.isAgence">Les points de vente apparaîtront ici dès que vos merchandisers les auront visités ou recensés.</template>
               <template v-else>Les points de vente apparaîtront ici dès que leur position GPS sera enregistrée.</template>
             </p>
           </div>
@@ -88,6 +89,7 @@ definePageMeta({
 })
 
 const pdvStore = usePDVStore()
+const authStore = useAuthStore()
 const { typePdvLabel, fetchTypePdvLabels } = useTypePdvLabels()
 const route = useRoute()
 
@@ -288,7 +290,11 @@ async function initMap() {
 
   // Load PDV
   try {
-    allPDV.value = await pdvStore.fetchAllPDV(false, 'pdv_id,nom_pdv,zone,quartier,canal,sous_categorie_pdv,geolocation_lat,geolocation_lng,image_url')
+    // Compte agence : les PDV visités ou recensés par ses merchandisers, pas tout
+    // ce que la RLS lui ouvre (territoires des fiches, dont l'intérieur).
+    const visitesAgence = authStore.isAgence ? await pdvStore.fetchPdvVisitesAgence() : null
+    allPDV.value = visitesAgence
+      ?? await pdvStore.fetchAllPDV(false, 'pdv_id,nom_pdv,zone,quartier,canal,sous_categorie_pdv,geolocation_lat,geolocation_lng,image_url')
   }
   catch (err) {
     erreur.value = messageUtilisateur(err, 'Les points de vente n\'ont pas pu être chargés. Rechargez la page dans quelques instants.')

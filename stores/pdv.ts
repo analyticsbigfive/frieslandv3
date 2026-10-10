@@ -212,6 +212,21 @@ export const usePDVStore = defineStore('pdv', () => {
     })
   }
 
+  // Compte agence : les PDV visités ou recensés par les merchandisers de son agence
+  // (carte_pdv_agence, migration 20261010180000). Lire `pdv` par la RLS lui
+  // rendait aussi les PDV des territoires des fiches (Bouaké, Dabou…), à ~6 s
+  // la page. Base sans la migration : null, l'appelant se replie sur `pdv`.
+  async function fetchPdvVisitesAgence(): Promise<PDV[] | null> {
+    try {
+      return await fetchAllRows<PDV>((from, to) => (supabase.rpc as any)('carte_pdv_agence')
+        .order('nom_pdv').order('pdv_id').range(from, to))
+    }
+    catch (err: any) {
+      if (err?.code === 'PGRST202' || /carte_pdv_agence/.test(err?.message || '')) return null
+      throw err
+    }
+  }
+
   async function fetchScopedPDV(
     profile?: Profile | null,
     force = false,
@@ -393,6 +408,7 @@ export const usePDVStore = defineStore('pdv', () => {
     fetchFilterFacets,
     fetchPDV,
     fetchAllPDV,
+    fetchPdvVisitesAgence,
     nbSansGps,
     compterSansGps,
     fetchScopedPDV,
