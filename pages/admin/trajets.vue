@@ -97,7 +97,7 @@
             </button>
           </li>
           <li v-if="reps.length === 0" class="p-4 text-sm text-slate-600 dark:text-slate-300">
-            Aucun commercial, merchandiser ou superviseur actif pour l'instant.
+            {{ authStore.isAgence ? 'Aucun merchandiser actif dans votre agence pour l\'instant.' : 'Aucun commercial, merchandiser ou superviseur actif pour l\'instant.' }}
           </li>
         </ul>
       </aside>
@@ -335,6 +335,8 @@ interface RepSummary {
 }
 
 const supabase = useSupabaseClient()
+const authStore = useAuthStore()
+const pdvStore = usePDVStore()
 
 const mapContainer = ref<HTMLElement | null>(null)
 interface VisitMarker {
@@ -762,11 +764,16 @@ async function loadPositions() {
 }
 
 async function loadCommerciaux() {
-  const { data, error } = await supabase
+  // Compte agence : les merchandisers de son agence seulement (la base ne lui
+  // ouvre déjà que les siens et leurs commerciaux, migration 20261010180000).
+  let query = supabase
     .from('profiles')
     .select('id, nom, email, role, is_active')
-    .in('role', ['commercial', 'merchandiser', 'superviseur'])
     .eq('is_active', true)
+  query = authStore.isAgence
+    ? query.eq('role', 'merchandiser').eq('employeur', authStore.agenceCourante || '')
+    : query.in('role', ['commercial', 'merchandiser', 'superviseur'])
+  const { data, error } = await query
 
   if (!error) {
     commerciaux.value = (data ?? []).map((p: any) => ({ id: p.id, nom: p.nom, email: p.email }))
@@ -774,6 +781,15 @@ async function loadCommerciaux() {
 }
 
 async function loadPdv() {
+  // Compte agence : les PDV visités ou recensés par ses merchandisers (une requête rapide
+  // au lieu de la RLS sur `pdv`, ~6 s, coupée à 1 000 lignes).
+  const visitesAgence = authStore.isAgence ? await pdvStore.fetchPdvVisitesAgence().catch(() => null) : null
+  if (visitesAgence) {
+    allPdv.value = visitesAgence
+      .filter(p => p.geolocation_lat && p.geolocation_lng)
+      .map(p => ({ pdv_id: p.pdv_id, nom_pdv: p.nom_pdv, lat: p.geolocation_lat as number, lng: p.geolocation_lng as number }))
+    return
+  }
   const { data, error } = await supabase
     .from('pdv')
     .select('pdv_id, nom_pdv, geolocation_lat, geolocation_lng')

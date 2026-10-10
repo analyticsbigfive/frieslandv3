@@ -356,3 +356,49 @@ describe('point GPS et rayon', () => {
     expect(() => validerOperation(op({ latitude: 5.4, longitude: -4, rayon_m: 50 }), OPERATIONS_PAR_IMPORT['routing-mensuel'])).toThrow(/rayon/)
   })
 })
+
+describe('point GPS : PDV du distributeur de la ligne (décision du 10/10)', () => {
+  const ENTETE_P = ['Zone', 'Commune', 'Merchandiser', 'Distributeur', 'Sales rep', 'Jour', 'Occurrence', 'Point de visite', 'SSF', 'Type SSF', 'Latitude', 'Longitude', 'Rayon']
+  const NIARE = 'ETABLISSEMENT NIARE & FRERES'
+  const pdvD = (id: string, lat: number, lng: number, distributor_name: string | null) =>
+    ({ pdv_id: id, zone: 'ABOBO 1', quartier: 'SAMAKE', is_active: true, geolocation_lat: lat, geolocation_lng: lng, distributor_name })
+  // Point A : 5.4195, -4.0084. Point B : 5.3000, -3.9000. 0,001° ≈ 111 m.
+  const pdvsD = [
+    pdvD('N1', 5.4196, -4.0084, NIARE), // ~11 m de A
+    pdvD('N2', 5.4220, -4.0084, NIARE), // ~280 m de A
+    pdvD('O1', 5.4196, -4.0085, 'PRODISMA'), // autre distributeur, ~16 m de A
+    pdvD('K1', 5.4197, -4.0084, null), // portefeuille DMS, sans distributeur, ~22 m de A
+    pdvD('N3', 5.3117, -3.9000, NIARE), // ~1 300 m de B, seul
+  ]
+  const L_ = (...v: string[]) => v
+  const lignesD = [
+    L_('Abobo - Anyama', 'Abobo', 'Tano Venance', 'Niare & Frères', 'M. Rachid', 'Samedi', '2', 'Kennedy 2', 'Aucun SSF', '-', '5.4195', '-4.0084', ''),
+    L_('Abobo - Anyama', 'Abobo', 'Tano Venance', 'Niare & Frères', 'M. Rachid', 'Lundi', '1', 'Djibi village', 'Aucun SSF', '-', '5.3000', '-3.9000', ''),
+    L_('Abobo - Anyama', 'Abobo', 'Tano Venance', '', 'M. Rachid', 'Mardi', '1', 'Kennedy', 'Aucun SSF', '-', '5.4195', '-4.0084', ''),
+  ]
+  const feuillesD = [{ nom: 'R', lignes: [ENTETE_P, ...lignesD].map((v, i) => ({ n: i + 1, cellules: ['', ...v] })) }]
+  const dD = donnees({
+    pdvs: pdvsD, aliasImport: [{ type: 'distributeur', motif: 'NIARE', mode: 'contient', cible: NIARE }],
+    reglesPdv: [{ template_id: T_SSF, pdv_id: 'P3', position_order: 1 }, { template_id: T_DMS, pdv_id: 'K1', position_order: 1 }],
+  })
+  const res = simulerRoutingMensuel(lireRoutingMensuel(feuillesD), dD, { fichier: 'distributeur.csv', debut: '2026-10-12' })
+  const regles = (res.operations as any[]).find(o => o.type === 'regles_mensuelles.remplacer' && o.user_id === M2).regles
+  const regleDu = (jour: number) => regles.find((r: any) => r.days_of_week[0] === jour)
+
+  it('prend les PDV du distributeur dans le rayon, ni ceux d’un autre distributeur, ni le portefeuille', () => {
+    expect([...regleDu(6).pdv_ids].sort()).toEqual(['N1', 'N2'])
+    expect(regleDu(6).notes).toMatch(/PDV de ETABLISSEMENT NIARE & FRERES à moins de 500 m/)
+  })
+
+  it('aucun PDV du distributeur à 500 m : rayon élargi jusqu’à 1 500 m, et c’est signalé', () => {
+    expect(regleDu(1).pdv_ids).toEqual(['N3'])
+    expect(regleDu(1).notes).toMatch(/1500 m .*rayon élargi/)
+    expect(res.rapport).toMatch(/rayon élargi/)
+    expect(res.rapport).toMatch(/Djibi village : 1 PDV de ETABLISSEMENT NIARE & FRERES à 1500 m/)
+  })
+
+  it('sans distributeur sur la ligne : le portefeuille dans le rayon, comme avant', () => {
+    expect(regleDu(2).pdv_ids).toEqual(['K1'])
+    expect(regleDu(2).notes).toMatch(/portefeuille à moins de 500 m/)
+  })
+})
