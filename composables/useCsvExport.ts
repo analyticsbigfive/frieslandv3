@@ -4,6 +4,7 @@ import { chargerExcelJS } from '~/utils/chargerExcel'
 import type { Visite, PDV } from '~/types'
 import { parseCsvTexte } from '~/utils/routingImport'
 import { catalogueProduits, getSkus, skuQuantity } from '~/utils/products'
+import { aGps, lienGoogleMaps, merchandiserDe, type PdvAgence } from '~/utils/pdvAgence'
 
 export function useCsvExport() {
 
@@ -145,6 +146,47 @@ export function useCsvExport() {
   }
 
   /**
+   * Points de vente › PDV de l'agence : la liste filtrée, avec le lien Google
+   * Maps de chaque PDV géolocalisé (à compléter ou vérifier par l'agence).
+   */
+  async function exportPdvAgenceToExcel(lignes: PdvAgence[], nomFichier = 'pdv-agence.xlsx') {
+    const Excel = await chargerExcelJS()
+    const wb = new Excel.Workbook()
+    const ws = wb.addWorksheet('PDV de l\'agence')
+    ws.columns = [
+      { header: 'ID PDV', key: 'pdv_id', width: 12 },
+      { header: 'Point de vente', key: 'nom_pdv', width: 28 },
+      { header: 'Type', key: 'sous_categorie_pdv', width: 16 },
+      { header: 'Zone', key: 'zone', width: 18 },
+      { header: 'Quartier', key: 'quartier', width: 20 },
+      { header: 'Distributeur', key: 'distributor_name', width: 28 },
+      { header: 'Téléphone', key: 'adressage', width: 18 },
+      { header: 'GPS', key: 'gps', width: 8 },
+      { header: 'Latitude', key: 'geolocation_lat', width: 12 },
+      { header: 'Longitude', key: 'geolocation_lng', width: 12 },
+      { header: 'Google Maps', key: 'maps', width: 40 },
+      { header: 'Visites', key: 'nb_visites', width: 9 },
+      { header: 'Dernière visite', key: 'derniere', width: 15 },
+      { header: 'Merchandiser', key: 'merchandiser', width: 26 },
+      { header: 'Recensé par', key: 'recense_par', width: 26 },
+    ]
+    ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
+    ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF003DA5' } }
+    for (const p of lignes) {
+      ws.addRow({
+        ...p,
+        gps: aGps(p) ? 'Oui' : 'Non',
+        maps: lienGoogleMaps(p),
+        derniere: p.derniere_visite ? p.derniere_visite.slice(0, 10) : 'Jamais',
+        merchandiser: merchandiserDe(p) || '',
+      })
+    }
+    ws.autoFilter = { from: 'A1', to: 'O1' }
+    const buffer = await wb.xlsx.writeBuffer()
+    downloadFile(buffer, nomFichier, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+  }
+
+  /**
    * Export to CSV
    */
   function exportToCsv(data: any[], filename: string) {
@@ -206,6 +248,7 @@ export function useCsvExport() {
   return {
     exportVisitesToExcel,
     exportPDVToExcel,
+    exportPdvAgenceToExcel,
     exportToCsv,
     downloadUsersTemplate,
     parseCsv,
