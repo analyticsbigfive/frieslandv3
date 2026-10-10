@@ -59,10 +59,10 @@
         </dl>
       </section>
 
-      <section v-if="productDetail.length" class="mb-6">
+      <section v-if="!sansReleveProduits && productDetail.length" class="mb-6">
         <h3 class="text-base font-semibold text-slate-900 dark:text-white">Disponibilité en rayon par référence</h3>
         <p class="mb-3 mt-1 text-sm text-slate-600 dark:text-slate-300">
-          Quantité relevée pendant la visite, comparée au seuil demandé pour ce type de point de vente.
+          Ce que le merchandiser a relevé pour chaque référence. Quand la visite a aussi une quantité, elle est comparée au seuil demandé pour ce type de point de vente.
         </p>
         <div class="space-y-3">
           <div v-for="cat in productDetail" :key="cat.key" class="admin-surface overflow-x-auto">
@@ -70,38 +70,40 @@
               <thead>
                 <tr>
                   <th scope="col">{{ cat.label }}</th>
-                  <th scope="col" class="whitespace-nowrap text-right">Quantité relevée</th>
-                  <th scope="col" class="whitespace-nowrap text-right">Seuil requis</th>
-                  <th scope="col">Disponible</th>
+                  <th scope="col">Disponibilité</th>
+                  <th scope="col">Prix</th>
+                  <th v-if="cat.avecQuantites" scope="col" class="whitespace-nowrap text-right">Quantité relevée</th>
+                  <th v-if="cat.avecQuantites" scope="col" class="whitespace-nowrap text-right">Seuil requis</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="item in cat.items" :key="item.nom">
                   <td class="font-medium text-slate-900 dark:text-white">{{ item.nom }}</td>
-                  <td class="text-right tabular-nums">{{ item.qte }}</td>
-                  <td class="text-right tabular-nums">{{ item.seuil ?? '—' }}</td>
                   <td class="whitespace-nowrap">
-                    <span
-                      v-if="item.evaluable"
-                      class="inline-flex items-center gap-1.5"
-                      :class="item.ok ? 'font-medium text-emerald-700 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-200'"
-                    >
-                      <UIcon
-                        :name="item.ok ? 'i-heroicons-check-circle-solid' : 'i-heroicons-x-circle'"
-                        class="h-4 w-4 shrink-0"
-                        aria-hidden="true"
-                      />
-                      {{ item.ok ? 'Oui' : 'Sous le seuil' }}
-                    </span>
-                    <span v-else class="text-slate-600 dark:text-slate-300" title="Aucun seuil défini pour cette référence et ce type de point de vente">
-                      Non évaluable
+                    <span class="inline-flex items-center gap-1.5" :class="STATUTS_DISPO[item.statut].classe" :title="STATUTS_DISPO[item.statut].aide">
+                      <UIcon :name="STATUTS_DISPO[item.statut].icone" class="h-4 w-4 shrink-0" aria-hidden="true" />
+                      {{ STATUTS_DISPO[item.statut].libelle }}
                     </span>
                   </td>
+                  <td class="whitespace-nowrap" :class="item.prix === 'non_respecte' ? 'font-medium text-red-700 dark:text-red-400' : 'text-slate-700 dark:text-slate-200'">
+                    {{ item.prix ? LIBELLES_PRIX[item.prix] : '—' }}
+                  </td>
+                  <td v-if="cat.avecQuantites" class="text-right tabular-nums">{{ item.qte ?? '—' }}</td>
+                  <td v-if="cat.avecQuantites" class="text-right tabular-nums">{{ item.seuil ?? '—' }}</td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
+      </section>
+
+      <section v-if="sansReleveProduits" class="mb-6">
+        <h3 class="text-base font-semibold text-slate-900 dark:text-white">Disponibilité en rayon par référence</h3>
+        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+          {{ (visite?.data as any)?.source === 'bonnet-rouge-export'
+            ? 'Visite reprise de l’export Bonnet Rouge de l’agence : ce fichier ne contient pas les relevés produits.'
+            : 'Aucun relevé produit n’a été enregistré pendant cette visite.' }}
+        </p>
       </section>
 
       <section v-if="visibilityDetail.length" class="mb-6">
@@ -272,11 +274,26 @@
 </template>
 
 <script setup lang="ts">
+
+type StatutAffiche = DisponibiliteReleve | 'sous_seuil'
+const STATUTS_DISPO: Record<StatutAffiche, { libelle: string, icone: string, classe: string, aide?: string }> = {
+  disponible: { libelle: 'Disponible', icone: 'i-heroicons-check-circle-solid', classe: 'font-medium text-emerald-700 dark:text-emerald-400' },
+  sous_seuil: { libelle: 'Sous le seuil', icone: 'i-heroicons-arrow-trending-down', classe: 'font-medium text-amber-800 dark:text-amber-300', aide: 'Présente en rayon, mais en quantité inférieure au seuil demandé' },
+  rupture: { libelle: 'En rupture', icone: 'i-heroicons-x-circle', classe: 'font-medium text-red-700 dark:text-red-400' },
+  contradictoire: { libelle: 'Relevé contradictoire', icone: 'i-heroicons-exclamation-triangle', classe: 'text-amber-800 dark:text-amber-300', aide: '« Disponible » et « En rupture » ont été cochés tous les deux' },
+  indetermine: { libelle: 'Non précisé', icone: 'i-heroicons-question-mark-circle', classe: 'text-slate-600 dark:text-slate-300', aide: 'Seul le prix a été relevé pour cette référence' },
+  non_renseigne: { libelle: 'Non renseigné', icone: 'i-heroicons-minus-circle', classe: 'text-slate-600 dark:text-slate-300', aide: 'Référence non relevée pendant cette visite' },
+}
+const LIBELLES_PRIX: Record<Exclude<PrixReleve, null>, string> = {
+  respecte: 'Respecté',
+  non_respecte: 'Non respecté',
+  contradictoire: 'Contradictoire',
+}
 import type { Visite } from '~/types'
 import { tradeTypeForCanal, type PerfectStoreResultB } from '~/utils/perfectStore'
 import { visibilityElementObserved, visibilitySegmentForPdv, FALLBACK_VISIBILITY_ELEMENTS } from '~/utils/visibilityStandards'
 import { photosAffichables } from '~/utils/visitePhotos'
-import { catalogueProduits, categoriesProduitsActives, getCategoryDef } from '~/utils/products'
+import { catalogueProduits, categoriesProduitsActives, getCategoryDef, releveSku, type DisponibiliteReleve, type PrixReleve } from '~/utils/products'
 import { visibiliteConcurrencePresente } from '~/utils/concurrence'
 import { isModernTrade } from '~/utils/canal'
 import { formatDateFr } from '~/utils/dates'
@@ -335,6 +352,12 @@ const dispoSegmentGrade = computed(() => {
   return refs.value?.segmentGrade.find(s => s.type_pdv_nom === sousCategorie) || null
 })
 
+// Visites sans aucun relevé produit (ex. visites reprises de l'export Atom).
+const sansReleveProduits = computed(() => {
+  const produits = (props.visite?.data as any)?.produits
+  return !produits || typeof produits !== 'object' || !Object.keys(produits).length
+})
+
 const productDetail = computed(() => {
   if (!refs.value) return []
   const canal = dispoSegmentGrade.value?.canal ?? tradeTypeForCanal(props.visite?.pdv?.canal)
@@ -349,11 +372,17 @@ const productDetail = computed(() => {
       .map((c) => {
         const poidsRow = refs.value!.poids.find(p => p.reference_nom === c.reference_nom && p.canal === canal && p.base_calcul === 'taux_vente')
         const seuilRow = segment && grade ? refs.value!.seuils.find(s => s.reference_nom === c.reference_nom && s.segment === segment && s.grade === grade) : undefined
-        const qte = Number(produits?.[cat]?.quantites?.[c.sku_key]) || 0
-        const evaluable = !!(poidsRow && seuilRow)
-        return { nom: c.reference_nom, qte, seuil: seuilRow?.quantite_min ?? null, evaluable, ok: evaluable && qte >= seuilRow!.quantite_min }
+        const releve = releveSku(produits?.[cat], c.sku_key)
+        const qte = releve.quantite
+        const seuil = seuilRow?.quantite_min ?? null
+        // Quantité relevée et seuil connus : « Sous le seuil » précise « Disponible ».
+        const sousLeSeuil = !!poidsRow && qte !== null && seuil !== null && qte > 0 && qte < seuil
+        const statut: StatutAffiche = sousLeSeuil ? 'sous_seuil' : releve.disponibilite
+        return { nom: c.reference_nom, qte, seuil, statut, prix: releve.prix }
       }),
-  })).filter(cat => cat.items.length)
+  }))
+    .map(cat => ({ ...cat, avecQuantites: cat.items.some(i => i.qte !== null) }))
+    .filter(cat => cat.items.length)
 })
 
 const promotionApplicable = computed(() => (props.visite?.data as any)?.visibilite?.promotion_applicable === true)
