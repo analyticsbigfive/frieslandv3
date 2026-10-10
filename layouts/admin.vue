@@ -143,6 +143,10 @@
         </div>
       </footer>
     </div>
+    <!-- Conteneur des toasts (useToast) : sans lui, aucune notification du
+         back-office ne s'affichait. Limité au layout admin : l'application
+         mobile garde ses propres messages. -->
+    <UNotifications />
   </div>
 </template>
 

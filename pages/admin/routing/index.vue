@@ -36,7 +36,11 @@
         </template>
       </template>
     </AdminPageHeader>
-    <p v-if="lectureSeule" class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+    <p v-if="authStore.isCommercial" class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+      <UIcon name="i-heroicons-eye" class="h-4 w-4 shrink-0" aria-hidden="true" />
+      <span>Consultation : les tournées et les règles des merchandisers de votre équipe. Pour les modifier, adressez-vous à votre superviseur.</span>
+    </p>
+    <p v-else-if="lectureSeule" class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
       <UIcon name="i-heroicons-eye" class="h-4 w-4 shrink-0" aria-hidden="true" />
       <span>
         Consultation : le routing de vos merchandisers se charge dans
@@ -270,7 +274,10 @@
       <div v-else-if="groupedTemplates.length === 0" class="admin-surface p-8 text-center">
         <UIcon name="i-heroicons-calendar" class="mx-auto mb-3 h-10 w-10 text-slate-400" aria-hidden="true" />
         <p class="font-semibold text-slate-900 dark:text-white">Aucune règle récurrente</p>
-        <p v-if="lectureSeule" class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+        <p v-if="authStore.isCommercial" class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+          Aucune règle pour les merchandisers de votre équipe. Les merchandisers vous sont rattachés dans leur fiche utilisateur.
+        </p>
+        <p v-else-if="lectureSeule" class="mt-1 text-sm text-slate-600 dark:text-slate-300">
           Aucune règle pour vos merchandisers : le routing se charge dans
           <AdminLienEcran chemin="/admin/import-export">Paramètres › Import / Export</AdminLienEcran>.
         </p>
@@ -1301,17 +1308,18 @@ import { messageUtilisateur } from '~/utils/supabaseErrors'
 import { compte, pluriel } from '~/utils/pluriel'
 
 // Écran de PLANIFICATION : création et édition de routings, de templates et
-// d'exceptions. La matrice RBAC le range dans la section « principal », ouverte
-// au commercial — qui consulte en lecture seule. Une garde de route plutôt
-// qu'une dizaine de `v-if` : les contrôles d'écriture sont disséminés dans tout
-// le fichier, en manquer un rouvrirait le trou en silence.
+// d'exceptions. Admin et superviseur modifient ; agence et commercial
+// consultent (lectureSeule masque les contrôles d'écriture). La base ne leur
+// ouvre que la lecture des tournées de leurs merchandisers (politiques
+// *_select_agence et *_select_commercial) : un contrôle oublié dans le
+// gabarit échouerait côté serveur, il ne rouvrirait pas l'écriture.
 definePageMeta({
   middleware: [
     'auth',
     'admin',
     () => {
       const authStore = useAuthStore()
-      if (!authStore.isSuperviseur && !authStore.isAgence) return navigateTo('/admin')
+      if (!authStore.isSuperviseur && !authStore.isAgence && !authStore.isCommercial) return navigateTo('/admin')
     },
   ],
   layout: 'admin',
@@ -1420,7 +1428,7 @@ async function handleImportRoutings() {
 const route = useRoute()
 const activeTab = computed(() => (route.query.vue === 'regles' ? 'templates' : 'routings'))
 // Compte agence : consultation (les règles de la base limitent aussi les écritures).
-const lectureSeule = computed(() => authStore.isAgence)
+const lectureSeule = computed(() => authStore.isAgence || authStore.isCommercial)
 
 // ---- Shared state ----
 // true d'emblée : sans ça, « Aucun routing trouvé » s'affichait le temps du
@@ -2731,7 +2739,10 @@ onMounted(async () => {
       .order('nom_pdv').order('pdv_id')
       .range(from, to)),
   ])
-  users.value = cachedUsers.filter(u => u.is_active !== false)
+  // Commercial : le filtre « Personne » se limite à son équipe.
+  const moi = authStore.profile?.id
+  users.value = cachedUsers.filter(u => u.is_active !== false
+    && (!authStore.isCommercial || u.commercial_id === moi))
   pdvList.value = pdvResult
 })
 </script>

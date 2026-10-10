@@ -116,8 +116,8 @@ export const ADMIN_DOMAINS: AdminDomain[] = [
     icon: 'i-heroicons-calendar-days',
     group: 'terrain',
     tabs: [
-      { id: 'planning.tournees', label: 'Tournées', title: 'Tournées planifiées', path: '/admin/routing', access: 'principal', roles: ['admin', 'superviseur', 'agence'], aide: 'Les tournées prévues pour chaque merchandiser.' },
-      { id: 'planning.regles', label: 'Règles récurrentes', path: '/admin/routing', query: { vue: 'regles' }, access: 'principal', roles: ['admin', 'superviseur', 'agence'], aide: 'Les règles qui génèrent les tournées chaque semaine ou chaque mois.' },
+      { id: 'planning.tournees', label: 'Tournées', title: 'Tournées planifiées', path: '/admin/routing', access: 'principal', roles: ['admin', 'superviseur', 'agence', 'commercial'], aide: 'Les tournées prévues pour chaque merchandiser.' },
+      { id: 'planning.regles', label: 'Règles récurrentes', path: '/admin/routing', query: { vue: 'regles' }, access: 'principal', roles: ['admin', 'superviseur', 'agence', 'commercial'], aide: 'Les règles qui génèrent les tournées chaque semaine ou chaque mois.' },
       { id: 'planning.programme', label: 'Programme merchandiser', path: '/admin/routing/programme-merchandiser', access: 'principal', aide: 'La couverture du mois des merchandisers d\'agence.' },
       { id: 'planning.ecarts', label: 'Écarts de tournée', title: 'Écarts entre merchandisers et vendeurs', path: '/admin/routing/ecarts-ssf', access: 'principal', aide: 'Les jours où le merchandiser et le vendeur du distributeur ne sont pas passés aux mêmes endroits.' },
     ],

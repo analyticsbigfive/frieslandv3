@@ -473,6 +473,8 @@
         </div>
       </div>
     </UModal>
+
+    <AdminConfirmation v-bind="confirmation" @confirmer="confirmer" @annuler="annuler" />
   </div>
 </template>
 
@@ -500,6 +502,7 @@ const pdvStore = usePDVStore()
 const { exportPDVToExcel, parseCsv } = useCsvExport()
 const toast = useToast()
 const supabase = useSupabaseClient()
+const { confirmation, demanderConfirmation, confirmer, annuler } = useConfirmation()
 
 const pdvList = computed(() => pdvStore.pdvList)
 const total = computed(() => pdvStore.total)
@@ -819,7 +822,12 @@ function openPDVOnMap(pdv: PDV) {
 // retirées : la confirmation le dit avec le nom du point de vente.
 async function deletePDV(pdv: PDV) {
   const nom = pdv.nom_pdv || 'ce point de vente'
-  if (!confirm(`Supprimer « ${nom} » ?\n\nIl n’apparaîtra plus dans les listes ni dans les tournées.`)) return
+  const ok = await demanderConfirmation({
+    titre: `Supprimer « ${nom} » ?`,
+    message: 'Il n’apparaîtra plus dans les listes ni dans les tournées.',
+    libelleAction: 'Supprimer le point de vente',
+  })
+  if (!ok) return
   try {
     await pdvStore.deletePDV(pdv.pdv_id)
     toast.add({ title: 'Point de vente supprimé', description: `« ${nom} » n’apparaît plus dans les listes ni dans les tournées.`, color: 'green' })

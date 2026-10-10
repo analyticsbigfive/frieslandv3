@@ -143,10 +143,11 @@ describe('registre de navigation', () => {
       for (const e of reserves) expect(ouverts).not.toContain(e)
       expect(ouverts).toContain('Paramètres › Référentiels')
     }
-    // Tournées et Règles récurrentes : admin, superviseur et agence seulement.
+    // Tournées et Règles récurrentes : admin, superviseur, agence et commercial
+    // (ces deux derniers en consultation).
     const planning = ['Planning › Tournées', 'Planning › Règles récurrentes']
     for (const e of planning) {
-      expect(sectionCoverage('principal', 'commercial')).not.toContain(e)
+      expect(sectionCoverage('principal', 'commercial')).toContain(e)
       expect(sectionCoverage('principal', 'merchandiser')).not.toContain(e)
       expect(sectionCoverage('principal', 'superviseur')).toContain(e)
       expect(sectionCoverage('principal', 'agence')).toContain(e)
@@ -178,9 +179,9 @@ describe('droits par rôle', () => {
     expect(peut('superviseur', '/admin/users')).toBe(false)
   })
 
-  it('commercial : Programme et Écarts, pas les tournées ni les règles', () => {
-    expect(peut('commercial', '/admin/routing')).toBe(false)
-    expect(peut('commercial', '/admin/routing', { vue: 'regles' })).toBe(false)
+  it('commercial : tournées et règles en consultation, Programme et Écarts', () => {
+    expect(peut('commercial', '/admin/routing')).toBe(true)
+    expect(peut('commercial', '/admin/routing', { vue: 'regles' })).toBe(true)
     expect(peut('commercial', '/admin/routing/programme-merchandiser')).toBe(true)
     expect(peut('commercial', '/admin/routing/ecarts-ssf')).toBe(true)
   })

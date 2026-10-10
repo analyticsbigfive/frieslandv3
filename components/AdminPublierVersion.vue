@@ -81,6 +81,8 @@
         <p v-if="etape" class="text-sm text-slate-600 dark:text-slate-300" aria-live="polite">{{ etape }}</p>
       </div>
     </section>
+
+    <AdminConfirmation v-bind="confirmation" @confirmer="confirmer" @annuler="annuler" />
   </div>
 </template>
 
@@ -90,6 +92,7 @@ import { messageUtilisateur } from '~/utils/supabaseErrors'
 
 const supabase = useSupabaseClient()
 const toast = useToast()
+const { confirmation, demanderConfirmation, confirmer, annuler } = useConfirmation()
 
 const actuelle = ref<any>(null)
 const installees = ref<{ cle: string, nom: string, code: number, nombre: number }[]>([])
@@ -163,7 +166,12 @@ async function choisir(event: Event) {
 async function publier() {
   const m = manifeste.value
   if (!fichier.value || !m || blocages.value.length) return
-  if (obligatoire.value && !confirm(`Rendre la version ${m.versionName} obligatoire ? Les téléphones en version plus ancienne seront bloqués jusqu’à la mise à jour.`)) return
+  if (obligatoire.value && !(await demanderConfirmation({
+    titre: `Rendre la version ${m.versionName} obligatoire ?`,
+    message: 'Les téléphones en version plus ancienne seront bloqués jusqu’à la mise à jour.',
+    libelleAction: `Publier ${m.versionName} (obligatoire)`,
+    destructif: false,
+  }))) return
   envoi.value = true
   try {
     etape.value = 'Étape 1 sur 3 : préparation de l’envoi…'
