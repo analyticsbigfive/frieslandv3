@@ -1,6 +1,6 @@
 # Guide d'administration — Big Five / Perfect Store (Friesland Bonnet Rouge)
 
-> Mise à jour du 9 octobre 2026. Application 1.0.12 (`package.json`).
+> Mise à jour du 14 octobre 2026. Application 1.0.12 (`package.json`).
 > Référence de l'équipe technique et des administrateurs avancés : le
 > back-office web (`/admin`) et tous les réglages qui pilotent l'application
 > mobile, sans passer par l'éditeur SQL. Le guide d'utilisation, ouvert par le
@@ -16,6 +16,11 @@
 > versions de l'app en un seul endroit (§8) ; Import / Export avec aperçu et
 > imports terrain ouverts à l'agence (§11) ; Maintenance renommée « Tâches
 > automatiques » (§12) ; Permissions avec colonne Agence (§7).
+>
+> Changements du 14 octobre : objectifs de disponibilité 2026 (§6 bis, écran
+> `Produits › Objectifs`, liste « Objectifs de disponibilité » des
+> Référentiels) ; agence Hello Event et ses 10 merchandisers des supermarchés
+> (§7 ter) ; guide « supermarchés » pour leurs comptes (§7 ter).
 
 ---
 
@@ -600,6 +605,58 @@ section « Types de PDV ».
 
 ---
 
+## 6 bis. Objectifs de disponibilité (`Produits › Objectifs`, `/admin/produits/objectifs`)
+
+Fichier client du 14/10/2026 « OBJECTIFS 2026 DISPONIBILITE IVC » : pour
+chaque trimestre et chaque canal, la part des PDV où chaque produit doit être
+disponible, la part des PDV avec PLV extérieure / intérieure et le respect
+des prix par famille. Migration `20261014130000_friesland_objectifs_disponibilite.sql`
+(appliquée le 14/10/2026).
+
+- **Objectifs** : table `objectif_disponibilite` (année, trimestre, canal
+  `GT_ABIDJAN` | `GT_UPC` | `MT`, indicateur `dispo` | `plv_exterieure` |
+  `plv_interieure` | `prix`, référence ou famille, cible de 0 à 1). 208
+  objectifs 2026 chargés depuis les feuilles GT ABIDJAN, GT UPC et MT ; une
+  cellule vide ou à 0 ne donne pas d'objectif. La feuille National n'est pas
+  stockée : son objectif est la moyenne des canaux qui en ont un. Écriture :
+  admin et superviseur (RLS).
+- **Saisie** : `Paramètres › Référentiels`, liste « Objectifs de
+  disponibilité » (section Produits) : grille par trimestre, en %, case vide =
+  pas d'objectif ; « Reprendre le T… » recopie le trimestre précédent sans
+  enregistrer ; changer de trimestre, de liste ou de page avec des saisies non
+  enregistrées demande confirmation.
+- **Canal d'un PDV** (`canal_objectif`, miroir `utils/objectifsDisponibilite.ts`) :
+  `Modern trade` → MT ; sinon région ABIDJAN 1/2 → GT Abidjan ; CNO, CNE, C →
+  GT intérieur ; à défaut la division du territoire. Un PDV sans région
+  (« sans canal ») ne compte dans aucun canal ni dans le National.
+- **Réalisé** (RPC `dashboard_objectifs_disponibilite(annee, trimestre,
+  territoire)`, sans `security definer` : un compte agence ne voit que son
+  périmètre) : dernière visite **avec relevé produit** de chaque PDV dans le
+  trimestre. Disponible = règle de `dashboard_presence_skus` (quantité ≥ seuil
+  Perfect Store du segment / grade ; en MT, standard MT et facings ; sinon
+  statut « Disponible » sans rupture). Seuls les PDV où le produit a été
+  relevé comptent ; sans seuil pour le type, le produit n'y est pas attendu
+  (`hors_calcul`). Types hérités sans grade (« Supermarché », « Superette
+  MT », « Kiosque »…) : segment le plus proche, grade le moins exigeant.
+  PLV : `visibilite.<emplacement>.presence_visibilite` ; prix :
+  `produits.<famille>.prix_respectes` parmi les PDV où la famille est
+  présente ; ligne « base » = PDV relevés par canal.
+- **Écran** : tuiles (objectifs atteints, en retard, plus gros écart, PDV
+  relevés), « À rattraper en priorité » (5 plus gros écarts), puis un tableau
+  par famille et un tableau PLV / prix. Atteint = réalisé arrondi ≥ objectif
+  arrondi ; proche = à 5 points ou moins ; sous 30 PDV, « base faible » (pas
+  de verdict). Trimestre en cours sous 30 PDV relevés : l'écran ouvre le
+  dernier trimestre complet. `?trimestre=2026-T3&territoire=…` dans l'URL.
+  Export CSV de toutes les cases.
+- **Non calculés** : les KPI merchandising (60 %), visibilité (90 %) et prix
+  par produit (100 %) du fichier : l'application n'en a pas de mesure fiable
+  (une seule question de prix par famille).
+- **À savoir** : peu de relevés produits depuis septembre 2026 (T4 presque
+  vide au 14/10) ; les boîtes IMP des visites importées semblent inversées
+  (convention de l'application retenue le 10/10).
+
+---
+
 ## 7. Utilisateurs, équipes, versions et permissions
 
 - **`Paramètres › Utilisateurs`** (`/admin/users`, admin seulement) :
@@ -633,6 +690,30 @@ section « Types de PDV ».
   toujours (`ecransOuvertsA('agence')`), et le rappel qu'Utilisateurs et
   Permissions restent réservés à l'administrateur. Seul l'admin peut écrire
   dans la table (politique `rsa_admin_write`).
+
+---
+
+## 7 ter. Agence Hello Event (supermarchés)
+
+Fiche client du 14/10/2026 « FICHE DE ZONE MERCHANDISEUR ABIDJAN ET UPC » :
+10 merchandisers des supermarchés (8 à Abidjan, 2 à l'intérieur), employés de
+l'agence **Hello Event Communication & Événementiel**.
+
+- Agence `hello-event` (direction MT, sans programme : ni quotas ni routing
+  mensuel). Comptes créés par `scripts/ajout-merch-hello-event-2026-10-14.mjs`
+  (simulation par défaut, `--apply`) : aucun n'existait.
+- Identifiants génériques par poste : `helloevent.abidjan1` à `abidjan8`,
+  `helloevent.upc9` et `upc10` `@friesland-terrain.ci` (domaine fictif, aucun
+  e-mail n'y arrive). Mot de passe provisoire `SEED_DEFAULT_PASSWORD`,
+  changement imposé à la première connexion.
+- Périmètre : les communes (`pdv.zone`) des magasins de leur fiche, sinon
+  `pdv_ids_perimetre()` leur donnerait tout le parc. Les magasins ne sont pas
+  rattachés (pas de tournée) : ils visitent depuis l'onglet PDV. Pour leur
+  donner des tournées : import « Liste de PDV par jour » (§11).
+- Guides : `node scripts/generer-guides-pdf.mjs --utilisateurs --employeur
+  hello-event --avec-mots-de-passe` produit un guide « supermarchés »
+  personnalisé par compte (`docs/guides/utilisateurs/merchandiseurs/`, non
+  versionné, à remettre au seul destinataire).
 
 ---
 

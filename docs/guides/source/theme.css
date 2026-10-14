@@ -218,3 +218,4 @@ dl.glossaire dd { margin: 0; }
 .semaine { margin: 0 0 6mm; }
 .semaine h2 { display: block; }
 .semaine .muet { color: var(--gris); font-size: 8.5pt; }
+p.muet { color: var(--gris); font-size: 8.5pt; }

@@ -79,3 +79,9 @@ supabase/.temp/
 
 # Guides PDF personnalisés (nom, e-mail, territoires : données personnelles)
 docs/guides/utilisateurs/
+# Guides PDF générés (scripts/generer-guides-pdf.mjs, GUIDE-ADMINISTRATION.md) :
+# remis hors dépôt. Les sources (docs/guides/source/, GUIDE-ADMINISTRATION.md)
+# restent versionnées, comme les copies de server/assets/guides/ que sert le
+# bouton Aide en production.
+docs/guides/*.pdf
+docs/GUIDE-ADMINISTRATION.pdf

@@ -195,6 +195,7 @@ export const ADMIN_DOMAINS: AdminDomain[] = [
     tabs: [
       { id: 'produits.synthese', label: 'Synthèse', title: 'Produits', path: '/admin/produits/recap', access: 'produits' },
       { id: 'produits.disponibilite', label: 'Disponibilité', title: 'Disponibilité des produits', path: '/admin/produits/familles', access: 'produits' },
+      { id: 'produits.objectifs', label: 'Objectifs', title: 'Objectifs de disponibilité', path: '/admin/produits/objectifs', access: 'produits', aide: 'Le réalisé du trimestre face aux objectifs par canal : boutiques d’Abidjan et de l’intérieur (GT), supermarchés (MT).' },
       { id: 'produits.prix', label: 'Prix', title: 'Prix relevés', path: '/admin/produits/familles', query: { vue: 'prix' }, access: 'produits' },
       { id: 'produits.releves', label: 'Détail par visite', title: 'Relevés produits par visite', path: '/admin/produits/familles', query: { vue: 'releves' }, access: 'produits' },
       { id: 'produits.inventaire', label: 'Inventaire', title: 'Inventaire des références', path: '/admin/produits/inventaire', access: 'produits' },

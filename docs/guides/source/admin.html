@@ -20,7 +20,7 @@
   <p>Ce que voit un utilisateur du terrain dépend de ses <strong>territoires</strong> et, s’ils sont renseignés, de ses <strong>quartiers</strong>. Le rattachement à un commercial (Équipes) est organisationnel : il ne change pas ce qu’on voit.</p>
 
   <h3>Les personnes du terrain</h3>
-  <p>Le <strong>commercial</strong> (salarié FrieslandCampina) est responsable des points de vente de son territoire. Deux métiers travaillent pour lui : le <strong>vendeur du distributeur</strong> (on dit « SSF ») vend et livre ; le <strong>merchandiser</strong> (souvent employé d’une agence) installe les produits et la visibilité en magasin. Ni l’un ni l’autre ne dirige l’autre : le <strong>routing mensuel</strong> de l’agence les fait simplement passer dans les mêmes points de vente le même jour.</p>
+  <p>Le <strong>commercial</strong> (salarié FrieslandCampina) est responsable des points de vente de son territoire. Deux métiers travaillent pour lui : le <strong>vendeur du distributeur</strong> (on dit « SSF ») vend et livre ; le <strong>merchandiser</strong> (souvent employé d’une agence : Atom BTL dans les boutiques d’Abidjan, Hello Event dans les supermarchés) installe les produits et la visibilité en magasin. Ni l’un ni l’autre ne dirige l’autre : le <strong>routing mensuel</strong> de l’agence les fait simplement passer dans les mêmes points de vente le même jour.</p>
 </section>
 
 <section class="chapitre">
@@ -222,6 +222,20 @@
     <img src="guides/source/captures/guide/produits.png" alt="Disponibilité d’une famille de produits">
     <figcaption>La famille de produits est un filtre de la page, pas un onglet de plus.</figcaption>
   </figure>
+
+  <h3>Objectifs de disponibilité</h3>
+  <p><span class="ui">Produits</span> › <span class="ui">Objectifs</span> compare, pour un trimestre, le réalisé aux objectifs fixés par FrieslandCampina, par canal : <strong>boutiques d’Abidjan (GT)</strong>, <strong>boutiques de l’intérieur (GT)</strong>, <strong>supermarchés (MT)</strong> et <strong>National</strong>. On y lit les 15 produits du fichier des objectifs, la PLV extérieure et intérieure, et le respect des prix par famille.</p>
+  <ul>
+    <li>En haut : objectifs atteints, nombre de retards, plus gros écart, points de vente relevés, puis la liste <span class="ui">À rattraper en priorité</span> (les 5 plus gros écarts).</li>
+    <li>Chaque case donne le réalisé, l’objectif, l’écart en points et le nombre de points de vente mesurés. <strong>Atteint</strong> : réalisé au moins égal à l’objectif ; <strong>Proche</strong> : à 5 points ou moins ; <strong>En retard</strong> au-delà. Sous 30 points de vente, la case n’est pas jugée (« base faible »).</li>
+    <li>Un point de vente compte une fois : sa dernière visite du trimestre avec un relevé produit. Disponible = quantité au standard Perfect Store de son type (en supermarché, le standard MT et les faces). Un produit sans seuil pour un type de point de vente n’y est pas attendu : ces points de vente sortent de sa base.</li>
+    <li>Le trimestre en cours est signalé comme provisoire. Tant qu’il compte moins de 30 points de vente relevés, l’écran ouvre le dernier trimestre complet. Le trimestre et le territoire choisis restent dans l’adresse de la page : on peut la partager.</li>
+    <li>L’objectif National est la moyenne des objectifs des canaux, comme dans le fichier du client. <span class="ui">Exporter (CSV)</span> donne toutes les cases.</li>
+  </ul>
+  <figure class="ecran">
+    <img src="guides/source/captures/guide/objectifs.png" alt="Les objectifs de disponibilité du trimestre">
+    <figcaption>Le réalisé du trimestre face aux objectifs, et les plus gros écarts.</figcaption>
+  </figure>
 </section>
 
 <section class="chapitre">
@@ -235,6 +249,8 @@
     <figcaption>Choisir une liste à gauche ; la modifier à droite.</figcaption>
   </figure>
   <ul>
+    <li><strong>Objectifs de disponibilité</strong> (Produits) : la grille des objectifs d’un trimestre, en %, par produit et par canal ; une case vide = pas d’objectif. <span class="ui">Reprendre le T… </span> recopie le trimestre précédent (rien n’est enregistré avant <span class="ui">Enregistrer les objectifs</span>). Changer de trimestre ou de page avec des saisies non enregistrées demande confirmation. Réservé à l’administrateur et au superviseur.</li>
+    <li><strong>Agences</strong> (Distribution et vendeurs) : les employeurs des merchandisers (FrieslandCampina, Atom BTL, Hello Event…), avec leur direction et l’indication « programme » (tournées par quotas et routing mensuel).</li>
     <li><strong>Paramètres terrain</strong> (Application mobile) : rayon de visite par défaut (300 m), précision GPS exigée (10 m), suivi de tournée, objectif de visites par jour… Les téléphones relisent ces valeurs à chaque ouverture.</li>
     <li><strong>Tâches automatiques</strong> : <span class="ui">Recalculer les tournées à venir</span>, <span class="ui">Générer les tournées manquantes</span>, <span class="ui">Rafraîchir les statistiques maintenant</span>, et l’état des tâches de nuit.</li>
   </ul>
@@ -273,7 +289,7 @@
   <h3>Versions de l’app</h3>
   <ul>
     <li>La <strong>version minimale exigée</strong> : en dessous, l’application affiche un écran de mise à jour obligatoire. <span class="ui">Modifier la version minimale</span> la change.</li>
-    <li>Le tableau montre qui est à jour, qui est bloqué et qui n’a rien déclaré, filtrable par direction, employeur et rôle ; <span class="ui">Exporter les comptes</span> fait l’inventaire des licences.</li>
+    <li>Le tableau montre qui est à jour, qui est bloqué et qui n’a rien déclaré, filtrable par direction, employeur et rôle ; <span class="ui">Exporter les comptes</span> fait l’inventaire des licences : comptes actifs, <strong>hors comptes de test</strong> (adresses <code>qa.…</code> ou domaine de test), par direction et par rôle. Une personne qui a deux comptes (commercial et merchandiser, par exemple) compte deux licences ; elle est signalée.</li>
     <li><span class="ui">Publier une nouvelle version</span> (administrateur) : déposez le fichier APK fourni par l’équipe technique ; laissez d’abord la version facultative, puis rendez-la obligatoire une fois en ligne sur le Play Store.</li>
   </ul>
 
@@ -318,6 +334,10 @@
     <dt>Famille de produits</dt><dd>EVAP, IMP, SCM, UHT… : regroupement des références relevées pendant la visite.</dd>
     <dt>Boutiques (GT)</dt><dd>Le commerce traditionnel (general trade) : boutiques, kiosques, superettes de quartier.</dd>
     <dt>Supermarchés (MT)</dt><dd>La grande distribution (modern trade).</dd>
+    <dt>Boutiques de l’intérieur (GT UPC)</dt><dd>Le commerce traditionnel hors d’Abidjan (up country), un canal des objectifs de disponibilité.</dd>
+    <dt>Objectif de disponibilité</dt><dd>La part des points de vente où un produit doit être disponible, fixée par trimestre et par canal.</dd>
+    <dt>Base faible</dt><dd>Moins de 30 points de vente mesurés : le résultat est montré, mais pas jugé.</dd>
+    <dt>Licence</dt><dd>Un compte actif de l’application ou du back-office, hors comptes de test.</dd>
     <dt>Écarts au standard</dt><dd>Les critères qui manquent à un point de vente pour atteindre le niveau visé.</dd>
     <dt>Vendeur du distributeur (SSF)</dt><dd>Il vend et livre les clients du distributeur ; il dépend, comme le merchandiser, du commercial.</dd>
     <dt>Fichier du distributeur (DMS)</dt><dd>Le logiciel des distributeurs, d’où viennent les clients de chaque vendeur et les portefeuilles des merchandisers.</dd>
@@ -345,7 +365,7 @@
     <h3>Arrivée d’un nouvel utilisateur</h3>
     <ol>
       <li>Créer le compte : rôle, téléphone, territoires (et quartiers) ; agence pour un merchandiser ou un compte Agence.</li>
-      <li>Pour un merchandiser : le rattacher à son commercial (Équipes) et lui prévoir des tournées (règle récurrente ou routing mensuel).</li>
+      <li>Pour un merchandiser : le rattacher à son commercial (Équipes) et lui prévoir des tournées (règle récurrente, routing mensuel, ou liste de points de vente par jour importée depuis Import / Export › Imports terrain). Sans tournée, il visite depuis l’onglet PDV de l’application, dans son périmètre.</li>
       <li><span class="ui">Réinitialiser le mot de passe</span> pour lui imposer un mot de passe personnel ; noter le mot de passe provisoire sur sa fiche.</li>
       <li>Lui remettre son guide et vérifier sa première connexion.</li>
     </ol>

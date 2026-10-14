@@ -3,7 +3,7 @@
  *
  * Usage :
  *   node scripts/generer-guides-pdf.mjs
- *       -> les 5 guides génériques : docs/guides/GUIDE-{ADMIN,ADMIN-ATOM,COMMERCIAL,MERCHANDISER,MERCHANDISER-ATOM}.pdf
+ *       -> les 6 guides génériques : docs/guides/GUIDE-{ADMIN,ADMIN-ATOM,COMMERCIAL,MERCHANDISER,MERCHANDISER-MT,MERCHANDISER-ATOM}.pdf
  *   node scripts/generer-guides-pdf.mjs --utilisateurs
  *       -> en plus, un guide personnalisé par commercial et merchandiseur actif
  *          (nom, e-mail, territoires, équipe / commercial responsable) dans
@@ -17,6 +17,11 @@
  *       -> imprime en plus le mot de passe par défaut (SEED_DEFAULT_PASSWORD)
  *          sur la fiche des comptes qui ne l'ont pas encore remplacé
  *          (user_metadata.must_change_password encore à true).
+ *
+ *   node scripts/generer-guides-pdf.mjs --utilisateurs --employeur hello-event [--avec-mots-de-passe]
+ *       -> les guides personnalisés des seuls comptes de cette agence. Un
+ *          merchandiseur d'agence de la direction MT (Hello Event) reçoit le
+ *          guide supermarchés (merchandiser-mt.html).
  *
  *   GUIDE_ADMIN_MOT_DE_PASSE=… node scripts/generer-guides-pdf.mjs --admin admin@friesland.ci
  *       -> en plus, le guide admin avec la fiche de connexion de ce compte
@@ -73,6 +78,13 @@ const ROLES = {
     titre: 'Guide du compte agence',
     libelleRole: 'Agence · routing mensuel des merchandisers',
     intro: 'Ce guide accompagne le responsable du routing d’une agence (Atom BTL…) dans le back-office : ce que voit le compte agence, les règles du client, le fichier du mois avec ses points GPS, l’import, les corrections en cours de mois et le contrôle des tournées.',
+  },
+  merchandiser_mt: {
+    fichier: 'GUIDE-MERCHANDISER-MT',
+    source: 'merchandiser-mt',
+    titre: 'Guide du merchandiseur supermarchés',
+    libelleRole: 'Merchandiseur Hello Event · supermarchés (MT)',
+    intro: 'Ce guide accompagne les merchandiseurs de l’agence Hello Event dans les supermarchés : première connexion, magasins de vos communes, visite avec quantités, facings, prix et visibilité, standards des supermarchés et objectifs de disponibilité du trimestre.',
   },
   merchandiser_atom: {
     fichier: 'GUIDE-MERCHANDISER-ATOM',
@@ -137,9 +149,13 @@ function ficheUtilisateur(u) {
   const quartiers = (u.quartiers_assignes || []).filter(Boolean)
   if (quartiers.length) lignes.push(['Quartier(s)', echapper(abreger(quartiers, 12))])
   if (u.role === 'merchandiser') {
-    lignes.push(['Commercial responsable', u.commercial
-      ? `${echapper(u.commercial.nom || u.commercial.email)}${u.commercial.telephone ? ` · ${echapper(u.commercial.telephone)}` : ''}`
-      : 'Non rattaché'])
+    // Merchandiseur d'agence : son agence ; le commercial seulement s'il en a un.
+    if (u.agence) lignes.push(['Agence', echapper(u.agence)])
+    if (u.commercial || !u.agence) {
+      lignes.push(['Commercial responsable', u.commercial
+        ? `${echapper(u.commercial.nom || u.commercial.email)}${u.commercial.telephone ? ` · ${echapper(u.commercial.telephone)}` : ''}`
+        : 'Non rattaché'])
+    }
   }
   if (u.role === 'commercial') {
     const equipe = u.equipe || []
@@ -311,7 +327,7 @@ async function imprimer(chrome, fichierHtml, fichierPdf, titrePied) {
 // ---------------------------------------------------------------------------
 // Utilisateurs (option --utilisateurs)
 // ---------------------------------------------------------------------------
-async function chargerUtilisateurs({ avecMotsDePasse }) {
+async function chargerUtilisateurs({ avecMotsDePasse, employeur = null }) {
   const { config } = await import('dotenv')
   config({ path: join(RACINE, '.env') })
   const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env
@@ -324,11 +340,15 @@ async function chargerUtilisateurs({ avecMotsDePasse }) {
   })
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, nom, email, role, employeur, telephone, zone_assignee, territoires_assignes, quartiers_assignes, commercial_id, is_active')
+    .select('id, nom, email, role, employeur, direction, telephone, zone_assignee, territoires_assignes, quartiers_assignes, commercial_id, is_active')
     .in('role', ['commercial', 'merchandiser'])
   if (error) throw error
 
-  const actifs = data.filter(u => u.is_active !== false)
+  const actifs = data.filter(u => u.is_active !== false && (!employeur || u.employeur === employeur))
+  const { data: agences } = await supabase.from('agence').select('code, nom')
+  for (const u of actifs) {
+    if (u.employeur && u.employeur !== 'friesland') u.agence = agences?.find(a => a.code === u.employeur)?.nom || u.employeur
+  }
 
   if (avecMotsDePasse) {
     const defaut = process.env.SEED_DEFAULT_PASSWORD
@@ -371,6 +391,9 @@ const avecUtilisateurs = process.argv.includes('--utilisateurs')
 const avecMotsDePasse = process.argv.includes('--avec-mots-de-passe')
 const iAdmin = process.argv.indexOf('--admin')
 const emailAdmin = iAdmin > -1 ? process.argv[iAdmin + 1] : null
+const iEmployeur = process.argv.indexOf('--employeur')
+const employeur = iEmployeur > -1 ? process.argv[iEmployeur + 1] : null
+if (iEmployeur > -1 && !employeur) throw new Error('--employeur attend un code d’agence (ex. hello-event)')
 if (iAdmin > -1 && !emailAdmin?.includes('@')) throw new Error('--admin attend un e-mail')
 const css = await feuilleDeStyle()
 const travail = await mkdtemp(join(tmpdir(), 'guides-html-'))
@@ -405,7 +428,7 @@ try {
   }
 
   if (avecUtilisateurs) {
-    const utilisateurs = await chargerUtilisateurs({ avecMotsDePasse })
+    const utilisateurs = await chargerUtilisateurs({ avecMotsDePasse, employeur })
     console.log(`\n${utilisateurs.length} utilisateur(s) terrain actif(s)`)
     if (avecMotsDePasse) {
       const n = utilisateurs.filter(u => u.motDePasse).length
@@ -418,7 +441,10 @@ try {
       let nom = slug(u.nom || u.email.split('@')[0])
       if (vus.has(`${u.role}/${nom}`)) nom = `${nom}-${slug(u.email.split('@')[0])}`
       vus.add(`${u.role}/${nom}`)
-      const role = u.role === 'merchandiser' && u.employeur === 'atom' ? 'merchandiser_atom' : u.role
+      const role = u.role !== 'merchandiser' ? u.role
+        : u.employeur === 'atom' ? 'merchandiser_atom'
+          : u.direction === 'mt' && u.employeur !== 'friesland' ? 'merchandiser_mt'
+            : 'merchandiser'
       const html = join(travail, `${u.id}.html`)
       await writeFile(html, await assembler(role, { css, utilisateur: u }))
       await imprimer(chrome, html, join(dossier, `${nom}.pdf`), `${ROLES[role].titre} — ${u.nom || u.email}`)

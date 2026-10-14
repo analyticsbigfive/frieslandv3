@@ -67,6 +67,7 @@
 
     <!-- Écrans dédiés (grille, actions) : pas de table générique -->
     <AdminQuotasAtom v-if="activeVue?.id === 'quotas_atom'" />
+    <AdminObjectifsDisponibilite v-else-if="activeVue?.id === 'objectifs_disponibilite'" />
     <AdminMaintenance v-else-if="activeVue?.id === 'maintenance'" />
 
     <template v-if="!activeVue">
@@ -1617,6 +1618,7 @@ const sections = [
 // « Publier une version » et la version minimale sont dans Paramètres ›
 // Versions de l'app (un seul endroit).
 const vues: Vue[] = [
+  { id: 'objectifs_disponibilite', section: 'produit', label: 'Objectifs de disponibilité', vue: true },
   { id: 'quotas_atom', section: 'app', label: 'Quotas du programme merchandiser', vue: true },
   { id: 'maintenance', section: 'app', label: 'Tâches automatiques', vue: true },
 ]
