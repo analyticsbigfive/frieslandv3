@@ -16,6 +16,9 @@
 --    jour (comportement d'avant).
 --
 -- Reprend 20261010120000 (seul le calcul du lieu du jour change). Idempotent.
+--
+-- APPLIQUÉE en production le 14/10/2026 (connecteur Supabase, apply_migration).
+-- md5(pg_get_functiondef) avant : 17946990… (= 20261010120000) ; après : 76b2b410….
 -- ============================================================================
 begin;
 
