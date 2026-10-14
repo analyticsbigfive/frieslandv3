@@ -23,9 +23,10 @@ const A1 = '00000000-0000-0000-0000-0000000000a1'
 const F1 = '00000000-0000-0000-0000-0000000000f1'
 const base = () => faux({
   profiles: [
-    { id: A1, role: 'merchandiser', employeur: 'atom' },
-    { id: F1, role: 'merchandiser', employeur: 'friesland' },
+    { id: A1, role: 'merchandiser', employeur: 'atom', territoires_assignes: ['TREICHVILLE', 'Marcory'], zone_assignee: null },
+    { id: F1, role: 'merchandiser', employeur: 'friesland', territoires_assignes: ['COCODY 1'], zone_assignee: null },
   ],
+  pdv: [{ pdv_id: 'P-T', zone: 'TREICHVILLE' }, { pdv_id: 'P-M', zone: 'MARCORY' }, { pdv_id: 'P-C', zone: 'COCODY 1' }],
   routing_templates: [{ id: 'T-A1', user_id: A1 }, { id: 'T-F1', user_id: F1 }],
   ssf: [
     { id: 1, nom: 'SSF ATOM', commercial_id: null },
@@ -36,10 +37,10 @@ const base = () => faux({
 })
 
 describe('portée d’un compte agence', () => {
-  it('n’ouvre que le routing mensuel', () => {
-    expect(IMPORTS_AGENCE).toEqual(['routing-mensuel'])
-    expect(cibleOperation({ type: 'pdv.creer' })).toBeNull()
+  it('n’ouvre que le routing mensuel et les listes de PDV', () => {
+    expect(IMPORTS_AGENCE).toEqual(['routing-mensuel', 'liste-pdv'])
     expect(cibleOperation({ type: 'regle_dms.remplacer' })).toBeNull()
+    expect(cibleOperation({ type: 'visites.importer' })).toBeNull()
   })
 
   it('accepte les opérations sur ses merchandisers, ses règles et ses SSF', async () => {
@@ -54,6 +55,10 @@ describe('portée d’un compte agence', () => {
       { type: 'ssf.commercial', ssf: { id: 1 }, commercial_id: 'C9' },
       { type: 'ssf.commercial', ssf: { id: 3 }, commercial_id: 'C1' },
       { type: 'ssf.creer', nom: 'Nouveau' },
+      { type: 'regles_liste.remplacer', user_id: A1 },
+      { type: 'pdv.creer', lignes: [{ pdv_id: 'N1', zone: 'TREICHVILLE' }, { pdv_id: 'N2', zone: 'MARCORY' }] },
+      { type: 'pdv.maj', lignes: [{ pdv_id: 'P-T', valeurs: { telephone: '07 07 07 07 07' } }] },
+      { type: 'pdv.supprimer', marqueur: 'import-liste-pdv-202610141500', pdv_ids: ['P-T', 'P-DEJA-SUPPRIME'] },
     ]) await expect(verifierPorteeAgence(sb, op, 'atom')).resolves.toBeUndefined()
   })
 
@@ -68,6 +73,14 @@ describe('portée d’un compte agence', () => {
       { type: 'ssf_quartier.remplacer', ssf: { nom: 'SSF INCONNU' } },
       { type: 'ssf.commercial', ssf: { id: 3 }, commercial_id: 'C9' },
       { type: 'pdv.creer', lignes: [] },
+      { type: 'regles_liste.remplacer', user_id: F1 },
+      { type: 'pdv.creer', lignes: [{ pdv_id: 'N1', zone: 'TREICHVILLE' }, { pdv_id: 'N3', zone: 'COCODY 1' }] },
+      { type: 'pdv.creer', lignes: [{ pdv_id: 'N4', zone: null }] },
+      { type: 'pdv.maj', lignes: [{ pdv_id: 'P-C', valeurs: { telephone: '07' } }] },
+      { type: 'pdv.maj', lignes: [{ pdv_id: 'P-T', valeurs: { zone: 'COCODY 1' } }] },
+      { type: 'pdv.supprimer', marqueur: 'import-dms-202609291200', pdv_ids: ['P-T'] },
+      { type: 'pdv.supprimer', marqueur: 'import-liste-pdv-202610141500', pdv_ids: ['P-C'] },
+      { type: 'visites.importer', lignes: [] },
     ]) await expect(verifierPorteeAgence(sb, op, 'atom')).rejects.toBeInstanceOf(HorsAgence)
     await expect(verifierPorteeAgence(sb, { type: 'tournees.recalculer', user_id: A1 }, '')).rejects.toBeInstanceOf(HorsAgence)
   })

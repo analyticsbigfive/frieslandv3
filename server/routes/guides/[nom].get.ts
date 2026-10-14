@@ -1,14 +1,16 @@
 // Guides PDF du back-office, ouverts depuis le bouton « Aide » de l'en-tête.
 // Copies de docs/guides/ placées dans server/assets/guides/ par
 // scripts/generer-guides-pdf.mjs (seuls les guides génériques : jamais les
-// guides personnalisés, qui contiennent des identifiants). S'y ajoute l'exemple
-// de routing mensuel (fictif) proposé sur la carte d'import de l'agence.
+// guides personnalisés, qui contiennent des identifiants). S'y ajoutent les
+// exemples (fictifs) de routing mensuel et de liste de PDV par jour proposés
+// sur les cartes d'import de l'agence.
 import { serverSupabaseUser } from '#supabase/server'
 
 const GUIDES: Record<string, { type: string, disposition: 'inline' | 'attachment' }> = {
   'GUIDE-ADMIN.pdf': { type: 'application/pdf', disposition: 'inline' },
   'GUIDE-ADMIN-ATOM.pdf': { type: 'application/pdf', disposition: 'inline' },
   'exemple-routing-mensuel.csv': { type: 'text/csv; charset=utf-8', disposition: 'attachment' },
+  'exemple-liste-pdv.csv': { type: 'text/csv; charset=utf-8', disposition: 'attachment' },
 }
 
 export default defineEventHandler(async (event) => {

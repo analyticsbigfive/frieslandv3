@@ -56,11 +56,16 @@ import {
   chargerAlias, cleNom, csvTexte, distributeurCanonique, feuillesDepuisClasseur, feuillesDepuisCsv, motsPersonne, motsProches,
   aGps, haversine, norm, ordreGps, resoudreAlias, toutesLesLignes, trouverPersonne, uniques,
 } from '../commun.mjs'
+import { PREFIXE_REGLE_LISTE } from './operations.mjs'
 import { lireJours } from './ssf-sous-zones.mjs'
 
 export const JOURS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
 const SEMAINES = [1, 2, 3, 4]
 const PREFIXE_REGLE = 'Routing mensuel — '
+// Règles qui ne sont pas le portefeuille du merchandiser : SSF, routing
+// mensuel, et listes de PDV par jour (import « Liste de PDV par jour », qui
+// s'ajoutent au routing : ni remplacées ni passées en repli ici).
+const HORS_PORTEFEUILLE = new RegExp(`^(SSF — |Routing mensuel — |${PREFIXE_REGLE_LISTE})`)
 const SANS_SSF = new Set(['', '-', 'AUCUN', 'AUCUN SSF', 'SANS SSF', 'NEANT', 'NON', 'PAS DE SSF'])
 const SSF_A_PRECISER = new Set(['NON NOMME', 'A PRECISER', '?', 'INCONNU', 'A DEFINIR'])
 const cleTexte = (s) => norm(s).replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
@@ -356,7 +361,7 @@ export async function operationsDepuisRouting(sb, userId, { toutes = toutesLesLi
     toutes(() => sb.from('routing_templates').select('id,user_id,label,is_active,ssf_id').eq('user_id', userId).order('id')),
     toutes(() => sb.from('pdv').select('pdv_id,zone,quartier,is_active,geolocation_lat,geolocation_lng,distributor_name').order('pdv_id')),
   ])
-  const base = regles.filter(r => r.is_active !== false && !r.ssf_id && !/^(SSF — |Routing mensuel — )/.test(r.label || '')).map(r => r.id)
+  const base = regles.filter(r => r.is_active !== false && !r.ssf_id && !HORS_PORTEFEUILLE.test(r.label || '')).map(r => r.id)
   const reglesPdv = []
   for (let i = 0; i < base.length; i += 50) {
     reglesPdv.push(...await toutes(() => sb.from('routing_template_pdv').select('template_id,pdv_id,position_order').in('template_id', base.slice(i, i + 50)).order('id')))
@@ -376,7 +381,7 @@ export async function operationsDepuisRouting(sb, userId, { toutes = toutesLesLi
 
 /** PDV du portefeuille d'un merchandiser : ses règles actives hors SSF et hors routing mensuel. */
 export function portefeuilleDe(userId, regles, reglesPdv) {
-  const ids = new Set(regles.filter(r => r.user_id === userId && r.is_active !== false && !r.ssf_id && !/^(SSF — |Routing mensuel — )/.test(r.label || '')).map(r => r.id))
+  const ids = new Set(regles.filter(r => r.user_id === userId && r.is_active !== false && !r.ssf_id && !HORS_PORTEFEUILLE.test(r.label || '')).map(r => r.id))
   return uniques(reglesPdv.filter(x => ids.has(x.template_id)).sort((a, b) => a.position_order - b.position_order).map(x => x.pdv_id))
 }
 
@@ -678,7 +683,7 @@ export function simulerRoutingMensuel(lignes, donnees, options = {}) {
     })
 
     // Règle de portefeuille → repli, tous les jours, en quotas.
-    const portefeuilles = regles.filter(r => r.user_id === userId && r.is_active !== false && !/^(SSF — |Routing mensuel — )/.test(r.label || '') && !r.ssf_id)
+    const portefeuilles = regles.filter(r => r.user_id === userId && r.is_active !== false && !HORS_PORTEFEUILLE.test(r.label || '') && !r.ssf_id)
     if (!portefeuilles.length) sansRegleDePortefeuille.push(profil.nom || profil.email)
     for (const r of portefeuilles) {
       operations.push({ type: 'regle.jours', template_id: r.id, days_of_week: [1, 2, 3, 4, 5, 6], is_active: true, mode: 'quota', repli: true })

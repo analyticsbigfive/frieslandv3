@@ -13,11 +13,18 @@
  * SSF de leur routing. Le commercial d'un SSF n'est jamais changé : il n'est
  * posé que s'il manque, comme le fait la simulation.
  *
+ * Liste de PDV par jour (14/10/2026) : une agence crée des PDV et en
+ * complète le téléphone, seulement dans les zones du périmètre de ses
+ * merchandisers ; elle ne supprime que les PDV d'un import « liste de PDV »
+ * de ces zones (annulation d'un lot).
+ *
  * Aucune dépendance Node : module partagé serveur / tests.
  */
+import { norm } from '../commun.mjs'
 
 /** Imports ouverts aux comptes agence. */
-export const IMPORTS_AGENCE = ['routing-mensuel']
+export const IMPORTS_AGENCE = ['routing-mensuel', 'liste-pdv']
+const MARQUEUR_LISTE = 'import-liste-pdv-'
 
 export class HorsAgence extends Error {}
 
@@ -28,6 +35,7 @@ export function cibleOperation(op) {
   switch (op?.type) {
     case 'routing_mensuel.remplacer':
     case 'regles_mensuelles.remplacer':
+    case 'regles_liste.remplacer':
     case 'profil.perimetre':
     case 'tournees.recalculer':
       return { merchandiser: op.user_id }
@@ -38,6 +46,12 @@ export function cibleOperation(op) {
       return { ssf: op.ssf }
     case 'ssf.creer':
       return {}
+    case 'pdv.creer':
+      return { zones: (op.lignes || []).map(l => l?.zone ?? null) }
+    case 'pdv.maj':
+      return { pdv: (op.lignes || []).map(l => l?.pdv_id), seulement: ['telephone'] }
+    case 'pdv.supprimer':
+      return { pdv: op.pdv_ids || [], marqueur: MARQUEUR_LISTE }
     default:
       return null
   }
@@ -54,6 +68,19 @@ async function merchandisersDeLAgence(sb, ids, agence) {
   if (!ids.length) return new Set()
   const data = await lire(sb.from('profiles').select('id').in('id', ids).eq('role', 'merchandiser').eq('employeur', agence), 'profils')
   return new Set((data || []).map(p => p.id))
+}
+
+/** Zones du périmètre des merchandisers de l'agence (noms comparables, alias de territoire compris). */
+async function zonesDeLAgence(sb, agence) {
+  const merch = await lire(sb.from('profiles').select('territoires_assignes,zone_assignee').eq('role', 'merchandiser').eq('employeur', agence), 'profils')
+  const noms = [...new Set((merch || []).flatMap(m => [...(Array.isArray(m.territoires_assignes) ? m.territoires_assignes : []), m.zone_assignee]).filter(Boolean))]
+  const zones = new Set(noms.map(norm))
+  try {
+    const { data, error } = await sb.rpc('territoires_etendus', { p_noms: noms })
+    if (!error && Array.isArray(data)) for (const x of data) zones.add(norm(typeof x === 'string' ? x : x?.territoires_etendus))
+  }
+  catch { /* fonction absente : noms tels quels */ }
+  return zones
 }
 
 async function ssfDe(sb, ref) {
@@ -80,6 +107,28 @@ export async function verifierPorteeAgence(sb, op, agence) {
     const data = await lire(sb.from('routing_templates').select('user_id').eq('id', cible.regle).limit(1), 'règle')
     const userId = data?.[0]?.user_id
     if (!userId || !(await merchandisersDeLAgence(sb, [userId], agence)).size) hors('règle hors de votre agence')
+  }
+
+  if (cible.zones) {
+    const zones = await zonesDeLAgence(sb, agence)
+    const dehors = [...new Set(cible.zones.filter(z => !zones.has(norm(z))))]
+    if (!cible.zones.length || dehors.length) hors(`PDV hors des zones de votre agence : ${dehors.map(z => z ?? 'sans zone').join(', ') || 'aucune ligne'}`)
+  }
+
+  if (cible.pdv) {
+    if (cible.seulement && !(op.lignes || []).every(l => Object.keys(l?.valeurs || {}).every(k => cible.seulement.includes(k)))) {
+      hors(`PDV : seule la colonne ${cible.seulement.join(', ')} peut être changée par une agence`)
+    }
+    if (cible.marqueur && !String(op.marqueur || '').startsWith(cible.marqueur)) hors('PDV : seuls ceux d’une liste de PDV peuvent être supprimés par une agence')
+    const ids = [...new Set(cible.pdv.filter(Boolean))]
+    if (ids.length) {
+      const pdvs = []
+      for (let i = 0; i < ids.length; i += 200) pdvs.push(...(await lire(sb.from('pdv').select('pdv_id,zone').in('pdv_id', ids.slice(i, i + 200)), 'PDV') || []))
+      const zones = await zonesDeLAgence(sb, agence)
+      // Un PDV déjà supprimé (relance d'une annulation) n'est plus là : rien à vérifier pour lui.
+      const dehors = pdvs.filter(p => !zones.has(norm(p.zone)))
+      if (dehors.length) hors(`PDV hors des zones de votre agence : ${dehors.slice(0, 5).map(p => p.pdv_id).join(', ')}`)
+    }
   }
 
   if (cible.ssf) {

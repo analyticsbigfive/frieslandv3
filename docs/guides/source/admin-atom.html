@@ -38,6 +38,7 @@
     <thead><tr><th>Je veux…</th><th>Où</th></tr></thead>
     <tbody>
       <tr><td>Charger le routing du mois</td><td>Mode d’emploi en trois étapes : <span class="ui">Planning › Routing du mois</span>. Import : <span class="ui">Paramètres › Import / Export</span>, carte <span class="ui">Routing mensuel des merchandisers (fichier de l’agence)</span></td></tr>
+      <tr><td>Ajouter une liste de points de vente par jour</td><td><span class="ui">Paramètres › Import / Export</span>, carte <span class="ui">Liste de PDV par jour (fichier de l’agence)</span></td></tr>
       <tr><td>Corriger une case (lieu, point GPS, SSF)</td><td><span class="ui">Paramètres › Référentiels</span>, liste <span class="ui">Routing mensuel</span></td></tr>
       <tr><td>Faire reconnaître un nom ou un lieu</td><td><span class="ui">Paramètres › Référentiels</span>, liste <span class="ui">Alias d’import (orthographes)</span></td></tr>
       <tr><td>Voir les tournées de la semaine</td><td><span class="ui">Planning › Tournées</span>, affichage <span class="ui">Planning</span></td></tr>
@@ -131,6 +132,21 @@
   <div class="encadre encadre--astuce">
     <span class="encadre__titre">Revenir en arrière</span>
     <p>L’<span class="ui">Historique des imports</span>, sous les cartes, garde chaque lot. <span class="ui">Annuler le lot</span> remet le routing, les règles et les périmètres d’avant l’import.</p>
+  </div>
+</section>
+
+<section class="chapitre">
+  <h2>Ajouter une liste de points de vente par jour</h2>
+  <p>Pour une zone, une liste de points de vente à visiter chaque jour de la semaine, <strong>en plus</strong> du routing du mois : le merchandiser fait toute la liste du jour, chaque semaine. Son routing mensuel ne change pas.</p>
+  <ol class="etapes">
+    <li>Le fichier : une feuille par jour (<code>lundi</code>, <code>mardi</code>…) ou une colonne <code>Jour</code>. Colonnes : <code>Nom du PDV</code>, <code>Localisation</code>, <code>Secteur</code>, <code>Contact</code>, <code>Type</code>. Une feuille sans jour (ex. « autres ») : les points de vente sont créés, mais n’entrent dans aucune tournée. Un exemple se télécharge sur la carte.</li>
+    <li><span class="ui">Paramètres › Import / Export</span>, carte <span class="ui">Liste de PDV par jour (fichier de l’agence)</span> : choisissez le fichier, le <strong>merchandiser</strong> (si le fichier n’a pas de colonne <code>Merchandiser</code>) et la date de début, puis <span class="ui">Simuler</span>.</li>
+    <li>Relisez le rapport : points de vente <strong>déjà en base</strong> (ils gardent leur GPS), <strong>créés</strong> (sans GPS), et <strong>à vérifier</strong> (un point de vente proche existe peut-être : le nom et l’adresse sont dans le tableau). Puis <span class="ui">Appliquer</span>.</li>
+    <li>Les points de vente créés n’ont pas de position : le merchandiser les géolocalise à sa première visite, dans l’application.</li>
+  </ol>
+  <div class="encadre encadre--astuce">
+    <span class="encadre__titre">Changer la liste</span>
+    <p>Un nouveau fichier pour le même merchandiser et la même zone remplace la liste d’avant. <span class="ui">Annuler le lot</span> remet la liste d’avant et supprime les points de vente créés qui n’ont pas encore été visités.</p>
   </div>
 </section>
 

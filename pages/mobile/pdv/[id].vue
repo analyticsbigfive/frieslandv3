@@ -68,6 +68,10 @@
               <p class="text-xs text-gray-400">Adressage</p>
               <p class="text-sm text-gray-900 dark:text-gray-100">{{ pdv.adressage || '—' }}</p>
             </div>
+            <div v-if="pdv.telephone" class="col-span-2">
+              <p class="text-xs text-gray-400">Téléphone</p>
+              <a :href="`tel:${pdv.telephone.replace(/\s+/g, '')}`" class="text-sm font-medium text-fc-red underline-offset-2 hover:underline">{{ pdv.telephone }}</a>
+            </div>
           </div>
         </div>
 

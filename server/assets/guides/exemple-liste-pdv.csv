@@ -1,0 +1,6 @@
+﻿Merchandiser;Jour;Nom du PDV;Localisation;Secteur;Contact;Type
+EXEMPLE Merchandiser;Lundi;Boutique Exemple 1;Avenue 1 rue 12;Biafra;07 00 00 00 01;Boutique C
+EXEMPLE Merchandiser;Lundi;Kiosque Exemple 2;Avenue 1 rue 14;Biafra;;Kiosque
+EXEMPLE Merchandiser;Mardi;Superette Exemple 3;Avenue 6 rue 21;France Amerique;;Supérette
+EXEMPLE Merchandiser;Lundi, Jeudi;Boutique Exemple 4 (deux jours);Avenue 12 rue 15;Quartier Appolo;;Boutique B
+EXEMPLE Merchandiser;;Aboki Exemple 5 (sans jour : non planifié);Avenue 22 rue 15;Quartier Appolo;;Aboki

@@ -50,6 +50,38 @@
             Télécharger un exemple de fichier
           </a>
         </div>
+        <div v-if="imp.type === 'liste-pdv'" class="space-y-2 text-xs text-slate-700 dark:text-slate-300">
+          <div>
+            <label for="liste-pdv-merch" class="mb-1 block font-semibold">Merchandiser <span class="font-normal text-slate-600 dark:text-slate-400">(si le fichier n’a pas de colonne « Merchandiser »)</span></label>
+            <USelectMenu
+              v-model="options.listeMerch"
+              :options="optionsMerchandisers"
+              value-attribute="value"
+              option-attribute="label"
+              placeholder="Choisir le merchandiser"
+              size="sm"
+              searchable
+              searchable-placeholder="Rechercher…"
+              :search-attributes="['label']"
+              :loading="merchandisersEnCours"
+              id="liste-pdv-merch"
+            />
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <label for="liste-pdv-debut">Tournées à partir du</label>
+            <UInput id="liste-pdv-debut" v-model="options.listeDebut" type="date" size="xs" class="w-36" />
+            <UCheckbox v-model="options.recalculerListe" label="Recalculer les tournées des 7 prochains jours" />
+          </div>
+          <!-- Exemple fictif (merchandiser « EXEMPLE ») : le simuler n'écrit rien. -->
+          <a
+            href="/guides/exemple-liste-pdv.csv"
+            download
+            class="inline-flex items-center gap-1 font-semibold text-brand-700 underline-offset-2 hover:underline focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-brand-300"
+          >
+            <UIcon name="i-heroicons-arrow-down-tray" class="h-4 w-4" aria-hidden="true" />
+            Télécharger un exemple de fichier
+          </a>
+        </div>
         <UButton
           size="sm"
           variant="outline"
@@ -189,7 +221,7 @@ import { compte, pluriel } from '~/utils/pluriel'
 // @ts-ignore modules JS partagés avec les scripts (sans types)
 import { decouperOperations } from '~/scripts/lib/imports/operations.mjs'
 
-type TypeImport = 'dms-pdv' | 'merch-dms' | 'routing-atom' | 'ssf-sous-zones' | 'routing-ssf-dms' | 'routing-mensuel'
+type TypeImport = 'dms-pdv' | 'merch-dms' | 'routing-atom' | 'ssf-sous-zones' | 'routing-ssf-dms' | 'routing-mensuel' | 'liste-pdv'
 interface DefImport {
   type: TypeImport
   titre: string
@@ -232,6 +264,18 @@ const IMPORTS: DefImport[] = [
     }],
   },
   {
+    type: 'liste-pdv',
+    titre: 'Liste de PDV par jour (fichier de l’agence)',
+    description: 'La liste des points de vente à visiter chaque jour de la semaine, en plus du routing mensuel : le merchandiser fait toute la liste du jour, chaque semaine. Les PDV déjà en base sont retrouvés (ils gardent leur GPS) ; les autres sont créés sans GPS et le merchandiser les géolocalise à sa première visite.',
+    fichiers: [{
+      cle: 'principal',
+      libelle: 'Fichier de l’agence (.xlsx ou .csv)',
+      requis: true,
+      accept: '.xlsx,.csv',
+      aide: 'Une feuille par jour (lundi, mardi…) ou une colonne « Jour ». Colonnes : Nom du PDV, Localisation, Secteur, Contact, Type. Une feuille sans jour (« autres ») : PDV créés, mais planifiés dans aucune tournée.',
+    }],
+  },
+  {
     type: 'routing-ssf-dms',
     titre: 'Tournées des vendeurs du distributeur (SSF)',
     description: 'Fichier des clients du distributeur (DMS) : pour chaque vendeur (SSF), les points de vente de ses clients. Sert à comparer sa tournée avec celle du merchandiser qui travaille avec lui. À faire après l’import des clients du distributeur.',
@@ -253,6 +297,7 @@ const LISTES_LIEES: Partial<Record<TypeImport, { liste: string, libelle: string 
     { liste: 'alias_import', libelle: 'Alias d’import (orthographes)' },
   ],
   'routing-ssf-dms': [{ liste: 'ssf', libelle: 'Vendeurs des distributeurs (SSF)' }],
+  'liste-pdv': [{ liste: 'alias_import', libelle: 'Alias d’import (orthographes)' }],
 }
 
 // Libellés des chiffres du rapport : les scripts d'import (scripts/lib/imports)
@@ -304,6 +349,11 @@ const LIBELLES_RESUME: Record<string, string> = {
   reglesPasseesEnQuotas: 'Tournées passées aux quotas',
   rejetsClient: 'Lignes refusées',
   moisReference: 'Mois de référence',
+  pdvExistants: 'PDV déjà en base',
+  aVerifier: 'PDV créés à vérifier',
+  doublonsFichier: 'Lignes en double dans le fichier',
+  nonPlanifies: 'PDV sans jour (non planifiés)',
+  telephones: 'Téléphones enregistrés',
   operations: 'Écritures prévues',
 }
 /** Clé inconnue : « motsCollesEnCamel » devient « Mots colles en camel ». */
@@ -324,25 +374,49 @@ const LIBELLES_CSV: Record<string, string> = {
   'routing-mensuel.csv': 'Détail des cases',
   'lieux-a-rattacher.csv': 'Lieux à rattacher',
   'routing-ssf.csv': 'Détail par vendeur',
+  'liste-pdv.csv': 'Détail des PDV',
 }
 
 const supabase = useSupabaseClient()
 const toast = useToast()
 const authStore = useAuthStore()
 const { confirmation, demanderConfirmation, confirmer: confirmerFenetre, annuler: annulerFenetre } = useConfirmation()
-// Compte agence : seulement le routing mensuel de ses merchandisers ; la route
-// serveur (requireAdminOuAgence) vérifie chaque opération.
-const importsVisibles = computed(() => (authStore.isAgence ? IMPORTS.filter(i => i.type === 'routing-mensuel') : IMPORTS))
+// Compte agence : le routing mensuel et les listes de PDV de ses merchandisers ;
+// la route serveur (requireAdminOuAgence) vérifie chaque opération.
+const IMPORTS_AGENCE: TypeImport[] = ['routing-mensuel', 'liste-pdv']
+const importsVisibles = computed(() => (authStore.isAgence ? IMPORTS.filter(i => IMPORTS_AGENCE.includes(i.type)) : IMPORTS))
 
 const fichiers = reactive<Record<string, Record<string, File | null>>>({})
 const maintenant = new Date()
 const jourIso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+// Liste de PDV : règles à partir du lundi qui vient (aujourd'hui si c'est lundi).
+const lundiQuiVient = () => { const d = new Date(maintenant); d.setDate(d.getDate() + ((8 - d.getDay()) % 7)); return jourIso(d) }
 const options = reactive({
   seuilDepot: 10,
   debut: jourIso(maintenant),
   pregenererDms: false,
   recalculerSsf: true,
+  listeMerch: '' as string,
+  listeDebut: lundiQuiVient(),
+  recalculerListe: true,
 })
+// Merchandisers proposés pour une liste de PDV (un compte agence : les siens, par la RLS).
+const merchandisers = ref<any[]>([])
+const merchandisersEnCours = ref(false)
+const optionsMerchandisers = computed(() => merchandisers.value.map(m => ({ value: m.id, label: `${m.nom || m.email}${m.email ? ` (${m.email})` : ''}` })))
+async function chargerMerchandisersListe() {
+  merchandisersEnCours.value = true
+  try {
+    const { chargerMerchandisers }: any = await import('~/scripts/lib/imports/liste-pdv.mjs')
+    merchandisers.value = await chargerMerchandisers(supabase as any, { toutes })
+  }
+  catch (e: any) {
+    toast.add({ title: 'Liste des merchandisers indisponible', description: messageUtilisateur(e), color: 'red' })
+  }
+  finally {
+    merchandisersEnCours.value = false
+  }
+}
 const simulationEnCours = ref<TypeImport | null>(null)
 const etape = ref('')
 const resultat = ref<{ type: TypeImport, titre: string, fichier: string | null, res: any } | null>(null)
@@ -404,6 +478,19 @@ async function simuler(imp: DefImport) {
       const donnees = await chargerDonneesRoutingAtom(sb, { onEtape, toutes })
       etape.value = 'Rapprochement…'
       res = simulerRoutingAtom(lignes, donnees, { fichier: principal!.name, marqueur: `import-atom-${horodatage()}` })
+    }
+    else if (imp.type === 'liste-pdv') {
+      const { chargerDonneesListePdv, lireListePdvCsv, lireListePdvExcel, simulerListePdv }: any = await import('~/scripts/lib/imports/liste-pdv.mjs')
+      const { lignes, avecMerch } = /\.csv$/i.test(principal!.name)
+        ? lireListePdvCsv(await principal!.text(), principal!.name)
+        : lireListePdvExcel(await lireClasseur(principal!))
+      if (!avecMerch && !options.listeMerch) throw new Error('Le fichier n’a pas de colonne « Merchandiser » : choisissez le merchandiser avant de simuler.')
+      const donnees = await chargerDonneesListePdv(sb, lignes, { merchandiserId: options.listeMerch || null, onEtape, toutes })
+      etape.value = 'Rapprochement…'
+      res = simulerListePdv(lignes, donnees, {
+        fichier: principal!.name, debut: options.listeDebut || jourIso(maintenant), jours: options.recalculerListe ? 7 : 0,
+        auteurId: authStore.profile?.id || null, marqueur: `import-liste-pdv-${horodatage()}`, aujourdhui: jourIso(new Date()),
+      })
     }
     else if (imp.type === 'routing-ssf-dms') {
       const { chargerDonneesRoutingSsf, simulerRoutingSsf }: any = await import('~/scripts/lib/imports/routing-ssf-dms.mjs')
@@ -478,7 +565,7 @@ async function appliquer() {
     }
     await envoyer(r.type, r.res.operations, lot.id, 'application', 'Application')
     await (supabase.from('import_lot' as any) as any).update({ statut: 'applique', applique_le: new Date().toISOString() }).eq('id', lot.id)
-    if (r.type === 'dms-pdv' || r.type === 'routing-atom') await (supabase.rpc as any)('programmer_rafraichissement_stats')
+    if (['dms-pdv', 'routing-atom', 'liste-pdv'].includes(r.type)) await (supabase.rpc as any)('programmer_rafraichissement_stats')
     toast.add({ title: 'Import appliqué', description: progression.value, color: 'green' })
     resultat.value = null
   }
@@ -504,7 +591,7 @@ async function annuler(lot: any) {
     await (supabase.from('import_lot' as any) as any).update({ statut: 'annulation' }).eq('id', lot.id)
     await envoyer(lot.type, lot.retour || [], lot.id, 'retour', 'Annulation')
     await (supabase.from('import_lot' as any) as any).update({ statut: 'annule', annule_le: new Date().toISOString(), erreur: null }).eq('id', lot.id)
-    if (lot.type === 'dms-pdv' || lot.type === 'routing-atom') await (supabase.rpc as any)('programmer_rafraichissement_stats')
+    if (['dms-pdv', 'routing-atom', 'liste-pdv'].includes(lot.type)) await (supabase.rpc as any)('programmer_rafraichissement_stats')
     toast.add({ title: 'Lot annulé', description: TITRES[lot.type] || lot.type, color: 'green' })
   }
   catch (e: any) {
@@ -529,7 +616,10 @@ async function chargerLots() {
   }))
 }
 
-onMounted(chargerLots)
+onMounted(() => {
+  void chargerLots()
+  void chargerMerchandisersListe()
+})
 </script>
 
 <style scoped>
