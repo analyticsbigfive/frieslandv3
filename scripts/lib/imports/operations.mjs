@@ -38,15 +38,17 @@ const estObjet = (v) => v && typeof v === 'object' && !Array.isArray(v)
 const COLONNES_PDV_CREATION = new Set([
   'pdv_id', 'nom_pdv', 'canal', 'categorie_pdv', 'sous_categorie_pdv', 'region', 'zone', 'quartier', 'territory_code',
   'area_code', 'geolocation_lat', 'geolocation_lng', 'rayon_geofence', 'adressage', 'distributor_name', 'mdm',
-  'date_creation', 'ajoute_par', 'is_active', 'gps_source',
+  'date_creation', 'ajoute_par', 'is_active', 'gps_source', 'telephone',
 ])
-const COLONNES_PDV_MAJ = new Set(['mdm', 'distributor_name', 'zone', 'territory_code', 'region', 'quartier', 'area_code'])
+const COLONNES_PDV_MAJ = new Set(['mdm', 'distributor_name', 'zone', 'territory_code', 'region', 'quartier', 'area_code', 'telephone'])
 const COLONNES_VISITE = new Set([
   'visite_id', 'pdv_id', 'user_id', 'date_visite', 'commercial', 'email', 'geolocation_lat', 'geolocation_lng',
   'geofence_validated', 'precision_gps', 'status', 'sync_status', 'synced_at', 'distributeur_id', 'distributeur_brut',
   'ssf_id', 'ssf_brut', 'image_urls', 'data',
 ])
 const PREFIXES_VISITE = ['ATOM-']
+/** Règles de l'import « Liste de PDV par jour » (une par jour, mode périmètre). */
+export const PREFIXE_REGLE_LISTE = 'Liste PDV — '
 const clesAutorisees = (objet, autorisees) => Object.keys(objet).every(k => autorisees.has(k))
 const prefixeVisite = (id) => PREFIXES_VISITE.find(p => String(id || '').startsWith(p))
 
@@ -173,6 +175,19 @@ const VALIDATEURS = {
   },
   'visites.supprimer'(op) {
     exiger(Array.isArray(op.visite_ids) && op.visite_ids.length <= 500 && op.visite_ids.every(id => prefixeVisite(id) && estTexte(id, 120)), 'visites.supprimer : 500 visite_id « ATOM-… » au plus')
+  },
+  'regles_liste.remplacer'(op) {
+    exiger(UUID.test(op.user_id || ''), 'regles_liste.remplacer : user_id invalide')
+    exiger(estTexte(op.territoire, 200) && op.territoire.trim(), 'regles_liste.remplacer : territoire requis')
+    exiger(op.created_by == null || UUID.test(op.created_by), 'regles_liste.remplacer : created_by invalide')
+    exiger(Array.isArray(op.regles) && op.regles.length <= 7, 'regles_liste.remplacer : regles (≤ 7) requises')
+    for (const r of op.regles) {
+      exiger(estTexte(r.label, 200) && r.label.startsWith(PREFIXE_REGLE_LISTE), `règle : libellé « ${PREFIXE_REGLE_LISTE}… » requis`)
+      exiger(estJours(r.days_of_week) && r.days_of_week.length, 'règle : jours requis')
+      exiger(r.date_debut == null || DATE.test(r.date_debut), 'règle : date_debut invalide')
+      exiger(texteOuNul(r.notes, 4000), 'règle : notes invalides')
+      exiger(estListeTextes(r.pdv_ids, 2000, 64) && r.pdv_ids.every(id => PDV_ID.test(id)), 'règle : pdv_ids invalides')
+    }
   },
   'regle_dms.remplacer'(op) {
     exiger(UUID.test(op.user_id || ''), 'regle_dms.remplacer : user_id invalide')
@@ -441,6 +456,33 @@ const EXECUTEURS = {
     return `règle « ${r.label} » : ${lignes.length} PDV`
   },
 
+  async 'regles_liste.remplacer'(sb, op) {
+    // Seulement les listes de CE merchandiser pour CE territoire : une liste
+    // d'une autre zone et ses autres règles (routing mensuel, portefeuille)
+    // restent. PDV et exceptions partent en cascade ; les tournées déjà
+    // générées gardent leurs étapes (template_id → NULL).
+    ok(await sb.from('routing_templates').delete().eq('user_id', op.user_id).eq('territoire', op.territoire)
+      .like('label', `${PREFIXE_REGLE_LISTE}%`), 'listes de PDV (suppression)')
+    let nbPdv = 0
+    for (const r of op.regles) {
+      const jours = [...new Set(r.days_of_week)].sort((a, b) => a - b)
+      // Mode périmètre : toute la liste chaque semaine, en plus des règles quota du jour.
+      const { data: regle, error } = await sb.from('routing_templates').insert({
+        user_id: op.user_id, label: r.label, mode: 'perimetre', ssf_id: null,
+        days_of_week: jours, day_of_week: jours[0], semaines_du_mois: null, repli: false,
+        territoire: op.territoire, distributeur: null, date_debut: r.date_debut || null, date_fin: null,
+        notes: r.notes || null, is_active: true, created_by: op.created_by || null,
+      }).select('id').single()
+      if (error) throw new Error(`règle ${r.label} : ${error.message}`)
+      const lignes = [...new Set(r.pdv_ids)].map((pdv_id, k) => ({
+        template_id: regle.id, pdv_id, position_order: k + 1, objectifs: { releve_stock: true, photos: true },
+      }))
+      for (let i = 0; i < lignes.length; i += 500) ok(await sb.from('routing_template_pdv').insert(lignes.slice(i, i + 500)), `PDV de la règle ${r.label}`)
+      nbPdv += lignes.length
+    }
+    return `${op.regles.length} liste(s) de PDV (${op.territoire}), ${nbPdv} PDV`
+  },
+
   async 'tournees.recalculer'(sb, op) {
     // Tournées à venir encore intactes (toutes les étapes en attente) :
     // supprimées puis régénérées avec les règles actuelles. Une tournée
@@ -485,6 +527,7 @@ export const OPERATIONS_PAR_IMPORT = {
   'ssf-sous-zones': ['ssf.creer', 'ssf_quartier.remplacer', 'regles_ssf.remplacer', 'regle.jours', 'profil.perimetre', 'tournees.recalculer'],
   'routing-ssf-dms': ['ssf.creer', 'ssf_pdv.remplacer'],
   'routing-mensuel': ['ssf.creer', 'ssf.commercial', 'ssf_quartier.remplacer', 'routing_mensuel.remplacer', 'regles_mensuelles.remplacer', 'regle.jours', 'profil.perimetre', 'tournees.recalculer'],
+  'liste-pdv': ['profil.perimetre', 'pdv.creer', 'pdv.maj', 'pdv.supprimer', 'regles_liste.remplacer', 'tournees.recalculer'],
 }
 
 /**

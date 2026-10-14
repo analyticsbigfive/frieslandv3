@@ -172,6 +172,17 @@ describe('simulation du routing mensuel', () => {
     expect(opsDe('regle.jours')).toEqual([{ type: 'regle.jours', template_id: T_DMS, days_of_week: [1, 2, 3, 4, 5, 6], is_active: true, mode: 'quota', repli: true }])
   })
 
+  it('une liste de PDV par jour reste telle quelle : ni remplacée, ni passée en repli', () => {
+    const T_LISTE = 'aaaaaaaa-0000-0000-0000-000000000003'
+    const d = donnees()
+    d.regles.push({ id: T_LISTE, user_id: M2, label: 'Liste PDV — Lundi — ABOBO 1 › SAMAKE', mode: 'perimetre', days_of_week: [1], is_active: true, ssf_id: null, repli: false, territoire: 'ABOBO 1' })
+    d.reglesPdv.push({ template_id: T_LISTE, pdv_id: 'P3', position_order: 1 })
+    const r = simulerRoutingMensuel(lireRoutingMensuel(feuilles), d, { fichier: 'routing.xlsx', debut: '2026-10-12' })
+    expect(r.operations.filter((o: any) => o.type === 'regle.jours').map((o: any) => o.template_id)).toEqual([T_DMS])
+    const remplacees = (r.retour as any[]).find(o => o.type === 'regles_mensuelles.remplacer' && o.user_id === M2).regles
+    expect(remplacees.some((x: any) => x.label.startsWith('Liste PDV'))).toBe(false)
+  })
+
   it('commercial du fichier ≠ base : signalé, jamais modifié', () => {
     expect(res.rapport).toMatch(/KOSSA KEVIN : fichier M\. Kamy → GAI KAMI ; base : SOUARE IBRAHIMA/)
     expect(res.rapport).toMatch(/Mme Tea \(aucun compte reconnu\)/)

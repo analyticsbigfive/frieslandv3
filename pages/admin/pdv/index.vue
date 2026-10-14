@@ -400,6 +400,9 @@
                 <UFormGroup label="Adresse" size="md">
                   <UInput v-model="pdvForm.adressage" placeholder="Ex. Rue du Commerce, près du marché" size="md" class="w-full" />
                 </UFormGroup>
+                <UFormGroup label="Téléphone du PDV" size="md" help="Contact du gérant, donné par l’agence.">
+                  <UInput v-model="pdvForm.telephone" type="tel" placeholder="Ex. 07 07 19 10 22" size="md" class="w-full" />
+                </UFormGroup>
                 <UFormGroup label="Code client du distributeur" size="md" help="Code client du fichier du distributeur (DMS) : il sert à rapprocher les imports.">
                   <UInput v-model="pdvForm.mdm" placeholder="Ex. 150009895" size="md" class="w-full" />
                 </UFormGroup>
@@ -622,8 +625,12 @@ const pdvForm = ref({
   distributor_name: '',
   objectif_perfect_store: '',
   mdm: '',
+  telephone: '',
   rayon_geofence: undefined as number | undefined,
 })
+// Colonne pdv.telephone présente (migration 20261014100000) : sans elle, un
+// téléphone vide n'est pas envoyé, pour que l'enregistrement reste possible.
+const colonneTelephone = ref(false)
 
 // Options depuis les facettes (tout le parc scopé), pas la page paginée courante.
 // SANS_ZONE_LABEL isole les PDV sans territoire : invisibles des commerciaux et
@@ -793,6 +800,7 @@ async function editPDV(pdv: PDV) {
   pdvForm.value.distributor_name = ''
   pdvForm.value.objectif_perfect_store = ''
   pdvForm.value.mdm = ''
+  pdvForm.value.telephone = ''
   pdvForm.value.rayon_geofence = undefined
   showCreate.value = true
   try {
@@ -803,6 +811,8 @@ async function editPDV(pdv: PDV) {
       pdvForm.value.distributor_name = full.distributor_name || ''
       pdvForm.value.objectif_perfect_store = full.objectif_perfect_store || ''
       pdvForm.value.mdm = full.mdm || ''
+      pdvForm.value.telephone = full.telephone || ''
+      colonneTelephone.value = 'telephone' in full
       pdvForm.value.rayon_geofence = full.rayon_geofence ?? undefined
       hydrateGeoCascade()
       // Préselection quartier si présent dans les options de l'area (byte-exact).
@@ -859,6 +869,7 @@ function openCreatePDV() {
     distributor_name: '',
     objectif_perfect_store: '',
     mdm: '',
+    telephone: '',
     rayon_geofence: undefined,
   }
   showCreate.value = true
@@ -885,6 +896,8 @@ async function handleSavePDV() {
     payload.distributor_name = payload.distributor_name || null
     payload.objectif_perfect_store = payload.objectif_perfect_store || null
     payload.mdm = String(payload.mdm || '').trim() || null
+    payload.telephone = String(payload.telephone || '').trim() || null
+    if (payload.telephone == null && !colonneTelephone.value) delete payload.telephone
     // Rayon vide : rayon par défaut des Paramètres terrain (création : défaut de la base).
     const rayon = payload.rayon_geofence === '' || payload.rayon_geofence == null ? null : Number(payload.rayon_geofence)
     if (rayon == null && !editingPDV.value) delete payload.rayon_geofence

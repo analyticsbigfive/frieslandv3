@@ -65,6 +65,8 @@ export interface PDV {
   geolocation_lng: number
   rayon_geofence: number
   adressage?: string
+  /** Contact du PDV donné par l'agence (migration 20261014100000). */
+  telephone?: string | null
   image_url?: string
   date_creation: string
   ajoute_par: string
