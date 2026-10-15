@@ -180,10 +180,12 @@ const VALIDATEURS = {
     exiger(UUID.test(op.user_id || ''), 'regles_liste.remplacer : user_id invalide')
     exiger(estTexte(op.territoire, 200) && op.territoire.trim(), 'regles_liste.remplacer : territoire requis')
     exiger(op.created_by == null || UUID.test(op.created_by), 'regles_liste.remplacer : created_by invalide')
-    exiger(Array.isArray(op.regles) && op.regles.length <= 7, 'regles_liste.remplacer : regles (≤ 7) requises')
+    // Une règle par jour et par jeu de semaines du mois.
+    exiger(Array.isArray(op.regles) && op.regles.length <= 35, 'regles_liste.remplacer : regles (≤ 35) requises')
     for (const r of op.regles) {
       exiger(estTexte(r.label, 200) && r.label.startsWith(PREFIXE_REGLE_LISTE), `règle : libellé « ${PREFIXE_REGLE_LISTE}… » requis`)
       exiger(estJours(r.days_of_week) && r.days_of_week.length, 'règle : jours requis')
+      exiger(r.semaines_du_mois == null || (Array.isArray(r.semaines_du_mois) && r.semaines_du_mois.length && r.semaines_du_mois.every(n => Number.isInteger(n) && n >= 1 && n <= 5)), 'règle : semaines du mois (1 à 5) invalides')
       exiger(r.date_debut == null || DATE.test(r.date_debut), 'règle : date_debut invalide')
       exiger(texteOuNul(r.notes, 4000), 'règle : notes invalides')
       exiger(estListeTextes(r.pdv_ids, 2000, 64) && r.pdv_ids.every(id => PDV_ID.test(id)), 'règle : pdv_ids invalides')
@@ -466,10 +468,12 @@ const EXECUTEURS = {
     let nbPdv = 0
     for (const r of op.regles) {
       const jours = [...new Set(r.days_of_week)].sort((a, b) => a - b)
-      // Mode périmètre : toute la liste chaque semaine, en plus des règles quota du jour.
+      // Mode périmètre : toute la liste les semaines prévues (chaque semaine par
+      // défaut), en plus des règles quota du jour.
+      const semaines = r.semaines_du_mois?.length ? [...new Set(r.semaines_du_mois)].sort((a, b) => a - b) : null
       const { data: regle, error } = await sb.from('routing_templates').insert({
         user_id: op.user_id, label: r.label, mode: 'perimetre', ssf_id: null,
-        days_of_week: jours, day_of_week: jours[0], semaines_du_mois: null, repli: false,
+        days_of_week: jours, day_of_week: jours[0], semaines_du_mois: semaines, repli: false,
         territoire: op.territoire, distributeur: null, date_debut: r.date_debut || null, date_fin: null,
         notes: r.notes || null, is_active: true, created_by: op.created_by || null,
       }).select('id').single()
