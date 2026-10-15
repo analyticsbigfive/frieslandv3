@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { joursDeRegle, libelleJours, datesDeRegle, pdvExclus, dansException } from '../utils/routingRecurrence'
+import { joursDeRegle, libelleJours, datesDeRegle, pdvExclus, dansException, dansSemainesDuMois, semaineDuMois } from '../utils/routingRecurrence'
 
 // Ces fonctions décident quelles dates l'admin voit comme « couvertes » par une
 // règle. Une erreur ne lève rien : elle affiche simplement les mauvaises dates,
@@ -94,5 +94,22 @@ describe('pdvExclus / dansException', () => {
     expect(dansException(e, '2026-08-10')).toBe(true)
     expect(dansException(e, '2026-08-16')).toBe(true)
     expect(dansException(e, '2026-08-17')).toBe(false)
+  })
+})
+
+describe('semaines du mois (routing mensuel, liste une semaine sur deux)', () => {
+  it('semaine du mois : jours 1-7 = 1 … 29-31 = 5', () => {
+    expect(['2026-10-01', '2026-10-07', '2026-10-08', '2026-10-19', '2026-10-22', '2026-10-29'].map(semaineDuMois)).toEqual([1, 1, 2, 3, 4, 5])
+  })
+  it('une moitié de liste (semaines 1 et 3) ne montre que ses lundis', () => {
+    const regle = { days_of_week: [1], semaines_du_mois: [1, 3], date_debut: '2026-10-19' }
+    expect(datesDeRegle(regle, '2026-10-19', '2026-11-16')).toEqual(['2026-10-19', '2026-11-02', '2026-11-16'])
+    expect(datesDeRegle({ ...regle, semaines_du_mois: [2, 4] }, '2026-10-19', '2026-11-16')).toEqual(['2026-10-26', '2026-11-09'])
+  })
+  it('5e semaine : aucune règle à semaines, sauf réglage routing_semaine_5', () => {
+    const r = { days_of_week: [4], semaines_du_mois: [1, 3] }
+    expect(dansSemainesDuMois(r, '2026-10-29')).toBe(false)
+    expect(dansSemainesDuMois(r, '2026-10-29', 1)).toBe(true)
+    expect(dansSemainesDuMois({ days_of_week: [4] }, '2026-10-29')).toBe(true)
   })
 })

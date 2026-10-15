@@ -19,6 +19,8 @@ export interface RegleRecurrente {
   date_debut?: string | null
   date_fin?: string | null
   is_active?: boolean | null
+  /** Semaines du mois (1 = jours 1-7 … 5 = jours 29-31) ; null = toutes. */
+  semaines_du_mois?: number[] | null
 }
 
 export interface ExceptionRegle {
@@ -49,6 +51,22 @@ export function joursDeRegle(regle: RegleRecurrente): number[] {
 export function libelleJours(regle: RegleRecurrente): string {
   const jours = joursDeRegle(regle)
   return JOURS_SEMAINE.filter(j => jours.includes(j.value)).map(j => j.court).join(' · ') || 'Aucun jour'
+}
+
+/** Semaine du mois d'une date AAAA-MM-JJ : 1 (jours 1-7) … 5 (jours 29-31), comme `semaine_du_mois` en SQL. */
+export function semaineDuMois(date: string): number {
+  return Math.floor((Number(date.slice(8, 10)) - 1) / 7) + 1
+}
+
+/**
+ * Vrai si la règle s'applique la semaine du mois de `date` (`semaine_routing`
+ * en SQL) : une règle sans semaines s'applique toujours ; la 5e semaine
+ * reprend la semaine `semaine5` (réglage routing_semaine_5, 0 = aucune).
+ */
+export function dansSemainesDuMois(regle: RegleRecurrente, date: string, semaine5 = 0): boolean {
+  if (!regle.semaines_du_mois?.length) return true
+  const s = semaineDuMois(date)
+  return regle.semaines_du_mois.includes(s < 5 ? s : (semaine5 || 5))
 }
 
 /** Vrai si `date` (AAAA-MM-JJ) tombe dans la fenêtre d'une exception. */
@@ -83,7 +101,7 @@ export function datesDeRegle(
       && (!regle.date_fin || iso <= regle.date_fin)
     const suspendue = exceptions.some(e => !e.pdv_id && dansException(e, iso))
 
-    if (jours.includes(curseur.getDay()) && dansFenetre && !suspendue) sorties.push(iso)
+    if (jours.includes(curseur.getDay()) && dansFenetre && !suspendue && dansSemainesDuMois(regle, iso)) sorties.push(iso)
     curseur.setDate(curseur.getDate() + 1)
   }
 

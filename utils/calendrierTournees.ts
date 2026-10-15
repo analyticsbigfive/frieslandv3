@@ -1,7 +1,7 @@
 // utils/calendrierTournees.ts
 // Calendrier mensuel des tournées d'une personne (page admin Routing) :
 // grille lundi → dimanche et couverture des jours par les règles récurrentes.
-import { joursDeRegle, dansException, type RegleRecurrente } from './routingRecurrence'
+import { joursDeRegle, dansException, dansSemainesDuMois, type RegleRecurrente } from './routingRecurrence'
 import { toIsoJour, debutDeSemaine } from './periode'
 
 export interface RegleCalendrier extends RegleRecurrente {
@@ -58,6 +58,7 @@ export function couvertureJour(regles: RegleCalendrier[], date: string): Couvert
     if (!joursDeRegle(r).includes(jourSemaine)) continue
     if (r.date_debut && date < r.date_debut) continue
     if (r.date_fin && date > r.date_fin) continue
+    if (!dansSemainesDuMois(r, date)) continue
     const exception = (r.routing_template_exception || []).find(e => !e.pdv_id && dansException(e, date))
     if (exception) out.suspendues.push({ regle: r, motif: exception.motif || 'Suspendue' })
     else out.regles.push(r)
