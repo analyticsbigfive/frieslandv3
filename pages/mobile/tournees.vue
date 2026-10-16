@@ -125,7 +125,7 @@
               <template v-else>{{ rp.position_order }}</template>
             </span>
             <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{{ rp.pdv?.nom_pdv || rp.pdv_id }}</p>
+              <p class="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{{ libellePdv(rp) }}</p>
               <p v-if="rp.pdv?.quartier || rp.pdv?.zone" class="truncate text-xs text-gray-400">
                 {{ rp.pdv?.quartier || rp.pdv?.zone }}
               </p>
@@ -148,6 +148,7 @@
 </template>
 
 <script setup lang="ts">
+import { libellePdv } from '~/utils/libellePdv'
 import type { Routing, RoutingPDV } from '~/types'
 import { toIsoJour } from '~/utils/periode'
 import { canalAtom } from '~/utils/canalAtom'

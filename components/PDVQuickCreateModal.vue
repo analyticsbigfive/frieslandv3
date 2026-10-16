@@ -151,7 +151,7 @@
 </template>
 
 <script setup lang="ts">
-import { grouperQuartiersParTerritoire } from '~/utils/territoires'
+import { grouperQuartiersParTerritoire, resoudreTerritoirePdv } from '~/utils/territoires'
 import type { PDV } from '~/types'
 
 const props = defineProps<{
@@ -194,10 +194,20 @@ const quartierOptionsGroupees = computed(() =>
 // résolue depuis le quartier choisi (quartier -> zone_id -> zone.code) ; le
 // distributeur découle de cette area (zone_distributeur), repli territoire ;
 // les nationaux sont toujours proposés.
-const { distributeurs, territories, areas, quartiers, territoireDistributeurs, zoneDistributeurs, posTypes, fetchReferentiels } = useReferentiels()
+const { distributeurs, territories, areas, quartiers, territoireDistributeurs, zoneDistributeurs, territoireAliases, posTypes, fetchReferentiels } = useReferentiels()
 
-const currentTerritory = computed(() => territories.value.find(t => t.name === form.zone))
-const territoryCode = computed(() => currentTerritory.value?.code || '')
+// Territoire résolu sans tenir compte de la casse (« KOUMASSI » ↔ « koumassi »)
+// ni des alias, en partant du quartier choisi : sinon un profil Atom en
+// MAJUSCULES n'avait aucun territoire, donc que les distributeurs nationaux.
+const territoryCode = computed(() => resoudreTerritoirePdv({
+  zone: form.zone,
+  quartier: form.quartier,
+  territoiresProfil: authStore.profile?.territoires_assignes || [],
+  quartiers: quartiers.value,
+  areas: areas.value,
+  territoires: territories.value,
+  aliases: territoireAliases.value,
+}))
 const scopedAreas = computed(() => areas.value.filter(a => !territoryCode.value || a.territory_code === territoryCode.value))
 const selectedQuartier = computed(() => {
   const zoneIds = new Set(scopedAreas.value.map(a => a.id))
@@ -307,7 +317,9 @@ function resetForm() {
 
 watch(() => props.modelValue, async (open) => {
   if (open) {
-    await fetchReferentiels()
+    // Rechargé à chaque ouverture : un distributeur ajouté entre-temps apparaît
+    // sans redémarrer l'app. Hors ligne, on garde la liste déjà chargée.
+    await fetchReferentiels(isOnline.value)
     resetForm()
   }
 })

@@ -107,6 +107,7 @@
 </template>
 
 <script setup lang="ts">
+import { libellePdv } from '~/utils/libellePdv'
 // Suivi des visites de l'équipe (lot 3.1). La RLS limite déjà les lignes au
 // périmètre du commercial (territoires + quartiers) ; la requête ne filtre
 // donc pas par user_id, contrairement à /mobile.
@@ -169,7 +170,7 @@ const filtered = computed(() => {
 })
 
 function nomPdv(v: Visite) {
-  return (v as any).pdv?.nom_pdv || `PDV ${v.pdv_id?.substring(0, 8)}`
+  return libellePdv(v as any)
 }
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })

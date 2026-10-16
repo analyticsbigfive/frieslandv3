@@ -217,6 +217,7 @@
 </template>
 
 <script setup lang="ts">
+import { libellePdv } from '~/utils/libellePdv'
 import { categoriesProduitsActives } from '~/utils/products'
 import { estMerchandiserProgramme } from '~/utils/agences'
 import type { Visite } from '~/types'
@@ -299,7 +300,7 @@ function formatDate(date: string) {
 }
 
 function getPDVName(visite: Visite) {
-  return (visite as any).pdv?.nom_pdv || `PDV ${visite.pdv_id?.substring(0, 8)}`
+  return libellePdv(visite as any)
 }
 
 function viewVisite(visite: Visite) {

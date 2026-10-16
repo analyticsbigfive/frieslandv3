@@ -52,7 +52,7 @@
           class="mobile-card p-3"
         >
           <div class="flex items-center justify-between">
-            <span class="font-medium text-sm text-gray-900 dark:text-gray-100">{{ v.pdv?.nom_pdv || v.pdv_id }}</span>
+            <span class="font-medium text-sm text-gray-900 dark:text-gray-100">{{ libellePdv(v) }}</span>
             <span class="text-xs text-gray-400">{{ new Date(v.date_visite).toLocaleDateString('fr-FR') }}</span>
           </div>
         </div>
@@ -62,6 +62,7 @@
 </template>
 
 <script setup lang="ts">
+import { libellePdv } from '~/utils/libellePdv'
 definePageMeta({ middleware: ['auth'], layout: 'mobile' })
 
 const supabase = useSupabaseClient()

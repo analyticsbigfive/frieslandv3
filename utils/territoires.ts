@@ -86,3 +86,41 @@ export function grouperQuartiersParTerritoire(
     .map(g => ({ ...g, quartiers: g.quartiers.sort((a, b) => a.localeCompare(b, 'fr')) }))
     .sort((a, b) => (a.code === '' ? 1 : b.code === '' ? -1 : a.territoire.localeCompare(b.territoire, 'fr')))
 }
+
+// Code du territoire d'un nom porté par un profil : exact, puis sans casse ni
+// accents (« KOUMASSI » ↔ « koumassi »), puis via territoire_alias.
+export function codeTerritoireDuNom(nom: string, territoires: TerritoireRef[], aliases: TerritoireAlias[] = []): string {
+  if (!nom) return ''
+  const exact = territoires.find(t => t.name === nom)
+  if (exact) return exact.code
+  const key = normaliserNomTerritoire(nom)
+  return territoires.find(t => normaliserNomTerritoire(t.name) === key)?.code
+    || aliases.find(a => normaliserNomTerritoire(a.alias) === key)?.territoire_code
+    || ''
+}
+
+// Territoire d'un PDV créé sur le terrain. Un même nom de quartier existe dans
+// plusieurs areas (SICOGI : 8) : on garde l'area qui tombe dans les territoires
+// du profil ; à défaut, le territoire de la zone du profil ; à défaut, celui de
+// la première area portant ce quartier.
+export function resoudreTerritoirePdv(opts: {
+  zone: string
+  quartier: string
+  territoiresProfil: string[]
+  quartiers: QuartierRef[]
+  areas: AreaRef[]
+  territoires: TerritoireRef[]
+  aliases?: TerritoireAlias[]
+}): string {
+  const { zone, quartier, territoiresProfil, quartiers, areas, territoires, aliases = [] } = opts
+  const codeZone = codeTerritoireDuNom(zone, territoires, aliases)
+  const codesProfil = new Set(
+    [zone, ...territoiresProfil].map(n => codeTerritoireDuNom(n, territoires, aliases)).filter(Boolean),
+  )
+  const areaParId = new Map(areas.map(a => [a.id, a]))
+  const codesQuartier = quartier
+    ? quartiers.filter(q => q.nom === quartier).map(q => areaParId.get(q.zone_id)?.territory_code).filter(Boolean) as string[]
+    : []
+  if (codeZone && codesQuartier.includes(codeZone)) return codeZone
+  return codesQuartier.find(c => codesProfil.has(c)) || codeZone || codesQuartier[0] || ''
+}
