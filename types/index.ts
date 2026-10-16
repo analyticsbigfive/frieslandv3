@@ -198,6 +198,8 @@ export interface RoutingTemplate {
   date_debut?: string | null
   /** NULL = la règle court indéfiniment (cas nominal). */
   date_fin?: string | null
+  /** Semaines du mois (1 = jours 1-7 … 5 = jours 29-31) ; null = toutes. Routing mensuel, listes une semaine sur deux. */
+  semaines_du_mois?: number[] | null
   /** perimetre (défaut) ou quota (Atom : grille routing_quota_canal, un PDV par mois). */
   mode?: RoutingTemplateMode
   /** SSF qui accompagne le merchandiser les jours de la règle (sous-zone : ssf_quartier). */

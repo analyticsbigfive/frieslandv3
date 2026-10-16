@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 // @ts-ignore module JS sans types
-import { avenueDe, cleAdresse, cleQuartier, gerantsCompatibles, lireListePdv, lireListePdvCsv, rapprocher, simulerListePdv, telephoneDe, typeDe } from '../scripts/lib/imports/liste-pdv.mjs'
+import { avenueDe, cleAdresse, cleQuartier, gerantsCompatibles, lireListePdv, lireListePdvCsv, lireSemaines, rapprocher, simulerListePdv, telephoneDe, typeDe } from '../scripts/lib/imports/liste-pdv.mjs'
 // @ts-ignore module JS sans types
 import { OPERATIONS_PAR_IMPORT, validerOperation } from '../scripts/lib/imports/operations.mjs'
 
@@ -225,6 +225,60 @@ describe('simulation', () => {
   it('sans merchandiser : bloqué', () => {
     const x = donnees({ merchDeLigne: new Map() })
     expect(simulerListePdv(x.lignes, x.d, { aujourdhui: '2026-10-14' }).bloquants).toEqual(['Choisissez le merchandiser : le fichier n’a pas de colonne « Merchandiser ».'])
+  })
+})
+
+describe('une semaine sur deux (colonne « Semaines »)', () => {
+  // Réponse d'Atom du 15/10/2026 : chaque liste du jour en deux moitiés, en alternance.
+  const CSV = [
+    'Jour;Semaines;Nom du PDV;Localisation;Secteur;Contact;Type',
+    'Lundi;1 et 3;Sow rue 44 treichville;Après la mosquée;Belleville;;Boutique C',
+    'Lundi;2 et 4;Diallo treichville avenue 6;Avenue 6 rue 16 barrée;France Amerique;;Boutique C',
+    'Lundi;S2 + S4;Kiosque test;Avenue 1;Belleville;;Kiosque',
+    'Mardi;;Boutique aras;Avenue 3 rue 38;Aras;;Boutique C',
+  ].join('\n')
+  const sim = () => {
+    const { lignes } = lireListePdvCsv(CSV)
+    const x = donnees()
+    const profil = x.d.profils[0]
+    return simulerListePdv(lignes, { ...x.d, merchDeLigne: new Map(lignes.map((l: any) => [l, { profil, certitude: 'choisi' }])) }, { aujourdhui: '2026-10-15', debut: '2026-10-19' })
+  }
+
+  it('adresse sans avenue ni secteur : zone principale de la liste', () => {
+    const csv = `${CSV}\nMercredi;2 et 4;diallo;avenue rue 18;;;Boutique C`
+    const { lignes } = lireListePdvCsv(csv)
+    const x = donnees()
+    const profil = x.d.profils[0]
+    const res = simulerListePdv(lignes, { ...x.d, merchDeLigne: new Map(lignes.map((l: any) => [l, { profil, certitude: 'choisi' }])) }, { aujourdhui: '2026-10-15' })
+    const cree = res.operations.find((o: any) => o.type === 'pdv.creer').lignes[0]
+    expect(cree).toMatchObject({ nom_pdv: 'diallo', zone: 'TREICHVILLE', quartier: null })
+  })
+
+  it('lit les semaines du mois ; vide, « toutes » ou 1 à 4 = chaque semaine', () => {
+    expect(['1 et 3', 'S2+S4', '2,4', 'impaires', 'semaines paires', '', 'toutes', '1, 2, 3, 4'].map(lireSemaines))
+      .toEqual([[1, 3], [2, 4], [2, 4], [1, 3], [2, 4], null, null, null])
+    expect(() => lireSemaines('A')).toThrow(/Semaines/)
+  })
+
+  it('une règle par jour et par moitié, avec ses semaines du mois', () => {
+    const op = sim().operations.find((o: any) => o.type === 'regles_liste.remplacer')
+    expect(op.regles.map((r: any) => [r.days_of_week, r.semaines_du_mois, r.pdv_ids])).toEqual([
+      [[1], [1, 3], ['B1']],
+      [[1], [2, 4], ['B2', 'B10']],
+      [[2], null, ['B11']],
+    ])
+    expect(op.regles[0].label).toBe('Liste PDV — Lundi (semaines 1 et 3) — TREICHVILLE › Belleville')
+    expect(op.regles[2].label).toBe('Liste PDV — Mardi — TREICHVILLE › Aras')
+    expect(() => validerOperation(op, OPERATIONS_PAR_IMPORT['liste-pdv'])).not.toThrow()
+    expect(() => validerOperation({ ...op, regles: [{ ...op.regles[0], semaines_du_mois: [6] }] })).toThrow(/semaines/)
+  })
+
+  it('rapport : semaines de chaque règle ; retour = liste d’avant, chaque semaine', () => {
+    const res = sim()
+    expect(res.rapport).toMatch(/\| Lundi \| 2, 4 \| Lundi \(semaines 2 et 4\)/)
+    expect(res.rapport).toMatch(/jours 29 à 31 suivent le réglage/)
+    const avant = (res.retour as any[]).find(o => o.type === 'regles_liste.remplacer')
+    expect(avant.regles[0]).toMatchObject({ semaines_du_mois: null, pdv_ids: ['B1'] })
   })
 })
 

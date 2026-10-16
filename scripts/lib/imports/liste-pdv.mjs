@@ -16,8 +16,14 @@
  *   - ou CSV / feuille unique avec une colonne « Jour ».
  * Colonnes (en-tête cherché sur chaque feuille) : Nom du PDV, Localisation
  * (ou Adresse), Type ; facultatives : Merchandiser, Zone (ou Commune),
- * Secteur (ou Quartier), Contact (ou Téléphone), Jour. Sans colonne
+ * Secteur (ou Quartier), Contact (ou Téléphone), Jour, Semaines. Sans colonne
  * Merchandiser, l'écran demande de le choisir.
+ *
+ * Semaines (réponse d'Atom du 15/10/2026 : pour alléger Gui, chaque PDV de
+ * Treichville une semaine sur deux) : semaines du mois où la ligne est
+ * visitée, comme le routing mensuel (« 1 et 3 », « 2 et 4 » ; vide = chaque
+ * semaine). Une règle par jour et par jeu de semaines ; la 5e semaine (jours
+ * 29 à 31) suit le paramètre routing_semaine_5.
  *
  * Rapprochement avec les PDV de la base, dans les zones du périmètre du
  * merchandiser (et celles du fichier) ; un PDV de la base ne sert qu'à une
@@ -78,6 +84,7 @@ export function lireListePdv(feuilles) {
           else if (/^(CONTACT|TEL|TELEPHONE|NUMERO|PORTABLE)/.test(h) && !idx.contact) idx.contact = i
           else if (/^(TYPE|CATEGORIE|SOUS CATEGORIE|CANAL)/.test(h) && !idx.type) idx.type = i
           else if (/^JOUR/.test(h) && !idx.jour) idx.jour = i
+          else if (/^SEMAINE/.test(h) && !idx.semaines) idx.semaines = i
         })
         if (idx.nom && (idx.adresse || idx.type)) cols = idx
         continue
@@ -90,12 +97,29 @@ export function lireListePdv(feuilles) {
       lignes.push({
         feuille: f.nom.trim(), ligne: n, nom, adresse: v(cols.adresse), quartier: v(cols.quartier), zone: v(cols.zone),
         contact: v(cols.contact), type: v(cols.type), merch: v(cols.merch), jours,
+        semaines: cols.semaines ? lireSemaines(v(cols.semaines)) : null,
       })
     }
   }
   if (!lignes.length) throw new Error('Aucune ligne lisible : il faut au moins les colonnes « Nom du PDV » et « Localisation » (ou « Type »)')
   return { lignes, avecMerch }
 }
+
+/**
+ * Semaines du mois d'une ligne (1 = jours 1-7 … 5 = jours 29-31) :
+ * « 1 et 3 », « S2 + S4 », « impaires » → [1, 3], « paires » → [2, 4].
+ * null = chaque semaine (vide, « toutes », ou les semaines 1 à 4).
+ */
+export function lireSemaines(texte) {
+  const t = cleTexte(texte)
+  if (!t || /TOUTES|CHAQUE/.test(t)) return null
+  if (/^(SEMAINES? )?IMPAIRES?$/.test(t)) return [1, 3]
+  if (/^(SEMAINES? )?PAIRES?$/.test(t)) return [2, 4]
+  const s = uniques((separerChiffres(t).match(/\d+/g) || []).map(Number).filter(n => n >= 1 && n <= 5)).sort((a, b) => a - b)
+  if (!s.length) throw new Error(`Semaines « ${texte} » : écrire les semaines du mois, par exemple « 1 et 3 » ou « 2 et 4 »`)
+  return [1, 2, 3, 4].every(n => s.includes(n)) ? null : s
+}
+const libelleSemaines = (s) => (s?.length ? `semaine${s.length > 1 ? 's' : ''} ${s.length > 1 ? `${s.slice(0, -1).join(', ')} et ${s.at(-1)}` : s[0]}` : 'chaque semaine')
 
 export const lireListePdvExcel = (wb) => lireListePdv(feuillesDepuisClasseur(wb))
 export const lireListePdvCsv = (texte, nom = 'CSV') => lireListePdv(feuillesDepuisCsv(texte, nom))
@@ -247,7 +271,7 @@ export async function chargerDonneesListePdv(sb, lignes, { merchandiserId = null
   etape('Listes en place')
   const ids = profils.map(p => p.id)
   const regles = ids.length
-    ? await toutes(() => sb.from('routing_templates').select('id,user_id,label,territoire,days_of_week,day_of_week,date_debut,notes,is_active')
+    ? await toutes(() => sb.from('routing_templates').select('id,user_id,label,territoire,days_of_week,day_of_week,semaines_du_mois,date_debut,notes,is_active')
       .in('user_id', ids).like('label', `${PREFIXE_REGLE_LISTE}%`).order('id'))
     : []
   const reglesPdv = []
@@ -369,8 +393,13 @@ export function simulerListePdv(lignes, donnees, options = {}) {
   const traductionsQuartier = new Map()
   const typesNonReconnus = new Map()
 
-  /** Quartier et zone d'une ligne à créer. */
-  function localiser(l) {
+  /**
+   * Quartier et zone d'une ligne à créer. `zoneListe` : zone principale des
+   * PDV retrouvés de la liste, pour une adresse sans avenue ni secteur
+   * (« avenue rue 18 ») ; sans zone, le PDV échappe au périmètre et à un
+   * nouvel import de la même liste.
+   */
+  function localiser(l, zoneListe = null) {
     const av = avenueDe(l.adresse) ?? avenueDe(l.nom)
     const voisins = av != null ? (parAvenue.get(av) || []) : []
     let quartier = null
@@ -390,6 +419,7 @@ export function simulerListePdv(lignes, donnees, options = {}) {
       || (quartier && quartierParCle.get(cleQuartier(quartier))?.zone)
       || plusFrequent(voisins.map(p => p.zone))
       || (l.zone ? norm(l.zone) : null)
+      || zoneListe
     return { quartier, zone, distributeur: distributeurDe(zone, quartier), statutQuartier }
   }
   // Distributeur d'un PDV créé : le plus fréquent de son quartier, sinon de sa zone.
@@ -422,6 +452,7 @@ export function simulerListePdv(lignes, donnees, options = {}) {
 
   for (const { profil, certitude, lignes: siennes } of parMerch.values()) {
     const rapp = rapprocher(siennes, pdvs, { motsLieux })
+    const zoneListe = plusFrequent(siennes.map(l => rapp.get(l).pdv?.zone))
     const pdvDeLigne = new Map()
     const crees = []
     const maj = []
@@ -434,7 +465,7 @@ export function simulerListePdv(lignes, donnees, options = {}) {
         if (tel && donnees.migrationAppliquee !== false && !r.pdv.telephone) maj.push({ pdv_id: r.pdv.pdv_id, valeurs: { telephone: tel } })
         continue
       }
-      const loc = localiser(l)
+      const loc = localiser(l, zoneListe)
       const type = typeDe(l.type)
       if (!type.reconnu && l.type) typesNonReconnus.set(l.type, (typesNonReconnus.get(l.type) || 0) + 1)
       const local = typeLocal.get(type.sous_categorie_pdv)
@@ -465,22 +496,28 @@ export function simulerListePdv(lignes, donnees, options = {}) {
       if (r.meme) pdvDeLigne.set(l, pdvDeLigne.get(r.meme))
     }
 
-    // Une règle par jour, dans l'ordre du fichier ; territoire = zone principale de la liste.
+    // Une règle par jour et par jeu de semaines (« 1 et 3 », chaque semaine…),
+    // dans l'ordre du fichier ; territoire = zone principale de la liste.
     const territoire = plusFrequent(siennes.map(l => pdvDeLigne.get(l)?.zone)) || profil.territoires_assignes?.[0] || 'SANS ZONE'
     const reglesNouvelles = []
     for (let j = 0; j <= 6; j++) {
-      const duJour = siennes.filter(l => l.jours.includes(j))
-      if (!duJour.length) continue
-      const ids = uniques(duJour.map(l => pdvDeLigne.get(l)?.pdv_id))
-      const quartiers = [...grouper(duJour, l => pdvDeLigne.get(l)?.quartier).entries()].sort((a, b) => b[1].length - a[1].length).slice(0, 2).map(([q]) => q)
-      reglesNouvelles.push({
-        label: `${PREFIXE_REGLE_LISTE}${JOURS[j]} — ${territoire}${quartiers.length ? ` › ${quartiers.join(' / ')}` : ''}`.slice(0, 200),
-        days_of_week: [j],
-        date_debut: debut,
-        notes: `Liste de PDV par jour, fichier « ${fichier} » (${ids.length} PDV, toute la liste chaque semaine).`.slice(0, 4000),
-        pdv_ids: ids.slice(0, MAX_PDV_REGLE),
-        nouveaux: duJour.filter(l => pdvDeLigne.get(l)?.nouveau).length,
-      })
+      // « * » : chaque semaine (grouper ignore une clé vide).
+      const parSemaines = grouper(siennes.filter(l => l.jours.includes(j)), l => (l.semaines ? l.semaines.join(',') : '*'))
+      for (const cle of [...parSemaines.keys()].sort()) {
+        const duJour = parSemaines.get(cle)
+        const semaines = cle === '*' ? null : cle.split(',').map(Number)
+        const ids = uniques(duJour.map(l => pdvDeLigne.get(l)?.pdv_id))
+        const quartiers = [...grouper(duJour, l => pdvDeLigne.get(l)?.quartier).entries()].sort((a, b) => b[1].length - a[1].length).slice(0, 2).map(([q]) => q)
+        reglesNouvelles.push({
+          label: `${PREFIXE_REGLE_LISTE}${JOURS[j]}${semaines ? ` (${libelleSemaines(semaines)})` : ''} — ${territoire}${quartiers.length ? ` › ${quartiers.join(' / ')}` : ''}`.slice(0, 200),
+          days_of_week: [j],
+          semaines_du_mois: semaines,
+          date_debut: debut,
+          notes: `Liste de PDV par jour, fichier « ${fichier} » (${ids.length} PDV, toute la liste ${semaines ? `les ${libelleSemaines(semaines)} du mois` : 'chaque semaine'}).`.slice(0, 4000),
+          pdv_ids: ids.slice(0, MAX_PDV_REGLE),
+          nouveaux: duJour.filter(l => pdvDeLigne.get(l)?.nouveau).length,
+        })
+      }
     }
     const nonPlanifiees = siennes.filter(l => !l.jours.length)
 
@@ -509,7 +546,7 @@ export function simulerListePdv(lignes, donnees, options = {}) {
     retour.regles.push({
       type: 'regles_liste.remplacer', user_id: profil.id, territoire, created_by: options.auteurId || null,
       regles: avant.map(r => ({
-        label: r.label, days_of_week: r.days_of_week || [r.day_of_week], date_debut: r.date_debut, notes: r.notes,
+        label: r.label, days_of_week: r.days_of_week || [r.day_of_week], semaines_du_mois: r.semaines_du_mois ?? null, date_debut: r.date_debut, notes: r.notes,
         pdv_ids: reglesPdv.filter(x => x.template_id === r.id).sort((a, b) => a.position_order - b.position_order).map(x => x.pdv_id),
       })).filter(r => r.days_of_week.length && r.days_of_week.every(j => j != null)),
     })
@@ -555,7 +592,8 @@ export function simulerListePdv(lignes, donnees, options = {}) {
 
   const md = []
   md.push('# Liste de PDV par jour', '')
-  md.push(`Fichier : ${fichier} — ${lignes.length} lignes. Chaque jour, le merchandiser visite toute la liste du jour, chaque semaine, en plus de sa case du routing mensuel. Les PDV créés n’ont pas de GPS : le merchandiser les géolocalise à sa première visite.`)
+  const alternance = lignes.some(l => l.semaines)
+  md.push(`Fichier : ${fichier} — ${lignes.length} lignes. Chaque jour, le merchandiser visite toute la liste du jour${alternance ? ' prévue pour la semaine du mois (colonne « Semaines » ; sans semaine : chaque semaine)' : ', chaque semaine'}, en plus de sa case du routing mensuel. Les PDV créés n’ont pas de GPS : le merchandiser les géolocalise à sa première visite.`)
   md.push('', '## Résumé', '')
   for (const p of plannings) {
     md.push(`- Merchandiser : **${p.profil.nom || p.profil.email}** (${p.profil.email || '—'})${p.certitude === 'approche' ? ', reconnu malgré une orthographe différente' : ''}. Zone de la liste : ${p.territoire}.`)
@@ -571,9 +609,9 @@ export function simulerListePdv(lignes, donnees, options = {}) {
   for (const p of plannings) {
     md.push('', `## Tournées de ${p.profil.nom || p.profil.email}`, '')
     if (p.regles.length) {
-      md.push('| Jour | Règle | PDV | dont créés |', '|---|---|---:|---:|')
-      for (const r of p.regles) md.push(`| ${JOURS[r.days_of_week[0]]} | ${r.label.slice(PREFIXE_REGLE_LISTE.length)} | ${r.pdv_ids.length} | ${r.nouveaux} |`)
-      md.push('', `À partir du ${debut.split('-').reverse().join('/')}, chaque semaine. Ces règles s’ajoutent au routing mensuel du merchandiser, qui ne change pas.`)
+      md.push('| Jour | Semaines du mois | Règle | PDV | dont créés |', '|---|---|---|---:|---:|')
+      for (const r of p.regles) md.push(`| ${JOURS[r.days_of_week[0]]} | ${r.semaines_du_mois ? r.semaines_du_mois.join(', ') : 'toutes'} | ${r.label.slice(PREFIXE_REGLE_LISTE.length)} | ${r.pdv_ids.length} | ${r.nouveaux} |`)
+      md.push('', `À partir du ${debut.split('-').reverse().join('/')}. Ces règles s’ajoutent au routing mensuel du merchandiser, qui ne change pas.${p.regles.some(r => r.semaines_du_mois) ? ' Semaines du mois : 1 = jours 1 à 7, 2 = 8 à 14, 3 = 15 à 21, 4 = 22 à 28 ; les jours 29 à 31 suivent le réglage « Routing de la 5e semaine du mois », comme le routing mensuel.' : ''}`)
     }
     if (p.nonPlanifiees.length) {
       const feuilles = uniques(p.nonPlanifiees.map(l => `« ${l.feuille} »`)).join(', ')
@@ -598,9 +636,9 @@ export function simulerListePdv(lignes, donnees, options = {}) {
   md.push('', '## Retour arrière', '', '« Annuler le lot » (Imports terrain) remet les listes d’avant, retire les téléphones ajoutés, supprime les PDV créés (sauf ceux déjà visités) et remet le périmètre d’avant.')
 
   const csv = {
-    'liste-pdv.csv': csvTexte(['Merchandiser', 'Feuille', 'Ligne', 'Jours', 'Nom', 'Adresse', 'Secteur (fichier)', 'Contact', 'Type (fichier)', 'Rapprochement', 'PDV', 'Nom en base', 'Adresse en base', 'Zone', 'Quartier', 'GPS', 'Pistes'],
+    'liste-pdv.csv': csvTexte(['Merchandiser', 'Feuille', 'Ligne', 'Jours', 'Semaines', 'Nom', 'Adresse', 'Secteur (fichier)', 'Contact', 'Type (fichier)', 'Rapprochement', 'PDV', 'Nom en base', 'Adresse en base', 'Zone', 'Quartier', 'GPS', 'Pistes'],
       detail.map(({ profil, l, r, p }) => [
-        profil.nom || profil.email, l.feuille, l.ligne, l.jours.map(j => JOURS[j]).join(' + ') || 'non planifié', l.nom, l.adresse, l.quartier, l.contact, l.type,
+        profil.nom || profil.email, l.feuille, l.ligne, l.jours.map(j => JOURS[j]).join(' + ') || 'non planifié', l.semaines ? l.semaines.join(', ') : 'toutes', l.nom, l.adresse, l.quartier, l.contact, l.type,
         r.pdv ? `déjà en base (${r.niveau})` : r.meme ? 'doublon du fichier' : r.pistes.length ? 'créé, à vérifier' : 'créé',
         p?.pdv_id || '', r.pdv?.nom_pdv || '', r.pdv?.adressage || '', p?.zone || '', p?.quartier || '',
         p?.geolocation_lat != null ? 'oui' : 'non (à la première visite)', r.pistes.map(x => `${x.pdv_id} ${x.nom_pdv}`).join(' | '),
