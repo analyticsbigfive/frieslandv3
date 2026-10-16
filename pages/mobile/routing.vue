@@ -90,7 +90,7 @@
 
             <!-- PDV Info -->
             <div class="flex-1 min-w-0">
-              <h3 class="font-bold text-gray-900 dark:text-gray-100 text-sm">{{ rp.pdv?.nom_pdv || rp.pdv_id }}</h3>
+              <h3 class="font-bold text-gray-900 dark:text-gray-100 text-sm">{{ libellePdv(rp) }}</h3>
               <!-- Type de PDV : canal Atom (Pushcart, Superette…) ou sous-catégorie brute -->
               <BadgeTypePdv :sous-categorie="rp.pdv?.sous_categorie_pdv" class="mt-1" />
               <p class="text-xs text-gray-400 mt-0.5">
@@ -209,6 +209,7 @@
 </template>
 
 <script setup lang="ts">
+import { libellePdv } from '~/utils/libellePdv'
 import type { RoutingPDV } from '~/types'
 
 // La tournée est un geste d'écriture (démarrage de mission, saut de PDV,
