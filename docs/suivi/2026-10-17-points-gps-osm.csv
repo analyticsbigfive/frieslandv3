@@ -1,0 +1,216 @@
+Merchandiser;Jour;Semaine;Point de visite;Commune;Distributeur;Statut;Point GPS utilisé;Ancien point (agence);Écart (m);Explication;Suggestion OpenStreetMap
+ABBE FREDERIC;Lundi;S1;220 Logements 1;Adjamé;BOUSSOURA SARL;OK;5.35800, -4.02100;;;Point à 795 m du lieu trouvé sur OpenStreetMap;
+ABBE FREDERIC;Mardi;S1;Agban village;Attécoubé;BOUSSOURA SARL;OK;5.36023, -4.03334;;;Point à 1 m du lieu trouvé sur OpenStreetMap;
+ABBE FREDERIC;Mercredi;S1;Quartier Ébrié;Adjamé;BOUSSOURA SARL;OK;5.35529, -4.02076;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+ABBE FREDERIC;Jeudi;S1;Paillet;Adjamé (Williamsville);BOUSSOURA SARL;À confirmer (douteux);5.37671, -4.01332;;;"Lieu introuvable sur OpenStreetMap ; PDV du quartier reconnu à 1016 m du point";
+ABBE FREDERIC;Vendredi;S1;Cité Rane;Adjamé;BOUSSOURA SARL;À confirmer (non vérifiable);5.36400, -4.02400;;;Lieu introuvable sur OpenStreetMap et aucun quartier de PDV reconnu : point non vérifiable;
+ABBE FREDERIC;Samedi;S1;Bracodi;Adjamé;BOUSSOURA SARL;OK;5.36160, -4.02523;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+ABBE FREDERIC;Lundi;S2;220 Logements 2;Adjamé;BOUSSOURA SARL;OK;5.35950, -4.02250;;;PDV du quartier reconnu à 100 m du point;
+ABBE FREDERIC;Mardi;S2;Attécoubé 1;Attécoubé;BOUSSOURA SARL;À confirmer (douteux);5.33700, -4.03200;;;"Point à 511 m des PDV notés ATTECOUBE (limite) ; le centre de ces PDV tombe côté Adjamé.";5.35151, -4.05196 (« Attécoubé 3 »)
+ABBE FREDERIC;Mercredi;S2;Dallas 1;Adjamé;BOUSSOURA SARL;Corrigé le 17/10;5.34191, -4.02370;5.33200, -4.03900;2021;OpenStreetMap « Carrefour Dallas »;
+ABBE FREDERIC;Jeudi;S2;Williamsville 1;Adjamé (Williamsville);BOUSSOURA SARL;Corrigé le 17/10;5.37375, -4.02510;5.37200, -4.01800;810;Centre des PDV du quartier (lieu introuvable sur OpenStreetMap);
+ABBE FREDERIC;Vendredi;S2;Bramakoté 1;Adjamé;BOUSSOURA SARL;Corrigé le 17/10;5.34927, -4.03242;5.36100, -4.02900;1358;Centre des PDV du quartier (lieu introuvable sur OpenStreetMap);
+ABBE FREDERIC;Samedi;S2;Dallas 1;Adjamé;BOUSSOURA SARL;Corrigé le 17/10;5.34191, -4.02370;5.33200, -4.03900;2021;OpenStreetMap « Carrefour Dallas »;
+ABBE FREDERIC;Lundi;S3;Bracodi 1;Adjamé;BOUSSOURA SARL;Corrigé le 17/10;5.36160, -4.02523;5.35200, -4.02500;1068;OpenStreetMap « Bracodi »;
+ABBE FREDERIC;Mardi;S3;Attécoubé 2;Attécoubé;BOUSSOURA SARL;OK;5.33850, -4.03350;;;PDV du quartier reconnu à 409 m du point;
+ABBE FREDERIC;Mercredi;S3;Saint Michel 1;Adjamé;BOUSSOURA SARL;Corrigé le 17/10;5.34548, -4.02202;5.35500, -4.02300;1064;OpenStreetMap « Saint-Michel »;
+ABBE FREDERIC;Jeudi;S3;Vidange;Adjamé (Williamsville);BOUSSOURA SARL;À confirmer (douteux);5.38519, -4.00601;;;"Lieu introuvable sur OpenStreetMap ; PDV du quartier reconnu à 2059 m du point";
+ABBE FREDERIC;Vendredi;S3;Bramakoté 2;Adjamé;BOUSSOURA SARL;Corrigé le 17/10;5.34927, -4.03242;5.36250, -4.03050;1486;Centre des PDV du quartier (lieu introuvable sur OpenStreetMap);
+ABBE FREDERIC;Samedi;S3;Attécoubé 2;Attécoubé;BOUSSOURA SARL;OK;5.33850, -4.03350;;;PDV du quartier reconnu à 409 m du point;
+ABBE FREDERIC;Lundi;S4;Bracodi 2;Adjamé;BOUSSOURA SARL;OK;5.35350, -4.02650;;;Point à 911 m du lieu trouvé sur OpenStreetMap;
+ABBE FREDERIC;Mardi;S4;Cité Fairmont et Attécoubé 2;Attécoubé;BOUSSOURA SARL;OK;5.34000, -4.03100;;;PDV du quartier reconnu à 182 m du point;
+ABBE FREDERIC;Mercredi;S4;Dallas 2;Adjamé;BOUSSOURA SARL;Corrigé le 17/10;5.34191, -4.02370;5.33350, -4.04050;2082;OpenStreetMap « Carrefour Dallas »;
+ABBE FREDERIC;Jeudi;S4;HMA;Adjamé (Williamsville);BOUSSOURA SARL;OK;5.38132, -4.00742;;;Point à 954 m du lieu trouvé sur OpenStreetMap;
+ABBE FREDERIC;Vendredi;S4;Délégation;Adjamé;BOUSSOURA SARL;OK;5.34325, -4.02980;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+ABBE FREDERIC;Samedi;S4;Quartier rouge;Adjamé;BOUSSOURA SARL;OK;5.35080, -4.02050;;;PDV du quartier reconnu à 14 m du point;
+DEHEO WILFRIED;Lundi;S1;Sable et Institut des aveugles;Yopougon;SODICOM-CI;Corrigé le 17/10;5.35705, -4.06819;5.33800, -4.07800;2380;OpenStreetMap « Sable »;
+DEHEO WILFRIED;Mardi;S1;Niangon;Yopougon;SODICOM-CI;OK;5.32358, -4.09822;;;Point à 1 m du lieu trouvé sur OpenStreetMap;
+DEHEO WILFRIED;Mercredi;S1;Selmer;Yopougon;SODICOM-CI;OK;5.34037, -4.07002;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+DEHEO WILFRIED;Jeudi;S1;Koweït;Yopougon;SODICOM-CI;OK;5.32218, -4.05427;;;Point à 109 m du lieu trouvé sur OpenStreetMap;
+DEHEO WILFRIED;Vendredi;S1;Petit Toit rouge;Yopougon;SODICOM-CI;OK;5.32412, -4.06695;;;Point à 172 m du lieu trouvé sur OpenStreetMap;
+DEHEO WILFRIED;Samedi;S1;Base CIE;Yopougon;SODICOM-CI;OK;5.33219, -4.08947;;;Point à 13 m du lieu trouvé sur OpenStreetMap;
+DEHEO WILFRIED;Lundi;S2;Millionnaire;Yopougon;SODICOM-CI;OK;5.35429, -4.06024;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+DEHEO WILFRIED;Mardi;S2;Camp militaire;Yopougon;SODICOM-CI;OK;5.32157, -4.06465;;;Point à 1 m du lieu trouvé sur OpenStreetMap;
+DEHEO WILFRIED;Mercredi;S2;Sicogi;Yopougon;SODICOM-CI;OK;5.34409, -4.07743;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+DEHEO WILFRIED;Jeudi;S2;Koweït 2 et Agbayaté 1;Yopougon;SODICOM-CI;Corrigé le 17/10;5.32122, -4.05446;5.32100, -4.09200;4156;OpenStreetMap « Koweit »;
+DEHEO WILFRIED;Vendredi;S2;Kouté;Yopougon;SODICOM-CI;OK;5.32514, -4.07331;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+DEHEO WILFRIED;Samedi;S2;Locodjro;Yopougon;SODICOM-CI;OK;5.32641, -4.04112;;;PDV du quartier reconnu à 151 m du point;
+DEHEO WILFRIED;Lundi;S3;Nouveau quartier;Yopougon;SODICOM-CI;OK;5.33959, -4.05924;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+DEHEO WILFRIED;Mardi;S3;Sideci LEM;Yopougon;SODICOM-CI;OK;5.33100, -4.08400;;;Point à 766 m du lieu trouvé sur OpenStreetMap;
+DEHEO WILFRIED;Mercredi;S3;Complexe;Yopougon;SODICOM-CI;OK;5.34141, -4.06502;;;Point à 1 m du lieu trouvé sur OpenStreetMap;
+DEHEO WILFRIED;Jeudi;S3;Agbayaté 2;Yopougon;SODICOM-CI;À confirmer (douteux);5.32250, -4.09400;;;OpenStreetMap propose « Carrefour Agbayaté » (bus_stop) à 5133 m du point de l'agence : lieu peu sûr;5.32220, -4.04764 (« Carrefour Agbayaté »)
+DEHEO WILFRIED;Vendredi;S3;Béago;Yopougon;SODICOM-CI;OK;5.30756, -4.07007;;;Point à 1 m du lieu trouvé sur OpenStreetMap;
+DEHEO WILFRIED;Samedi;S3;Mossikro;Yopougon;SODICOM-CI;OK;5.34099, -4.04635;;;PDV du quartier reconnu à 31 m du point;
+DEHEO WILFRIED;Lundi;S4;Toit rouge;Yopougon;SODICOM-CI;OK;5.33133, -4.05500;;;Point à 1 m du lieu trouvé sur OpenStreetMap;
+DEHEO WILFRIED;Mardi;S4;Assonvon;Yopougon;SODICOM-CI;À confirmer (douteux);5.33300, -4.08800;;;OpenStreetMap propose « Pharmacie Assonvon » (pharmacy) à 2205 m du point de l'agence : lieu peu sûr;5.33276, -4.06809 (« Pharmacie Assonvon »)
+DEHEO WILFRIED;Mercredi;S4;Wassakara;Yopougon;SODICOM-CI;OK;5.34811, -4.06675;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+DEHEO WILFRIED;Jeudi;S4;Abobodoumé;Yopougon;SODICOM-CI;OK;5.30913, -4.04012;;;Point à 690 m du lieu trouvé sur OpenStreetMap;
+DEHEO WILFRIED;Vendredi;S4;Azito;Yopougon;SODICOM-CI;OK;5.30152, -4.08161;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+GUI STEPHANE;Lundi;S1;Biafra;Treichville;SIDECOM;OK;5.31344, -4.00484;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+GUI STEPHANE;Mardi;S1;Grand marché;Marcory;SIDECOM;À confirmer (douteux);5.30100, -4.00500;;;OpenStreetMap propose « Grand marché de Marcory » (marketplace) à 3216 m du point de l'agence : lieu peu sûr;5.29986, -3.97598 (« Grand marché de Marcory »)
+GUI STEPHANE;Mercredi;S1;Biétry;Marcory;SIDECOM;OK;5.27768, -3.97499;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+GUI STEPHANE;Jeudi;S1;Hibiscus;Marcory;SIDECOM;OK;5.29900, -3.98184;;;Point à 1 m du lieu trouvé sur OpenStreetMap;
+GUI STEPHANE;Vendredi;S1;Petit marché;Marcory;SIDECOM;OK;5.30229, -3.98481;;;Point à 60 m du lieu trouvé sur OpenStreetMap;
+GUI STEPHANE;Samedi;S1;Snap;Treichville;SIDECOM;À confirmer (non vérifiable);5.30400, -3.99200;;;Lieu introuvable sur OpenStreetMap et aucun quartier de PDV reconnu : point non vérifiable;
+GUI STEPHANE;Lundi;S2;Arras;Treichville;SIDECOM;OK;5.29995, -4.00339;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+GUI STEPHANE;Mardi;S2;Gare de Bassam;Treichville;SIDECOM;OK;5.29905, -4.00329;;;Point à 84 m du lieu trouvé sur OpenStreetMap;
+GUI STEPHANE;Mercredi;S2;Zone 4;Marcory;SIDECOM;OK;5.29194, -3.98127;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+GUI STEPHANE;Jeudi;S2;Anoumabo;Marcory;SIDECOM;OK;5.30966, -3.96822;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+GUI STEPHANE;Vendredi;S2;Sans fil;Marcory;SIDECOM;OK;5.30708, -3.96405;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+GUI STEPHANE;Samedi;S2;Konan Raphaël;Marcory;SIDECOM;À confirmer (non vérifiable);5.29836, -3.98486;;;Lieu introuvable sur OpenStreetMap et aucun quartier de PDV reconnu : point non vérifiable;
+GUI STEPHANE;Lundi;S3;Quartier Apollo;Treichville;SIDECOM;Corrigé le 17/10;5.30614, -4.00926;5.29200, -4.00800;1578;Centre des PDV du quartier (lieu introuvable sur OpenStreetMap);
+GUI STEPHANE;Mardi;S3;Belle ville;Treichville;SIDECOM;OK;5.30465, -3.99702;;;PDV du quartier reconnu à 76 m du point;
+GUI STEPHANE;Mercredi;S3;Résidentiel;Marcory;SIDECOM;OK;5.31154, -3.99374;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+GUI STEPHANE;Jeudi;S3;Marie Core;Marcory;SIDECOM;À confirmer (non vérifiable);5.30500, -3.98200;;;Lieu introuvable sur OpenStreetMap et aucun quartier de PDV reconnu : point non vérifiable;
+GUI STEPHANE;Vendredi;S3;Champroux;Treichville;SIDECOM;OK;5.30509, -3.99259;;;PDV du quartier reconnu à 119 m du point;
+GUI STEPHANE;Samedi;S3;Déguerpis;Marcory;SIDECOM;À confirmer (non vérifiable);5.29100, -3.98500;;;Lieu introuvable sur OpenStreetMap et aucun quartier de PDV reconnu : point non vérifiable;
+GUI STEPHANE;Lundi;S4;CHU;Treichville;SIDECOM;OK;5.29158, -4.00357;;;Point à 400 m du lieu trouvé sur OpenStreetMap;
+GUI STEPHANE;Mardi;S4;Zone portuaire;Treichville;SIDECOM;À confirmer (douteux);5.28500, -4.01500;;;"Lieu introuvable sur OpenStreetMap ; PDV du quartier reconnu à 1079 m du point";
+GUI STEPHANE;Mercredi;S4;Remblais;Marcory;SIDECOM;OK;5.30709, -3.96364;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+GUI STEPHANE;Jeudi;S4;Centre commercial;Marcory;SIDECOM;OK;5.30200, -3.98800;;;Point à 853 m du lieu trouvé sur OpenStreetMap;
+GUI STEPHANE;Vendredi;S4;Texas;Treichville;SIDECOM;À confirmer (non vérifiable);5.29800, -3.97900;;;Lieu introuvable sur OpenStreetMap et aucun quartier de PDV reconnu : point non vérifiable;
+GUI STEPHANE;Samedi;S4;Jean-Baptiste Mockey;Marcory;SIDECOM;OK;5.30185, -3.97515;;;Point à 23 m du lieu trouvé sur OpenStreetMap;
+GUIHI BERNADIN;Lundi;S1;2 Plateaux (Colombie);Cocody;PRODISMA;OK;5.37529, -4.00395;;;PDV du quartier reconnu à 74 m du point;
+GUIHI BERNADIN;Mardi;S1;Riviera 3;Cocody;PRODISMA;OK;5.35120, -3.96016;;;Point à 316 m du lieu trouvé sur OpenStreetMap;
+GUIHI BERNADIN;Mercredi;S1;Mahou Dokoui;Cocody;PRODISMA;À confirmer (douteux);5.37800, -3.98500;;;"Lieu introuvable sur OpenStreetMap ; PDV du quartier reconnu à 2168 m du point";
+GUIHI BERNADIN;Jeudi;S1;M'Pouto;Cocody;PRODISMA;OK;5.32697, -3.95611;;;Point à 1 m du lieu trouvé sur OpenStreetMap;
+GUIHI BERNADIN;Vendredi;S1;Cocody Centre;Cocody;PRODISMA;OK;5.33500, -4.00300;;;PDV du quartier reconnu à 30 m du point;
+GUIHI BERNADIN;Samedi;S1;2 Plateaux (Colombie);Cocody;PRODISMA;OK;5.37529, -4.00395;;;PDV du quartier reconnu à 74 m du point;
+GUIHI BERNADIN;Lundi;S2;2 Plateaux (Bleu marine);Cocody;PRODISMA;OK;5.36200, -3.99200;;;Point à 852 m du lieu trouvé sur OpenStreetMap;
+GUIHI BERNADIN;Mardi;S2;Anono 1 et 2;Cocody;PRODISMA;OK;5.34200, -3.96800;;;PDV du quartier reconnu à 387 m du point;
+GUIHI BERNADIN;Mercredi;S2;Allocodrome;Cocody;PRODISMA;À confirmer (douteux);5.35800, -3.99100;;;OpenStreetMap propose « Allocodrome » (bus_stop) à 4506 m du point de l'agence : lieu peu sûr;5.39661, -4.00336 (« Allocodrome »)
+GUIHI BERNADIN;Jeudi;S2;CAD;Cocody;PRODISMA;À confirmer (non vérifiable);5.34800, -3.95500;;;Lieu introuvable sur OpenStreetMap et aucun quartier de PDV reconnu : point non vérifiable;
+GUIHI BERNADIN;Vendredi;S2;Riviera;Cocody;PRODISMA;OK;5.35100, -3.96200;;;Point à 483 m du lieu trouvé sur OpenStreetMap;
+GUIHI BERNADIN;Samedi;S2;Anono (1 et 2);Cocody;PRODISMA;OK;5.34200, -3.96800;;;Point à 619 m du lieu trouvé sur OpenStreetMap;
+GUIHI BERNADIN;Lundi;S3;2 Plateaux (Casa);Cocody;PRODISMA;OK;5.36400, -3.98900;;;Point à 710 m du lieu trouvé sur OpenStreetMap;
+GUIHI BERNADIN;Mardi;S3;Anono 3;Cocody;PRODISMA;OK;5.34350, -3.96650;;;Point à 800 m du lieu trouvé sur OpenStreetMap;
+GUIHI BERNADIN;Mercredi;S3;Danga Cité des arts;Cocody;PRODISMA;OK;5.34659, -3.99977;;;Point à 610 m du lieu trouvé sur OpenStreetMap;
+GUIHI BERNADIN;Jeudi;S3;M'Badon;Cocody;PRODISMA;OK;5.32767, -3.93473;;;Point à 1 m du lieu trouvé sur OpenStreetMap;
+GUIHI BERNADIN;Vendredi;S3;2 Plateaux;Cocody;PRODISMA;OK;5.36967, -3.99195;;;Point à 1 m du lieu trouvé sur OpenStreetMap;
+GUIHI BERNADIN;Samedi;S3;Blockoss;Cocody;PRODISMA;À confirmer (non vérifiable);5.32322, -4.00183;;;Lieu introuvable sur OpenStreetMap et aucun quartier de PDV reconnu : point non vérifiable;
+GUIHI BERNADIN;Lundi;S4;2 Plateaux (Valon);Cocody;PRODISMA;OK;5.35853, -3.99401;;;PDV du quartier reconnu à 437 m du point;
+GUIHI BERNADIN;Mardi;S4;Anono 4;Cocody;PRODISMA;OK;5.34500, -3.96500;;;PDV du quartier reconnu à 500 m du point;
+GUIHI BERNADIN;Mercredi;S4;Blockoss et Cocody Centre;Cocody;PRODISMA;OK;5.32800, -4.00100;;;PDV du quartier reconnu à 313 m du point;
+GUIHI BERNADIN;Jeudi;S4;M'Pouto et CAD;Cocody;PRODISMA;Corrigé le 17/10;5.32697, -3.95611;5.34100, -3.95100;1659;OpenStreetMap « M’pouto »;
+GUIHI BERNADIN;Vendredi;S4;M'Badon;Cocody;PRODISMA;OK;5.32767, -3.93473;;;Point à 1 m du lieu trouvé sur OpenStreetMap;
+GUIHI BERNADIN;Samedi;S4;CA (à confirmer);Cocody;PRODISMA;À confirmer (douteux);5.35000, -3.97000;;;"Le fichier dit lui-même « à confirmer » ; OpenStreetMap ne donne que la commune (Cocody).";5.35737, -3.99493 (« Cocody »)
+KOUADIO ATOFFE GUY ANICET;Lundi;S1;Koumassi 32;Koumassi;SIDECOM;OK;5.30750, -3.95296;;;PDV du quartier reconnu à 287 m du point;
+KOUADIO ATOFFE GUY ANICET;Mardi;S1;Campement;Koumassi;SIDECOM;OK;5.30439, -3.94388;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+KOUADIO ATOFFE GUY ANICET;Mercredi;S1;Soweto;Koumassi;SIDECOM;OK;5.28601, -3.95131;;;Point à 57 m du lieu trouvé sur OpenStreetMap;
+KOUADIO ATOFFE GUY ANICET;Jeudi;S1;Ahoussabougou;Koumassi;SIDECOM;Corrigé le 17/10;5.29388, -3.95973;5.29268, -3.97293;1468;Centre des PDV du quartier (lieu introuvable sur OpenStreetMap);
+KOUADIO ATOFFE GUY ANICET;Vendredi;S1;Baradji;Koumassi;SIDECOM;OK;5.29796, -3.95860;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+KOUADIO ATOFFE GUY ANICET;Samedi;S1;Remblais;Koumassi;SIDECOM;OK;5.30038, -3.96444;;;Point à 1 m du lieu trouvé sur OpenStreetMap;
+KOUADIO ATOFFE GUY ANICET;Lundi;S2;Koumassi 05;Koumassi;SIDECOM;OK;5.31432, -3.94256;;;PDV du quartier reconnu à 228 m du point;
+KOUADIO ATOFFE GUY ANICET;Mardi;S2;Pangolin;Koumassi;SIDECOM;OK;5.30092, -3.94658;;;Point à 130 m du lieu trouvé sur OpenStreetMap;
+KOUADIO ATOFFE GUY ANICET;Mercredi;S2;Bia Sud;Koumassi;SIDECOM;OK;5.28260, -3.96922;;;PDV du quartier reconnu à 170 m du point;
+KOUADIO ATOFFE GUY ANICET;Jeudi;S2;Marché de Koumassi;Koumassi;SIDECOM;OK;5.29278, -3.95828;;;Point à 117 m du lieu trouvé sur OpenStreetMap;
+KOUADIO ATOFFE GUY ANICET;Vendredi;S2;3 Ampoules;Koumassi;SIDECOM;À confirmer (non vérifiable);5.29710, -3.96220;;;Lieu introuvable sur OpenStreetMap et aucun quartier de PDV reconnu : point non vérifiable;
+KOUADIO ATOFFE GUY ANICET;Samedi;S2;Marais;Koumassi;SIDECOM;OK;5.30123, -3.95762;;;PDV du quartier reconnu à 25 m du point;
+KOUADIO ATOFFE GUY ANICET;Lundi;S3;Koumassi Fanny;Koumassi;SIDECOM;OK;5.31222, -3.94839;;;Point à 486 m du lieu trouvé sur OpenStreetMap;
+KOUADIO ATOFFE GUY ANICET;Mardi;S3;Prodomo;Koumassi;SIDECOM;OK;5.30046, -3.95064;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+KOUADIO ATOFFE GUY ANICET;Mercredi;S3;Sicogi;Koumassi;SIDECOM;OK;5.28335, -3.96499;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+KOUADIO ATOFFE GUY ANICET;Jeudi;S3;Quartier Adioukrou;Koumassi;SIDECOM;À confirmer (non vérifiable);5.30800, -3.95200;;;Lieu introuvable sur OpenStreetMap et aucun quartier de PDV reconnu : point non vérifiable;
+KOUADIO ATOFFE GUY ANICET;Vendredi;S3;Kahira;Koumassi;SIDECOM;OK;5.29646, -3.96754;;;Point à 106 m du lieu trouvé sur OpenStreetMap;
+KOUADIO ATOFFE GUY ANICET;Samedi;S3;Divo;Koumassi;SIDECOM;OK;5.30680, -3.95019;;;Point à 1 m du lieu trouvé sur OpenStreetMap;
+KOUADIO ATOFFE GUY ANICET;Lundi;S4;Koumassi 147;Koumassi;SIDECOM;OK;5.30830, -3.94495;;;PDV du quartier reconnu à 298 m du point;
+KOUADIO ATOFFE GUY ANICET;Mardi;S4;Inchallah;Koumassi;SIDECOM;OK;5.29874, -3.95523;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+KOUADIO ATOFFE GUY ANICET;Mercredi;S4;Grand carrefour;Koumassi;SIDECOM;À confirmer (douteux);5.28817, -3.96996;;;OpenStreetMap propose « Grand Carrefour de Koumassi - Avant le feu » (trunk) à 1365 m du point de l'agence : lieu peu sûr;5.27638, -3.96652 (« Grand Carrefour de Koumassi - Avant le feu »)
+KOUADIO ATOFFE GUY ANICET;Jeudi;S4;Iroko;Koumassi;SIDECOM;OK;5.29443, -3.96410;;;Point à 1 m du lieu trouvé sur OpenStreetMap;
+KOUADIO ATOFFE GUY ANICET;Vendredi;S4;Petroci;Koumassi;SIDECOM;À confirmer (douteux);5.29800, -3.94100;;;OpenStreetMap propose « Petroci » (bus_stop) à 3123 m du point de l'agence : lieu peu sûr;5.30171, -3.96896 (« Petroci »)
+KOUADIO ATOFFE GUY ANICET;Samedi;S4;Sans fil;Koumassi;SIDECOM;À confirmer (douteux);5.30750, -3.95296;;;OpenStreetMap propose « Pont sans fil Aliodan » (bridge) à 1244 m du point de l'agence : lieu peu sûr;5.30577, -3.96406 (« Pont sans fil Aliodan »)
+KOUAME HELLARION;Lundi;S1;Palmeraie Enica;Cocody;PLAISIR BACHUSS;OK;5.37911, -3.95342;;;PDV du quartier reconnu à 28 m du point;
+KOUAME HELLARION;Mardi;S1;Cité Sir;Cocody;PLAISIR BACHUSS;OK;5.39183, -3.92960;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+KOUAME HELLARION;Mercredi;S1;Angré Mahou 1;Cocody;PLAISIR BACHUSS;OK;5.39500, -3.97800;;;PDV du quartier reconnu à 112 m du point;
+KOUAME HELLARION;Jeudi;S1;Djorobité 1;Cocody;PLAISIR BACHUSS;À confirmer (douteux);5.40500, -3.93500;;;Djorobité : le point de l'agence, OpenStreetMap et les PDV notés DJOROBITE donnent 3 endroits différents.;5.39725, -3.93969 (« Carrefour Djorobité »)
+KOUAME HELLARION;Vendredi;S1;Djorobité 2;Cocody;PLAISIR BACHUSS;À confirmer (douteux);5.41200, -3.92800;;;Djorobité : le point de l'agence, OpenStreetMap et les PDV notés DJOROBITE donnent 3 endroits différents.;5.39725, -3.93969 (« Carrefour Djorobité »)
+KOUAME HELLARION;Samedi;S1;Abatta;Cocody;PLAISIR BACHUSS;OK;5.32677, -3.91406;;;PDV du quartier reconnu à 133 m du point;
+KOUAME HELLARION;Lundi;S2;Palmeraie Bonoumin;Cocody;PLAISIR BACHUSS;OK;5.36471, -3.97258;;;PDV du quartier reconnu à 328 m du point;
+KOUAME HELLARION;Mardi;S2;Faya Ephrata;Cocody;PLAISIR BACHUSS;À confirmer (douteux);5.37200, -3.94500;;;"Lieu introuvable sur OpenStreetMap ; PDV du quartier reconnu à 637 m du point";
+KOUAME HELLARION;Mercredi;S2;Angré Mahou 2;Cocody;PLAISIR BACHUSS;OK;5.39650, -3.97650;;;PDV du quartier reconnu à 109 m du point;
+KOUAME HELLARION;Jeudi;S2;Djorobité 1;Cocody;PLAISIR BACHUSS;À confirmer (douteux);5.40600, -3.93400;;;Djorobité : le point de l'agence, OpenStreetMap et les PDV notés DJOROBITE donnent 3 endroits différents.;5.39725, -3.93969 (« Carrefour Djorobité »)
+KOUAME HELLARION;Vendredi;S2;Djorobité 2;Cocody;PLAISIR BACHUSS;À confirmer (douteux);5.41300, -3.92700;;;OpenStreetMap propose « Carrefour Djorobité » (bus_stop) à 2245 m du point de l'agence : lieu peu sûr;5.39725, -3.93969 (« Carrefour Djorobité »)
+KOUAME HELLARION;Samedi;S2;Abatta;Cocody;PLAISIR BACHUSS;OK;5.32677, -3.91406;;;PDV du quartier reconnu à 133 m du point;
+KOUAME HELLARION;Lundi;S3;Attoban;Cocody;PLAISIR BACHUSS;OK;5.36319, -3.97840;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+KOUAME HELLARION;Mardi;S3;Akouédo;Cocody;PLAISIR BACHUSS;OK;5.35226, -3.94070;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+KOUAME HELLARION;Mercredi;S3;Terminus 81-82;Cocody;PLAISIR BACHUSS;OK;5.40483, -3.98515;;;Point à 172 m du lieu trouvé sur OpenStreetMap;
+KOUAME HELLARION;Jeudi;S3;Djorobité 1;Cocody;PLAISIR BACHUSS;À confirmer (douteux);5.40700, -3.93300;;;Djorobité : le point de l'agence, OpenStreetMap et les PDV notés DJOROBITE donnent 3 endroits différents.;5.39725, -3.93969 (« Carrefour Djorobité »)
+KOUAME HELLARION;Vendredi;S3;Djorobité 2;Cocody;PLAISIR BACHUSS;À confirmer (douteux);5.41400, -3.92600;;;OpenStreetMap propose « Carrefour Djorobité » (bus_stop) à 2401 m du point de l'agence : lieu peu sûr;5.39725, -3.93969 (« Carrefour Djorobité »)
+KOUAME HELLARION;Samedi;S3;Abatta village;Cocody;PLAISIR BACHUSS;OK;5.32830, -3.91674;;;PDV du quartier reconnu à 25 m du point;
+KOUAME HELLARION;Lundi;S4;Angré 8e tranche;Cocody;PLAISIR BACHUSS;OK;5.38642, -3.97481;;;PDV du quartier reconnu à 53 m du point;
+KOUAME HELLARION;Mardi;S4;Akouédo Attié;Cocody;PLAISIR BACHUSS;OK;5.35714, -3.92910;;;Point à 335 m du lieu trouvé sur OpenStreetMap;
+KOUAME HELLARION;Mercredi;S4;Angré Château;Cocody;PLAISIR BACHUSS;OK;5.41280, -3.98088;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+KOUAME HELLARION;Jeudi;S4;Angré CHU;Cocody;PLAISIR BACHUSS;OK;5.40090, -3.95756;;;Point à 19 m du lieu trouvé sur OpenStreetMap;
+KOUAME HELLARION;Vendredi;S4;Djorobité 2;Cocody;PLAISIR BACHUSS;À confirmer (douteux);5.41500, -3.92500;;;OpenStreetMap propose « Carrefour Djorobité » (bus_stop) à 2557 m du point de l'agence : lieu peu sûr;5.39725, -3.93969 (« Carrefour Djorobité »)
+KOUAME HELLARION;Samedi;S4;Abatta village;Cocody;PLAISIR BACHUSS;OK;5.32830, -3.91674;;;PDV du quartier reconnu à 25 m du point;
+SEREGONE SCHADRACK;Lundi;S1;Akeikoi;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.44839, -4.00615;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+SEREGONE SCHADRACK;Mardi;S1;Avocatier le Grand;Abobo;ETABLISSEMENT NIARE & FRERES;À confirmer (non vérifiable);5.43100, -4.02800;;;Lieu introuvable sur OpenStreetMap et aucun quartier de PDV reconnu : point non vérifiable;
+SEREGONE SCHADRACK;Mercredi;S1;Mairie;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.42117, -4.01670;;;Point à 88 m du lieu trouvé sur OpenStreetMap;
+SEREGONE SCHADRACK;Jeudi;S1;Agbékoi;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.43716, -4.00460;;;Point à 1 m du lieu trouvé sur OpenStreetMap;
+SEREGONE SCHADRACK;Vendredi;S1;Pharmacie Lamé;Abobo;ETABLISSEMENT NIARE & FRERES;À confirmer (non vérifiable);5.42500, -4.00900;;;Lieu introuvable sur OpenStreetMap et aucun quartier de PDV reconnu : point non vérifiable;
+SEREGONE SCHADRACK;Samedi;S1;Nouvelle gare;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.43923, -4.04209;;;Point à 149 m du lieu trouvé sur OpenStreetMap;
+SEREGONE SCHADRACK;Lundi;S2;Djibi;Abobo;ETABLISSEMENT NIARE & FRERES;À confirmer (douteux);5.42202, -3.98193;;;OpenStreetMap « Djibi Village » : aucun PDV autour de ce point. Lieu à préciser.;5.45613, -3.97275 (« Djibi Village »)
+SEREGONE SCHADRACK;Mardi;S2;Niamké;Abobo;ETABLISSEMENT NIARE & FRERES;À confirmer (non vérifiable);5.42200, -4.01500;;;Lieu introuvable sur OpenStreetMap et aucun quartier de PDV reconnu : point non vérifiable;
+SEREGONE SCHADRACK;Mercredi;S2;Musée d'Abobo;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.41800, -4.01200;;;Point à 773 m du lieu trouvé sur OpenStreetMap;
+SEREGONE SCHADRACK;Jeudi;S2;Habitat;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.43280, -4.00951;;;Point à 1 m du lieu trouvé sur OpenStreetMap;
+SEREGONE SCHADRACK;Vendredi;S2;14e arrondissement;Abobo;ETABLISSEMENT NIARE & FRERES;À confirmer (non vérifiable);5.42314, -4.01481;;;Lieu introuvable sur OpenStreetMap et aucun quartier de PDV reconnu : point non vérifiable;
+SEREGONE SCHADRACK;Samedi;S2;Avocatier marché de nuit;Abobo;ETABLISSEMENT NIARE & FRERES;À confirmer (non vérifiable);5.43669, -4.02980;;;Lieu introuvable sur OpenStreetMap et aucun quartier de PDV reconnu : point non vérifiable;
+SEREGONE SCHADRACK;Lundi;S3;Houphouët-Boigny;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.44349, -4.00884;;;Point à 1 m du lieu trouvé sur OpenStreetMap;
+SEREGONE SCHADRACK;Mardi;S3;BC;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.44587, -4.02070;;;PDV du quartier reconnu à 40 m du point;
+SEREGONE SCHADRACK;Mercredi;S3;Gendarmerie;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.42753, -4.02065;;;Point à 91 m du lieu trouvé sur OpenStreetMap;
+SEREGONE SCHADRACK;Jeudi;S3;Abobo 4 étages;Abobo;ETABLISSEMENT NIARE & FRERES;À confirmer (douteux);5.43806, -4.00843;;;"Lieu introuvable sur OpenStreetMap ; PDV du quartier reconnu à 625 m du point";
+SEREGONE SCHADRACK;Vendredi;S3;Mâle;Abobo;ETABLISSEMENT NIARE & FRERES;À confirmer (douteux);5.41400, -4.02100;;;OpenStreetMap propose « Groupe Scolaire Male Gbinde Akeikoi extension » (school) à 4470 m du point de l'agence : lieu peu sûr;5.45183, -4.00735 (« Groupe Scolaire Male Gbinde Akeikoi extension »)
+SEREGONE SCHADRACK;Samedi;S3;Château;Abobo;ETABLISSEMENT NIARE & FRERES;À confirmer (douteux);5.43800, -4.01900;;;OpenStreetMap propose « Château » (bus_stop) à 7599 m du point de l'agence : lieu peu sûr;5.46404, -4.08247 (« Château »)
+SEREGONE SCHADRACK;Lundi;S4;Quartier Yacouba;Abobo;ETABLISSEMENT NIARE & FRERES;À confirmer (non vérifiable);5.41200, -4.01800;;;Lieu introuvable sur OpenStreetMap et aucun quartier de PDV reconnu : point non vérifiable;
+SEREGONE SCHADRACK;Mardi;S4;Avocatier 32e arrondissement;Abobo;ETABLISSEMENT NIARE & FRERES;À confirmer (non vérifiable);5.43793, -4.02926;;;Lieu introuvable sur OpenStreetMap et aucun quartier de PDV reconnu : point non vérifiable;
+SEREGONE SCHADRACK;Mercredi;S4;Lycée moderne Abobo;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.42823, -4.01330;;;Point à 222 m du lieu trouvé sur OpenStreetMap;
+SEREGONE SCHADRACK;Jeudi;S4;Plaque 1;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.43545, -4.00674;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+SEREGONE SCHADRACK;Vendredi;S4;Gare Abobo;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.41650, -4.01500;;;Point à 662 m du lieu trouvé sur OpenStreetMap;
+SEREGONE SCHADRACK;Samedi;S4;Palais de justice;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.44525, -4.01999;;;Point à 20 m du lieu trouvé sur OpenStreetMap;
+YAO VENANCE;Lundi;S1;Anador;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.41079, -4.01425;;;Point à 1 m du lieu trouvé sur OpenStreetMap;
+YAO VENANCE;Mardi;S1;Cité policière;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.43550, -4.01713;;;Point à 80 m du lieu trouvé sur OpenStreetMap;
+YAO VENANCE;Mercredi;S1;Samaké;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.41638, -4.00672;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+YAO VENANCE;Jeudi;S1;Alépé;Abobo;ETABLISSEMENT NIARE & FRERES;À confirmer (douteux);5.43200, -3.99800;;;OpenStreetMap propose « Route d'Alépé » (secondary) à 4343 m du point de l'agence : lieu peu sûr;5.46069, -3.97138 (« Route d'Alépé »)
+YAO VENANCE;Vendredi;S1;N'Dotré;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.44854, -4.07073;;;Point à 360 m du lieu trouvé sur OpenStreetMap;
+YAO VENANCE;Samedi;S1;Biabou;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.44040, -3.98388;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+YAO VENANCE;Lundi;S2;Dokui;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.39617, -4.00096;;;Point à 984 m du lieu trouvé sur OpenStreetMap;
+YAO VENANCE;Mardi;S2;Colatier;Abobo;ETABLISSEMENT NIARE & FRERES;À confirmer (douteux);5.47952, -4.05357;;;OpenStreetMap propose « EPV Colatier » (school) à 2261 m du point de l'agence : lieu peu sûr;5.45936, -4.05088 (« EPV Colatier »)
+YAO VENANCE;Mercredi;S2;Kennedy;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.41948, -4.00835;;;Point à 1 m du lieu trouvé sur OpenStreetMap;
+YAO VENANCE;Jeudi;S2;Azur;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.39950, -4.00649;;;Point à 13 m du lieu trouvé sur OpenStreetMap;
+YAO VENANCE;Vendredi;S2;Anyama;Anyama;ETABLISSEMENT NIARE & FRERES;OK;5.49610, -4.05120;;;PDV du quartier reconnu à 92 m du point;
+YAO VENANCE;Samedi;S2;Kennedy 2;Abobo;ETABLISSEMENT NIARE & FRERES;Corrigé le 17/10;5.41948, -4.00835;5.43500, -4.02200;2294;OpenStreetMap « Kennedy »;
+YAO VENANCE;Lundi;S3;Belle vie;Abobo;ETABLISSEMENT NIARE & FRERES;À confirmer (douteux);5.44100, -4.03200;;;"Lieu introuvable sur OpenStreetMap ; PDV du quartier reconnu à 4418 m du point";
+YAO VENANCE;Mardi;S3;Camp commando;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.43562, -4.02026;;;Point à 58 m du lieu trouvé sur OpenStreetMap;
+YAO VENANCE;Mercredi;S3;Abobo Baoulé;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.43429, -3.99602;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+YAO VENANCE;Jeudi;S3;Anador 2;Abobo;ETABLISSEMENT NIARE & FRERES;Corrigé le 17/10;5.40870, -4.01022;5.42100, -4.02500;2132;Centre des PDV notés ANADOR (le point OSM « Anador » donnait surtout ABOBO CENTRE / SAMAKE);
+YAO VENANCE;Vendredi;S3;Cazar;Abobo;ETABLISSEMENT NIARE & FRERES;À confirmer (non vérifiable);5.45800, -4.04800;;;Lieu introuvable sur OpenStreetMap et aucun quartier de PDV reconnu : point non vérifiable;
+YAO VENANCE;Samedi;S3;Colochat;Abobo;ETABLISSEMENT NIARE & FRERES;À confirmer (non vérifiable);5.44800, -4.03800;;;Lieu introuvable sur OpenStreetMap et aucun quartier de PDV reconnu : point non vérifiable;
+YAO VENANCE;Lundi;S4;Djibi village;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.45613, -3.97275;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+YAO VENANCE;Mardi;S4;CMPC;Abobo;ETABLISSEMENT NIARE & FRERES;À confirmer (non vérifiable);5.45100, -4.04100;;;Lieu introuvable sur OpenStreetMap et aucun quartier de PDV reconnu : point non vérifiable;
+YAO VENANCE;Mercredi;S4;Abobote;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.41012, -4.00146;;;Point à 630 m du lieu trouvé sur OpenStreetMap;
+YAO VENANCE;Jeudi;S4;Abobo Belle vie;Abobo;ETABLISSEMENT NIARE & FRERES;À confirmer (douteux);5.44250, -4.03050;;;"Lieu introuvable sur OpenStreetMap ; PDV du quartier reconnu à 1886 m du point";
+YAO VENANCE;Vendredi;S4;CMPC 2;Abobo;ETABLISSEMENT NIARE & FRERES;À confirmer (non vérifiable);5.45250, -4.03950;;;Lieu introuvable sur OpenStreetMap et aucun quartier de PDV reconnu : point non vérifiable;
+YAO VENANCE;Samedi;S4;Abobo Baoulé 2;Abobo;ETABLISSEMENT NIARE & FRERES;OK;5.41100, -3.99200;;;PDV du quartier reconnu à 480 m du point;
+ZOGBOLOU KEVIN;Lundi;S1;Zone industrielle;Yopougon;NOUVEAUX DISTRIBUTEURS ASSOCIES;OK;5.37441, -4.08454;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+ZOGBOLOU KEVIN;Mardi;S1;Gesco;Yopougon;NOUVEAUX DISTRIBUTEURS ASSOCIES;OK;5.36538, -4.10399;;;Point à 1 m du lieu trouvé sur OpenStreetMap;
+ZOGBOLOU KEVIN;Mercredi;S1;Songon;Songon;NOUVEAUX DISTRIBUTEURS ASSOCIES;OK;5.32490, -4.25167;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+ZOGBOLOU KEVIN;Jeudi;S1;Lubafrik;Yopougon;NOUVEAUX DISTRIBUTEURS ASSOCIES;Corrigé le 17/10;5.31966, -4.10706;5.37100, -4.08900;6049;Centre des PDV du quartier (lieu introuvable sur OpenStreetMap);
+ZOGBOLOU KEVIN;Vendredi;S1;Sicogi;Yopougon;NOUVEAUX DISTRIBUTEURS ASSOCIES;OK;5.34409, -4.07743;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+ZOGBOLOU KEVIN;Samedi;S1;Maroc 1;Yopougon;NOUVEAUX DISTRIBUTEURS ASSOCIES;Corrigé le 17/10;5.33942, -4.09920;5.34850, -4.07220;3155;OpenStreetMap « Quartier Maroc »;
+ZOGBOLOU KEVIN;Lundi;S2;Andokoi 1;Yopougon;NOUVEAUX DISTRIBUTEURS ASSOCIES;Corrigé le 17/10;5.36607, -4.06824;5.37800, -4.07200;1390;OpenStreetMap « Andokoi »;
+ZOGBOLOU KEVIN;Mardi;S2;Ananeraie LKM;Yopougon;NOUVEAUX DISTRIBUTEURS ASSOCIES;OK;5.35616, -4.10138;;;PDV du quartier reconnu à 297 m du point;
+ZOGBOLOU KEVIN;Mercredi;S2;Cité verte;Yopougon;NOUVEAUX DISTRIBUTEURS ASSOCIES;OK;5.33452, -4.11165;;;Point à 1 m du lieu trouvé sur OpenStreetMap;
+ZOGBOLOU KEVIN;Jeudi;S2;Académie;Yopougon;NOUVEAUX DISTRIBUTEURS ASSOCIES;OK;5.31658, -4.11275;;;Point à 1 m du lieu trouvé sur OpenStreetMap;
+ZOGBOLOU KEVIN;Vendredi;S2;Siporex;Yopougon;NOUVEAUX DISTRIBUTEURS ASSOCIES;OK;5.35417, -4.07457;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+ZOGBOLOU KEVIN;Samedi;S2;Maroc 2;Yopougon;NOUVEAUX DISTRIBUTEURS ASSOCIES;Corrigé le 17/10;5.33942, -4.09920;5.35200, -4.07550;2973;OpenStreetMap « Quartier Maroc »;
+ZOGBOLOU KEVIN;Lundi;S3;Andokoi 2;Yopougon;NOUVEAUX DISTRIBUTEURS ASSOCIES;Corrigé le 17/10;5.36607, -4.06824;5.37950, -4.07050;1514;OpenStreetMap « Andokoi »;
+ZOGBOLOU KEVIN;Mardi;S3;Ananeraie Entenne;Yopougon;NOUVEAUX DISTRIBUTEURS ASSOCIES;OK;5.35700, -4.10300;;;PDV du quartier reconnu à 499 m du point;
+ZOGBOLOU KEVIN;Mercredi;S3;Lièvre rouge;Yopougon;NOUVEAUX DISTRIBUTEURS ASSOCIES;OK;5.33627, -4.10793;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+ZOGBOLOU KEVIN;Jeudi;S3;Lokoa;Yopougon;NOUVEAUX DISTRIBUTEURS ASSOCIES;OK;5.31120, -4.10383;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+ZOGBOLOU KEVIN;Vendredi;S3;Port-Bouët 2 (1);Yopougon;NOUVEAUX DISTRIBUTEURS ASSOCIES;Corrigé le 17/10;5.34983, -4.08868;5.34100, -4.06800;2491;Centre des PDV notés PORT BOUET 2 (le point OSM « Port-Bouët II » tombait sur des PDV notés MAROC);
+ZOGBOLOU KEVIN;Samedi;S3;Maroc 3;Yopougon;NOUVEAUX DISTRIBUTEURS ASSOCIES;Corrigé le 17/10;5.33942, -4.09920;5.35550, -4.07880;2881;OpenStreetMap « Quartier Maroc »;
+ZOGBOLOU KEVIN;Lundi;S4;Micao;Yopougon;NOUVEAUX DISTRIBUTEURS ASSOCIES;OK;5.38160, -4.09776;;;Point à 0 m du lieu trouvé sur OpenStreetMap;
+ZOGBOLOU KEVIN;Mardi;S4;Batim (1-2-3);Yopougon;NOUVEAUX DISTRIBUTEURS ASSOCIES;OK;5.36100, -4.09500;;;Point à 345 m du lieu trouvé sur OpenStreetMap;
+ZOGBOLOU KEVIN;Mercredi;S4;Bagnon;Yopougon;NOUVEAUX DISTRIBUTEURS ASSOCIES;OK;5.34044, -4.10982;;;Point à 405 m du lieu trouvé sur OpenStreetMap;
+ZOGBOLOU KEVIN;Jeudi;S4;Texaco;Yopougon;NOUVEAUX DISTRIBUTEURS ASSOCIES;OK;5.32644, -4.09143;;;Point à 128 m du lieu trouvé sur OpenStreetMap;
+ZOGBOLOU KEVIN;Vendredi;S4;Port-Bouët 2 (2);Yopougon;NOUVEAUX DISTRIBUTEURS ASSOCIES;Corrigé le 17/10;5.34983, -4.08868;5.34250, -4.06650;2587;Centre des PDV notés PORT BOUET 2 (le point OSM « Port-Bouët II » tombait sur des PDV notés MAROC);
+ZOGBOLOU KEVIN;Samedi;S4;Maroc 4;Yopougon;NOUVEAUX DISTRIBUTEURS ASSOCIES;Corrigé le 17/10;5.33942, -4.09920;5.35900, -4.08200;2892;OpenStreetMap « Quartier Maroc »;
