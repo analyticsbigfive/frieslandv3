@@ -1097,6 +1097,13 @@ async function handleSaveUser() {
     const quartiers = (userForm.value.quartiers_assignes || []).filter(Boolean)
 
     if (editingUser.value) {
+      // L'email est aussi l'identifiant de connexion (auth.users) : changé côté
+      // serveur, avant le reste, pour qu'un refus arrête l'enregistrement.
+      const email = (userForm.value.email || '').trim().toLowerCase()
+      if (email !== (editingUser.value.email || '').toLowerCase()) {
+        userForm.value.email = await authStore.updateUserEmail(editingUser.value.id, email)
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({
