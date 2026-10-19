@@ -1811,7 +1811,12 @@ watch(() => pdvFilter.zone, () => { pdvFilter.quartier = '' })
 
 // Changement de merchandiser : purge les PDV déjà sélectionnés qui sortent de son périmètre,
 // et remet les filtres colonnes à zéro (leurs options dépendent du nouveau périmètre).
+// Pas pendant le remplissage d'une tournée ouverte en modification : ses étapes
+// (règle avec son propre territoire ou SSF, PDV pas encore chargés) étaient
+// purgées puis supprimées à l'enregistrement, étapes faites comprises.
+let remplissageTournee = false
 watch(() => newRouting.userId, () => {
+  if (remplissageTournee) return
   const scopedIds = new Set(scopedPdvList.value.map(p => p.pdv_id))
   newRouting.pdvItems = newRouting.pdvItems.filter(i => scopedIds.has(i.pdv_id))
   clearPdvFilter()
@@ -2569,6 +2574,7 @@ async function openEditRouting(routing: Routing) {
     toast.add({ title: 'Tournée non chargée', description: messageUtilisateur(err), color: 'red' })
     return
   }
+  remplissageTournee = true
   editingRoutingId.value = routing.id
   newRouting.userId = routing.user_id || routing.user?.id || ''
   newRouting.date = routing.date_routing
@@ -2581,6 +2587,7 @@ async function openEditRouting(routing: Routing) {
   selectedPdvToAdd.value = ''
   clearPdvFilter()
   showCreateModal.value = true
+  void nextTick(() => { remplissageTournee = false })
 }
 
 function closeRoutingModal() {
