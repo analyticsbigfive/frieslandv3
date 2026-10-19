@@ -185,6 +185,26 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /**
+   * Change l'email de connexion d'un utilisateur (auth.users + profiles.email),
+   * côté serveur via l'API admin. Renvoie l'email enregistré (en minuscules).
+   */
+  async function updateUserEmail(id: string, email: string): Promise<string> {
+    if (!isAdmin.value) {
+      throw new Error('Permission refusée : seuls les administrateurs peuvent changer un email')
+    }
+    try {
+      const res = await $fetch<{ email: string }>(`/api/admin/users/${id}/email`, {
+        method: 'POST',
+        body: { email },
+      })
+      return res.email
+    }
+    catch (err: any) {
+      throw new Error(err?.data?.statusMessage || err?.data?.message || err?.message || 'Changement d\'email impossible')
+    }
+  }
+
   async function logout() {
     // Avant de perdre la session : ce téléphone ne doit plus recevoir les
     // notifications push de la personne qui se déconnecte (la RLS n'autorise
@@ -308,6 +328,7 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     deleteUser,
     resetUserPassword,
+    updateUserEmail,
     logout,
     fetchProfile,
     updateProfile,
