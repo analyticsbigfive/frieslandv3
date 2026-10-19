@@ -425,6 +425,23 @@
           </UFormGroup>
 
           <UFormGroup label="Quartiers assignés" help="Les quartiers des territoires cochés. Laissez tout décoché pour autoriser tous les quartiers." size="md" class="sm:col-span-2">
+            <div v-if="quartiersHorsListe.length" class="mb-3 rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/50 dark:bg-amber-900/10">
+              <p class="text-sm font-semibold text-amber-900 dark:text-amber-200">Quartiers absents de la liste des quartiers</p>
+              <p class="mt-0.5 text-xs text-amber-800 dark:text-amber-300">Conservés sur le profil. Retirez ceux qui ne doivent plus en faire partie.</p>
+              <p class="mt-2 flex flex-wrap gap-1.5">
+                <span v-for="q in quartiersHorsListe" :key="q" class="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-amber-900 dark:bg-slate-800 dark:text-amber-200">
+                  {{ q }}
+                  <button
+                    type="button"
+                    class="rounded-full hover:text-amber-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                    :aria-label="`Retirer ${q}`"
+                    @click="toggleQuartier(q)"
+                  >
+                    <UIcon name="i-heroicons-x-mark-20-solid" class="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                </span>
+              </p>
+            </div>
             <div
               v-if="!userForm.territory_codes.length"
               class="rounded-md border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-600 dark:border-slate-600 dark:text-slate-400"
@@ -762,14 +779,30 @@ function territoryChipLabel(code: string) {
   return srLabel ? `${t.name} · ${srLabel}` : t.name
 }
 
+// À la décoche d'un territoire, retire seulement les quartiers du référentiel
+// qui lui appartenaient. Les libellés hors référentiel restent (listés plus bas,
+// retirables un à un) : les purger pouvait vider la liste, et une liste vide
+// veut dire « tous les quartiers ».
+function purgerQuartiersDecoches(avant: string[]) {
+  const apres = new Set(quartierOptions.value)
+  const retires = new Set(avant.filter(q => !apres.has(q)))
+  userForm.value.quartiers_assignes = userForm.value.quartiers_assignes.filter(q => !retires.has(q))
+}
+
+// Quartiers du profil absents des quartiers des territoires cochés.
+const quartiersHorsListe = computed(() => {
+  const options = new Set(quartierOptions.value)
+  return userForm.value.quartiers_assignes.filter(q => q && !options.has(q))
+})
+
 // Coche/décoche un territoire. À la décoche, purge les quartiers devenus orphelins.
 function toggleTerritory(code: string) {
+  const avant = quartierOptions.value
   const list = userForm.value.territory_codes
   const idx = list.indexOf(code)
   if (idx === -1) list.push(code)
   else list.splice(idx, 1)
-  const valid = new Set(quartierOptions.value)
-  userForm.value.quartiers_assignes = userForm.value.quartiers_assignes.filter(q => valid.has(q))
+  purgerQuartiersDecoches(avant)
 }
 
 // Coche/décoche uniquement les territoires visibles (sous-région filtrée) :
@@ -781,9 +814,9 @@ function toggleAllVisibleTerritories(select: boolean) {
     if (select) current.add(code)
     else current.delete(code)
   }
+  const avant = quartierOptions.value
   userForm.value.territory_codes = [...current]
-  const valid = new Set(quartierOptions.value)
-  userForm.value.quartiers_assignes = userForm.value.quartiers_assignes.filter(q => valid.has(q))
+  purgerQuartiersDecoches(avant)
 }
 // Quartiers groupés par territoire (utils/territoires.ts).
 const quartierGroupes = computed(() => grouperQuartiersParTerritoire(quartierOptions.value, quartiers.value, areas.value, territories.value))
@@ -1092,8 +1125,10 @@ async function handleSaveUser() {
     // pointer une autre sous-région que celle du périmètre réel).
     const firstTerr = territories.value.find(t => t.code === userForm.value.territory_codes[0])
     const sr = subRegions.value.find(s => s.code === (firstTerr?.sub_region_code || userForm.value.sub_region_code))
-    const zoneAssignee = terrs[0] || userForm.value.zone_assignee || null
-    const region = sr?.nom_affichage || sr?.name || userForm.value.region || null
+    // Aucun territoire coché : zone et région vidées (sinon l'ancienne zone_assignee
+    // restait le périmètre du compte, malgré « Utilisateur mis à jour »).
+    const zoneAssignee = terrs[0] || null
+    const region = terrs.length ? (sr?.nom_affichage || sr?.name || userForm.value.region || null) : null
     const quartiers = (userForm.value.quartiers_assignes || []).filter(Boolean)
 
     if (editingUser.value) {

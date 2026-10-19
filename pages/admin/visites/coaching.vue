@@ -229,12 +229,14 @@ async function charger() {
   try {
     const BASE = 'id, date_coaching, auteur_id, superviseur_id, assigne_a, distributeur_nom, vendeur_nom, engin_code, pdv_id, route_jour, type_pdv, type_pdv_detail, quartier, proprietaire_nom, proprietaire_prenom, proprietaire_tel, nb_sku_pdv, nb_sku_dispo, skus_disponibles, reponses, commentaire, motif_non_participation, pdv:pdv_id(nom_pdv, zone), auteur:auteur_id(nom), assigne:assigne_a(nom), superviseur:superviseur_id(nom)'
     // Type, SSF, merchandiser suivi, objectif : migration 20261008160000 (repli sans).
-    const requete = (colonnes: string) => (supabase.from('field_coaching') as any)
-      .select(colonnes)
-      .gte('date_coaching', `${periode.value.debut}T00:00:00`)
-      .lte('date_coaching', `${periode.value.fin}T23:59:59`)
-      .order('date_coaching', { ascending: false })
-      .limit(2000)
+    // Bornes vides (preset « Tout ») : pas de filtre, plutôt qu'une date invalide.
+    const { debut, fin } = periode.value
+    const requete = (colonnes: string) => {
+      let q = (supabase.from('field_coaching') as any).select(colonnes)
+      if (debut) q = q.gte('date_coaching', `${debut}T00:00:00`)
+      if (fin) q = q.lte('date_coaching', `${fin}T23:59:59`)
+      return q.order('date_coaching', { ascending: false }).limit(2000)
+    }
     let { data, error } = await requete(`${BASE}, type_coaching, ssf_id, merchandiser_id, objectif_code, ssf:ssf_id(nom), merchandiser:merchandiser_id(nom)`)
     if (error) ({ data, error } = await requete(BASE))
     if (error) throw error

@@ -228,7 +228,8 @@ const visitesStore = useVisitesStore()
 const authStore = useAuthStore()
 // La suppression d'une visite est définitive (delete en base) : réservée à
 // l'administrateur et au superviseur.
-const peutSupprimer = computed(() => authStore.isSuperviseur)
+// Suppression réservée à l'admin par la RLS (visites_delete_admin).
+const peutSupprimer = computed(() => authStore.isAdmin)
 const toast = useToast()
 const { confirmation, demanderConfirmation, confirmer, annuler } = useConfirmation()
 const { exportVisitesToExcel } = useCsvExport()

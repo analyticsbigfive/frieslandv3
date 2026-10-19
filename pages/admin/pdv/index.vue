@@ -654,8 +654,11 @@ const categorieOptions = computed(() => {
 })
 // Canal dérivé de la catégorie (categorie_pdv.canal), aligné sur le calcul
 // Perfect Store — plus de saisie manuelle.
+// Catégorie hors référentiel : canal actuel conservé (sinon un PDV Modern trade
+// repassait en General trade à chaque enregistrement).
 const derivedCanal = computed(() => {
   const pos = posTypes.value.find(p => p.level3_group === pdvForm.value.categorie_pdv)
+  if (!pos) return pdvForm.value.canal || canalLabelFromCode(null)
   return canalLabelFromCode((pos as any)?.canal)
 })
 const sousCategorieOptions = computed(() => posTypes.value
@@ -689,10 +692,17 @@ const areaCascadeOptions = computed(() => areas.value
 // quartiers homonymes (ex SLEIL sur GAG 1 vs GAG 2).
 const selectedZoneId = computed(() => areas.value.find(a =>
   a.code === pdvForm.value.area_code && a.territory_code === pdvForm.value.territory_code)?.id)
-const quartierCascadeOptions = computed(() => quartiers.value
-  .filter(q => q.zone_id === selectedZoneId.value)
-  .sort((a, b) => a.ordre - b.ordre)
-  .map(q => ({ value: q.nom, label: q.nom })))
+const quartierCascadeOptions = computed(() => {
+  const out = quartiers.value
+    .filter(q => q.zone_id === selectedZoneId.value)
+    .sort((a, b) => a.ordre - b.ordre)
+    .map(q => ({ value: q.nom, label: q.nom }))
+  // Conserve le quartier actuel s'il est hors liste (area non résolue, libellé
+  // terrain) : sinon l'enregistrer effaçait le quartier du PDV.
+  const actuel = pdvForm.value.quartier_nom
+  if (actuel && !out.some(o => o.value === actuel)) out.unshift({ value: actuel, label: actuel })
+  return out
+})
 
 // Reset des niveaux enfants quand un parent change.
 function onRegionChange() { pdvForm.value.sub_region_code = ''; pdvForm.value.territory_code = ''; pdvForm.value.area_code = ''; pdvForm.value.quartier_nom = '' }
@@ -815,12 +825,18 @@ async function editPDV(pdv: PDV) {
       colonneTelephone.value = 'telephone' in full
       pdvForm.value.rayon_geofence = full.rayon_geofence ?? undefined
       hydrateGeoCascade()
-      // Préselection quartier si présent dans les options de l'area (byte-exact).
-      pdvForm.value.quartier_nom = quartierCascadeOptions.value.some(o => o.value === full.quartier)
-        ? full.quartier
-        : ''
+      // Quartier actuel toujours repris (ajouté aux options s'il est hors liste).
+      pdvForm.value.quartier_nom = full.quartier || ''
     }
-  } catch { /* colonnes absentes avant migration 020 — ignorer */ }
+    else throw new Error('Point de vente introuvable')
+  }
+  catch (err) {
+    // Formulaire incomplet (territoire, distributeur… vides) : l'enregistrer
+    // effacerait ces champs. On le ferme plutôt.
+    showCreate.value = false
+    editingPDV.value = null
+    toast.add({ title: 'Fiche non chargée', description: messageUtilisateur(err), color: 'red' })
+  }
 }
 
 function openPDVOnMap(pdv: PDV) {
