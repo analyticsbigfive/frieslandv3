@@ -104,18 +104,26 @@ export const useVisitesStore = defineStore('visites', () => {
    * l'onglet est borné à un mois par défaut, un mois chargé produisait un
    * fichier tronqué sans le dire. Plafond de sécurité à 5000 lignes, signalé
    * à l'appelant plutôt que coupé en silence.
+   *
+   * Lu par pages de 1000 : PostgREST plafonne chaque réponse à 1000 lignes
+   * (utils/fetchAll.ts), un simple .limit(5000) en rendait 1000 sans le dire.
+   * Une ligne de plus que la limite est lue pour savoir si le fichier est tronqué.
    */
   async function fetchVisitesForExport(limite = 5000): Promise<{ rows: Visite[]; tronque: boolean }> {
-    const query = appliquerFiltres(supabase
-      .from('visites')
-      .select(SELECT_VISITE)
-      .order('date_visite', { ascending: false }))
-      .limit(limite)
-
-    const { data, error } = await query
-    if (error) throw error
-    const rows = (data || []) as Visite[]
-    return { rows, tronque: rows.length >= limite }
+    const PAGE = 1000
+    const rows: Visite[] = []
+    for (let from = 0; from <= limite; from += PAGE) {
+      const { data, error } = await appliquerFiltres(supabase
+        .from('visites')
+        .select(SELECT_VISITE)
+        .order('date_visite', { ascending: false })
+        .order('id', { ascending: true }))
+        .range(from, Math.min(from + PAGE - 1, limite))
+      if (error) throw error
+      rows.push(...((data || []) as Visite[]))
+      if (!data || data.length < PAGE) break
+    }
+    return { rows: rows.slice(0, limite), tronque: rows.length > limite }
   }
 
   async function fetchVisiteById(id: string) {
@@ -166,12 +174,16 @@ export const useVisitesStore = defineStore('visites', () => {
   }
 
   async function deleteVisite(id: string) {
-    const { error } = await supabase
+    // .select() : une suppression refusée par la RLS ne renvoie pas d'erreur,
+    // seulement 0 ligne.
+    const { data, error } = await supabase
       .from('visites')
       .delete()
       .eq('visite_id', id)
+      .select('id')
 
     if (error) throw error
+    if (!data?.length) throw new Error('Visite non supprimée : seul un administrateur peut supprimer une visite')
     visites.value = visites.value.filter(v => v.visite_id !== id)
   }
 
