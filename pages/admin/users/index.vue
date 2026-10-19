@@ -1097,13 +1097,6 @@ async function handleSaveUser() {
     const quartiers = (userForm.value.quartiers_assignes || []).filter(Boolean)
 
     if (editingUser.value) {
-      // L'email est aussi l'identifiant de connexion (auth.users) : changé côté
-      // serveur, avant le reste, pour qu'un refus arrête l'enregistrement.
-      const email = (userForm.value.email || '').trim().toLowerCase()
-      if (email !== (editingUser.value.email || '').toLowerCase()) {
-        userForm.value.email = await authStore.updateUserEmail(editingUser.value.id, email)
-      }
-
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -1121,6 +1114,20 @@ async function handleSaveUser() {
         .eq('id', editingUser.value.id)
 
       if (error) throw error
+
+      // L'email est aussi l'identifiant de connexion (auth.users) : changé côté
+      // serveur, en dernier, pour ne jamais le changer sur un enregistrement raté.
+      const email = (userForm.value.email || '').trim().toLowerCase()
+      if (email !== (editingUser.value.email || '').toLowerCase()) {
+        try {
+          userForm.value.email = await authStore.updateUserEmail(editingUser.value.id, email)
+        }
+        catch (err: any) {
+          toast.add({ title: 'Email non changé', description: `Les autres modifications sont enregistrées. ${messageUtilisateur(err)}`, color: 'red' })
+          fetchUsers()
+          return
+        }
+      }
       toast.add({ title: 'Utilisateur mis à jour', description: userForm.value.nom || userForm.value.email, color: 'green' })
     }
     else {

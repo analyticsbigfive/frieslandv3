@@ -38,7 +38,8 @@ export default defineEventHandler(async (event) => {
 
   // Déjà à jour côté auth : on resynchronise seulement le profil.
   if (ancien?.toLowerCase() !== email) {
-    const { data: pris } = await service.from('profiles').select('id').ilike('email', email).neq('id', id).limit(1)
+    // eq et non ilike : « _ » est un joker pour ilike. Emails stockés en minuscules.
+    const { data: pris } = await service.from('profiles').select('id').eq('email', email).neq('id', id).limit(1)
     if (pris?.length) {
       throw apiError(409, 'Un autre compte utilise déjà cet email')
     }
