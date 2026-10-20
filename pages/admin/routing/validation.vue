@@ -29,7 +29,7 @@
         Ouvrir la validation
       </UButton>
       <p class="text-xs text-slate-600 dark:text-slate-300">
-        Un code à 4 chiffres est créé pour chaque merchandiser Atom actif. Un mois déjà ouvert ajoute seulement les merchandisers manquants.
+        Un lien personnel est créé pour chaque merchandiser Atom actif. Un mois déjà ouvert ajoute seulement les merchandisers manquants.
       </p>
     </section>
 
@@ -42,7 +42,8 @@
         </div>
         <div class="flex flex-wrap gap-2">
           <UButton size="sm" variant="outline" icon="i-heroicons-clipboard-document" @click="copier(lienPublic, 'Lien copié')">Copier le lien</UButton>
-          <UButton size="sm" variant="outline" icon="i-heroicons-chat-bubble-left-right" @click="copier(tousLesMessages, 'Les messages sont copiés')">Copier tous les messages</UButton>
+          <UButton size="sm" variant="outline" icon="i-heroicons-chat-bubble-left-right" @click="copier(tousLesLiens, 'Les liens sont copiés')">Copier tous les liens</UButton>
+          <UButton size="sm" variant="outline" icon="i-heroicons-arrow-down-tray" @click="exporterRapportZones">Rapport des zones (CSV)</UButton>
           <UButton size="sm" variant="outline" icon="i-heroicons-arrow-down-tray" @click="exporterReponses">Exporter les réponses (CSV)</UButton>
           <UButton v-if="campagne.statut === 'ouverte'" size="sm" variant="ghost" color="gray" @click="basculerCampagne('fermee')">Fermer ce mois</UButton>
           <UButton v-else size="sm" variant="ghost" color="gray" @click="basculerCampagne('ouverte')">Rouvrir ce mois</UButton>
@@ -71,7 +72,7 @@
               <th class="text-right">Zones non couvertes</th>
               <th class="text-right">Visites prévues</th>
               <th>Dernière activité</th>
-              <th>Code</th>
+              <th>Lien personnel</th>
               <th><span class="sr-only">Actions</span></th>
             </tr>
           </thead>
@@ -97,8 +98,8 @@
               </td>
               <td class="whitespace-nowrap text-sm">{{ l.derniereActivite ? dateCourte(l.derniereActivite) : '—' }}</td>
               <td>
-                <span class="font-semibold tabular-nums tracking-wider">{{ l.code }}</span>
-                <UButton size="xs" variant="ghost" color="gray" class="ml-1" :aria-label="`Nouveau code pour ${l.nom}`" @click="nouveauCode(l)">Nouveau</UButton>
+                <UButton size="xs" variant="ghost" color="gray" icon="i-heroicons-link" :aria-label="`Copier le lien de ${l.nom}`" @click="copier(lienPersonnel(l), `Lien de ${l.nom} copié`)">Copier</UButton>
+                <UButton size="xs" variant="ghost" color="gray" :aria-label="`Nouveau lien pour ${l.nom}`" @click="nouveauLien(l)">Nouveau</UButton>
               </td>
               <td class="whitespace-nowrap text-right">
                 <UButton size="xs" variant="ghost" color="gray" icon="i-heroicons-chat-bubble-oval-left" :to="lienWhatsApp(l)" target="_blank" :aria-label="`Envoyer le message à ${l.nom} sur WhatsApp`">WhatsApp</UButton>
@@ -190,20 +191,39 @@
         </div>
 
         <!-- Zones -->
-        <div v-else-if="onglet === 'zones'" class="grid gap-4 lg:grid-cols-2">
-          <div v-for="bloc in detail.zones" :key="bloc.titre" class="space-y-2">
-            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">{{ bloc.titre }}</h3>
-            <p v-if="!bloc.lignes.length" class="text-sm text-slate-600">Rien d'enregistré.</p>
-            <ul class="divide-y divide-slate-200 rounded-md border border-slate-200 dark:divide-slate-700 dark:border-slate-700">
-              <li v-for="z in bloc.lignes" :key="z.libelle" class="flex items-center justify-between gap-3 px-3 py-2 text-sm">
-                <span>{{ z.libelle }}</span>
-                <UBadge :color="z.decision === 'non' ? 'amber' : z.decision === 'oui' ? 'green' : 'gray'" variant="subtle" size="xs">
-                  {{ z.decision === 'non' ? 'Ne couvre pas' : z.decision === 'oui' ? 'Couvre' : 'Sans réponse' }}
-                </UBadge>
-              </li>
-            </ul>
+        <div v-else-if="onglet === 'zones'" class="space-y-4">
+          <div class="grid gap-4 lg:grid-cols-2">
+            <div v-for="bloc in detail.zones" :key="bloc.titre" class="space-y-2">
+              <h3 class="text-sm font-semibold text-slate-900 dark:text-white">{{ bloc.titre }}</h3>
+              <p v-if="!bloc.lignes.length" class="text-sm text-slate-600">Rien d'enregistré.</p>
+              <ul class="divide-y divide-slate-200 rounded-md border border-slate-200 dark:divide-slate-700 dark:border-slate-700">
+                <li v-for="z in bloc.lignes" :key="z.libelle" class="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                  <span>{{ z.libelle }}</span>
+                  <UBadge :color="z.decision === 'non' ? 'amber' : z.decision === 'oui' ? 'green' : 'gray'" variant="subtle" size="xs">
+                    {{ z.decision === 'non' ? 'Ne couvre pas' : z.decision === 'oui' ? 'Couvre' : 'Sans réponse' }}
+                  </UBadge>
+                </li>
+              </ul>
+            </div>
           </div>
-          <p v-if="detail.zonesRemarque" class="rounded-md bg-slate-50 p-3 text-sm lg:col-span-2 dark:bg-slate-800">
+          <div class="space-y-2">
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Ce qu'il propose de changer</h3>
+            <p v-if="!detail.ecarts.length" class="text-sm text-slate-600">
+              {{ detail.aPropose ? 'Sa proposition correspond à ce qui est enregistré.' : 'Aucune proposition : il n\'a pas corrigé ses zones.' }}
+            </p>
+            <table v-else class="admin-table w-full">
+              <thead><tr><th>Type</th><th>Zone</th><th>Changement</th></tr></thead>
+              <tbody>
+                <tr v-for="e in detail.ecarts" :key="`${e.type}-${e.libelle}-${e.action}`">
+                  <td>{{ e.type }}</td>
+                  <td class="font-medium text-slate-900 dark:text-white">{{ e.libelle }}</td>
+                  <td><UBadge :color="e.action === 'Ajouter' ? 'green' : 'amber'" variant="subtle" size="xs">{{ e.action }}</UBadge></td>
+                </tr>
+              </tbody>
+            </table>
+            <p class="text-xs text-slate-600 dark:text-slate-300">Rien n'est modifié dans les profils : le rapport des zones (CSV) sert à faire la mise à jour.</p>
+          </div>
+          <p v-if="detail.zonesRemarque" class="rounded-md bg-slate-50 p-3 text-sm dark:bg-slate-800">
             <b>Zones à ajouter selon le merchandiser :</b> {{ detail.zonesRemarque }}
           </p>
         </div>
@@ -314,6 +334,7 @@ const zones = ref<any[]>([])
 const routing = ref<any[]>([])
 const profils = ref<any[]>([])
 const plans = ref<Record<string, any[]>>({})
+const territoires = ref<{ code: string; nom: string }[]>([])
 const selection = ref<string | null>(null)
 const onglet = ref('jours')
 const moisNouveau = ref(prochainMois())
@@ -349,21 +370,23 @@ async function charger() {
     await chargerCampagnes()
     if (!campagneId.value) { fiches.value = []; return }
     const { data: f, error } = await supabase.from('validation_tournee_merch')
-      .select('id, merchandiser_id, code, lien_jeton, statut, nom_saisi, remarque, zones_remarque, valide_le, derniere_activite')
+      .select('id, merchandiser_id, code, lien_jeton, statut, nom_saisi, remarque, zones_remarque, zones_proposees, valide_le, derniere_activite')
       .eq('campagne_id', campagneId.value)
     if (error) throw error
     fiches.value = f || []
     const ids = fiches.value.map(x => x.id)
     const merchs = fiches.value.map(x => x.merchandiser_id)
     const vide = ['00000000-0000-0000-0000-000000000000']
-    const [r, p, z, rm, pr] = await Promise.all([
+    const [r, p, z, rm, pr, te] = await Promise.all([
       supabase.from('validation_tournee_reponse').select('id, validation_merch_id, routing_mensuel_id, decision, commentaire, traite').in('validation_merch_id', ids.length ? ids : vide),
       supabase.from('validation_tournee_pdv_retour').select('id, validation_merch_id, pdv_id, motif, commentaire, traite, pdv:pdv(nom_pdv)').in('validation_merch_id', ids.length ? ids : vide),
       supabase.from('validation_tournee_zone').select('validation_merch_id, type, libelle, decision').in('validation_merch_id', ids.length ? ids : vide),
       supabase.from('routing_mensuel').select('id, merchandiser_id, jour_semaine, semaine_du_mois, point_visite, secteur').eq('actif', true).in('merchandiser_id', merchs.length ? merchs : vide).order('semaine_du_mois').order('jour_semaine'),
       supabase.from('profiles').select('id, nom, telephone, zone_assignee, territoires_assignes, quartiers_assignes').in('id', merchs.length ? merchs : vide),
+      supabase.from('territoire').select('code, nom'),
     ])
-    for (const x of [r, p, z, rm, pr]) if (x.error) throw x.error
+    for (const x of [r, p, z, rm, pr, te]) if (x.error) throw x.error
+    territoires.value = te.data || []
     reponses.value = r.data || []
     retours.value = p.data || []
     zones.value = z.data || []
@@ -441,6 +464,8 @@ const detail = computed(() => {
     nomSaisi: f.nom_saisi,
     remarque: f.remarque,
     zonesRemarque: f.zones_remarque,
+    aPropose: !!f.zones_proposees,
+    ecarts: ecartsZones(f),
     jours: lignesRouting.map(l => ({
       id: l.id, semaine: l.semaine_du_mois, jour: l.jour_semaine, pointVisite: l.point_visite,
       prevues: plan.filter((x: any) => x.ligne_id === l.id).length,
@@ -451,37 +476,63 @@ const detail = computed(() => {
     zones: [
       { titre: 'Secteur Atom', lignes: uniques(lignesRouting.map(l => l.secteur)).map(s => ({ libelle: s, decision: reponseZone('secteur_atom', s) })) },
       { titre: 'Territoires Friesland', lignes: uniques([(prof as any).zone_assignee, ...((prof as any).territoires_assignes || [])]).map(t => ({ libelle: t, decision: reponseZone('territoire_friesland', t) })) },
-      { titre: 'Quartiers Friesland qu\'il ne couvre pas', lignes: zs.filter(z => z.type === 'quartier_friesland' && z.decision === 'non').map(z => ({ libelle: z.libelle, decision: 'non' })) },
     ],
   }
 })
 
 const lienPersonnel = (l: { lien?: string }) => `${lienPublic.value}?t=${l.lien || ''}`
 
-function message(l: { nom: string; code: string; lien?: string }) {
-  const mois = campagne.value?.libelle || ''
-  return `Bonjour ${l.nom},
-
-L'équipe Friesland vous demande de vérifier votre tournée de ${mois} : vos zones et secteurs, votre point de visite pour chaque jour, et les boutiques prévues.
-
-Touchez votre lien personnel (ne le transférez à personne) :
-${lienPersonnel(l)}
-
-Activez la localisation du téléphone pour voir à quelle distance sont les boutiques.
-Pour chaque jour, répondez OK, Modifier ou Retirer, puis validez à la fin. Comptez environ 15 minutes.
-
-Si le lien ne s'ouvre pas : allez sur ${lienPublic.value}, touchez votre nom et tapez le code ${l.code}.
-
-Merci.`
+function message(l: { nom: string; lien?: string }) {
+  return `Validation de votre tournée de ${campagne.value?.libelle || ''} : touchez votre lien personnel.\n${lienPersonnel(l)}`
 }
 
 // WhatsApp : le numéro du compte s'il est connu (format international sans +),
 // sinon WhatsApp demande à qui envoyer.
-function lienWhatsApp(l: { nom: string; code: string; lien?: string; telephone?: string }) {
+function lienWhatsApp(l: { nom: string; lien?: string; telephone?: string }) {
   const numero = String(l.telephone || '').replace(/\D/g, '')
   return `https://wa.me/${numero}?text=${encodeURIComponent(message(l))}`
 }
-const tousLesMessages = computed(() => lignes.value.map(l => message(l)).join('\n\n----------\n\n'))
+// Un seul message pour le groupe : le nom de chacun et son lien.
+const tousLesLiens = computed(() => [
+  `Validation de votre tournée de ${campagne.value?.libelle || ''} : touchez le lien à votre nom.`,
+  ...lignes.value.map(l => `${l.nom}\n${lienPersonnel(l)}`),
+].join('\n\n'))
+
+// --- Zones : enregistré aujourd'hui / proposé par le merchandiser -----------
+const cleZone = (s: string) => String(s || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036F]/g, '').replace(/[^A-Z0-9]+/g, ' ').trim()
+function ecartsZones(f: any) {
+  const prop = f.zones_proposees
+  if (!prop) return []
+  const prof: any = profils.value.find(p => p.id === f.merchandiser_id) || {}
+  const nomTerr = (code: string) => territoires.value.find(t => t.code === code)?.nom || code
+  const codeTerr = (nom: string) => territoires.value.find(t => cleZone(t.nom) === cleZone(nom))?.code || nom
+  const actuels = {
+    'Secteur Atom': routing.value.filter(l => l.merchandiser_id === f.merchandiser_id).map(l => l.secteur).filter(Boolean),
+    Territoire: [prof.zone_assignee, ...(prof.territoires_assignes || [])].filter(Boolean).map(codeTerr),
+    Quartier: prof.quartiers_assignes || [],
+  } as Record<string, string[]>
+  const proposes = { 'Secteur Atom': prop.secteursAtom || [], Territoire: prop.territoires || [], Quartier: prop.quartiers || [] } as Record<string, string[]>
+  const out: { type: string; libelle: string; action: string }[] = []
+  for (const type of Object.keys(proposes)) {
+    const a = new Set(actuels[type].map(cleZone))
+    const p = new Set(proposes[type].map(cleZone))
+    const libelle = (x: string) => type === 'Territoire' ? nomTerr(x) : x
+    for (const x of [...new Set(proposes[type])]) if (!a.has(cleZone(x))) out.push({ type, libelle: libelle(x), action: 'Ajouter' })
+    for (const x of [...new Set(actuels[type])]) if (!p.has(cleZone(x))) out.push({ type, libelle: libelle(x), action: 'Retirer' })
+  }
+  return out
+}
+
+function exporterRapportZones() {
+  const lignesCsv: any[][] = []
+  for (const f of fiches.value) {
+    const nom = profils.value.find(p => p.id === f.merchandiser_id)?.nom || ''
+    for (const e of ecartsZones(f)) lignesCsv.push([nom, e.type, e.libelle, e.action, f.zones_remarque || ''])
+    if (!f.zones_proposees && f.zones_remarque) lignesCsv.push([nom, '', '', '', f.zones_remarque])
+  }
+  telechargerCsv(`rapport-zones-${campagne.value?.mois?.slice(0, 7) || 'mois'}.csv`,
+    ['Merchandiser', 'Type', 'Zone', 'Changement', 'Remarque du merchandiser'], lignesCsv)
+}
 
 async function copier(texte: string, ok: string) {
   try {
@@ -539,15 +590,15 @@ async function basculerCampagne(nouveau: 'ouverte' | 'fermee') {
   await charger()
 }
 
-async function nouveauCode(l: { id: string; nom: string }) {
+async function nouveauLien(l: { id: string; nom: string }) {
   if (!(await demanderConfirmation({
-    titre: `Donner un nouveau code à « ${l.nom} » ?`,
-    message: 'L\'ancien code et l\'ancien lien ne marcheront plus. Pensez à lui envoyer le nouveau message.',
-    libelleAction: 'Donner un nouveau code',
+    titre: `Donner un nouveau lien à « ${l.nom} » ?`,
+    message: 'L\'ancien lien ne marchera plus. Pensez à lui envoyer le nouveau.',
+    libelleAction: 'Donner un nouveau lien',
     destructif: false,
   }))) return
   const lien = Array.from(crypto.getRandomValues(new Uint8Array(16)), o => o.toString(16).padStart(2, '0')).join('')
-  const { error } = await supabase.from('validation_tournee_merch').update({ code: nouveauCodeAleatoire(), lien_jeton: lien, essais_rates: 0, bloque_jusqua: null }).eq('id', l.id)
+  const { error } = await supabase.from('validation_tournee_merch').update({ lien_jeton: lien }).eq('id', l.id)
   if (error) { erreur.value = messageUtilisateur(error); return }
   await charger()
 }

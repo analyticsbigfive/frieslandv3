@@ -2,7 +2,7 @@
   <div class="min-h-dvh bg-gray-50 text-slate-700 safe-area-top">
     <header class="sticky top-0 z-40 flex min-h-[56px] items-center gap-2 bg-fc-red px-4 py-2.5 text-white shadow-sm">
       <button
-        v-if="etape !== 'noms' && etape !== 'fini'"
+        v-if="etape === 'jours' || etape === 'valider'"
         type="button"
         class="touch-target -ml-2 inline-flex items-center justify-center rounded-xl hover:bg-white/10"
         aria-label="Revenir à l'écran précédent"
@@ -32,52 +32,19 @@
         {{ erreur }}
       </div>
 
-      <!-- 1. Choisir son nom -->
-      <section v-if="etape === 'noms'" class="space-y-4">
-        <div>
-          <h2 class="text-lg font-semibold text-slate-900">Qui êtes-vous ?</h2>
-          <p class="mt-1 text-sm text-slate-500">Touchez votre nom. Vous taperez ensuite le code à 4 chiffres reçu de l'admin.</p>
-        </div>
-        <p v-if="chargement" class="text-sm text-slate-500">Chargement…</p>
-        <p v-else-if="!campagne" class="rounded-lg bg-white p-4 text-sm text-slate-600 ring-1 ring-slate-200">
-          Aucune validation n'est ouverte pour le moment.
-        </p>
-        <ul v-else class="space-y-2">
-          <li v-for="m in merchandisers" :key="m.id">
-            <button
-              type="button"
-              class="flex w-full items-center justify-between gap-3 rounded-lg bg-white px-4 py-3.5 text-left ring-1 ring-slate-200 transition hover:ring-fc-red/40 active:bg-slate-50"
-              @click="choisir(m)"
-            >
-              <span class="font-semibold text-slate-900">{{ m.nom }}</span>
-              <span class="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="pastille(m.statut).classe">{{ pastille(m.statut).texte }}</span>
-            </button>
-          </li>
-        </ul>
-      </section>
-
-      <!-- 2. Code -->
-      <section v-else-if="etape === 'code'" class="space-y-5">
-        <div>
-          <h2 class="text-lg font-semibold text-slate-900">{{ choisi?.nom }}</h2>
-          <p class="mt-1 text-sm text-slate-500">Tapez votre code à 4 chiffres.</p>
-        </div>
-        <form class="space-y-4" @submit.prevent="entrer">
-          <label for="code" class="sr-only">Code à 4 chiffres</label>
-          <input
-            id="code"
-            v-model="code"
-            inputmode="numeric"
-            autocomplete="one-time-code"
-            maxlength="4"
-            pattern="[0-9]{4}"
-            class="w-full rounded-lg border border-slate-300 bg-white px-4 py-4 text-center text-3xl font-bold tracking-[0.5em] text-slate-900 focus:border-fc-red focus:outline-none focus:ring-2 focus:ring-fc-red/30"
-            placeholder="••••"
-          >
-          <UButton type="submit" block size="xl" color="primary" :loading="envoi" :disabled="code.length !== 4">
-            Entrer
-          </UButton>
-        </form>
+      <!-- Sans lien personnel -->
+      <section v-if="etape === 'accueil'" class="space-y-4 pt-6 text-center">
+        <p v-if="chargement" class="text-sm text-slate-500" role="status">Ouverture de votre fiche…</p>
+        <template v-else>
+          <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
+            <UIcon name="i-heroicons-link" class="h-7 w-7 text-slate-500" />
+          </div>
+          <h2 class="text-lg font-semibold text-slate-900">Ouvrez votre lien personnel</h2>
+          <p class="text-sm text-slate-600">
+            Touchez le lien à votre nom reçu sur WhatsApp. Il ouvre directement votre fiche.
+          </p>
+          <p v-if="!campagne" class="text-sm text-slate-500">Aucune validation n'est ouverte pour le moment.</p>
+        </template>
       </section>
 
       <!-- 3. Zones et secteurs -->
@@ -109,22 +76,75 @@
           <p v-if="!donnees.zones.territoiresFriesland.length" class="text-sm text-slate-500">Aucun territoire Friesland enregistré.</p>
         </div>
 
-        <div v-if="donnees.zones.quartiersFriesland.length" class="space-y-2">
-          <h3 class="text-sm font-semibold text-slate-900">Mes quartiers chez Friesland</h3>
-          <p class="text-sm text-slate-500">Touchez les quartiers que vous ne couvrez pas. Ils passent en rouge.</p>
-          <div class="flex flex-wrap gap-2">
-            <button
-              v-for="q in donnees.zones.quartiersFriesland" :key="`q-${q}`"
-              type="button"
-              class="rounded-full px-3 py-1.5 text-sm font-semibold ring-1 transition"
-              :class="zone('quartier_friesland', q) === 'non' ? 'bg-red-50 text-red-700 ring-red-300 line-through' : 'bg-white text-slate-700 ring-slate-200'"
-              :aria-pressed="zone('quartier_friesland', q) === 'non'"
-              @click="repondreZone('quartier_friesland', q, zone('quartier_friesland', q) === 'non' ? null : 'non')"
-            >
-              {{ q }}
-            </button>
+        <!-- Ce que je couvre vraiment : même choix que dans l'admin -->
+        <div v-if="zonesNon || choixOuvert" class="space-y-4 rounded-lg bg-white p-4 ring-1 ring-amber-300">
+          <div>
+            <h3 class="text-base font-semibold text-slate-900">Ce que je couvre vraiment</h3>
+            <p class="mt-1 text-sm text-slate-600">
+              Cochez vos secteurs, vos territoires, puis vos quartiers. C'est une proposition : l'équipe la vérifie avant de changer quoi que ce soit.
+            </p>
           </div>
+
+          <fieldset class="space-y-2">
+            <legend class="text-sm font-semibold text-slate-900">Secteurs Atom</legend>
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-for="s in donnees.referentiel.secteursAtom" :key="`sa-${s}`" type="button"
+                class="rounded-full px-3 py-1.5 text-sm font-semibold ring-1 transition"
+                :class="choix.secteursAtom.includes(s) ? 'bg-emerald-50 text-emerald-800 ring-emerald-400' : 'bg-white text-slate-600 ring-slate-200'"
+                :aria-pressed="choix.secteursAtom.includes(s)"
+                @click="basculer('secteursAtom', s)"
+              >
+                {{ s }}
+              </button>
+            </div>
+          </fieldset>
+
+          <fieldset class="space-y-2">
+            <legend class="text-sm font-semibold text-slate-900">Territoires Friesland</legend>
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-for="t in donnees.referentiel.territoires" :key="`t-${t.code}`" type="button"
+                class="rounded-full px-3 py-1.5 text-sm font-semibold ring-1 transition"
+                :class="choix.territoires.includes(t.code) ? 'bg-emerald-50 text-emerald-800 ring-emerald-400' : 'bg-white text-slate-600 ring-slate-200'"
+                :aria-pressed="choix.territoires.includes(t.code)"
+                @click="basculerTerritoire(t.code)"
+              >
+                {{ t.nom }}
+              </button>
+            </div>
+          </fieldset>
+
+          <fieldset class="space-y-3">
+            <legend class="text-sm font-semibold text-slate-900">Quartiers de mes territoires</legend>
+            <p v-if="!territoiresChoisis.length" class="text-sm text-slate-500">Cochez au moins un territoire pour voir ses quartiers.</p>
+            <div v-for="t in territoiresChoisis" :key="`qt-${t.code}`" class="space-y-1.5">
+              <div class="flex items-center justify-between gap-2">
+                <p class="text-xs font-semibold text-slate-700">
+                  {{ t.nom }} · <span class="tabular-nums">{{ t.quartiers.filter(q => choix.quartiers.includes(q)).length }} sur {{ t.quartiers.length }}</span>
+                </p>
+                <button v-if="t.quartiers.length" type="button" class="text-xs font-semibold text-fc-red underline-offset-2 hover:underline" @click="basculerGroupe(t.quartiers)">
+                  {{ t.quartiers.every(q => choix.quartiers.includes(q)) ? 'Tout décocher' : 'Tout cocher' }}
+                </button>
+              </div>
+              <p v-if="!t.quartiers.length" class="text-xs text-slate-500">Aucun quartier enregistré pour ce territoire.</p>
+              <div class="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                <label v-for="q in t.quartiers" :key="`q-${t.code}-${q}`" class="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-sm hover:bg-slate-50">
+                  <input type="checkbox" class="h-4 w-4 rounded border-slate-300 text-fc-red focus:ring-fc-red" :checked="choix.quartiers.includes(q)" @change="basculer('quartiers', q)">
+                  <span>{{ q }}</span>
+                </label>
+              </div>
+            </div>
+          </fieldset>
+          <p class="text-xs text-slate-500" role="status">{{ etatChoix }}</p>
         </div>
+        <button
+          v-else type="button"
+          class="text-sm font-semibold text-fc-red underline underline-offset-2"
+          @click="choixOuvert = true"
+        >
+          Corriger mes zones
+        </button>
 
         <div class="space-y-2">
           <label for="zones-manquantes" class="text-sm font-semibold text-slate-900">Zones ou quartiers que je couvre et qui manquent</label>
@@ -326,14 +346,11 @@ const DECISIONS = [
 ]
 const CLE_JETON = 'validation-tournee-jeton'
 
-const etape = ref<'noms' | 'code' | 'zones' | 'jours' | 'valider' | 'fini'>('noms')
+const etape = ref<'accueil' | 'zones' | 'jours' | 'valider' | 'fini'>('accueil')
 const chargement = ref(true)
 const envoi = ref(false)
 const erreur = ref('')
 const campagne = ref<{ libelle: string; mois: string } | null>(null)
-const merchandisers = ref<{ id: string; nom: string; statut: string }[]>([])
-const choisi = ref<{ id: string; nom: string } | null>(null)
-const code = ref('')
 const jeton = ref('')
 const donnees = ref<any>(null)
 const reponses = ref<Record<string, { decision: string; commentaire: string }>>({})
@@ -385,42 +402,14 @@ const BarreAction = defineComponent({
 const message = (e: any) => e?.data?.message || e?.data?.statusMessage || e?.message || 'Erreur, réessayez'
 const api = (url: string, options: any = {}) => $fetch(url, { ...options, headers: { ...(jeton.value ? { Authorization: `Bearer ${jeton.value}` } : {}), ...(options.headers || {}) } })
 
-function pastille(statut: string) {
-  if (statut === 'validee') return { texte: 'Validé', classe: 'bg-emerald-50 text-emerald-800' }
-  if (statut === 'en_cours') return { texte: 'En cours', classe: 'bg-amber-50 text-amber-800' }
-  return { texte: 'À faire', classe: 'bg-slate-100 text-slate-600' }
-}
-
-async function chargerNoms() {
+async function chargerCampagne() {
   chargement.value = true
   try {
     const r: any = await $fetch('/api/validation-tournee')
     campagne.value = r.campagne
-    merchandisers.value = r.merchandisers
   }
   catch (e) { erreur.value = message(e) }
   finally { chargement.value = false }
-}
-
-function choisir(m: { id: string; nom: string }) {
-  choisi.value = m
-  code.value = ''
-  erreur.value = ''
-  etape.value = 'code'
-}
-
-async function entrer() {
-  if (!choisi.value) return
-  envoi.value = true
-  erreur.value = ''
-  try {
-    const r: any = await $fetch('/api/validation-tournee/acces', { method: 'POST', body: { id: choisi.value.id, code: code.value } })
-    jeton.value = r.jeton
-    try { localStorage.setItem(CLE_JETON, r.jeton) } catch {}
-    await chargerDonnees()
-  }
-  catch (e) { erreur.value = message(e); code.value = '' }
-  finally { envoi.value = false }
 }
 
 async function chargerDonnees() {
@@ -432,6 +421,13 @@ async function chargerDonnees() {
   reponsesZones.value = d.reponsesZones
   zonesRemarque.value = d.zonesRemarque
   remarque.value = d.remarque
+  const base = d.zonesProposees || d.zonesActuelles
+  choix.value = {
+    secteursAtom: [...(base?.secteursAtom || [])],
+    territoires: [...(base?.territoires || [])],
+    quartiers: [...(base?.quartiers || [])],
+  }
+  choixOuvert.value = !!d.zonesProposees
   etape.value = d.statut === 'validee' ? 'fini' : 'zones'
 }
 
@@ -454,13 +450,53 @@ function repondreZone(type: string, libelle: string, decision: string | null) {
   enregistrer({ type: 'zone', zoneType: type, libelle, decision })
 }
 const enregistrerZonesRemarque = () => enregistrer({ type: 'zones_remarque', commentaire: zonesRemarque.value })
+const zonesNon = computed(() => Object.values(reponsesZones.value).filter(z => z.decision === 'non').length)
 const zonesRestantes = computed(() => {
   if (!donnees.value) return 0
   const z = donnees.value.zones
-  return [...z.secteursAtom.map((s: string) => ['secteur_atom', s]), ...z.territoiresFriesland.map((t: string) => ['territoire_friesland', t])]
+  const sansReponse = [...z.secteursAtom.map((s: string) => ['secteur_atom', s]), ...z.territoiresFriesland.map((t: string) => ['territoire_friesland', t])]
     .filter(([t, l]) => !zone(t, l)).length
+  // Un « Non » demande au moins un territoire coché dans « Ce que je couvre vraiment ».
+  return sansReponse + (zonesNon.value && !choix.value.territoires.length ? 1 : 0)
 })
-const zonesNon = computed(() => Object.values(reponsesZones.value).filter(z => z.decision === 'non').length)
+
+// --- Ce que je couvre vraiment (proposition, même choix que dans l'admin) ---
+const choixOuvert = ref(false)
+const choix = ref<{ secteursAtom: string[]; territoires: string[]; quartiers: string[] }>({ secteursAtom: [], territoires: [], quartiers: [] })
+const etatChoix = ref('')
+const territoiresChoisis = computed(() => (donnees.value?.referentiel.territoires || []).filter((t: any) => choix.value.territoires.includes(t.code)))
+let minuterie: ReturnType<typeof setTimeout> | null = null
+function enregistrerChoix() {
+  etatChoix.value = 'Enregistrement…'
+  if (minuterie) clearTimeout(minuterie)
+  minuterie = setTimeout(async () => {
+    await enregistrer({ type: 'zones_proposees', zones: choix.value })
+    etatChoix.value = erreur.value ? '' : 'Proposition enregistrée'
+  }, 600)
+}
+function basculer(liste: 'secteursAtom' | 'quartiers', valeur: string) {
+  const l = choix.value[liste]
+  choix.value[liste] = l.includes(valeur) ? l.filter(x => x !== valeur) : [...l, valeur]
+  enregistrerChoix()
+}
+function basculerTerritoire(code: string) {
+  const t = (donnees.value?.referentiel.territoires || []).find((x: any) => x.code === code)
+  if (choix.value.territoires.includes(code)) {
+    // Décocher un territoire retire ses quartiers, comme dans l'admin.
+    choix.value.territoires = choix.value.territoires.filter(x => x !== code)
+    const siens = new Set(t?.quartiers || [])
+    choix.value.quartiers = choix.value.quartiers.filter(q => !siens.has(q))
+  }
+  else choix.value.territoires = [...choix.value.territoires, code]
+  enregistrerChoix()
+}
+function basculerGroupe(quartiers: string[]) {
+  const tous = quartiers.every(q => choix.value.quartiers.includes(q))
+  const set = new Set(choix.value.quartiers)
+  for (const q of quartiers) tous ? set.delete(q) : set.add(q)
+  choix.value.quartiers = [...set]
+  enregistrerChoix()
+}
 
 // --- Jours ------------------------------------------------------------------
 const jours = computed<Jour[]>(() => donnees.value?.jours || [])
@@ -523,9 +559,7 @@ async function valider() {
 
 function retour() {
   erreur.value = ''
-  if (etape.value === 'code') etape.value = 'noms'
-  else if (etape.value === 'zones') deconnecter()
-  else if (etape.value === 'jours') etape.value = 'zones'
+  if (etape.value === 'jours') etape.value = 'zones'
   else if (etape.value === 'valider') etape.value = 'jours'
 }
 
@@ -533,8 +567,7 @@ function deconnecter() {
   jeton.value = ''
   donnees.value = null
   try { localStorage.removeItem(CLE_JETON) } catch {}
-  etape.value = 'noms'
-  chargerNoms()
+  etape.value = 'accueil'
 }
 
 async function entrerParLien(lien: string) {
@@ -553,7 +586,8 @@ async function entrerParLien(lien: string) {
 }
 
 onMounted(async () => {
-  await chargerNoms()
+  await chargerCampagne()
+  chargement.value = true
   const lien = String(useRoute().query.t || '')
   if (lien && campagne.value && await entrerParLien(lien)) return
   let garde = ''
@@ -563,5 +597,6 @@ onMounted(async () => {
     try { await chargerDonnees() }
     catch { deconnecter() }
   }
+  chargement.value = false
 })
 </script>

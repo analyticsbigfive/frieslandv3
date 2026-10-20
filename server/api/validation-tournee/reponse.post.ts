@@ -3,6 +3,8 @@
 // { type: 'pdv', pdvId, ligneId, motif: pas_ma_tournee|position_fausse|ferme|null, commentaire }
 // { type: 'zone', zoneType: secteur_atom|territoire_friesland|quartier_friesland, libelle, decision: oui|non|null, commentaire }
 // { type: 'zones_remarque', commentaire } : zones couvertes qui manquent dans les listes
+// { type: 'zones_proposees', zones: { secteursAtom, territoires, quartiers } } : ce qu'il
+//   couvre vraiment (proposition ; profiles n'est jamais modifié ici)
 const DECISIONS = ['ok', 'modifier', 'retirer']
 const MOTIFS = ['pas_ma_tournee', 'position_fausse', 'ferme']
 const TYPES_ZONE = ['secteur_atom', 'territoire_friesland', 'quartier_friesland']
@@ -59,6 +61,19 @@ export default defineEventHandler(async (event) => {
       }, { onConflict: 'validation_merch_id,type,libelle' })
       if (error) throw apiError(500, error.message)
     }
+  }
+  else if (body?.type === 'zones_proposees') {
+    const liste = (x: unknown, max: number, motif: RegExp) => Array.isArray(x)
+      ? [...new Set(x.map(v => String(v ?? '').trim()).filter(v => v && motif.test(v)))].slice(0, max)
+      : []
+    const z = body?.zones || {}
+    const zones = {
+      secteursAtom: liste(z.secteursAtom, 50, /^.{1,200}$/),
+      territoires: liste(z.territoires, 50, /^[\w .'-]{1,40}$/),
+      quartiers: liste(z.quartiers, 1000, /^.{1,120}$/),
+    }
+    const { error } = await service.from('validation_tournee_merch').update({ zones_proposees: zones }).eq('id', v.id)
+    if (error) throw apiError(500, error.message)
   }
   else if (body?.type === 'zones_remarque') {
     const { error } = await service.from('validation_tournee_merch').update({ zones_remarque: commentaire }).eq('id', v.id)

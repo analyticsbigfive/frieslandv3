@@ -1,12 +1,10 @@
 // server/utils/validationTournee.ts
 // Socle des routes publiques /api/validation-tournee/* (page /validation-tournee).
 //
-// Les merchandisers Atom n'ont pas de session sur cette page : ils choisissent
-// leur nom puis tapent le code à 4 chiffres donné par l'admin. Le serveur
-// rend alors un jeton signé (HMAC) valable 12 h, porté par l'en-tête
-// Authorization. Le verrouillage après 5 codes faux est en base
-// (validation_tournee_merch.essais_rates / bloque_jusqua) : une limite en
-// mémoire ne tient pas sur Vercel (une instance par requête).
+// Les merchandisers Atom n'ont pas de session sur cette page : ils ouvrent
+// leur lien personnel (jeton de 128 bits, envoyé sur WhatsApp). Le serveur rend
+// alors un jeton signé (HMAC) valable 12 h, porté par l'en-tête Authorization.
+// (Le code à 4 chiffres a été retiré le 20/10/2026 à la demande de Jean Luc.)
 import { createHmac, createHash, timingSafeEqual } from 'node:crypto'
 import type { H3Event } from 'h3'
 

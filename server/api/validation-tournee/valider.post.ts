@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
     service.from('routing_mensuel').select('id, secteur').eq('merchandiser_id', v.merchandiser_id).eq('actif', true),
     service.from('validation_tournee_reponse').select('routing_mensuel_id').eq('validation_merch_id', v.id),
     service.from('profiles').select('zone_assignee, territoires_assignes').eq('id', v.merchandiser_id).maybeSingle(),
-    service.from('validation_tournee_zone').select('type, libelle').eq('validation_merch_id', v.id),
+    service.from('validation_tournee_zone').select('type, libelle, decision').eq('validation_merch_id', v.id),
   ])
   for (const r of [lignes, reponses, profil, zones]) if (r.error) throw apiError(500, r.error.message)
   const faits = new Set((reponses.data || []).map((r: any) => r.routing_mensuel_id))
@@ -28,6 +28,14 @@ export default defineEventHandler(async (event) => {
   ].filter(([, l]) => String(l || '').trim())
   const zonesManquantes = new Set(attendus.filter(([t, l]) => !repondu.has(`${t}|${cle(l)}`)).map(([t, l]) => `${t}|${cle(l)}`)).size
   if (zonesManquantes) throw apiError(400, `Il reste ${zonesManquantes} zone${zonesManquantes > 1 ? 's' : ''} sans réponse`)
+
+  // Un « Non » demande de dire ce qu'il couvre vraiment (au moins un territoire).
+  if ((zones.data || []).some((z: any) => z.decision === 'non')) {
+    const { data: m } = await service.from('validation_tournee_merch').select('zones_proposees').eq('id', v.id).maybeSingle()
+    if (!(m?.zones_proposees?.territoires || []).length) {
+      throw apiError(400, 'Vous avez répondu « Non » à une zone : cochez les territoires que vous couvrez vraiment')
+    }
+  }
 
   const maintenant = new Date().toISOString()
   const { error } = await service.from('validation_tournee_merch').update({
