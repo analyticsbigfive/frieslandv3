@@ -1,8 +1,12 @@
 // POST /api/validation-tournee/reponse — route PUBLIQUE, jeton requis.
 // { type: 'jour', ligneId, decision: ok|modifier|retirer, commentaire }
+// { type: 'quartier', ligneIds: [...], decision, commentaire } : la même réponse
+//   pour tous les jours d'un quartier (liste des quartiers du mois)
 // { type: 'pdv', pdvId, ligneId, motif: pas_ma_tournee|position_fausse|ferme|null, commentaire }
 // { type: 'zone', zoneType: secteur_atom|territoire_friesland|quartier_friesland, libelle, decision: oui|non|null, commentaire }
 // { type: 'zones_remarque', commentaire } : zones couvertes qui manquent dans les listes
+// { type: 'zones_proposees', zones: { secteursAtom, territoires, quartiers } } : ce qu'il
+//   couvre vraiment (proposition ; profiles n'est jamais modifié ici)
 const DECISIONS = ['ok', 'modifier', 'retirer']
 const MOTIFS = ['pas_ma_tournee', 'position_fausse', 'ferme']
 const TYPES_ZONE = ['secteur_atom', 'territoire_friesland', 'quartier_friesland']
@@ -22,7 +26,18 @@ export default defineEventHandler(async (event) => {
     if (!l) throw apiError(400, 'Jour inconnu')
   }
 
-  if (body?.type === 'jour') {
+  if (body?.type === 'quartier') {
+    const ids = Array.isArray(body?.ligneIds) ? [...new Set(body.ligneIds.map(String))].slice(0, 31) : []
+    if (!ids.length || !DECISIONS.includes(body?.decision)) throw apiError(400, 'Choix invalide')
+    const { data: siennes } = await service.from('routing_mensuel').select('id').in('id', ids).eq('merchandiser_id', v.merchandiser_id)
+    if ((siennes || []).length !== ids.length) throw apiError(400, 'Quartier inconnu')
+    const { error } = await service.from('validation_tournee_reponse').upsert(
+      ids.map(id => ({ validation_merch_id: v.id, routing_mensuel_id: id, decision: body.decision, commentaire, traite: false, maj_le: maintenant })),
+      { onConflict: 'validation_merch_id,routing_mensuel_id' },
+    )
+    if (error) throw apiError(500, error.message)
+  }
+  else if (body?.type === 'jour') {
     if (!ligneId || !DECISIONS.includes(body?.decision)) throw apiError(400, 'Choix invalide')
     const { error } = await service.from('validation_tournee_reponse').upsert({
       validation_merch_id: v.id, routing_mensuel_id: ligneId, decision: body.decision, commentaire, traite: false, maj_le: maintenant,
@@ -59,6 +74,19 @@ export default defineEventHandler(async (event) => {
       }, { onConflict: 'validation_merch_id,type,libelle' })
       if (error) throw apiError(500, error.message)
     }
+  }
+  else if (body?.type === 'zones_proposees') {
+    const liste = (x: unknown, max: number, motif: RegExp) => Array.isArray(x)
+      ? [...new Set(x.map(v => String(v ?? '').trim()).filter(v => v && motif.test(v)))].slice(0, max)
+      : []
+    const z = body?.zones || {}
+    const zones = {
+      secteursAtom: liste(z.secteursAtom, 50, /^.{1,200}$/),
+      territoires: liste(z.territoires, 50, /^[\w .'-]{1,40}$/),
+      quartiers: liste(z.quartiers, 1000, /^.{1,120}$/),
+    }
+    const { error } = await service.from('validation_tournee_merch').update({ zones_proposees: zones }).eq('id', v.id)
+    if (error) throw apiError(500, error.message)
   }
   else if (body?.type === 'zones_remarque') {
     const { error } = await service.from('validation_tournee_merch').update({ zones_remarque: commentaire }).eq('id', v.id)

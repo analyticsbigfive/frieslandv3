@@ -885,13 +885,15 @@ remplie. Rapport filtrable GT / MT dans `Visites › Coaching terrain`.
 - Un jour trop court se complète avec des boutiques du **même distributeur**, chez le **même merchandiser**, dans le **quartier voisin le plus proche**. Exemple : Abatta (Kouamé) n'a aucune boutique Plaisir Bachus ; on prend celles d'Abatta village, à 300 m. Jamais un autre distributeur.
 
 **Déroulé d'un mois :**
-1. Ouvrir la validation du mois (bouton « Ouvrir la validation ») : un code à 4 chiffres est créé pour chaque merchandiser Atom.
-2. Envoyer à chacun son message sur WhatsApp (bouton « WhatsApp » : la conversation s'ouvre avec le message rempli). Le message contient un **lien personnel** qui ouvre directement sa fiche, sans code ; le code à 4 chiffres reste en secours. « Nouveau » change le code et le lien.
-3. Le merchandiser répond en trois étapes : ses zones et secteurs (Atom et Friesland côte à côte), ses 24 jours (OK, Modifier, Retirer, avec les boutiques et leur distance à son téléphone), puis valide avec son nom.
+1. Ouvrir la validation du mois (bouton « Ouvrir la validation ») : un lien personnel est créé pour chaque merchandiser Atom.
+2. Envoyer les liens sur WhatsApp : « Copier tous les liens » donne un seul message avec le nom et le lien de chacun ; le bouton « WhatsApp » d'une ligne envoie son lien seul. Le lien ouvre directement la fiche, sans code. « Nouveau » change le lien.
+3. Le merchandiser répond en trois étapes : ses zones et secteurs (Atom et Friesland côte à côte ; s'il répond « Non », il coche ce qu'il couvre vraiment — secteurs Atom, territoires, quartiers, comme dans l'admin — et c'est une simple proposition), la liste de ses quartiers du mois (un par point de visite, avec ses jours de passage : OK, Modifier ou Retirer, et la liste des PDV du quartier à la demande ; pas de GPS ni de distance), puis valide avec son nom. La réponse d'un quartier vaut pour chacun de ses jours.
 4. Suivre l'avancement ; le détail de chaque fiche montre les jours à corriger, les boutiques signalées et les zones qu'il ne couvre pas. Cocher « Traité » une fois la correction faite dans Paramètres › Référentiels.
 5. Fermer le mois quand tout est revu.
 
-**Sécurité :** le lien personnel porte un jeton de 128 bits (à ne pas transférer) ; 5 codes faux bloquent l'accès 15 minutes ; « Nouveau » donne un autre code et un autre lien. Aucun téléphone de boutique n'est montré sur la page publique.
+**Sécurité :** le lien personnel porte un jeton de 128 bits ; « Nouveau » en donne un autre. Si quelqu'un remplit la fiche d'un autre, la signature le montre et « Rouvrir la fiche » la fait refaire.
+
+**Mettre à jour les zones :** « Rapport des zones (CSV) » liste, par merchandiser, les secteurs, territoires et quartiers à ajouter ou à retirer. Les profils ne sont jamais modifiés automatiquement : la mise à jour se fait ensuite dans Utilisateurs (fiche du merchandiser). Aucun téléphone de boutique n'est montré sur la page publique.
 
 **E-mail à chaque fiche validée :** fonction Supabase `notifier-validation-tournee`. À configurer une fois dans Supabase › Edge Functions › Secrets : `RESEND_API_KEY` (compte gratuit sur resend.com), `NOTIF_DESTINATAIRES` (adresses séparées par des virgules ; sans domaine vérifié chez Resend, uniquement l'adresse du compte Resend), facultatif `NOTIF_EXPEDITEUR` et `APP_URL`. Sans ces secrets, rien ne part et rien ne casse.
 
