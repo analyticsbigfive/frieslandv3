@@ -86,6 +86,9 @@ export default defineNuxtConfig({
     },
     workbox: {
       navigateFallback: '/',
+      // Page publique de validation des tournées (lien WhatsApp) et API : jamais
+      // servies par le shell hors ligne.
+      navigateFallbackDenylist: [/^\/validation-tournee/, /^\/api\//],
       globPatterns: ['**/*.{js,css,html,png,svg,ico,woff2}'],
       // Pas de cache sur /rest/v1 : les réponses dépendent de l'utilisateur
       // (RLS) mais le cache est indexé par URL seule — sur un navigateur
