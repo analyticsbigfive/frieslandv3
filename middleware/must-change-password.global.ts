@@ -8,7 +8,7 @@ export default defineNuxtRouteMiddleware((to) => {
 
   const mustChange = user.value.user_metadata?.must_change_password === true
   const allowed = ['/changer-mot-de-passe', '/login',
-  '/politique-de-confidentialite', '/suppression-de-compte',
+  '/politique-de-confidentialite', '/suppression-de-compte', '/validation-tournee',
   // anciennes URL, servies en alias pour les versions déjà installées
   '/privacy-policy', '/supprimer-compte']
 

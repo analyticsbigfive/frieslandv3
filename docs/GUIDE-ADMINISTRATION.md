@@ -874,6 +874,29 @@ remplie. Rapport filtrable GT / MT dans `Visites › Coaching terrain`.
 
 ---
 
+### Validation des tournées par les merchandisers Atom (20/10/2026)
+
+**Où :** Planning › Validation des tournées (admin et agence ; l'agence ne voit que ses merchandisers). Page publique pour les merchandisers : `/validation-tournee`, sans compte.
+
+**Règle des tournées Atom décidée le 20/10/2026 :**
+- Les boutiques de référence sont celles identifiées par Atom (fichier « BONNET ROUGE », onglet PDV, colonnes GPS_Lat et GPS_Lng). Le DMS ne sert pas pour Atom.
+- Le quartier d'une boutique est le point de visite du routing le plus proche, parmi ceux de tous les merchandisers Atom. Un distributeur peut servir plusieurs merchandisers (Niare & Frères : Yao et Seregone) : la boutique va au point le plus proche, donc à un seul.
+- Un jour de tournée prend les boutiques du distributeur de la ligne dans le quartier de son point de visite, puis les quotas par type de boutique (20 du lundi au jeudi, 15 le vendredi, 10 le samedi ; chaque boutique une fois par mois ; un type manquant est remplacé par des boutiques).
+- Un jour trop court se complète avec des boutiques du **même distributeur**, chez le **même merchandiser**, dans le **quartier voisin le plus proche**. Exemple : Abatta (Kouamé) n'a aucune boutique Plaisir Bachus ; on prend celles d'Abatta village, à 300 m. Jamais un autre distributeur.
+
+**Déroulé d'un mois :**
+1. Ouvrir la validation du mois (bouton « Ouvrir la validation ») : un code à 4 chiffres est créé pour chaque merchandiser Atom.
+2. Envoyer à chacun son message (bouton « Message », ou « Copier tous les messages ») : lien, nom à toucher, code.
+3. Le merchandiser répond en trois étapes : ses zones et secteurs (Atom et Friesland côte à côte), ses 24 jours (OK, Modifier, Retirer, avec les boutiques et leur distance à son téléphone), puis valide avec son nom.
+4. Suivre l'avancement ; le détail de chaque fiche montre les jours à corriger, les boutiques signalées et les zones qu'il ne couvre pas. Cocher « Traité » une fois la correction faite dans Paramètres › Référentiels.
+5. Fermer le mois quand tout est revu.
+
+**Sécurité :** 5 codes faux bloquent l'accès 15 minutes ; « Nouveau » donne un autre code. Aucun téléphone de boutique n'est montré sur la page publique.
+
+**E-mail à chaque fiche validée :** fonction Supabase `notifier-validation-tournee`. À configurer une fois dans Supabase › Edge Functions › Secrets : `RESEND_API_KEY` (compte gratuit sur resend.com), `NOTIF_DESTINATAIRES` (adresses séparées par des virgules ; sans domaine vérifié chez Resend, uniquement l'adresse du compte Resend), facultatif `NOTIF_EXPEDITEUR` et `APP_URL`. Sans ces secrets, rien ne part et rien ne casse.
+
+**Import des boutiques Atom :** `node scripts/importer-pdv-atom.mjs` (simulation, rapport dans Téléchargements › imports-terrain), puis `--apply`. Retour arrière : `--retour=<dossier>/retour.json --apply`.
+
 ## 8. Application mobile (ce que vos réglages pilotent)
 
 - **Sélection du PDV** : chaque option affiche `Nom (Territoire) · GT/MT` ;

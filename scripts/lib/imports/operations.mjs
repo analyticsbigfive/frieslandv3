@@ -161,6 +161,22 @@ const VALIDATEURS = {
       exiger(l.si_mdm_vide == null || typeof l.si_mdm_vide === 'boolean', 'pdv.maj : si_mdm_vide booléen')
     }
   },
+  'pdv.gps'(op) {
+    exiger(Array.isArray(op.lignes) && op.lignes.length && op.lignes.length <= 500, 'pdv.gps : 1 à 500 lignes')
+    exiger(op.motif == null || estTexte(op.motif, 200), 'pdv.gps : motif trop long')
+    for (const l of op.lignes) {
+      exiger(PDV_ID.test(l?.pdv_id || ''), 'pdv.gps : pdv_id invalide')
+      exiger(Number.isFinite(l.lat) && Number.isFinite(l.lng) && Math.abs(l.lat) <= 90 && Math.abs(l.lng) <= 180 && !(l.lat === 0 && l.lng === 0), 'pdv.gps : position invalide')
+      exiger(l.source == null || /^(atom|atom-absent|atom-fichier|terrain|dms|admin)$/.test(l.source), 'pdv.gps : source invalide')
+    }
+  },
+  'pdv_atom.enregistrer'(op) {
+    exiger(Array.isArray(op.lignes) && op.lignes.length && op.lignes.length <= 500, 'pdv_atom.enregistrer : 1 à 500 lignes')
+    for (const l of op.lignes) {
+      exiger(PDV_ID.test(l?.pdv_id || ''), 'pdv_atom.enregistrer : pdv_id invalide')
+      exiger(l.source_id == null || estTexte(l.source_id, 100), 'pdv_atom.enregistrer : source_id trop long')
+    }
+  },
   'pdv.supprimer'(op) {
     exiger(estMarqueur(op.marqueur), 'pdv.supprimer : marqueur « import-… » requis')
     exiger(Array.isArray(op.pdv_ids) && op.pdv_ids.length <= 500 && op.pdv_ids.every(id => PDV_ID.test(id)), 'pdv.supprimer : 500 pdv_id au plus')
@@ -420,6 +436,18 @@ const EXECUTEURS = {
     return `${faits} PDV mis à jour`
   },
 
+  async 'pdv.gps'(sb, op) {
+    // Ancienne position gardée dans pdv_gps_historique (fonction serveur).
+    const { data, error } = await sb.rpc('appliquer_gps_pdv', { p_lignes: op.lignes, p_motif: op.motif || null })
+    if (error) throw new Error(`pdv.gps : ${error.message}`)
+    return `${data ?? op.lignes.length} position(s) de PDV remplacée(s)`
+  },
+
+  async 'pdv_atom.enregistrer'(sb, op) {
+    ok(await sb.from('pdv_atom').upsert(op.lignes, { onConflict: 'pdv_id' }), 'pdv_atom.enregistrer')
+    return `${op.lignes.length} PDV dans la liste Atom`
+  },
+
   async 'pdv.supprimer'(sb, op) {
     if (!op.pdv_ids.length) return '0 PDV'
     // Un PDV déjà visité n'est jamais supprimé (ses visites restent valables).
@@ -528,6 +556,7 @@ export const OPERATIONS_PAR_IMPORT = {
   'dms-pdv': ['pdv.creer', 'pdv.maj', 'pdv.supprimer'],
   'merch-dms': ['profil.perimetre', 'regle_dms.remplacer', 'regle.jours', 'tournees.generer'],
   'routing-atom': ['pdv.creer', 'pdv.supprimer', 'visites.importer', 'visites.supprimer'],
+  'pdv-atom': ['pdv.creer', 'pdv.gps', 'pdv.maj', 'pdv_atom.enregistrer', 'pdv.supprimer'],
   'ssf-sous-zones': ['ssf.creer', 'ssf_quartier.remplacer', 'regles_ssf.remplacer', 'regle.jours', 'profil.perimetre', 'tournees.recalculer'],
   'routing-ssf-dms': ['ssf.creer', 'ssf_pdv.remplacer'],
   'routing-mensuel': ['ssf.creer', 'ssf.commercial', 'ssf_quartier.remplacer', 'routing_mensuel.remplacer', 'regles_mensuelles.remplacer', 'regle.jours', 'profil.perimetre', 'tournees.recalculer'],
