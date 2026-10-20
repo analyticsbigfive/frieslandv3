@@ -887,7 +887,7 @@ remplie. Rapport filtrable GT / MT dans `Visites › Coaching terrain`.
 **Déroulé d'un mois :**
 1. Ouvrir la validation du mois (bouton « Ouvrir la validation ») : un lien personnel est créé pour chaque merchandiser Atom.
 2. Envoyer les liens sur WhatsApp : « Copier tous les liens » donne un seul message avec le nom et le lien de chacun ; le bouton « WhatsApp » d'une ligne envoie son lien seul. Le lien ouvre directement la fiche, sans code. « Nouveau » change le lien.
-3. Le merchandiser répond en trois étapes : ses zones et secteurs (Atom et Friesland côte à côte ; s'il répond « Non », il coche ce qu'il couvre vraiment — secteurs Atom, territoires, quartiers, comme dans l'admin — et c'est une simple proposition), ses 24 jours (OK, Modifier, Retirer, avec les boutiques et leur distance à son téléphone), puis valide avec son nom.
+3. Le merchandiser répond en trois étapes : ses zones et secteurs (Atom et Friesland côte à côte ; s'il répond « Non », il coche ce qu'il couvre vraiment — secteurs Atom, territoires, quartiers, comme dans l'admin — et c'est une simple proposition), la liste de ses quartiers du mois (un par point de visite, avec ses jours de passage : OK, Modifier ou Retirer, et la liste des PDV du quartier à la demande ; pas de GPS ni de distance), puis valide avec son nom. La réponse d'un quartier vaut pour chacun de ses jours.
 4. Suivre l'avancement ; le détail de chaque fiche montre les jours à corriger, les boutiques signalées et les zones qu'il ne couvre pas. Cocher « Traité » une fois la correction faite dans Paramètres › Référentiels.
 5. Fermer le mois quand tout est revu.
 

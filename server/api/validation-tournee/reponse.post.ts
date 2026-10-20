@@ -1,5 +1,7 @@
 // POST /api/validation-tournee/reponse — route PUBLIQUE, jeton requis.
 // { type: 'jour', ligneId, decision: ok|modifier|retirer, commentaire }
+// { type: 'quartier', ligneIds: [...], decision, commentaire } : la même réponse
+//   pour tous les jours d'un quartier (liste des quartiers du mois)
 // { type: 'pdv', pdvId, ligneId, motif: pas_ma_tournee|position_fausse|ferme|null, commentaire }
 // { type: 'zone', zoneType: secteur_atom|territoire_friesland|quartier_friesland, libelle, decision: oui|non|null, commentaire }
 // { type: 'zones_remarque', commentaire } : zones couvertes qui manquent dans les listes
@@ -24,7 +26,18 @@ export default defineEventHandler(async (event) => {
     if (!l) throw apiError(400, 'Jour inconnu')
   }
 
-  if (body?.type === 'jour') {
+  if (body?.type === 'quartier') {
+    const ids = Array.isArray(body?.ligneIds) ? [...new Set(body.ligneIds.map(String))].slice(0, 31) : []
+    if (!ids.length || !DECISIONS.includes(body?.decision)) throw apiError(400, 'Choix invalide')
+    const { data: siennes } = await service.from('routing_mensuel').select('id').in('id', ids).eq('merchandiser_id', v.merchandiser_id)
+    if ((siennes || []).length !== ids.length) throw apiError(400, 'Quartier inconnu')
+    const { error } = await service.from('validation_tournee_reponse').upsert(
+      ids.map(id => ({ validation_merch_id: v.id, routing_mensuel_id: id, decision: body.decision, commentaire, traite: false, maj_le: maintenant })),
+      { onConflict: 'validation_merch_id,routing_mensuel_id' },
+    )
+    if (error) throw apiError(500, error.message)
+  }
+  else if (body?.type === 'jour') {
     if (!ligneId || !DECISIONS.includes(body?.decision)) throw apiError(400, 'Choix invalide')
     const { error } = await service.from('validation_tournee_reponse').upsert({
       validation_merch_id: v.id, routing_mensuel_id: ligneId, decision: body.decision, commentaire, traite: false, maj_le: maintenant,

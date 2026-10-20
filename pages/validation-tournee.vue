@@ -158,122 +158,88 @@
 
         <BarreAction :texte="zonesRestantes ? `${zonesRestantes} réponse${zonesRestantes > 1 ? 's' : ''} à donner` : 'Zones terminées'">
           <UButton block size="xl" color="primary" :disabled="zonesRestantes > 0" @click="etape = 'jours'">
-            Continuer vers ma tournée
+            Continuer vers mes quartiers
           </UButton>
         </BarreAction>
       </section>
 
-      <!-- 4. Jours de tournée -->
+      <!-- 4. Quartiers du mois -->
       <section v-else-if="etape === 'jours' && donnees" class="space-y-4">
         <Etapes :actuelle="2" />
         <div>
-          <h2 class="text-lg font-semibold text-slate-900">Ma tournée du mois</h2>
-          <p class="mt-1 text-sm text-slate-500">Pour chaque jour, dites si le point de visite est bon.</p>
+          <h2 class="text-lg font-semibold text-slate-900">Mes quartiers du mois</h2>
+          <p class="mt-1 text-sm text-slate-500">Pour chaque quartier, dites s'il fait bien partie de votre tournée. Touchez « Voir les PDV » pour la liste des boutiques.</p>
         </div>
 
-        <div class="rounded-lg bg-white p-4 text-sm ring-1 ring-slate-200">
-          <p class="font-semibold text-slate-900">Comment les boutiques du jour sont choisies</p>
-          <p class="mt-1">
-            Ce sont les boutiques de votre distributeur dans le quartier du point de visite du jour.
-            S'il n'y en a pas assez pour le quota, on complète avec des boutiques du même distributeur
-            dans le quartier voisin le plus proche. Elles sont marquées « quartier voisin ».
-          </p>
-        </div>
-
-        <div class="flex items-center justify-between gap-3 rounded-lg bg-white px-4 py-3 text-sm ring-1 ring-slate-200">
-          <span v-if="maPosition">Distances calculées depuis votre position.</span>
-          <span v-else-if="positionRefusee">Position refusée : les distances ne s'affichent pas.</span>
-          <span v-else>Activez votre position pour voir à quelle distance sont les boutiques.</span>
-          <UButton v-if="!maPosition" size="sm" color="primary" variant="soft" @click="activerPosition">Activer</UButton>
-        </div>
-
-        <div class="flex gap-1 rounded-lg bg-slate-100 p-1" role="tablist" aria-label="Semaine">
-          <button
-            v-for="s in semaines" :key="s"
-            type="button" role="tab" :aria-selected="semaine === s"
-            class="flex-1 rounded-md px-2 py-2 text-sm font-semibold transition"
-            :class="semaine === s ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'"
-            @click="semaine = s"
-          >
-            S{{ s }}
-            <span class="block text-[11px] font-normal" :class="restantSemaine(s) ? 'text-amber-700' : 'text-emerald-700'">
-              {{ restantSemaine(s) ? `${restantSemaine(s)} à faire` : 'fait' }}
-            </span>
-          </button>
-        </div>
+        <p v-if="!quartiers.length" class="rounded-lg bg-white p-4 text-sm text-slate-600 ring-1 ring-slate-200">
+          Aucun quartier n'est prévu pour vous ce mois-ci. Dites-le dans la remarque à l'étape suivante.
+        </p>
 
         <article
-          v-for="j in joursSemaine" :key="j.id"
+          v-for="q in quartiers" :key="q.cle"
           class="rounded-lg bg-white ring-1"
-          :class="reponses[j.id] ? 'ring-slate-200' : 'ring-amber-300'"
+          :class="reponseQuartier(q) ? 'ring-slate-200' : 'ring-amber-300'"
         >
           <div class="space-y-3 p-4">
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
-                <p class="text-xs font-semibold text-slate-500">{{ j.nomJour }}, semaine {{ j.semaine }}</p>
-                <p class="text-base font-semibold text-slate-900">{{ j.pointVisite }}</p>
-                <p class="text-xs text-slate-500">
-                  {{ j.distributeur }}<template v-if="j.ssf"> · SSF {{ j.ssf }}</template><template v-if="j.engin"> ({{ j.engin }})</template>
-                </p>
+                <p class="text-base font-semibold text-slate-900">{{ q.nom }}</p>
+                <p class="text-xs text-slate-500">{{ joursTexte(q) }}</p>
+                <p v-if="q.distributeur" class="text-xs text-slate-500">{{ q.distributeur }}</p>
               </div>
               <span class="shrink-0 text-right text-xs text-slate-500">
-                <b class="block text-lg leading-none text-slate-900">{{ j.pdv.length }}</b> boutiques
+                <b class="block text-lg leading-none text-slate-900">{{ q.pdv.length }}</b> PDV
               </span>
             </div>
 
-            <div class="grid grid-cols-3 gap-2" role="group" :aria-label="`Décision pour ${j.nomJour} ${j.pointVisite}`">
+            <div class="grid grid-cols-3 gap-2" role="group" :aria-label="`Décision pour le quartier ${q.nom}`">
               <button
                 v-for="d in DECISIONS" :key="d.valeur" type="button"
                 class="rounded-md px-2 py-2.5 text-sm font-semibold ring-1 transition"
-                :class="reponses[j.id]?.decision === d.valeur ? d.actif : 'bg-white text-slate-600 ring-slate-200'"
-                :aria-pressed="reponses[j.id]?.decision === d.valeur"
-                @click="repondreJour(j.id, d.valeur)"
+                :class="reponseQuartier(q)?.decision === d.valeur ? d.actif : 'bg-white text-slate-600 ring-slate-200'"
+                :aria-pressed="reponseQuartier(q)?.decision === d.valeur"
+                @click="repondreQuartier(q, d.valeur)"
               >
                 {{ d.texte }}
               </button>
             </div>
             <textarea
-              v-if="reponses[j.id] && reponses[j.id].decision !== 'ok'"
-              v-model="reponses[j.id].commentaire" rows="2"
+              v-if="reponseQuartier(q) && reponseQuartier(q)!.decision !== 'ok'"
+              v-model="commentaires[q.cle]" rows="2"
               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-fc-red focus:outline-none focus:ring-2 focus:ring-fc-red/30"
-              :placeholder="reponses[j.id].decision === 'modifier' ? 'Quel point de visite à la place ? Pourquoi ?' : 'Pourquoi retirer ce jour ?'"
-              :aria-label="`Commentaire pour ${j.nomJour} ${j.pointVisite}`"
-              @blur="repondreJour(j.id, reponses[j.id].decision, true)"
+              :placeholder="reponseQuartier(q)!.decision === 'modifier' ? 'Quel quartier à la place ? Pourquoi ?' : 'Pourquoi retirer ce quartier ?'"
+              :aria-label="`Commentaire pour le quartier ${q.nom}`"
+              @blur="repondreQuartier(q, reponseQuartier(q)!.decision)"
             />
 
             <button
-              v-if="j.pdv.length" type="button"
+              v-if="q.pdv.length" type="button"
               class="flex w-full items-center justify-between rounded-md bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700"
-              :aria-expanded="ouvert === j.id"
-              @click="ouvert = ouvert === j.id ? null : j.id"
+              :aria-expanded="ouvert === q.cle"
+              @click="ouvert = ouvert === q.cle ? null : q.cle"
             >
-              <span>Voir les boutiques<template v-if="nbVoisins(j)"> · dont {{ nbVoisins(j) }} du quartier voisin</template></span>
-              <UIcon name="i-heroicons-chevron-down" class="h-4 w-4 transition-transform" :class="ouvert === j.id ? 'rotate-180' : ''" />
+              <span>{{ ouvert === q.cle ? 'Masquer les PDV' : 'Voir les PDV' }}</span>
+              <UIcon name="i-heroicons-chevron-down" class="h-4 w-4 transition-transform" :class="ouvert === q.cle ? 'rotate-180' : ''" />
             </button>
             <p v-else class="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              Aucune boutique de votre distributeur pour ce jour. Dites-le avec « Modifier ».
+              Aucun PDV de votre distributeur dans ce quartier. Dites-le avec « Modifier ».
             </p>
 
-            <ul v-if="ouvert === j.id" class="divide-y divide-slate-100">
-              <li v-for="p in pdvTries(j)" :key="p.id" class="flex items-center justify-between gap-3 py-2.5">
+            <ul v-if="ouvert === q.cle" class="divide-y divide-slate-100">
+              <li v-for="p in q.pdv" :key="p.id" class="flex items-center justify-between gap-3 py-2.5">
                 <div class="min-w-0">
                   <p class="truncate text-sm font-semibold" :class="retours[p.id] ? 'text-slate-400 line-through' : 'text-slate-900'">{{ p.nom }}</p>
-                  <p class="text-xs text-slate-500">
-                    <template v-if="distanceDeMoi(p) != null">à {{ formatDistance(distanceDeMoi(p)) }} de vous</template>
-                    <template v-else>{{ p.type }}</template>
-                    <span v-if="p.quartierVoisin" class="ml-1 rounded-full bg-amber-50 px-1.5 py-0.5 font-semibold text-amber-800">quartier voisin</span>
-                  </p>
+                  <p class="text-xs text-slate-500">{{ p.type }}</p>
                 </div>
                 <label class="sr-only" :for="`retour-${p.id}`">Signaler {{ p.nom }}</label>
                 <select
                   :id="`retour-${p.id}`"
                   class="shrink-0 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs"
                   :value="retours[p.id]?.motif || ''"
-                  @change="signalerPdv(j.id, p.id, ($event.target as HTMLSelectElement).value)"
+                  @change="signalerPdv(q.lignes[0], p.id, ($event.target as HTMLSelectElement).value)"
                 >
                   <option value="">OK</option>
                   <option value="pas_ma_tournee">Pas chez moi</option>
-                  <option value="position_fausse">Position fausse</option>
                   <option value="ferme">Fermé</option>
                 </select>
               </li>
@@ -281,8 +247,8 @@
           </div>
         </article>
 
-        <BarreAction :texte="joursRestants ? `${joursRestants} jour${joursRestants > 1 ? 's' : ''} à traiter` : 'Tous les jours sont traités'">
-          <UButton block size="xl" color="primary" :disabled="joursRestants > 0" @click="etape = 'valider'">
+        <BarreAction :texte="quartiersRestants ? `${quartiersRestants} quartier${quartiersRestants > 1 ? 's' : ''} à traiter` : 'Tous les quartiers sont traités'">
+          <UButton block size="xl" color="primary" :disabled="quartiersRestants > 0" @click="etape = 'valider'">
             Terminer
           </UButton>
         </BarreAction>
@@ -323,7 +289,7 @@
           <UIcon name="i-heroicons-check" class="h-9 w-9 text-emerald-700" />
         </div>
         <h2 class="text-xl font-bold text-slate-900">Merci, c'est validé</h2>
-        <p class="text-sm text-slate-600">Votre fiche a été envoyée à l'équipe. Elle reviendra vers vous si un jour doit changer.</p>
+        <p class="text-sm text-slate-600">Votre fiche a été envoyée à l'équipe. Elle reviendra vers vous si un quartier doit changer.</p>
         <UButton color="gray" variant="soft" @click="deconnecter">Fermer</UButton>
       </section>
     </main>
@@ -336,8 +302,8 @@ import { computed, defineComponent, h, onMounted, ref } from 'vue'
 definePageMeta({ layout: false })
 useHead({ title: 'Validation de ma tournée', meta: [{ name: 'robots', content: 'noindex' }] })
 
-type Pdv = { id: string; nom: string; type: string; quartierVoisin: boolean; distancePoint: number; lat: number | null; lng: number | null }
-type Jour = { id: string; semaine: number; jour: number; nomJour: string; pointVisite: string; distributeur: string; ssf: string; engin: string; pdv: Pdv[] }
+type Pdv = { id: string; nom: string; type: string }
+type Quartier = { cle: string; nom: string; lignes: string[]; jours: { nomJour: string; jour: number; semaine: number }[]; distributeur: string; pdv: Pdv[] }
 
 const DECISIONS = [
   { valeur: 'ok', texte: 'OK', actif: 'bg-emerald-50 text-emerald-800 ring-emerald-400' },
@@ -357,18 +323,16 @@ const reponses = ref<Record<string, { decision: string; commentaire: string }>>(
 const retours = ref<Record<string, { motif: string; commentaire: string }>>({})
 const reponsesZones = ref<Record<string, { decision: string; commentaire: string }>>({})
 const zonesRemarque = ref('')
-const semaine = ref(1)
 const ouvert = ref<string | null>(null)
 const nomSaisi = ref('')
 const remarque = ref('')
-const maPosition = ref<{ lat: number; lng: number } | null>(null)
-const positionRefusee = ref(false)
+const commentaires = ref<Record<string, string>>({})
 
 // --- Petits composants de la page -----------------------------------------
 const Etapes = defineComponent({
   props: { actuelle: { type: Number, required: true } },
   setup: p => () => h('ol', { class: 'flex gap-2 text-xs font-semibold', 'aria-label': 'Étapes' },
-    ['Zones', 'Tournée', 'Validation'].map((t, i) => h('li', {
+    ['Zones', 'Quartiers', 'Validation'].map((t, i) => h('li', {
       class: ['flex-1 rounded-full px-2 py-1 text-center', i + 1 === p.actuelle ? 'bg-fc-red text-white' : i + 1 < p.actuelle ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-slate-500'],
       'aria-current': i + 1 === p.actuelle ? 'step' : undefined,
     }, `${i + 1}. ${t}`))),
@@ -428,6 +392,7 @@ async function chargerDonnees() {
     quartiers: [...(base?.quartiers || [])],
   }
   choixOuvert.value = !!d.zonesProposees
+  commentaires.value = Object.fromEntries((d.quartiers || []).map((q: Quartier) => [q.cle, d.reponses[q.lignes[0]]?.commentaire || '']))
   etape.value = d.statut === 'validee' ? 'fini' : 'zones'
 }
 
@@ -498,18 +463,21 @@ function basculerGroupe(quartiers: string[]) {
   enregistrerChoix()
 }
 
-// --- Jours ------------------------------------------------------------------
-const jours = computed<Jour[]>(() => donnees.value?.jours || [])
-const semaines = computed(() => [...new Set(jours.value.map(j => j.semaine))].sort())
-const joursSemaine = computed(() => jours.value.filter(j => j.semaine === semaine.value))
-const restantSemaine = (s: number) => jours.value.filter(j => j.semaine === s && !reponses.value[j.id]).length
-const joursRestants = computed(() => jours.value.filter(j => !reponses.value[j.id]).length)
-const nbVoisins = (j: Jour) => j.pdv.filter(p => p.quartierVoisin).length
-
-function repondreJour(id: string, decision: string, commentaireSeul = false) {
-  const avant = reponses.value[id]
-  if (!commentaireSeul) reponses.value[id] = { decision, commentaire: decision === 'ok' ? '' : (avant?.commentaire || '') }
-  enregistrer({ type: 'jour', ligneId: id, decision, commentaire: reponses.value[id]?.commentaire || '' })
+// --- Quartiers du mois -------------------------------------------------------
+const quartiers = computed<Quartier[]>(() => donnees.value?.quartiers || [])
+// Réponse d'un quartier : celle de ses jours (enregistrée sur chacun).
+const reponseQuartier = (q: Quartier) => q.lignes.every(id => reponses.value[id]) ? reponses.value[q.lignes[0]] : null
+const quartiersRestants = computed(() => quartiers.value.filter(q => !reponseQuartier(q)).length)
+const joursTexte = (q: Quartier) => {
+  const parJour = new Map<string, number[]>()
+  for (const j of q.jours) parJour.set(j.nomJour, [...(parJour.get(j.nomJour) || []), j.semaine])
+  return [...parJour.entries()].map(([n, s]) => `${n.toLowerCase()} ${s.map(x => `S${x}`).join(', ')}`).join(' · ')
+}
+function repondreQuartier(q: Quartier, decision: string) {
+  if (decision === 'ok') commentaires.value[q.cle] = ''
+  const commentaire = commentaires.value[q.cle] || ''
+  for (const id of q.lignes) reponses.value[id] = { decision, commentaire }
+  enregistrer({ type: 'quartier', ligneIds: q.lignes, decision, commentaire })
 }
 function signalerPdv(ligneId: string, pdvId: string, motif: string) {
   if (motif) retours.value[pdvId] = { motif, commentaire: '' }
@@ -517,33 +485,10 @@ function signalerPdv(ligneId: string, pdvId: string, motif: string) {
   enregistrer({ type: 'pdv', ligneId, pdvId, motif: motif || null })
 }
 
-// --- Distance depuis le téléphone -------------------------------------------
-function activerPosition() {
-  if (!navigator.geolocation) { positionRefusee.value = true; return }
-  navigator.geolocation.watchPosition(
-    pos => { maPosition.value = { lat: pos.coords.latitude, lng: pos.coords.longitude }; positionRefusee.value = false },
-    () => { positionRefusee.value = true },
-    { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 },
-  )
-}
-function distanceDeMoi(p: Pdv): number | null {
-  if (!maPosition.value || p.lat == null || p.lng == null) return null
-  const r = 6371000
-  const rad = (x: number) => x * Math.PI / 180
-  const dLat = rad(p.lat - maPosition.value.lat)
-  const dLng = rad(p.lng - maPosition.value.lng)
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(maPosition.value.lat)) * Math.cos(rad(p.lat)) * Math.sin(dLng / 2) ** 2
-  return 2 * r * Math.asin(Math.sqrt(a))
-}
-const formatDistance = (m: number | null) => m == null ? '' : m < 1000 ? `${Math.round(m / 10) * 10} m` : `${(m / 1000).toFixed(1).replace('.', ',')} km`
-const pdvTries = (j: Jour) => maPosition.value
-  ? [...j.pdv].sort((a, b) => (distanceDeMoi(a) ?? Infinity) - (distanceDeMoi(b) ?? Infinity))
-  : j.pdv
-
 // --- Validation -------------------------------------------------------------
 const recap = computed(() => ['ok', 'modifier', 'retirer'].map(d => ({
-  n: Object.values(reponses.value).filter(r => r.decision === d).length,
-  texte: d === 'ok' ? 'jours OK' : d === 'modifier' ? 'à modifier' : 'à retirer',
+  n: quartiers.value.filter(q => reponseQuartier(q)?.decision === d).length,
+  texte: d === 'ok' ? 'quartiers OK' : d === 'modifier' ? 'à modifier' : 'à retirer',
 })))
 
 async function valider() {
