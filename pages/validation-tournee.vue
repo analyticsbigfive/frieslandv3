@@ -175,8 +175,15 @@
           Aucun quartier n'est prévu pour vous ce mois-ci. Dites-le dans la remarque à l'étape suivante.
         </p>
 
+        <section v-for="g in parSemaine" :key="`s${g.semaine}`" class="space-y-3" :aria-labelledby="`titre-s${g.semaine}`">
+          <h3 :id="`titre-s${g.semaine}`" class="sticky top-[56px] z-20 -mx-4 flex items-center justify-between bg-gray-50/95 px-4 py-2 text-base font-semibold text-slate-900 backdrop-blur sm:-mx-6 sm:px-6">
+            Semaine {{ g.semaine }}
+            <span class="text-xs font-semibold" :class="g.restants ? 'text-amber-700' : 'text-emerald-700'">
+              {{ g.restants ? `${g.restants} à traiter` : 'fait' }}
+            </span>
+          </h3>
         <article
-          v-for="q in quartiers" :key="q.cle"
+          v-for="{ q, jours: joursSemaine } in g.quartiers" :key="`${g.semaine}-${q.cle}`"
           class="rounded-lg bg-white ring-1"
           :class="reponseQuartier(q) ? 'ring-slate-200' : 'ring-amber-300'"
         >
@@ -184,7 +191,9 @@
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <p class="text-base font-semibold text-slate-900">{{ q.nom }}</p>
-                <p class="text-xs text-slate-500">{{ joursTexte(q) }}</p>
+                <p class="text-xs text-slate-500">
+                  {{ joursSemaine.map(j => j.nomJour).join(', ') }}<template v-if="autresSemaines(q, g.semaine).length"> · aussi en {{ autresSemaines(q, g.semaine).map(x => `S${x}`).join(', ') }}</template>
+                </p>
                 <p v-if="q.distributeur" class="text-xs text-slate-500">{{ q.distributeur }}</p>
               </div>
               <span class="shrink-0 text-right text-xs text-slate-500">
@@ -215,17 +224,17 @@
             <button
               v-if="q.pdv.length" type="button"
               class="flex w-full items-center justify-between rounded-md bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700"
-              :aria-expanded="ouvert === q.cle"
-              @click="ouvert = ouvert === q.cle ? null : q.cle"
+              :aria-expanded="ouvert === `${g.semaine}-${q.cle}`"
+              @click="ouvert = ouvert === `${g.semaine}-${q.cle}` ? null : `${g.semaine}-${q.cle}`"
             >
-              <span>{{ ouvert === q.cle ? 'Masquer les PDV' : 'Voir les PDV' }}</span>
-              <UIcon name="i-heroicons-chevron-down" class="h-4 w-4 transition-transform" :class="ouvert === q.cle ? 'rotate-180' : ''" />
+              <span>{{ ouvert === `${g.semaine}-${q.cle}` ? 'Masquer les PDV' : 'Voir les PDV' }}</span>
+              <UIcon name="i-heroicons-chevron-down" class="h-4 w-4 transition-transform" :class="ouvert === `${g.semaine}-${q.cle}` ? 'rotate-180' : ''" />
             </button>
             <p v-else class="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
               Aucun PDV de votre distributeur dans ce quartier. Dites-le avec « Modifier ».
             </p>
 
-            <ul v-if="ouvert === q.cle" class="divide-y divide-slate-100">
+            <ul v-if="ouvert === `${g.semaine}-${q.cle}`" class="divide-y divide-slate-100">
               <li v-for="p in q.pdv" :key="p.id" class="flex items-center justify-between gap-3 py-2.5">
                 <div class="min-w-0">
                   <p class="truncate text-sm font-semibold" :class="retours[p.id] ? 'text-slate-400 line-through' : 'text-slate-900'">{{ p.nom }}</p>
@@ -246,6 +255,7 @@
             </ul>
           </div>
         </article>
+        </section>
 
         <BarreAction :texte="quartiersRestants ? `${quartiersRestants} quartier${quartiersRestants > 1 ? 's' : ''} à traiter` : 'Tous les quartiers sont traités'">
           <UButton block size="xl" color="primary" :disabled="quartiersRestants > 0" @click="etape = 'valider'">
@@ -468,11 +478,19 @@ const quartiers = computed<Quartier[]>(() => donnees.value?.quartiers || [])
 // Réponse d'un quartier : celle de ses jours (enregistrée sur chacun).
 const reponseQuartier = (q: Quartier) => q.lignes.every(id => reponses.value[id]) ? reponses.value[q.lignes[0]] : null
 const quartiersRestants = computed(() => quartiers.value.filter(q => !reponseQuartier(q)).length)
-const joursTexte = (q: Quartier) => {
-  const parJour = new Map<string, number[]>()
-  for (const j of q.jours) parJour.set(j.nomJour, [...(parJour.get(j.nomJour) || []), j.semaine])
-  return [...parJour.entries()].map(([n, s]) => `${n.toLowerCase()} ${s.map(x => `S${x}`).join(', ')}`).join(' · ')
-}
+// Regroupement par semaine : un quartier visité plusieurs semaines apparaît dans
+// chacune, avec la même réponse (elle vaut pour tous ses jours).
+const parSemaine = computed(() => {
+  const semaines = [...new Set(quartiers.value.flatMap(q => q.jours.map(j => j.semaine)))].sort((a, b) => a - b)
+  return semaines.map((semaine) => {
+    const liste = quartiers.value
+      .map(q => ({ q, jours: q.jours.filter(j => j.semaine === semaine) }))
+      .filter(x => x.jours.length)
+      .sort((a, b) => a.jours[0].jour - b.jours[0].jour)
+    return { semaine, quartiers: liste, restants: liste.filter(x => !reponseQuartier(x.q)).length }
+  })
+})
+const autresSemaines = (q: Quartier, semaine: number) => [...new Set(q.jours.map(j => j.semaine))].filter(x => x !== semaine).sort((a, b) => a - b)
 function repondreQuartier(q: Quartier, decision: string) {
   if (decision === 'ok') commentaires.value[q.cle] = ''
   const commentaire = commentaires.value[q.cle] || ''
