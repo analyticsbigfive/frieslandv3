@@ -537,8 +537,25 @@ function deconnecter() {
   chargerNoms()
 }
 
+async function entrerParLien(lien: string) {
+  try {
+    const r: any = await $fetch('/api/validation-tournee/acces-lien', { method: 'POST', body: { lien } })
+    jeton.value = r.jeton
+    try { localStorage.setItem(CLE_JETON, r.jeton) } catch {}
+    await chargerDonnees()
+    return true
+  }
+  catch (e) { erreur.value = message(e); return false }
+  finally {
+    // Le lien ne reste pas dans la barre d'adresse (partage d'écran, historique).
+    navigateTo({ path: '/validation-tournee' }, { replace: true })
+  }
+}
+
 onMounted(async () => {
   await chargerNoms()
+  const lien = String(useRoute().query.t || '')
+  if (lien && campagne.value && await entrerParLien(lien)) return
   let garde = ''
   try { garde = localStorage.getItem(CLE_JETON) || '' } catch {}
   if (garde && campagne.value) {
