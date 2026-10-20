@@ -44,7 +44,10 @@ export default defineEventHandler(async (event) => {
     toutes(() => service.from('pdv_quartier_tournee')
       .select('pdv_id, point_lat, point_lng, pdv:pdv(pdv_id, nom_pdv, sous_categorie_pdv, distributor_name, is_active)')
       .eq('merchandiser_id', v.merchandiser_id).order('pdv_id')),
-    service.from('profiles').select('nom, zone_assignee, territoires_assignes, quartiers_assignes').eq('id', v.merchandiser_id).maybeSingle(),
+    // Compte de test (QA Atom, copie du routing de Yao) : il ne prend aucune
+    // boutique dans le calcul des quartiers ; on montre celles des quartiers
+    // de ses points, rangées chez le merchandiser qui a les mêmes points.
+    service.from('profiles').select('nom, email, zone_assignee, territoires_assignes, quartiers_assignes').eq('id', v.merchandiser_id).maybeSingle(),
     service.from('validation_tournee_reponse').select('routing_mensuel_id, decision, commentaire').eq('validation_merch_id', v.id),
     service.from('validation_tournee_pdv_retour').select('pdv_id, motif, commentaire').eq('validation_merch_id', v.id),
     service.from('validation_tournee_zone').select('type, libelle, decision, commentaire').eq('validation_merch_id', v.id),
@@ -53,6 +56,18 @@ export default defineEventHandler(async (event) => {
     service.from('profiles').select('id').eq('employeur', 'atom').eq('role', 'merchandiser'),
   ])
   for (const r of [lignes, quartiersPdv, profil, reponses, retours, zones, merch, territoires, secteurs]) if (r.error) throw apiError(500, r.error.message)
+  if (String(profil.data?.email || '').endsWith('@friesland-test.ci') && !(quartiersPdv.data || []).length) {
+    const points = new Set((lignes.data || []).filter((l: any) => l.latitude != null).map((l: any) => `${(+l.latitude).toFixed(5)},${(+l.longitude).toFixed(5)}`))
+    const autres = await service.from('routing_mensuel').select('merchandiser_id, latitude, longitude').eq('actif', true).neq('merchandiser_id', v.merchandiser_id).not('latitude', 'is', null)
+    const sources = [...new Set((autres.data || []).filter((l: any) => points.has(`${(+l.latitude).toFixed(5)},${(+l.longitude).toFixed(5)}`)).map((l: any) => l.merchandiser_id))]
+    if (sources.length) {
+      const copie = await toutes(() => service.from('pdv_quartier_tournee')
+        .select('pdv_id, point_lat, point_lng, pdv:pdv(pdv_id, nom_pdv, sous_categorie_pdv, distributor_name, is_active)')
+        .in('merchandiser_id', sources).order('pdv_id'))
+      if (copie.error) throw apiError(500, copie.error.message)
+      quartiersPdv.data = copie.data
+    }
+  }
   const idsAtom = (secteurs.data || []).map((x: any) => x.id)
   const secteursAtom = await service.from('routing_mensuel').select('secteur').eq('actif', true)
     .in('merchandiser_id', idsAtom.length ? idsAtom : ['00000000-0000-0000-0000-000000000000'])
