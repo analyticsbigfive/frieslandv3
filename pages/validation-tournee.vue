@@ -26,7 +26,7 @@
       </button>
     </header>
 
-    <main class="mx-auto max-w-xl px-4 pb-32 pt-4">
+    <main class="w-full px-4 pb-32 pt-4 sm:px-6">
       <!-- Erreur générale -->
       <div v-if="erreur" class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
         {{ erreur }}
@@ -359,7 +359,7 @@ const LigneZone = defineComponent({
 const BarreAction = defineComponent({
   props: { texte: { type: String, default: '' } },
   setup: (p, { slots }) => () => h('div', { class: 'fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur' },
-    h('div', { class: 'mx-auto max-w-xl space-y-2' }, [h('p', { class: 'text-center text-xs text-slate-500' }, p.texte), slots.default?.()])),
+    h('div', { class: 'space-y-2' }, [h('p', { class: 'text-center text-xs text-slate-500' }, p.texte), slots.default?.()])),
 })
 
 // --- Appels -----------------------------------------------------------------
