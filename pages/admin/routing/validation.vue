@@ -101,7 +101,8 @@
                 <UButton size="xs" variant="ghost" color="gray" class="ml-1" :aria-label="`Nouveau code pour ${l.nom}`" @click="nouveauCode(l)">Nouveau</UButton>
               </td>
               <td class="whitespace-nowrap text-right">
-                <UButton size="xs" variant="ghost" color="gray" icon="i-heroicons-clipboard-document" :aria-label="`Copier le message de ${l.nom}`" @click="copier(message(l), `Message de ${l.nom} copié`)">Message</UButton>
+                <UButton size="xs" variant="ghost" color="gray" icon="i-heroicons-chat-bubble-oval-left" :to="lienWhatsApp(l)" target="_blank" :aria-label="`Envoyer le message à ${l.nom} sur WhatsApp`">WhatsApp</UButton>
+                <UButton size="xs" variant="ghost" color="gray" icon="i-heroicons-clipboard-document" :aria-label="`Copier le message de ${l.nom}`" @click="copier(message(l), `Message de ${l.nom} copié`)">Copier</UButton>
                 <UButton size="xs" variant="ghost" color="gray" :aria-expanded="selection === l.id" @click="selection = selection === l.id ? null : l.id">
                   {{ selection === l.id ? 'Fermer' : 'Détail' }}
                 </UButton>
@@ -210,7 +211,13 @@
         <!-- Message -->
         <div v-else-if="onglet === 'message'" class="space-y-2">
           <UTextarea :model-value="message(detail)" :rows="12" readonly aria-label="Message à envoyer" />
-          <UButton size="sm" color="primary" icon="i-heroicons-clipboard-document" @click="copier(message(detail), 'Message copié')">Copier le message</UButton>
+          <div class="flex flex-wrap gap-2">
+            <UButton size="sm" color="primary" icon="i-heroicons-chat-bubble-oval-left" :to="lienWhatsApp(detail)" target="_blank">Envoyer sur WhatsApp</UButton>
+            <UButton size="sm" variant="outline" icon="i-heroicons-clipboard-document" @click="copier(message(detail), 'Message copié')">Copier le message</UButton>
+          </div>
+          <p class="text-xs text-slate-600 dark:text-slate-300">
+            {{ detail.telephone ? `WhatsApp s'ouvre sur le ${detail.telephone}.` : 'Pas de téléphone enregistré : WhatsApp vous demandera à qui envoyer.' }}
+          </p>
         </div>
       </section>
 
@@ -342,7 +349,7 @@ async function charger() {
     await chargerCampagnes()
     if (!campagneId.value) { fiches.value = []; return }
     const { data: f, error } = await supabase.from('validation_tournee_merch')
-      .select('id, merchandiser_id, code, statut, nom_saisi, remarque, zones_remarque, valide_le, derniere_activite')
+      .select('id, merchandiser_id, code, lien_jeton, statut, nom_saisi, remarque, zones_remarque, valide_le, derniere_activite')
       .eq('campagne_id', campagneId.value)
     if (error) throw error
     fiches.value = f || []
@@ -354,7 +361,7 @@ async function charger() {
       supabase.from('validation_tournee_pdv_retour').select('id, validation_merch_id, pdv_id, motif, commentaire, traite, pdv:pdv(nom_pdv)').in('validation_merch_id', ids.length ? ids : vide),
       supabase.from('validation_tournee_zone').select('validation_merch_id, type, libelle, decision').in('validation_merch_id', ids.length ? ids : vide),
       supabase.from('routing_mensuel').select('id, merchandiser_id, jour_semaine, semaine_du_mois, point_visite, secteur').eq('actif', true).in('merchandiser_id', merchs.length ? merchs : vide).order('semaine_du_mois').order('jour_semaine'),
-      supabase.from('profiles').select('id, nom, zone_assignee, territoires_assignes, quartiers_assignes').in('id', merchs.length ? merchs : vide),
+      supabase.from('profiles').select('id, nom, telephone, zone_assignee, territoires_assignes, quartiers_assignes').in('id', merchs.length ? merchs : vide),
     ])
     for (const x of [r, p, z, rm, pr]) if (x.error) throw x.error
     reponses.value = r.data || []
@@ -390,6 +397,8 @@ const lignes = computed(() => fiches.value.map((f) => {
     merchandiserId: f.merchandiser_id,
     nom: prof?.nom || '—',
     code: f.code,
+    lien: f.lien_jeton,
+    telephone: prof?.telephone || '',
     statut: f.statut,
     derniereActivite: f.derniere_activite,
     joursTotal: jours.length,
@@ -425,6 +434,8 @@ const detail = computed(() => {
     id: f.id,
     nom: (prof as any).nom || '—',
     code: f.code,
+    lien: f.lien_jeton,
+    telephone: (prof as any).telephone || '',
     statut: f.statut,
     valideLe: f.valide_le,
     nomSaisi: f.nom_saisi,
@@ -445,20 +456,30 @@ const detail = computed(() => {
   }
 })
 
-function message(l: { nom: string; code: string }) {
+const lienPersonnel = (l: { lien?: string }) => `${lienPublic.value}?t=${l.lien || ''}`
+
+function message(l: { nom: string; code: string; lien?: string }) {
   const mois = campagne.value?.libelle || ''
   return `Bonjour ${l.nom},
 
 L'équipe Friesland vous demande de vérifier votre tournée de ${mois} : vos zones et secteurs, votre point de visite pour chaque jour, et les boutiques prévues.
 
-1. Ouvrez ce lien sur votre téléphone : ${lienPublic.value}
-2. Touchez votre nom : ${l.nom}
-3. Tapez votre code : ${l.code}
+Touchez votre lien personnel (ne le transférez à personne) :
+${lienPersonnel(l)}
 
 Activez la localisation du téléphone pour voir à quelle distance sont les boutiques.
 Pour chaque jour, répondez OK, Modifier ou Retirer, puis validez à la fin. Comptez environ 15 minutes.
 
+Si le lien ne s'ouvre pas : allez sur ${lienPublic.value}, touchez votre nom et tapez le code ${l.code}.
+
 Merci.`
+}
+
+// WhatsApp : le numéro du compte s'il est connu (format international sans +),
+// sinon WhatsApp demande à qui envoyer.
+function lienWhatsApp(l: { nom: string; code: string; lien?: string; telephone?: string }) {
+  const numero = String(l.telephone || '').replace(/\D/g, '')
+  return `https://wa.me/${numero}?text=${encodeURIComponent(message(l))}`
 }
 const tousLesMessages = computed(() => lignes.value.map(l => message(l)).join('\n\n----------\n\n'))
 
@@ -521,11 +542,12 @@ async function basculerCampagne(nouveau: 'ouverte' | 'fermee') {
 async function nouveauCode(l: { id: string; nom: string }) {
   if (!(await demanderConfirmation({
     titre: `Donner un nouveau code à « ${l.nom} » ?`,
-    message: 'L\'ancien code ne marchera plus. Pensez à lui envoyer le nouveau message.',
+    message: 'L\'ancien code et l\'ancien lien ne marcheront plus. Pensez à lui envoyer le nouveau message.',
     libelleAction: 'Donner un nouveau code',
     destructif: false,
   }))) return
-  const { error } = await supabase.from('validation_tournee_merch').update({ code: nouveauCodeAleatoire(), essais_rates: 0, bloque_jusqua: null }).eq('id', l.id)
+  const lien = Array.from(crypto.getRandomValues(new Uint8Array(16)), o => o.toString(16).padStart(2, '0')).join('')
+  const { error } = await supabase.from('validation_tournee_merch').update({ code: nouveauCodeAleatoire(), lien_jeton: lien, essais_rates: 0, bloque_jusqua: null }).eq('id', l.id)
   if (error) { erreur.value = messageUtilisateur(error); return }
   await charger()
 }
