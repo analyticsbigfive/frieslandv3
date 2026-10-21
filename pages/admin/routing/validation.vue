@@ -59,6 +59,69 @@
         </div>
       </div>
 
+      <!-- Avancement des retours et application -->
+      <section class="admin-surface space-y-4 p-4" aria-labelledby="avancement-titre">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 id="avancement-titre" class="text-base font-semibold text-slate-900 dark:text-white">Retours des merchandisers</h2>
+            <p class="text-sm text-slate-600 dark:text-slate-300">
+              <b class="tabular-nums text-slate-900 dark:text-white">{{ avancement.envoyees }} fiche{{ avancement.envoyees > 1 ? 's' : '' }} envoyée{{ avancement.envoyees > 1 ? 's' : '' }} sur {{ avancement.total }}</b>
+              · {{ choixRetenus.decides }} choix retenu{{ choixRetenus.decides > 1 ? 's' : '' }} sur {{ choixRetenus.demandes }} correction{{ choixRetenus.demandes > 1 ? 's' : '' }} demandée{{ choixRetenus.demandes > 1 ? 's' : '' }}
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <UButton size="sm" variant="outline" icon="i-heroicons-clipboard-document-list" @click="vueEnsemble = true">Vue d'ensemble des retours</UButton>
+            <UButton size="sm" variant="outline" icon="i-heroicons-eye" :loading="application === 'apercu'" :disabled="!!application" @click="lancer(true)">Voir l'aperçu</UButton>
+            <UButton
+              size="sm" color="primary" icon="i-heroicons-check-badge"
+              :loading="application === 'appliquer'" :disabled="!!manquantes.length || !!application || !choixRetenus.decides"
+              :title="manquantes.length ? `En attente de : ${manquantes.join(', ')}` : ''"
+              @click="lancer(false)"
+            >
+              Appliquer les corrections
+            </UButton>
+          </div>
+        </div>
+
+        <div class="h-3 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700" role="progressbar" :aria-valuenow="avancement.envoyees" aria-valuemin="0" :aria-valuemax="avancement.total" aria-label="Fiches envoyées">
+          <div class="h-full rounded-full bg-emerald-600 transition-all" :style="{ width: `${avancement.total ? 100 * avancement.envoyees / avancement.total : 0}%` }" />
+        </div>
+        <p v-if="manquantes.length" class="text-sm text-amber-800 dark:text-amber-300">
+          Le bouton « Appliquer » attend toutes les fiches. En attente de : <b>{{ manquantes.join(', ') }}</b>.
+        </p>
+
+        <ul class="grid gap-x-6 gap-y-2 sm:grid-cols-2 xl:grid-cols-3">
+          <li v-for="m in avancement.merchs" :key="m.id" class="space-y-1">
+            <div class="flex items-center justify-between gap-2 text-sm">
+              <span class="truncate font-medium text-slate-900 dark:text-white">{{ m.nom }}</span>
+              <UBadge :color="statut(m.statut).couleur" variant="subtle" size="xs">{{ m.statut === 'validee' ? 'Envoyée' : statut(m.statut).texte }}</UBadge>
+            </div>
+            <div class="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700" role="progressbar" :aria-valuenow="m.pct" aria-valuemin="0" aria-valuemax="100" :aria-label="`Fiche de ${m.nom}`">
+              <div class="h-full rounded-full" :class="m.statut === 'validee' ? 'bg-emerald-600' : 'bg-amber-500'" :style="{ width: `${m.pct}%` }" />
+            </div>
+            <p class="text-xs tabular-nums text-slate-600 dark:text-slate-300">{{ m.joursTraites }}/{{ m.joursTotal }} jours · {{ m.zonesFaites }}/{{ m.zonesTotal }} zones</p>
+          </li>
+        </ul>
+
+        <div v-if="passages.length" class="border-t border-slate-200 pt-3 dark:border-slate-700">
+          <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Corrections déjà appliquées</h3>
+          <ul class="mt-1 space-y-1 text-sm">
+            <li v-for="p in passages" :key="p.lot" class="flex flex-wrap items-center gap-2">
+              <span>Le {{ dateCourte(p.le) }} : {{ p.n }} changement{{ p.n > 1 ? 's' : '' }}</span>
+              <UBadge v-if="p.annule" color="gray" variant="subtle" size="xs">Annulé</UBadge>
+              <UButton v-else size="xs" variant="ghost" color="gray" :loading="application === 'annuler'" :disabled="!!application" @click="annulerPassage(p)">Annuler cette mise à jour</UButton>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <div class="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
+      <AdminValidationQuestions
+        class="xl:sticky xl:top-4 xl:order-last"
+        :campagne-id="campagne.id"
+        :merchandisers="lignes.filter(l => !estTest(l.merchandiserId)).map(l => ({ id: l.merchandiserId, nom: l.nom }))"
+      />
+      <div class="min-w-0 space-y-6">
       <!-- Tableau des merchandisers -->
       <section class="admin-surface overflow-x-auto">
         <table class="admin-table w-full">
@@ -144,7 +207,7 @@
         <div v-if="onglet === 'jours'" class="overflow-x-auto">
           <table class="admin-table w-full">
             <thead>
-              <tr><th>Semaine</th><th>Jour</th><th>Point de visite</th><th class="text-right">Boutiques prévues</th><th>Réponse</th><th>Commentaire</th><th>Traité</th></tr>
+              <tr><th>Semaine</th><th>Jour</th><th>Point de visite</th><th class="text-right">Boutiques prévues</th><th>Réponse</th><th>Commentaire</th><th>Correction</th><th>Traité</th></tr>
             </thead>
             <tbody>
               <tr v-for="j in detail.jours" :key="j.id">
@@ -158,7 +221,26 @@
                   <UBadge v-if="j.reponse" :color="decision(j.reponse.decision).couleur" variant="subtle" size="xs">{{ decision(j.reponse.decision).texte }}</UBadge>
                   <span v-else class="text-sm text-slate-400">Sans réponse</span>
                 </td>
-                <td class="max-w-xs text-sm">{{ j.reponse?.commentaire || '' }}</td>
+                <td class="max-w-xs text-sm font-medium text-slate-900 dark:text-white">{{ j.reponse?.commentaire || '' }}</td>
+                <td class="min-w-[15rem]">
+                  <template v-if="j.reponse && j.reponse.decision !== 'ok'">
+                    <span v-if="j.reponse.traite" class="text-sm text-slate-600">Appliqué : {{ texteCorrection(j.reponse) }}</span>
+                    <template v-else>
+                      <USelect
+                        size="xs" :model-value="valeurCorrection(j.reponse)" :options="optionsCorrection(detail.merchandiserId, j)"
+                        :aria-label="`Correction : ${JOURS[j.jour]} semaine ${j.semaine}`"
+                        @update:model-value="v => choisirCorrection(j.reponse, v)"
+                      />
+                      <button
+                        v-if="suggestion(detail.merchandiserId, j)" type="button"
+                        class="mt-1 text-left text-xs font-semibold text-fc-red underline-offset-2 hover:underline"
+                        @click="choisirCorrection(j.reponse, suggestion(detail.merchandiserId, j)!.value)"
+                      >
+                        D'après son commentaire : {{ suggestion(detail.merchandiserId, j)!.label }} — retenir
+                      </button>
+                    </template>
+                  </template>
+                </td>
                 <td>
                   <UCheckbox
                     v-if="j.reponse && j.reponse.decision !== 'ok'"
@@ -170,24 +252,40 @@
             </tbody>
           </table>
           <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">
-            Pour corriger un jour : Paramètres › Référentiels, onglet Routing mensuel.
+            Le choix est enregistré tout de suite ; il ne change le routing qu'avec « Appliquer les corrections ».
+            Le nouveau point de visite reprend le nom, le GPS et le distributeur d'un autre jour du merchandiser ; le SSF reste celui du jour.
+            Un point qui n'est dans aucun de ses jours se crée dans Paramètres › Référentiels, onglet Routing mensuel.
           </p>
         </div>
 
         <!-- Boutiques signalées -->
         <div v-else-if="onglet === 'pdv'" class="overflow-x-auto">
           <table class="admin-table w-full">
-            <thead><tr><th>Boutique</th><th>Signalement</th><th>Commentaire</th><th>Traité</th></tr></thead>
+            <thead><tr><th>Boutique</th><th>Point de visite</th><th>Signalement</th><th>Commentaire</th><th>Correction</th><th>Traité</th></tr></thead>
             <tbody>
-              <tr v-if="!detail.retours.length"><td colspan="4" class="py-6 text-center text-slate-600">Aucune boutique signalée.</td></tr>
+              <tr v-if="!detail.retours.length"><td colspan="6" class="py-6 text-center text-slate-600">Aucune boutique signalée.</td></tr>
               <tr v-for="r in detail.retours" :key="r.id">
-                <td class="font-medium text-slate-900 dark:text-white">{{ r.nom }}</td>
+                <td class="font-medium text-slate-900 dark:text-white">
+                  {{ r.nom }}
+                  <span v-if="r.doublon" class="block text-xs font-normal text-amber-700">Même nom plusieurs fois à ce point : doublon ?</span>
+                </td>
+                <td class="text-sm">{{ r.point }}</td>
                 <td>{{ MOTIFS[r.motif] }}</td>
                 <td class="text-sm">{{ r.commentaire || '' }}</td>
+                <td class="min-w-[12rem]">
+                  <span v-if="r.traite && r.correction" class="text-sm text-slate-600">Appliqué : {{ texteBoutique(r) }}</span>
+                  <USelect
+                    v-else-if="r.motif === 'ferme'" size="xs" :model-value="r.correction || ''"
+                    :options="[{ value: '', label: 'À décider' }, { value: 'fermer', label: 'Fermer la boutique' }, { value: 'garder', label: 'Ne rien changer' }]"
+                    :aria-label="`Correction : ${r.nom}`" @update:model-value="v => choisirBoutique(r, v)"
+                  />
+                  <span v-else class="text-xs text-slate-500">À voir avec Atom (pas de changement automatique)</span>
+                </td>
                 <td><UCheckbox :model-value="r.traite" :aria-label="`Signalement traité : ${r.nom}`" @update:model-value="v => marquerTraite('validation_tournee_pdv_retour', r.id, v)" /></td>
               </tr>
             </tbody>
           </table>
+          <p v-if="detail.retours.length" class="mt-3 text-sm text-slate-600 dark:text-slate-300">Fermer une boutique la retire aussi des tournées Friesland.</p>
         </div>
 
         <!-- Zones -->
@@ -221,11 +319,65 @@
                 </tr>
               </tbody>
             </table>
-            <p class="text-xs text-slate-600 dark:text-slate-300">Rien n'est modifié dans les profils : le rapport des zones (CSV) sert à faire la mise à jour.</p>
           </div>
           <p v-if="detail.zonesRemarque" class="rounded-md bg-slate-50 p-3 text-sm dark:bg-slate-800">
-            <b>Zones à ajouter selon le merchandiser :</b> {{ detail.zonesRemarque }}
+            <b>Ce qu'il écrit sur ses zones :</b> {{ detail.zonesRemarque }}
           </p>
+
+          <!-- Zones retenues pour son profil -->
+          <div v-if="zonesEdition" class="space-y-3 rounded-md border border-slate-200 p-4 dark:border-slate-700">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Zones à garder dans son profil</h3>
+              <p class="text-xs text-slate-600 dark:text-slate-300">
+                <template v-if="detail.zonesAppliqueesLe">Appliquées le {{ dateCourte(detail.zonesAppliqueesLe) }}.</template>
+                <template v-else-if="detail.zonesRetenues">Retenues, appliquées avec le bouton « Appliquer les corrections ».</template>
+                <template v-else>Rien de retenu : son profil ne changera pas.</template>
+              </p>
+            </div>
+            <p v-if="detail.territoiresRouting.length" class="text-sm text-slate-700 dark:text-slate-200">
+              D'après les quartiers de son routing (référentiel Friesland) :
+              <b>{{ detail.territoiresRouting.map(t => `${t.nom} (${t.jours} jour${t.jours > 1 ? 's' : ''})`).join(', ') }}</b>.
+              <span class="block text-xs text-slate-500">Les numéros des secteurs Atom ne suivent pas ceux des territoires Friesland (ex. Yopougon).</span>
+            </p>
+            <p v-if="zonesEdition.alerte && !detail.zonesRetenues" class="rounded-md bg-amber-50 p-2 text-sm font-medium text-amber-900 dark:bg-amber-950/40 dark:text-amber-200" role="status">{{ zonesEdition.alerte }}</p>
+            <fieldset>
+              <legend class="text-xs font-semibold text-slate-700 dark:text-slate-200">Territoires Friesland</legend>
+              <div class="mt-1 flex flex-wrap gap-2">
+                <button
+                  v-for="t in zonesEdition.choixTerritoires" :key="t" type="button" :aria-pressed="zonesEdition.territoires.includes(t)"
+                  class="rounded-full px-3 py-1 text-sm font-semibold ring-1 transition"
+                  :class="zonesEdition.territoires.includes(t) ? 'bg-emerald-50 text-emerald-800 ring-emerald-400' : 'bg-white text-slate-600 ring-slate-200 dark:bg-slate-800 dark:text-slate-300'"
+                  :disabled="!!detail.zonesAppliqueesLe"
+                  @click="basculerListe('territoires', t)"
+                >
+                  {{ t }}
+                </button>
+              </div>
+            </fieldset>
+            <div class="flex flex-wrap items-center gap-2">
+              <label :for="`zone-principale-${detail.id}`" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Zone principale</label>
+              <USelect :id="`zone-principale-${detail.id}`" v-model="zonesEdition.zone_assignee" :options="zonesEdition.territoires" size="xs" class="w-48" :disabled="!!detail.zonesAppliqueesLe" />
+            </div>
+            <details>
+              <summary class="cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-200">
+                Quartiers : {{ zonesEdition.quartiers.length }} gardés sur {{ zonesEdition.choixQuartiers.length }}
+              </summary>
+              <div class="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-3">
+                <label v-for="q in zonesEdition.choixQuartiers" :key="q" class="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-sm hover:bg-slate-50 dark:hover:bg-slate-800">
+                  <input type="checkbox" class="h-4 w-4 rounded border-slate-300" :checked="zonesEdition.quartiers.includes(q)" :disabled="!!detail.zonesAppliqueesLe" @change="basculerListe('quartiers', q)">
+                  <span>{{ q }}</span>
+                </label>
+              </div>
+            </details>
+            <div v-if="!detail.zonesAppliqueesLe" class="flex flex-wrap gap-2">
+              <UButton size="xs" color="primary" :disabled="!zonesEdition.territoires.length" @click="retenirZones(detail)">Retenir ces zones</UButton>
+              <UButton v-if="detail.zonesRetenues" size="xs" variant="ghost" color="gray" @click="retenirZones(detail, true)">Ne rien changer à son profil</UButton>
+            </div>
+            <p class="text-xs text-slate-600 dark:text-slate-300">
+              Proposé d'office : ce qu'il a coché s'il a modifié la liste pré-cochée, sinon son profil moins les territoires où il a répondu « non » ;
+              un territoire où passe son routing reste coché. Aucun quartier n'est retiré d'office (ils décident des PDV qu'il voit). Le secteur Atom ne change pas.
+            </p>
+          </div>
         </div>
 
         <!-- Message -->
@@ -287,14 +439,18 @@
         </p>
         <UButton size="sm" variant="outline" icon="i-heroicons-arrow-path" :loading="recalcul" @click="recalculer">Recalculer les quartiers</UButton>
       </section>
+      </div>
+      </div>
     </template>
 
+    <AdminValidationVueEnsemble v-model="vueEnsemble" :fiches="fichesVueEnsemble" :mois="campagne?.libelle || ''" />
+    <AdminValidationApercu v-model="apercuOuvert" :resultat="apercu" />
     <AdminConfirmation v-bind="confirmation" @confirmer="confirmer" @annuler="annuler" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { messageUtilisateur } from '~/utils/supabaseErrors'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
@@ -334,7 +490,8 @@ const zones = ref<any[]>([])
 const routing = ref<any[]>([])
 const profils = ref<any[]>([])
 const plans = ref<Record<string, any[]>>({})
-const territoires = ref<{ code: string; nom: string }[]>([])
+const territoires = ref<{ code: string; nom: string; sous_region_code?: string; zone?: { quartier: { nom: string }[] }[] }[]>([])
+const applications = ref<{ lot: string; applique_le: string; annule_le: string | null }[]>([])
 const selection = ref<string | null>(null)
 const onglet = ref('jours')
 const moisNouveau = ref(prochainMois())
@@ -363,36 +520,39 @@ async function chargerCampagnes() {
   if (!campagneId.value || !campagnes.value.some(c => c.id === campagneId.value)) campagneId.value = campagnes.value[0]?.id || ''
 }
 
-async function charger() {
+// avecPlans = false : rafraîchissement léger (toutes les minutes), sans refaire les plans du mois.
+async function charger(avecPlans = true) {
   chargement.value = true
   erreur.value = ''
   try {
     await chargerCampagnes()
     if (!campagneId.value) { fiches.value = []; return }
     const { data: f, error } = await supabase.from('validation_tournee_merch')
-      .select('id, merchandiser_id, code, lien_jeton, statut, nom_saisi, remarque, zones_remarque, zones_proposees, valide_le, derniere_activite')
+      .select('id, merchandiser_id, code, lien_jeton, statut, nom_saisi, remarque, zones_remarque, zones_proposees, zones_retenues, zones_appliquees_le, valide_le, derniere_activite')
       .eq('campagne_id', campagneId.value)
     if (error) throw error
     fiches.value = f || []
     const ids = fiches.value.map(x => x.id)
     const merchs = fiches.value.map(x => x.merchandiser_id)
     const vide = ['00000000-0000-0000-0000-000000000000']
-    const [r, p, z, rm, pr, te] = await Promise.all([
-      supabase.from('validation_tournee_reponse').select('id, validation_merch_id, routing_mensuel_id, decision, commentaire, traite').in('validation_merch_id', ids.length ? ids : vide),
-      supabase.from('validation_tournee_pdv_retour').select('id, validation_merch_id, pdv_id, motif, commentaire, traite, pdv:pdv(nom_pdv)').in('validation_merch_id', ids.length ? ids : vide),
+    const [r, p, z, rm, pr, te, ap] = await Promise.all([
+      supabase.from('validation_tournee_reponse').select('id, validation_merch_id, routing_mensuel_id, decision, commentaire, traite, correction').in('validation_merch_id', ids.length ? ids : vide),
+      supabase.from('validation_tournee_pdv_retour').select('id, validation_merch_id, pdv_id, routing_mensuel_id, motif, commentaire, traite, correction, pdv:pdv(nom_pdv)').in('validation_merch_id', ids.length ? ids : vide),
       supabase.from('validation_tournee_zone').select('validation_merch_id, type, libelle, decision').in('validation_merch_id', ids.length ? ids : vide),
-      supabase.from('routing_mensuel').select('id, merchandiser_id, jour_semaine, semaine_du_mois, point_visite, secteur').eq('actif', true).in('merchandiser_id', merchs.length ? merchs : vide).order('semaine_du_mois').order('jour_semaine'),
-      supabase.from('profiles').select('id, nom, telephone, zone_assignee, territoires_assignes, quartiers_assignes').in('id', merchs.length ? merchs : vide),
-      supabase.from('territoire').select('code, nom'),
+      supabase.from('routing_mensuel').select('id, merchandiser_id, jour_semaine, semaine_du_mois, point_visite, secteur, quartiers').eq('actif', true).in('merchandiser_id', merchs.length ? merchs : vide).order('semaine_du_mois').order('jour_semaine'),
+      supabase.from('profiles').select('id, nom, email, telephone, zone_assignee, territoires_assignes, quartiers_assignes').in('id', merchs.length ? merchs : vide),
+      supabase.from('territoire').select('code, nom, sous_region_code, zone(quartier(nom))'),
+      (supabase.from('validation_tournee_application') as any).select('lot, applique_le, annule_le').eq('campagne_id', campagneId.value).order('applique_le', { ascending: false }),
     ])
-    for (const x of [r, p, z, rm, pr, te]) if (x.error) throw x.error
+    for (const x of [r, p, z, rm, pr, te, ap]) if (x.error) throw x.error
     territoires.value = te.data || []
     reponses.value = r.data || []
     retours.value = p.data || []
     zones.value = z.data || []
     routing.value = rm.data || []
     profils.value = pr.data || []
-    chargerPlans(merchs)
+    applications.value = ap.data || []
+    if (avecPlans) chargerPlans(merchs)
   }
   catch (e) { erreur.value = messageUtilisateur(e) }
   finally { chargement.value = false }
@@ -453,13 +613,20 @@ const detail = computed(() => {
   const reponseZone = (type: string, libelle: string) => zs.find(z => z.type === type && z.libelle === libelle)?.decision || null
   const uniques = (l: any[]) => [...new Map(l.filter(Boolean).map((x: string) => [x.toUpperCase(), x])).values()]
   const lignesRouting = routing.value.filter(l => l.merchandiser_id === f.merchandiser_id)
+  const retoursMerch = retours.value.filter(x => x.validation_merch_id === f.id)
+  const memeNomMemePoint = (x: any) => retoursMerch.filter(y => y.routing_mensuel_id === x.routing_mensuel_id
+    && cleZone(y.pdv?.nom_pdv) === cleZone(x.pdv?.nom_pdv)).length > 1
   return {
     id: f.id,
+    merchandiserId: f.merchandiser_id,
     nom: (prof as any).nom || '—',
     code: f.code,
     lien: f.lien_jeton,
     telephone: (prof as any).telephone || '',
     statut: f.statut,
+    zonesRetenues: f.zones_retenues,
+    zonesAppliqueesLe: f.zones_appliquees_le,
+    territoiresRouting: territoiresDuRouting(f.merchandiser_id),
     valideLe: f.valide_le,
     nomSaisi: f.nom_saisi,
     remarque: f.remarque,
@@ -472,7 +639,12 @@ const detail = computed(() => {
       voisins: plan.filter((x: any) => x.ligne_id === l.id && x.quartier_voisin).length,
       reponse: rep.find(x => x.routing_mensuel_id === l.id) || null,
     })),
-    retours: retours.value.filter(x => x.validation_merch_id === f.id).map(x => ({ ...x, nom: x.pdv?.nom_pdv || 'Boutique' })),
+    retours: retoursMerch.map(x => ({
+      ...x,
+      nom: x.pdv?.nom_pdv || 'Boutique',
+      point: routing.value.find(l => l.id === x.routing_mensuel_id)?.point_visite || '',
+      doublon: memeNomMemePoint(x),
+    })),
     zones: [
       { titre: 'Secteur Atom', lignes: uniques(lignesRouting.map(l => l.secteur)).map(s => ({ libelle: s, decision: reponseZone('secteur_atom', s) })) },
       { titre: 'Territoires Friesland', lignes: uniques([(prof as any).zone_assignee, ...((prof as any).territoires_assignes || [])]).map(t => ({ libelle: t, decision: reponseZone('territoire_friesland', t) })) },
@@ -532,6 +704,262 @@ function exporterRapportZones() {
   }
   telechargerCsv(`rapport-zones-${campagne.value?.mois?.slice(0, 7) || 'mois'}.csv`,
     ['Merchandiser', 'Type', 'Zone', 'Changement', 'Remarque du merchandiser'], lignesCsv)
+}
+
+// --- Avancement des retours (hors comptes de test) --------------------------
+const estTest = (merch: string) => /@friesland-test\.ci$/i.test(profils.value.find(p => p.id === merch)?.email || '')
+function zonesAttendues(f: any) {
+  const prof: any = profils.value.find(p => p.id === f.merchandiser_id) || {}
+  const secteurs = routing.value.filter(l => l.merchandiser_id === f.merchandiser_id).map(l => l.secteur)
+  const terr = [prof.zone_assignee, ...(prof.territoires_assignes || [])]
+  return new Set([...secteurs.map(s => `secteur_atom|${cleZone(s)}`), ...terr.map(t => `territoire_friesland|${cleZone(t)}`)]
+    .filter(k => !k.endsWith('|')))
+}
+const avancement = computed(() => {
+  const merchs = lignes.value.filter(l => !estTest(l.merchandiserId)).map((l) => {
+    const f = fiches.value.find(x => x.id === l.id)
+    const attendues = zonesAttendues(f)
+    const repondues = new Set(zones.value.filter(z => z.validation_merch_id === l.id).map(z => `${z.type}|${cleZone(z.libelle)}`))
+    const zonesFaites = [...attendues].filter(k => repondues.has(k)).length
+    const total = l.joursTotal + attendues.size
+    const pct = l.statut === 'validee' ? 100 : total ? Math.round(100 * (l.joursTraites + zonesFaites) / total) : 0
+    return { ...l, zonesFaites, zonesTotal: attendues.size, pct }
+  })
+  return { merchs, envoyees: merchs.filter(m => m.statut === 'validee').length, total: merchs.length }
+})
+const manquantes = computed(() => avancement.value.merchs.filter(m => m.statut !== 'validee').map(m => m.nom))
+
+// --- Choix de correction pour chaque retour ---------------------------------
+const nomJour = (l: any) => `semaine ${l.semaine_du_mois}, ${JOURS[l.jour_semaine].toLowerCase()}`
+// Un point de visite par nom : ceux des autres jours du même merchandiser.
+function pointsDuMerch(merch: string, sauf: string) {
+  const vus = new Map<string, any>()
+  for (const l of routing.value.filter(x => x.merchandiser_id === merch && x.id !== sauf)) {
+    const k = cleZone(l.point_visite)
+    if (!vus.has(k)) vus.set(k, l)
+  }
+  return [...vus.values()]
+}
+function optionsCorrection(merch: string, j: { id: string; reponse: any }) {
+  const points = pointsDuMerch(merch, j.id).filter(l => cleZone(l.point_visite) !== cleZone(routing.value.find(x => x.id === j.id)?.point_visite))
+  return [
+    { value: '', label: 'À décider' },
+    { value: 'garder', label: 'Ne rien changer' },
+    ...(j.reponse.decision === 'retirer' ? [{ value: 'vider', label: 'Laisser le jour sans visite' }] : []),
+    ...points.map(l => ({ value: `remplacer:${l.id}`, label: `${l.point_visite} (comme ${nomJour(l)})` })),
+  ]
+}
+const valeurCorrection = (rep: any) => !rep?.correction ? '' : rep.correction.action === 'remplacer' ? `remplacer:${rep.correction.source_ligne_id}` : rep.correction.action
+function texteCorrection(rep: any) {
+  const c = rep?.correction
+  if (!c) return 'à décider'
+  if (c.action === 'garder') return 'rien à changer'
+  if (c.action === 'vider') return 'jour laissé sans visite'
+  return `remplacé par ${routing.value.find(l => l.id === c.source_ligne_id)?.point_visite || '?'}`
+}
+// Point cité dans le commentaire (« Faya », « Cité sir… ») : proposé, jamais retenu sans l'admin.
+function suggestion(merch: string, j: { id: string; reponse: any }) {
+  if (!j.reponse?.commentaire || j.reponse.correction) return null
+  const mots = cleZone(j.reponse.commentaire).split(' ')
+  let meilleur: any = null
+  let score = 0
+  for (const l of pointsDuMerch(merch, j.id)) {
+    const morceaux = cleZone(l.point_visite).split(' ').filter(m => m.length >= 3 && !/^\d+$/.test(m))
+    const s = morceaux.filter(m => mots.includes(m)).length + (morceaux[0] && mots[0] === morceaux[0] ? 1 : 0)
+    if (s > score) { score = s; meilleur = l }
+  }
+  return meilleur ? { value: `remplacer:${meilleur.id}`, label: meilleur.point_visite } : null
+}
+async function choisirCorrection(rep: any, valeur: string) {
+  const correction = !valeur ? null : valeur.startsWith('remplacer:')
+    ? { action: 'remplacer', source_ligne_id: valeur.slice(10) }
+    : { action: valeur }
+  const { error } = await (supabase.from('validation_tournee_reponse') as any).update({ correction }).eq('id', rep.id)
+  if (error) { erreur.value = messageUtilisateur(error); return }
+  reponses.value = reponses.value.map(x => x.id === rep.id ? { ...x, correction } : x)
+}
+async function choisirBoutique(r: any, valeur: string) {
+  const correction = valeur || null
+  const { error } = await (supabase.from('validation_tournee_pdv_retour') as any).update({ correction }).eq('id', r.id)
+  if (error) { erreur.value = messageUtilisateur(error); return }
+  retours.value = retours.value.map(x => x.id === r.id ? { ...x, correction } : x)
+}
+const texteBoutique = (r: any) => r.motif !== 'ferme' ? 'à voir avec Atom' : r.correction === 'fermer' ? 'boutique fermée' : r.correction === 'garder' ? 'rien à changer' : 'à décider'
+const choixRetenus = computed(() => {
+  const envoyees = new Set(fiches.value.filter(f => f.statut === 'validee').map(f => f.id))
+  const jours = reponses.value.filter(r => envoyees.has(r.validation_merch_id) && r.decision !== 'ok' && !r.traite)
+  const boutiques = retours.value.filter(r => envoyees.has(r.validation_merch_id) && r.motif === 'ferme' && !r.traite)
+  return { demandes: jours.length + boutiques.length, decides: jours.filter(r => r.correction).length + boutiques.filter(r => r.correction).length }
+})
+
+// --- Zones retenues pour le profil -------------------------------------------
+const nomTerritoire = (codeOuNom: string) => territoires.value.find(t => t.code === codeOuNom || cleZone(t.nom) === cleZone(codeOuNom))?.nom || codeOuNom
+const sansDoublon = (l: string[]) => [...new Map(l.filter(Boolean).map(x => [cleZone(x), x])).values()]
+// Territoires d'Abidjan où tombent les quartiers de son routing (référentiel
+// Friesland). Au moins 2 jours : un même nom de quartier existe dans d'autres villes.
+const SOUS_REGIONS_ABIDJAN = ['SOUTH1', 'SOUTH2']
+// Un nom de quartier présent dans plusieurs territoires (Sicogi, Zone industrielle…) ne compte pas.
+const territoireDuQuartier = computed(() => {
+  const parQuartier = new Map<string, Set<string>>()
+  for (const t of territoires.value.filter(x => SOUS_REGIONS_ABIDJAN.includes(x.sous_region_code || ''))) {
+    for (const z of t.zone || []) for (const q of z.quartier || []) {
+      const k = cleZone(q.nom)
+      parQuartier.set(k, (parQuartier.get(k) || new Set()).add(t.nom))
+    }
+  }
+  return new Map([...parQuartier].filter(([, ts]) => ts.size === 1).map(([k, ts]) => [k, [...ts][0]]))
+})
+function territoiresDuRouting(merch: string) {
+  const compte = new Map<string, number>()
+  for (const l of routing.value.filter(x => x.merchandiser_id === merch)) {
+    const ts = new Set((l.quartiers || []).map((q: string) => territoireDuQuartier.value.get(cleZone(q))).filter(Boolean) as string[])
+    for (const t of ts) compte.set(t, (compte.get(t) || 0) + 1)
+  }
+  return [...compte.entries()].filter(([, jours]) => jours >= 2).sort((a, b) => b[1] - a[1]).map(([nom, jours]) => ({ nom, jours }))
+}
+// Ce qu'il a coché s'il a touché à la liste pré-cochée ; sinon ses « oui / non ».
+function propositionZones(f: any) {
+  const prof: any = profils.value.find(p => p.id === f.merchandiser_id) || {}
+  const actuels = sansDoublon([prof.zone_assignee, ...(prof.territoires_assignes || [])].map(nomTerritoire))
+  const quartiersActuels: string[] = prof.quartiers_assignes || []
+  const prop = f.zones_proposees
+  const meme = (a: string[], b: string[]) => a.length === b.length && a.every(x => b.map(cleZone).includes(cleZone(x)))
+  const aModifie = !!prop && (!meme(sansDoublon((prop.territoires || []).map(nomTerritoire)), actuels) || !meme(prop.quartiers || [], quartiersActuels))
+  const non = new Set(zones.value.filter(z => z.validation_merch_id === f.id && z.type === 'territoire_friesland' && z.decision === 'non').map(z => cleZone(z.libelle)))
+  const reponse = aModifie ? sansDoublon((prop.territoires || []).map(nomTerritoire)) : actuels.filter(t => !non.has(cleZone(t)))
+  // Sa réponse retire un territoire où tombe son routing : on le garde coché et on prévient.
+  const duRouting = territoiresDuRouting(f.merchandiser_id).map(t => t.nom)
+  const oublies = duRouting.filter(t => !reponse.map(cleZone).includes(cleZone(t)))
+  const terr = sansDoublon([...reponse, ...oublies])
+  return {
+    aModifie,
+    alerte: oublies.length
+      ? `Son routing passe aussi par ${oublies.join(', ')}, que sa réponse ne garde pas. Laissé coché : à confirmer avec lui.`
+      : '',
+    territoires: terr,
+    // On ne retire jamais un quartier d'office : ils filtrent les PDV qu'il voit.
+    quartiers: sansDoublon([...quartiersActuels, ...(aModifie ? prop.quartiers || [] : [])]),
+    zone_assignee: terr.find(t => cleZone(t) === cleZone(prof.zone_assignee)) || terr[0] || '',
+    choixTerritoires: sansDoublon([...actuels, ...(prop?.territoires || []).map(nomTerritoire), ...duRouting]),
+    choixQuartiers: sansDoublon([...quartiersActuels, ...(prop?.quartiers || [])]).sort((a, b) => a.localeCompare(b, 'fr')),
+  }
+}
+const zonesEdition = ref<{ alerte: string; territoires: string[]; quartiers: string[]; zone_assignee: string; choixTerritoires: string[]; choixQuartiers: string[] } | null>(null)
+// Refait seulement si la fiche choisie ou ses zones retenues changent : le
+// rafraîchissement de chaque minute ne doit pas effacer ce que l'admin coche.
+watch(() => {
+  const f = fiches.value.find(x => x.id === selection.value)
+  return f ? `${f.id}|${JSON.stringify(f.zones_retenues ?? null)}` : ''
+}, () => {
+  const f = fiches.value.find(x => x.id === selection.value)
+  if (!f) { zonesEdition.value = null; return }
+  const p = propositionZones(f)
+  const r = f.zones_retenues
+  zonesEdition.value = r
+    ? { ...p, territoires: r.territoires || p.territoires, quartiers: r.quartiers || p.quartiers, zone_assignee: r.zone_assignee || p.zone_assignee }
+    : p
+})
+function basculerListe(liste: 'territoires' | 'quartiers', valeur: string) {
+  if (!zonesEdition.value) return
+  const l = zonesEdition.value[liste]
+  zonesEdition.value[liste] = l.includes(valeur) ? l.filter(x => x !== valeur) : [...l, valeur]
+}
+async function retenirZones(d: { id: string }, effacer = false) {
+  const z = zonesEdition.value
+  const zones_retenues = effacer || !z ? null : { zone_assignee: z.zone_assignee, territoires: z.territoires, quartiers: z.quartiers }
+  const { error } = await (supabase.from('validation_tournee_merch') as any).update({ zones_retenues }).eq('id', d.id)
+  if (error) { erreur.value = messageUtilisateur(error); return }
+  fiches.value = fiches.value.map(x => x.id === d.id ? { ...x, zones_retenues } : x)
+  toast.add({ title: effacer ? 'Zones : rien ne sera changé' : 'Zones retenues', color: 'green' })
+}
+
+// --- Vue d'ensemble ------------------------------------------------------------
+const vueEnsemble = ref(false)
+const fichesVueEnsemble = computed(() => lignes.value.filter(l => !estTest(l.merchandiserId)).map((l) => {
+  const f = fiches.value.find(x => x.id === l.id)
+  const zs = zones.value.filter(z => z.validation_merch_id === l.id && z.type !== 'quartier_friesland')
+  const prop = propositionZones(f)
+  const r = f.zones_retenues
+  return {
+    id: l.id,
+    nom: l.nom,
+    statut: l.statut,
+    statutTexte: statut(l.statut).texte,
+    joursTraites: l.joursTraites,
+    joursTotal: l.joursTotal,
+    remarque: f.remarque,
+    zonesRemarque: f.zones_remarque,
+    jours: routing.value.filter(x => x.merchandiser_id === l.merchandiserId).flatMap((x) => {
+      const rep = reponses.value.find(y => y.validation_merch_id === l.id && y.routing_mensuel_id === x.id)
+      return rep && rep.decision !== 'ok'
+        ? [{ id: rep.id, semaine: x.semaine_du_mois, jourTexte: JOURS[x.jour_semaine], point: x.point_visite, decision: rep.decision, commentaire: rep.commentaire || '', choix: rep.traite ? 'appliqué' : texteCorrection(rep) }]
+        : []
+    }),
+    boutiques: retours.value.filter(x => x.validation_merch_id === l.id).map(x => ({
+      id: x.id,
+      nom: x.pdv?.nom_pdv || 'Boutique',
+      motif: MOTIFS[x.motif] || x.motif,
+      point: routing.value.find(y => y.id === x.routing_mensuel_id)?.point_visite || '',
+      commentaire: x.commentaire || '',
+      doublon: retours.value.filter(y => y.validation_merch_id === l.id && y.routing_mensuel_id === x.routing_mensuel_id && cleZone(y.pdv?.nom_pdv) === cleZone(x.pdv?.nom_pdv)).length > 1,
+      choix: x.traite ? 'appliqué' : texteBoutique(x),
+    })),
+    zones: {
+      oui: zs.filter(z => z.decision === 'oui').map(z => z.libelle),
+      non: zs.filter(z => z.decision === 'non').map(z => z.libelle),
+      ecarts: ecartsZones(f),
+      aModifie: prop.aModifie,
+      retenues: r ? `${(r.territoires || []).join(', ')} (${(r.quartiers || []).length} quartiers)` : '',
+    },
+  }
+}))
+
+// --- Aperçu, application, annulation -----------------------------------------
+const apercu = ref<any>(null)
+const apercuOuvert = ref(false)
+const application = ref<'' | 'apercu' | 'appliquer' | 'annuler'>('')
+const passages = computed(() => {
+  const parLot = new Map<string, { lot: string; le: string; n: number; annule: boolean }>()
+  for (const a of applications.value) {
+    const p = parLot.get(a.lot) || { lot: a.lot, le: a.applique_le, n: 0, annule: !!a.annule_le }
+    p.n++
+    parLot.set(a.lot, p)
+  }
+  return [...parLot.values()].slice(0, 5)
+})
+async function lancer(simuler: boolean) {
+  if (!campagne.value) return
+  if (!simuler && !(await demanderConfirmation({
+    titre: 'Appliquer les corrections retenues ?',
+    message: `${choixRetenus.value.decides} choix sur ${choixRetenus.value.demandes}. Le routing, les boutiques et les profils changent dès maintenant, fin d'octobre comprise, et les tournées à venir sont refaites. La mise à jour pourra être annulée.`,
+    libelleAction: 'Appliquer',
+    destructif: false,
+  }))) return
+  application.value = simuler ? 'apercu' : 'appliquer'
+  erreur.value = ''
+  try {
+    apercu.value = await $fetch('/api/admin/validation-tournee/appliquer', { method: 'POST', body: { campagneId: campagne.value.id, simuler } })
+    apercuOuvert.value = true
+    if (!simuler) await charger()
+  }
+  catch (e) { erreur.value = messageUtilisateur(e) }
+  finally { application.value = '' }
+}
+async function annulerPassage(p: { lot: string; le: string }) {
+  if (!(await demanderConfirmation({
+    titre: `Annuler les corrections appliquées le ${dateCourte(p.le)} ?`,
+    message: 'Le routing, les boutiques et les profils reviennent comme avant cette mise à jour ; les retours repassent « à traiter ».',
+    libelleAction: 'Annuler cette mise à jour',
+    destructif: true,
+  }))) return
+  application.value = 'annuler'
+  try {
+    const r: any = await $fetch('/api/admin/validation-tournee/annuler', { method: 'POST', body: { lot: p.lot } })
+    toast.add({ title: 'Mise à jour annulée', description: `${r.annulees} changements défaits.`, color: 'green' })
+    await charger()
+  }
+  catch (e) { erreur.value = messageUtilisateur(e) }
+  finally { application.value = '' }
 }
 
 async function copier(texte: string, ok: string) {
@@ -671,5 +1099,12 @@ function exporterReponses() {
 }
 
 watch(campagneId, (v, avant) => { if (avant && v !== avant) { selection.value = null; charger() } })
-onMounted(() => { charger(); chargerHorsTournee() })
+// Les fiches arrivent pendant la journée : relecture légère chaque minute.
+let minuterie: ReturnType<typeof setInterval> | null = null
+onMounted(() => {
+  charger()
+  chargerHorsTournee()
+  minuterie = setInterval(() => { if (!document.hidden && !chargement.value && !application.value) charger(false) }, 60_000)
+})
+onBeforeUnmount(() => { if (minuterie) clearInterval(minuterie) })
 </script>

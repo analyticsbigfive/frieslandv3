@@ -62,3 +62,29 @@ export async function requireAdminOuAgence(event: H3Event, service: any): Promis
   }
   throw apiError(403, 'Action réservée aux administrateurs')
 }
+
+/** Admin ou superviseur : même portée que est_admin_ou_superviseur() en base. */
+export async function requireAdminOuSuperviseur(event: H3Event, service: any) {
+  let user: { id: string } | null = null
+  try {
+    user = (await serverSupabaseUser(event)) as any
+  }
+  catch {
+    user = null
+  }
+  if (!user) {
+    throw apiError(401, 'Session expirée, reconnectez-vous')
+  }
+
+  const { data, error } = await service
+    .from('profiles')
+    .select('role, is_active')
+    .eq('id', user.id)
+    .single()
+
+  if (error || !['admin', 'superviseur'].includes(data?.role) || data?.is_active === false) {
+    throw apiError(403, 'Action réservée aux administrateurs et superviseurs')
+  }
+
+  return user
+}
