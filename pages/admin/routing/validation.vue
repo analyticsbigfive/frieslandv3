@@ -109,7 +109,7 @@
             <li v-for="p in passages" :key="p.lot" class="flex flex-wrap items-center gap-2">
               <span>Le {{ dateCourte(p.le) }} : {{ p.n }} changement{{ p.n > 1 ? 's' : '' }}</span>
               <UBadge v-if="p.annule" color="gray" variant="subtle" size="xs">Annulé</UBadge>
-              <UButton v-else size="xs" variant="ghost" color="gray" :loading="application === 'annuler'" :disabled="!!application" @click="annulerPassage(p)">Annuler ce passage</UButton>
+              <UButton v-else size="xs" variant="ghost" color="gray" :loading="application === 'annuler'" :disabled="!!application" @click="annulerPassage(p)">Annuler cette mise à jour</UButton>
             </li>
           </ul>
         </div>
@@ -339,6 +339,7 @@
               <b>{{ detail.territoiresRouting.map(t => `${t.nom} (${t.jours} jour${t.jours > 1 ? 's' : ''})`).join(', ') }}</b>.
               <span class="block text-xs text-slate-500">Les numéros des secteurs Atom ne suivent pas ceux des territoires Friesland (ex. Yopougon).</span>
             </p>
+            <p v-if="zonesEdition.alerte && !detail.zonesRetenues" class="rounded-md bg-amber-50 p-2 text-sm font-medium text-amber-900 dark:bg-amber-950/40 dark:text-amber-200" role="status">{{ zonesEdition.alerte }}</p>
             <fieldset>
               <legend class="text-xs font-semibold text-slate-700 dark:text-slate-200">Territoires Friesland</legend>
               <div class="mt-1 flex flex-wrap gap-2">
@@ -373,7 +374,8 @@
               <UButton v-if="detail.zonesRetenues" size="xs" variant="ghost" color="gray" @click="retenirZones(detail, true)">Ne rien changer à son profil</UButton>
             </div>
             <p class="text-xs text-slate-600 dark:text-slate-300">
-              Proposé d'office : ce qu'il a coché s'il a modifié la liste pré-cochée, sinon son profil moins les territoires où il a répondu « non ». Le secteur Atom ne change pas.
+              Proposé d'office : ce qu'il a coché s'il a modifié la liste pré-cochée, sinon son profil moins les territoires où il a répondu « non » ;
+              un territoire où passe son routing reste coché. Aucun quartier n'est retiré d'office (ils décident des PDV qu'il voit). Le secteur Atom ne change pas.
             </p>
           </div>
         </div>
@@ -488,7 +490,7 @@ const zones = ref<any[]>([])
 const routing = ref<any[]>([])
 const profils = ref<any[]>([])
 const plans = ref<Record<string, any[]>>({})
-const territoires = ref<{ code: string; nom: string; zone?: { quartier: { nom: string }[] }[] }[]>([])
+const territoires = ref<{ code: string; nom: string; sous_region_code?: string; zone?: { quartier: { nom: string }[] }[] }[]>([])
 const applications = ref<{ lot: string; applique_le: string; annule_le: string | null }[]>([])
 const selection = ref<string | null>(null)
 const onglet = ref('jours')
@@ -539,7 +541,7 @@ async function charger(avecPlans = true) {
       supabase.from('validation_tournee_zone').select('validation_merch_id, type, libelle, decision').in('validation_merch_id', ids.length ? ids : vide),
       supabase.from('routing_mensuel').select('id, merchandiser_id, jour_semaine, semaine_du_mois, point_visite, secteur, quartiers').eq('actif', true).in('merchandiser_id', merchs.length ? merchs : vide).order('semaine_du_mois').order('jour_semaine'),
       supabase.from('profiles').select('id, nom, email, telephone, zone_assignee, territoires_assignes, quartiers_assignes').in('id', merchs.length ? merchs : vide),
-      supabase.from('territoire').select('code, nom, zone(quartier(nom))'),
+      supabase.from('territoire').select('code, nom, sous_region_code, zone(quartier(nom))'),
       (supabase.from('validation_tournee_application') as any).select('lot, applique_le, annule_le').eq('campagne_id', campagneId.value).order('applique_le', { ascending: false }),
     ])
     for (const x of [r, p, z, rm, pr, te, ap]) if (x.error) throw x.error
@@ -793,16 +795,27 @@ const choixRetenus = computed(() => {
 // --- Zones retenues pour le profil -------------------------------------------
 const nomTerritoire = (codeOuNom: string) => territoires.value.find(t => t.code === codeOuNom || cleZone(t.nom) === cleZone(codeOuNom))?.nom || codeOuNom
 const sansDoublon = (l: string[]) => [...new Map(l.filter(Boolean).map(x => [cleZone(x), x])).values()]
-// Territoires où tombent les quartiers de son routing (référentiel Friesland).
+// Territoires d'Abidjan où tombent les quartiers de son routing (référentiel
+// Friesland). Au moins 2 jours : un même nom de quartier existe dans d'autres villes.
+const SOUS_REGIONS_ABIDJAN = ['SOUTH1', 'SOUTH2']
+// Un nom de quartier présent dans plusieurs territoires (Sicogi, Zone industrielle…) ne compte pas.
+const territoireDuQuartier = computed(() => {
+  const parQuartier = new Map<string, Set<string>>()
+  for (const t of territoires.value.filter(x => SOUS_REGIONS_ABIDJAN.includes(x.sous_region_code || ''))) {
+    for (const z of t.zone || []) for (const q of z.quartier || []) {
+      const k = cleZone(q.nom)
+      parQuartier.set(k, (parQuartier.get(k) || new Set()).add(t.nom))
+    }
+  }
+  return new Map([...parQuartier].filter(([, ts]) => ts.size === 1).map(([k, ts]) => [k, [...ts][0]]))
+})
 function territoiresDuRouting(merch: string) {
   const compte = new Map<string, number>()
   for (const l of routing.value.filter(x => x.merchandiser_id === merch)) {
-    const qs = new Set((l.quartiers || []).map(cleZone))
-    for (const t of territoires.value) {
-      if ((t.zone || []).some(z => (z.quartier || []).some(q => qs.has(cleZone(q.nom))))) compte.set(t.nom, (compte.get(t.nom) || 0) + 1)
-    }
+    const ts = new Set((l.quartiers || []).map((q: string) => territoireDuQuartier.value.get(cleZone(q))).filter(Boolean) as string[])
+    for (const t of ts) compte.set(t, (compte.get(t) || 0) + 1)
   }
-  return [...compte.entries()].sort((a, b) => b[1] - a[1]).map(([nom, jours]) => ({ nom, jours }))
+  return [...compte.entries()].filter(([, jours]) => jours >= 2).sort((a, b) => b[1] - a[1]).map(([nom, jours]) => ({ nom, jours }))
 }
 // Ce qu'il a coché s'il a touché à la liste pré-cochée ; sinon ses « oui / non ».
 function propositionZones(f: any) {
@@ -813,17 +826,25 @@ function propositionZones(f: any) {
   const meme = (a: string[], b: string[]) => a.length === b.length && a.every(x => b.map(cleZone).includes(cleZone(x)))
   const aModifie = !!prop && (!meme(sansDoublon((prop.territoires || []).map(nomTerritoire)), actuels) || !meme(prop.quartiers || [], quartiersActuels))
   const non = new Set(zones.value.filter(z => z.validation_merch_id === f.id && z.type === 'territoire_friesland' && z.decision === 'non').map(z => cleZone(z.libelle)))
-  const terr = aModifie ? sansDoublon((prop.territoires || []).map(nomTerritoire)) : actuels.filter(t => !non.has(cleZone(t)))
+  const reponse = aModifie ? sansDoublon((prop.territoires || []).map(nomTerritoire)) : actuels.filter(t => !non.has(cleZone(t)))
+  // Sa réponse retire un territoire où tombe son routing : on le garde coché et on prévient.
+  const duRouting = territoiresDuRouting(f.merchandiser_id).map(t => t.nom)
+  const oublies = duRouting.filter(t => !reponse.map(cleZone).includes(cleZone(t)))
+  const terr = sansDoublon([...reponse, ...oublies])
   return {
     aModifie,
+    alerte: oublies.length
+      ? `Son routing passe aussi par ${oublies.join(', ')}, que sa réponse ne garde pas. Laissé coché : à confirmer avec lui.`
+      : '',
     territoires: terr,
-    quartiers: aModifie ? sansDoublon(prop.quartiers || []) : quartiersActuels,
+    // On ne retire jamais un quartier d'office : ils filtrent les PDV qu'il voit.
+    quartiers: sansDoublon([...quartiersActuels, ...(aModifie ? prop.quartiers || [] : [])]),
     zone_assignee: terr.find(t => cleZone(t) === cleZone(prof.zone_assignee)) || terr[0] || '',
-    choixTerritoires: sansDoublon([...actuels, ...(prop?.territoires || []).map(nomTerritoire)]),
+    choixTerritoires: sansDoublon([...actuels, ...(prop?.territoires || []).map(nomTerritoire), ...duRouting]),
     choixQuartiers: sansDoublon([...quartiersActuels, ...(prop?.quartiers || [])]).sort((a, b) => a.localeCompare(b, 'fr')),
   }
 }
-const zonesEdition = ref<{ territoires: string[]; quartiers: string[]; zone_assignee: string; choixTerritoires: string[]; choixQuartiers: string[] } | null>(null)
+const zonesEdition = ref<{ alerte: string; territoires: string[]; quartiers: string[]; zone_assignee: string; choixTerritoires: string[]; choixQuartiers: string[] } | null>(null)
 // Refait seulement si la fiche choisie ou ses zones retenues changent : le
 // rafraîchissement de chaque minute ne doit pas effacer ce que l'admin coche.
 watch(() => {
@@ -910,7 +931,7 @@ async function lancer(simuler: boolean) {
   if (!campagne.value) return
   if (!simuler && !(await demanderConfirmation({
     titre: 'Appliquer les corrections retenues ?',
-    message: `${choixRetenus.value.decides} choix sur ${choixRetenus.value.demandes}. Le routing, les boutiques et les profils changent dès maintenant, fin d'octobre comprise, et les tournées à venir sont refaites. Le passage pourra être annulé.`,
+    message: `${choixRetenus.value.decides} choix sur ${choixRetenus.value.demandes}. Le routing, les boutiques et les profils changent dès maintenant, fin d'octobre comprise, et les tournées à venir sont refaites. La mise à jour pourra être annulée.`,
     libelleAction: 'Appliquer',
     destructif: false,
   }))) return
@@ -927,14 +948,14 @@ async function lancer(simuler: boolean) {
 async function annulerPassage(p: { lot: string; le: string }) {
   if (!(await demanderConfirmation({
     titre: `Annuler les corrections appliquées le ${dateCourte(p.le)} ?`,
-    message: 'Le routing, les boutiques et les profils reviennent comme avant ce passage ; les retours repassent « à traiter ».',
-    libelleAction: 'Annuler ce passage',
+    message: 'Le routing, les boutiques et les profils reviennent comme avant cette mise à jour ; les retours repassent « à traiter ».',
+    libelleAction: 'Annuler cette mise à jour',
     destructif: true,
   }))) return
   application.value = 'annuler'
   try {
     const r: any = await $fetch('/api/admin/validation-tournee/annuler', { method: 'POST', body: { lot: p.lot } })
-    toast.add({ title: 'Passage annulé', description: `${r.annulees} changements défaits.`, color: 'green' })
+    toast.add({ title: 'Mise à jour annulée', description: `${r.annulees} changements défaits.`, color: 'green' })
     await charger()
   }
   catch (e) { erreur.value = messageUtilisateur(e) }

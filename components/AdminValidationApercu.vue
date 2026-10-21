@@ -35,11 +35,23 @@
         </ul>
       </section>
 
-      <section v-if="resultat.boutiques_autre_merchandiser.length" class="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm dark:border-amber-700 dark:bg-amber-950/40">
-        <h3 class="font-semibold text-slate-900 dark:text-white">Boutiques qui changent de merchandiser</h3>
-        <p class="mt-1 text-slate-700 dark:text-slate-200">Une boutique va au point de visite le plus proche : en déplaçant un point, certaines passent chez un collègue.</p>
+      <section
+        v-if="resultat.boutiques_autre_merchandiser.length" class="rounded-lg border p-4 text-sm"
+        :class="resultat.boutiques_sans_tournee ? 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/40' : 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/40'"
+      >
+        <h3 class="font-semibold text-slate-900 dark:text-white">
+          <template v-if="resultat.boutiques_sans_tournee">{{ resultat.boutiques_sans_tournee }} boutiques ne seraient plus dans aucune tournée</template>
+          <template v-else>Boutiques qui changent de merchandiser</template>
+        </h3>
+        <p class="mt-1 text-slate-700 dark:text-slate-200">
+          Une boutique va au point de visite le plus proche. En déplaçant un point, certaines tombent chez un collègue ;
+          si ce collègue ne travaille pas avec leur distributeur, plus personne ne les visite.
+        </p>
         <ul class="mt-2 space-y-1">
-          <li v-for="(b, i) in resultat.boutiques_autre_merchandiser" :key="i">{{ b.boutiques }} boutiques de {{ b.de }} passent chez <b>{{ b.vers }}</b></li>
+          <li v-for="(b, i) in resultat.boutiques_autre_merchandiser" :key="i">
+            {{ b.boutiques }} boutiques de {{ nomPropre(b.de) }} vont vers {{ nomPropre(b.vers) }}
+            <b v-if="b.sans_tournee" class="text-red-700 dark:text-red-400">— {{ b.sans_tournee === b.boutiques ? 'aucune' : `${b.boutiques - b.sans_tournee}` }} reprise{{ b.boutiques - b.sans_tournee > 1 ? 's' : '' }} (autre distributeur)</b>
+          </li>
         </ul>
       </section>
 
@@ -49,7 +61,7 @@
       </section>
 
       <p v-if="resultat.simulation && resultat.fiches_manquantes.length" class="text-sm text-amber-800 dark:text-amber-300">
-        Le passage réel attend encore : {{ resultat.fiches_manquantes.map(nomPropre).join(', ') }}.
+        « Appliquer » attend encore les fiches de : {{ resultat.fiches_manquantes.map(nomPropre).join(', ') }}.
       </p>
       <p v-if="resultat.tournees?.some((t: any) => !t.ok)" class="text-sm text-red-700" role="alert">
         Tournées à refaire à la main (Maintenance) pour : {{ resultat.tournees.filter((t: any) => !t.ok).map((t: any) => nomPropre(t.nom)).join(', ') }}.

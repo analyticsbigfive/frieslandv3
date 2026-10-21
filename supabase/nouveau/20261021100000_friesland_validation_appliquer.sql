@@ -281,15 +281,24 @@ begin
         select jsonb_agg(jsonb_build_object('pdv_id', j.cible_id, 'nom', j.avant->>'nom_pdv'))
         from validation_tournee_application j where j.lot = v_lot and j.table_cible = 'pdv'), '[]'::jsonb),
       -- Boutiques qui passent chez un autre merchandiser (point le plus proche).
+      -- Sans aucun jour de leur distributeur chez lui, elles ne sont plus dans
+      -- aucune tournée (atom_pdv_possibles filtre sur le distributeur).
       'boutiques_autre_merchandiser', coalesce((
-        select jsonb_agg(jsonb_build_object('de', pa.nom, 'vers', pb.nom, 'boutiques', n))
+        select jsonb_agg(jsonb_build_object('de', pa.nom, 'vers', pb.nom, 'boutiques', t.n, 'sans_tournee', t.n_sans))
         from (
-          select a.merchandiser_id as de, b.merchandiser_id as vers, count(*) as n
-          from _vt_quartier_avant a join pdv_quartier_tournee b on b.pdv_id = a.pdv_id
+          select a.merchandiser_id as de, b.merchandiser_id as vers, count(*) as n,
+                 count(*) filter (where not exists (
+                   select 1 from routing_mensuel r where r.merchandiser_id = b.merchandiser_id and r.actif
+                     and r.distributeur is not distinct from p.distributor_name)) as n_sans
+          from _vt_quartier_avant a
+          join pdv_quartier_tournee b on b.pdv_id = a.pdv_id
+          join pdv p on p.pdv_id = a.pdv_id
           where a.merchandiser_id <> b.merchandiser_id
           group by 1, 2
         ) t join profiles pa on pa.id = t.de join profiles pb on pb.id = t.vers), '[]'::jsonb)
     ) into v_res;
+    v_res := v_res || jsonb_build_object('boutiques_sans_tournee', coalesce((
+      select sum((x->>'sans_tournee')::int) from jsonb_array_elements(v_res->'boutiques_autre_merchandiser') x), 0));
 
     if p_simuler then
       raise exception 'simulation' using errcode = 'VTSIM';

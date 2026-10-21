@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
   await requireAdminOuSuperviseur(event, service)
   const body = await readBody(event).catch(() => ({}))
   const lot = String(body?.lot || '')
-  if (!/^[0-9a-f-]{36}$/i.test(lot)) throw apiError(400, 'Passage inconnu')
+  if (!/^[0-9a-f-]{36}$/i.test(lot)) throw apiError(400, 'Mise à jour inconnue')
 
   const { data: lignes, error: e1 } = await service.from('validation_tournee_application')
     .select('table_cible, cible_id, avant').eq('lot', lot)
