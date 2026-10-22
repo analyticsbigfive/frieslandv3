@@ -44,11 +44,18 @@
 -- Mesure du 22/10 (visites faites avec l'app ces 60 derniers jours, PDV lus
 -- avec les règles d'aujourd'hui, donc après « vos PDV ») :
 --   · admin : 0 refusée sur 1 ; merchandisers Friesland : 0 sur 15 ;
---   · merchandisers Atom actifs : 23 sur 555 (sans le point 2 : 202). Les 23
---     PDV ne sont dans la liste d'aucun merchandiser : ils étaient dans leurs
---     territoires le jour de la visite, « vos PDV » ne les montre plus ;
+--   · merchandisers Atom actifs : 23 sur 555 (sans le point 2 : 202), sur
+--     18 PDV, hors de leur tournée du jour : 21 du 13 au 21/10 (12 le 16/10,
+--     jour de la réaffectation), 2 fin septembre. Ces PDV étaient dans leurs
+--     territoires ; « vos PDV » ne les montre plus ;
 --   · merchandiser Atom désactivé : 4 sur 4, déjà refusées aujourd'hui
 --     (peut_ecrire_terrain).
+-- Effet dès aujourd'hui : 197 PDV restent affichés à 9 merchandisers Atom
+-- parce qu'ils les ont visités (Gui Stéphane 47, Guihi 36, Yao 32, Kouamé 29,
+-- Kouadio 16, Abbé 14, Deheo 14, Zogbolou 8, Seregone 1), surtout des PDV de
+-- leurs anciennes tournées (jusqu'au 20/10), hors de toute liste validée. Une
+-- nouvelle visite sur l'un d'eux sera refusée (y compris un jour de visite
+-- libre). À confirmer avec Jean Luc.
 --
 -- Retour arrière :
 --   drop trigger if exists trg_visite_pdv_lisible on public.visites;
