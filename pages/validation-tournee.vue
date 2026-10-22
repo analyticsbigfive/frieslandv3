@@ -178,7 +178,7 @@
         <section v-for="g in parSemaine" :key="`s${g.semaine}`" class="space-y-3" :aria-labelledby="`titre-s${g.semaine}`">
           <h3 :id="`titre-s${g.semaine}`" class="sticky top-[56px] z-20 -mx-4 flex items-center justify-between bg-gray-50/95 px-4 py-2 text-base font-semibold text-slate-900 backdrop-blur sm:-mx-6 sm:px-6">
             Semaine {{ g.semaine }}
-            <span class="text-xs font-semibold" :class="g.restants ? 'text-amber-700' : 'text-emerald-700'">
+            <span v-if="g.quartiers.length" class="text-xs font-semibold" :class="g.restants ? 'text-amber-700' : 'text-emerald-700'">
               {{ g.restants ? `${g.restants} à traiter` : 'fait' }}
             </span>
           </h3>
@@ -255,6 +255,15 @@
             </ul>
           </div>
         </article>
+        <article
+          v-for="j in g.libres" :key="`libre-${g.semaine}-${j.jour}-${j.date || ''}`"
+          class="rounded-lg bg-sky-50 p-4 ring-1 ring-sky-200"
+        >
+          <p class="text-base font-semibold text-slate-900">{{ j.nomJour }}{{ j.date ? ` ${dateCourte(j.date)}` : '' }} : visite libre</p>
+          <p class="mt-1 text-sm text-slate-600">
+            Pas de point de visite ce jour-là : vous choisissez vos PDV.<template v-if="j.objectif"> Objectif : {{ j.objectif }}.</template>
+          </p>
+        </article>
         </section>
 
         <BarreAction :texte="quartiersRestants ? `${quartiersRestants} quartier${quartiersRestants > 1 ? 's' : ''} à traiter` : 'Tous les quartiers sont traités'">
@@ -314,6 +323,7 @@ useHead({ title: 'Validation de ma tournée', meta: [{ name: 'robots', content: 
 
 type Pdv = { id: string; nom: string; type: string }
 type Quartier = { cle: string; nom: string; lignes: string[]; jours: { nomJour: string; jour: number; semaine: number }[]; distributeur: string; pdv: Pdv[] }
+type JourLibre = { semaine: number; jour: number; nomJour: string; date?: string; objectif: string }
 
 const DECISIONS = [
   { valeur: 'ok', texte: 'OK', actif: 'bg-emerald-50 text-emerald-800 ring-emerald-400' },
@@ -478,18 +488,26 @@ const quartiers = computed<Quartier[]>(() => donnees.value?.quartiers || [])
 // Réponse d'un quartier : celle de ses jours (enregistrée sur chacun).
 const reponseQuartier = (q: Quartier) => q.lignes.every(id => reponses.value[id]) ? reponses.value[q.lignes[0]] : null
 const quartiersRestants = computed(() => quartiers.value.filter(q => !reponseQuartier(q)).length)
+// Jours sans point de visite : visite libre (le merchandiser choisit ses PDV).
+const joursLibres = computed<JourLibre[]>(() => donnees.value?.joursLibres || [])
 // Regroupement par semaine : un quartier visité plusieurs semaines apparaît dans
-// chacune, avec la même réponse (elle vaut pour tous ses jours).
+// chacune, avec la même réponse (elle vaut pour tous ses jours). Les jours de
+// visite libre s'affichent à la fin de leur semaine.
 const parSemaine = computed(() => {
-  const semaines = [...new Set(quartiers.value.flatMap(q => q.jours.map(j => j.semaine)))].sort((a, b) => a - b)
+  const semaines = [...new Set([
+    ...quartiers.value.flatMap(q => q.jours.map(j => j.semaine)),
+    ...joursLibres.value.map(j => j.semaine),
+  ])].sort((a, b) => a - b)
   return semaines.map((semaine) => {
     const liste = quartiers.value
       .map(q => ({ q, jours: q.jours.filter(j => j.semaine === semaine) }))
       .filter(x => x.jours.length)
       .sort((a, b) => a.jours[0].jour - b.jours[0].jour)
-    return { semaine, quartiers: liste, restants: liste.filter(x => !reponseQuartier(x.q)).length }
+    const libres = joursLibres.value.filter(j => j.semaine === semaine)
+    return { semaine, quartiers: liste, libres, restants: liste.filter(x => !reponseQuartier(x.q)).length }
   })
 })
+const dateCourte = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
 const autresSemaines = (q: Quartier, semaine: number) => [...new Set(q.jours.map(j => j.semaine))].filter(x => x !== semaine).sort((a, b) => a - b)
 function repondreQuartier(q: Quartier, decision: string) {
   if (decision === 'ok') commentaires.value[q.cle] = ''
