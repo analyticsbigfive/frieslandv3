@@ -149,9 +149,11 @@ fichier Friesland ne collaient pas au terrain et cachaient des PDV de sa liste ;
 - **Ses PDV** (`pdv_ids_merch_atom`) :
   - sa liste validée : PDV de ses quartiers avec le distributeur de son routing, comme sur la page de validation ;
   - les PDV de ses tournées d'hier et des jours à venir ;
-  - les PDV visités avec l'app ces 60 derniers jours (pas les visites importées ATOM-…) ;
   - ceux qu'il a créés.
-- La base ne lui laisse lire que ceux-là (`pdv_ids_perimetre`, `pdv_ids_tournee`). Les anciennes listes DMS des règles
+- La base ne lui laisse lire que ceux-là, plus l'historique de ses visites faites avec l'app ces 60 derniers jours
+  (`pdv_ids_perimetre`, `pdv_ids_tournee` ; pas les visites importées ATOM-…). Une visite ne fait pas entrer un PDV dans
+  « ses PDV » : elle ne fixe donc pas sa position s'il n'est pas à lui (garde-fou `20261022131000`). L'employeur du
+  profil, qui décide de cette règle, ne se change que depuis l'administration. Les anciennes listes DMS des règles
   quota et les tournées passées ne sont plus lisibles.
 - L'app 1.0.15 filtre encore sur le profil. `synchroniser_zones_atom` (cron 02 h 50) vide la zone et les quartiers du
   profil et met en territoires ceux où se trouvent ses PDV, pour qu'aucun ne soit caché. Ancien profil gardé dans
