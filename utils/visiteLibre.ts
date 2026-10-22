@@ -10,17 +10,25 @@
 // routing_pdv.objectifs d'une visite :
 //   { visite_libre: true, canal, compte, hors_liste, deja_ce_mois, hors_quota }
 //
+// Pushcarts itinérants (migration 20261022120000) : les jours avec un point de
+// visite, les pushcarts ne sont plus imposés par leur nom ; l'objectif du jour
+// porte les pushcarts « à trouver » (même forme, type 'a_trouver'), et chaque
+// pushcart visité devient une étape { a_trouver: true, canal, compte, … }.
+//
 // Aucune dépendance Nuxt : module couvert par des tests unitaires.
 import { CANAUX_ATOM } from './canalAtom'
 
-export interface ObjectifsVisiteLibre {
-  type: 'visite_libre'
+export interface ObjectifsDuJour {
+  type: 'visite_libre' | 'a_trouver'
   quotas: Record<string, number>
   total: number
   realise?: Record<string, number>
   nb_realise?: number
   nb_visites?: number
 }
+
+export type ObjectifsVisiteLibre = ObjectifsDuJour & { type: 'visite_libre' }
+export type ObjectifsATrouver = ObjectifsDuJour & { type: 'a_trouver' }
 
 export interface LigneBilan {
   canal: string
@@ -44,8 +52,14 @@ export function visiteLibre(objectifs: unknown): ObjectifsVisiteLibre | null {
   return o && typeof o === 'object' && o.type === 'visite_libre' ? o : null
 }
 
+/** Les PDV « à trouver » d'un jour avec point de visite (pushcarts), sinon null. */
+export function aTrouver(objectifs: unknown): ObjectifsATrouver | null {
+  const o = objectifs as ObjectifsATrouver | null | undefined
+  return o && typeof o === 'object' && o.type === 'a_trouver' ? o : null
+}
+
 /** Résultat par type, dans l'ordre de la grille (Boutique d'abord). */
-export function bilanVisiteLibre(o: ObjectifsVisiteLibre): LigneBilan[] {
+export function bilanVisiteLibre(o: ObjectifsDuJour): LigneBilan[] {
   const ordre = ['Boutique', ...CANAUX_ATOM.filter(c => c !== 'Boutique')] as string[]
   return Object.entries(o.quotas || {})
     .filter(([, quota]) => Number(quota) > 0)
@@ -59,7 +73,7 @@ export function bilanVisiteLibre(o: ObjectifsVisiteLibre): LigneBilan[] {
 }
 
 /** PDV comptés et objectif du jour : { fait: 4, total: 10 }. */
-export function totalVisiteLibre(o: ObjectifsVisiteLibre): { fait: number, total: number } {
+export function totalVisiteLibre(o: ObjectifsDuJour): { fait: number, total: number } {
   const lignes = bilanVisiteLibre(o)
   return {
     fait: lignes.reduce((s, l) => s + l.fait, 0),
@@ -68,24 +82,30 @@ export function totalVisiteLibre(o: ObjectifsVisiteLibre): { fait: number, total
 }
 
 /** « Boutiques 4/6 · Porridge 0/1 · … » */
-export function texteBilanVisiteLibre(o: ObjectifsVisiteLibre): string {
+export function texteBilanVisiteLibre(o: ObjectifsDuJour): string {
   return bilanVisiteLibre(o).map(l => `${l.libelle} ${l.fait}/${l.quota}`).join(' · ')
 }
 
 /** « Boutiques 6 · Porridge 1 · … » (objectif d'un jour à venir) */
-export function texteObjectifVisiteLibre(o: ObjectifsVisiteLibre): string {
+export function texteObjectifVisiteLibre(o: ObjectifsDuJour): string {
   return bilanVisiteLibre(o).map(l => `${l.libelle} ${l.quota}`).join(' · ')
 }
 
 /** Objectif atteint pour chaque type. */
-export function objectifAtteint(o: ObjectifsVisiteLibre): boolean {
+export function objectifAtteint(o: ObjectifsDuJour): boolean {
   return bilanVisiteLibre(o).every(l => l.fait >= l.quota)
 }
 
-/** Remarques sur une visite d'un jour de visite libre (badges de l'admin). */
+/** Étape ajoutée par une visite (visite libre ou pushcart trouvé), pas imposée. */
+export function etapeAjoutee(objectifs: unknown): boolean {
+  const o = objectifs as Record<string, unknown> | null | undefined
+  return !!o && (o.visite_libre === true || o.a_trouver === true)
+}
+
+/** Remarques sur une visite ajoutée à la tournée (badges de l'admin). */
 export function remarquesVisiteLibre(objectifs: unknown): string[] {
   const o = objectifs as Record<string, unknown> | null | undefined
-  if (!o || o.visite_libre !== true) return []
+  if (!o || !etapeAjoutee(o)) return []
   const out: string[] = []
   if (o.deja_ce_mois) out.push('Déjà vu ce mois-ci, ne compte pas')
   else if (o.hors_quota) out.push(o.canal ? 'Quota du type déjà atteint, ne compte pas' : 'Type hors grille, ne compte pas')

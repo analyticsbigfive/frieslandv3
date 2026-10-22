@@ -126,6 +126,21 @@ Décision de Jean Luc : « les jours sans routing - visite libre. les jours avec
 - **Ne change pas :** les jours avec un point de visite, et la position GPS fixée par la première visite d'un PDV
   (`pdv_gps_depuis_visite`, app 1.0.15).
 
+## Pushcarts itinérants (22/10/2026, migration `20261022120000`)
+
+Friesland : « les pushcarts sont itinérants, donc difficiles à géolocaliser dans une zone ». Accord du superviseur le 22/10.
+
+- **Pas de position fixe.** Un pushcart n'est jamais « repéré » (source GPS `itinerant`, jamais `terrain` ni `admin`) :
+  chaque visite assez précise met sa position à jour (historique dans `pdv_gps_historique`), et l'app 1.0.15 ne bloque
+  jamais sa visite pour la distance. Un repère posé par un admin repasse aussi en `itinerant`.
+- **Pas de pushcart imposé.** Les jours avec un point de visite, la tournée ne tire plus de pushcart par son nom (18 PDV
+  imposés du lundi au jeudi, 14 le vendredi, 9 le samedi) ; l'objectif du jour porte « Pushcart 2 » (1 le vendredi et le
+  samedi) dans `routings.objectifs` (type `a_trouver`). Tout pushcart visité ce jour-là s'ajoute à la tournée comme PDV
+  fait et compte, mêmes exceptions que la visite libre (déjà vu ce mois-ci, quota atteint) ; un pushcart hors liste ou
+  créé sur place compte.
+- **Admin** : « Pushcarts 1/2 trouvés » sous « x/y PDV faits », en orange si le jour est passé et l'objectif manqué.
+- Les jours de visite libre ne changent pas. L'app mobile ne change pas : il faut dire aux merchandisers de trouver leurs
+  pushcarts du jour (message WhatsApp).
 ## « Vos PDV » (22/10/2026, migration `20261022130000`)
 
 Décision de Jean Luc, accord de Friesland : l'app ne montre à un merchandiser Atom que **ses PDV**. Les territoires du
