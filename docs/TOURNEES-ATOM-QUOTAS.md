@@ -153,7 +153,9 @@ fichier Friesland ne collaient pas au terrain et cachaient des PDV de sa liste ;
 - La base ne lui laisse lire que ceux-là, plus l'historique de ses visites faites avec l'app ces 60 derniers jours
   (`pdv_ids_perimetre`, `pdv_ids_tournee` ; pas les visites importées ATOM-…). Une visite ne fait pas entrer un PDV dans
   « ses PDV » : elle ne fixe donc pas sa position s'il n'est pas à lui (garde-fou `20261022131000`). L'employeur du
-  profil, qui décide de cette règle, ne se change que depuis l'administration. Les anciennes listes DMS des règles
+  profil, qui décide de cette règle, ne se change que depuis l'administration. Un merchandiser ne change que l'état de
+  ses étapes (statut, heures, GPS, visite, note) et le statut de sa tournée ; le PDV, l'ordre et l'objectif d'une étape,
+  le jour et l'objectif d'une tournée sont réservés à l'administration et aux fonctions du serveur (`20261022132000`). Les anciennes listes DMS des règles
   quota et les tournées passées ne sont plus lisibles.
 - L'app 1.0.15 filtre encore sur le profil. `synchroniser_zones_atom` (cron 02 h 50) vide la zone et les quartiers du
   profil et met en territoires ceux où se trouvent ses PDV, pour qu'aucun ne soit caché. Ancien profil gardé dans
