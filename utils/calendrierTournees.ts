@@ -3,7 +3,7 @@
 // grille lundi → dimanche et couverture des jours par les règles récurrentes.
 import { joursDeRegle, dansException, dansSemainesDuMois, type RegleRecurrente } from './routingRecurrence'
 import { toIsoJour, debutDeSemaine } from './periode'
-import { visiteLibre, totalVisiteLibre, texteBilanVisiteLibre, texteObjectifVisiteLibre, objectifAtteint } from './visiteLibre'
+import { visiteLibre, aTrouver, totalVisiteLibre, texteBilanVisiteLibre, texteObjectifVisiteLibre, objectifAtteint } from './visiteLibre'
 
 export interface RegleCalendrier extends RegleRecurrente {
   label?: string | null
@@ -148,18 +148,20 @@ export function etatJourTournee(
       }
       return { etat: 'planifiee', texte: 'Visite libre', titre: `Visite libre, ${total} PDV au choix : ${texteObjectifVisiteLibre(libre)}`, progression: null, cliquable: true, regle }
     }
+    // Pushcarts à trouver : en plus des PDV imposés, dans l'infobulle.
+    const trouver = aTrouver(tournee.objectifs)
     if (date <= aujourdhui) {
       const complete = nb > 0 && faits >= nb
       return {
         etat: complete ? 'faite' : 'incomplete',
         texte: `${faits}/${nb} faits`,
-        titre: `${faits} PDV faits sur ${nb}`,
+        titre: `${faits} PDV faits sur ${nb}${trouver ? ` · ${texteBilanVisiteLibre(trouver)}` : ''}`,
         progression: nb ? Math.round((faits / nb) * 100) : 0,
         cliquable: true,
         regle,
       }
     }
-    return { etat: 'planifiee', texte: `${nb} PDV`, titre: `Tournée planifiée : ${nb} PDV`, progression: null, cliquable: true, regle }
+    return { etat: 'planifiee', texte: `${nb} PDV`, titre: `Tournée planifiée : ${nb} PDV${trouver ? `, plus ${texteObjectifVisiteLibre(trouver)} à trouver` : ''}`, progression: null, cliquable: true, regle }
   }
   if (couverture.regles.length) {
     return date >= aujourdhui

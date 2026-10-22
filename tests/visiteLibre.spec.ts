@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  visiteLibre, bilanVisiteLibre, totalVisiteLibre, texteBilanVisiteLibre, texteObjectifVisiteLibre,
+  visiteLibre, aTrouver, etapeAjoutee, bilanVisiteLibre, totalVisiteLibre, texteBilanVisiteLibre, texteObjectifVisiteLibre,
   objectifAtteint, remarquesVisiteLibre, type ObjectifsVisiteLibre,
 } from '../utils/visiteLibre'
 
@@ -62,5 +62,24 @@ describe('remarquesVisiteLibre', () => {
     expect(remarquesVisiteLibre({ visite_libre: true, canal: null, hors_quota: true })).toEqual(['Type hors grille, ne compte pas'])
     expect(remarquesVisiteLibre({ visite_libre: true, canal: 'Boutique', deja_ce_mois: true, hors_quota: true, hors_liste: true }))
       .toEqual(['Déjà vu ce mois-ci, ne compte pas', 'Hors de sa liste'])
+  })
+})
+
+describe('pushcarts à trouver', () => {
+  const LUNDI = { type: 'a_trouver', quotas: { Pushcart: 2 }, total: 2, realise: { Pushcart: 1 } }
+
+  it('objectif d\'un jour avec point de visite, distinct de la visite libre', () => {
+    expect(aTrouver(LUNDI)).toBe(LUNDI)
+    expect(visiteLibre(LUNDI)).toBeNull()
+    expect(aTrouver(SAMEDI)).toBeNull()
+    expect(texteBilanVisiteLibre(aTrouver(LUNDI)!)).toBe('Pushcarts 1/2')
+    expect(objectifAtteint(aTrouver(LUNDI)!)).toBe(false)
+  })
+
+  it('étape ajoutée par une visite : remarques comme la visite libre', () => {
+    expect(etapeAjoutee({ a_trouver: true, canal: 'Pushcart', compte: true })).toBe(true)
+    expect(etapeAjoutee({ releve_stock: true })).toBe(false)
+    expect(remarquesVisiteLibre({ a_trouver: true, canal: 'Pushcart', hors_quota: true, hors_liste: true }))
+      .toEqual(['Quota du type déjà atteint, ne compte pas', 'Hors de sa liste'])
   })
 })
