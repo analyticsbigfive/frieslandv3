@@ -124,7 +124,7 @@ export const useRoutingStore = defineStore('routing', () => {
 
   const PAGE_ETAPES = 50
   const SELECT_ETAPE = `*,
-    pdv:pdv_id(pdv_id, nom_pdv, zone, quartier, geolocation_lat, geolocation_lng, rayon_geofence, canal, sous_categorie_pdv, adressage, image_url)`
+    pdv:pdv_id(pdv_id, nom_pdv, zone, quartier, geolocation_lat, geolocation_lng, rayon_geofence, gps_source, gps_maj_le, canal, sous_categorie_pdv, adressage, image_url)`
 
   // clos = fait ou passé (tournée terminée quand tout est clos) ;
   // entamés = en cours ou fait (tournée « en cours » dès le premier).

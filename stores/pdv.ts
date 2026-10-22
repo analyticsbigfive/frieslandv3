@@ -9,7 +9,7 @@ import type { PDV, Profile, ZoneSecteur } from '~/types'
 // Colonnes nécessaires aux listes (admin table + mobile).
 // Évite select('*') qui tire 24 colonnes inutiles (routing, dates…).
 // mdm = code client DMS, ajoute_par = origine (import DMS) : lus par l'admin.
-export const LIST_COLUMNS = 'id,pdv_id,nom_pdv,canal,categorie_pdv,sous_categorie_pdv,autre_sous_categorie,zone,quartier,region,territory_code,area_code,distributor_name,adressage,image_url,geolocation_lat,geolocation_lng,rayon_geofence,mdm,ajoute_par'
+export const LIST_COLUMNS = 'id,pdv_id,nom_pdv,canal,categorie_pdv,sous_categorie_pdv,autre_sous_categorie,zone,quartier,region,territory_code,area_code,distributor_name,adressage,image_url,geolocation_lat,geolocation_lng,rayon_geofence,gps_source,gps_maj_le,mdm,ajoute_par'
 
 // Valeur sentinelle du filtre zone : PDV dont la zone n'est pas renseignée.
 export const SANS_ZONE = '__SANS_ZONE__'

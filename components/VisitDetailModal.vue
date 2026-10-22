@@ -465,15 +465,29 @@ const generalInfo = computed<InfoVisite[]>(() => [
   ...(ssfVisite.value ? [{ label: 'Vendeur du distributeur (SSF)', value: ssfVisite.value }] : []),
   {
     label: 'Dans le rayon de visite',
-    // 1.0.12 : précision insuffisante à l'enregistrement (non bloquant).
-    value: props.visite?.geofence_validated
-      ? 'Oui'
-      : props.visite?.data?.gps?.motif === 'precision'
-        ? `Non, position GPS imprécise (${props.visite.data.gps.precision_m ?? '?'} m)`
-        : 'Non',
+    value: texteRayon.value,
     statut: props.visite?.geofence_validated ? 'ok' : 'alerte',
   },
 ])
+
+// 1.0.12 : précision insuffisante (non bloquant). 1.0.15 : repère du PDV
+// (première visite ou position admin) et distance de la tablette à ce repère.
+const texteRayon = computed(() => {
+  const gps = props.visite?.data?.gps
+  const ok = !!props.visite?.geofence_validated
+  if (gps?.repere === 'premiere_visite') {
+    const ecart = gps.distance_m != null ? `, à ${gps.distance_m} m de l'ancienne position` : ''
+    return gps.motif === 'precision'
+      ? `1re visite, position GPS imprécise (${gps.precision_m ?? '?'} m) : PDV non repéré`
+      : `1re visite : position du PDV fixée ici${ecart}`
+  }
+  if (gps?.repere) {
+    const repere = gps.repere === 'admin' ? 'de la position admin' : 'du repère'
+    return `${ok ? 'Oui' : 'Non'}, à ${gps.distance_m ?? '?'} m ${repere} (précision ${gps.precision_m ?? '?'} m)`
+  }
+  if (ok) return 'Oui'
+  return gps?.motif === 'precision' ? `Non, position GPS imprécise (${gps.precision_m ?? '?'} m)` : 'Non'
+})
 
 // Niveau Perfect Store en clair (« VIP PERFECT STORE » → « VIP Perfect Store »).
 const niveau = computed(() => {

@@ -51,17 +51,22 @@ export function useRouting() {
   }
 
   /**
-   * Validate geofencing and start a routing PDV mission.
-   * Returns true if started successfully, false if blocked.
+   * Démarre l'étape d'un PDV de la tournée. Retourne false si bloqué.
+   * Règle du 22/10/2026 : tant que le PDV n'a pas de repère (première visite),
+   * pas de contrôle de distance ; la visite fixera sa position. Ensuite la
+   * tablette doit être dans le rayon du repère, sans « démarrer quand même ».
    */
   async function startMission(routingPdv: RoutingPDV): Promise<boolean> {
-    if (!routingPdv.pdv?.geolocation_lat || !routingPdv.pdv?.geolocation_lng) {
-      // PDV sans GPS : pas de géofence possible. On relève la position du
-      // merchandiser, qui devient celle du PDV si elle est assez précise.
+    const repere = repereDuPdv(routingPdv.pdv)
+    if (!repere) {
+      // Première visite : on relève la position du merchandiser. Un PDV sans
+      // GPS la prend tout de suite ; sinon la visite enregistrée la fixera.
       isValidating.value = true
+      validationError.value = null
       try {
         const position = await grabPosition()
-        if (await geolocaliserPdv(routingPdv.pdv_id, position) && routingPdv.pdv && position) {
+        if (routingPdv.pdv && !routingPdv.pdv.geolocation_lat
+          && await geolocaliserPdv(routingPdv.pdv_id, position) && position) {
           routingPdv.pdv.geolocation_lat = position.lat
           routingPdv.pdv.geolocation_lng = position.lng
         }
@@ -79,12 +84,9 @@ export function useRouting() {
     validationError.value = null
 
     try {
-      const radius = routingPdv.pdv.rayon_geofence || parametres.value.geofence_rayon_m
-      const result = await validateGeofence(
-        routingPdv.pdv.geolocation_lat,
-        routingPdv.pdv.geolocation_lng,
-        radius
-      )
+      const pdv = routingPdv.pdv!
+      const radius = pdv.rayon_geofence || parametres.value.geofence_rayon_m
+      const result = await validateGeofence(pdv.geolocation_lat, pdv.geolocation_lng, radius)
 
       if (result.isWithinRange) {
         await routingStore.updateRoutingPDVStatus(routingPdv.id, 'in_progress', {
@@ -94,26 +96,16 @@ export function useRouting() {
           precision_gps: result.accuracy,
         })
         return true
-      } else {
-        validationError.value =
-          `Vous êtes à ${result.distance}m du PDV (max: ${radius}m). Rapprochez-vous pour démarrer la mission.`
-        toast.add({
-          title: 'Hors zone',
-          description: validationError.value,
-          color: 'red',
-          icon: 'i-heroicons-map-pin',
-        })
-        return false
       }
-    } catch (err: any) {
-      validationError.value = err.message || 'Erreur de géolocalisation'
-      toast.add({
-        title: 'Erreur GPS',
-        description: validationError.value!,
-        color: 'red',
-      })
+      validationError.value
+        = `Vous êtes à ${result.distance} m de ce PDV, ${texteRepere(pdv)} (maximum ${radius} m). Rapprochez-vous puis réessayez.`
       return false
-    } finally {
+    }
+    catch (err: any) {
+      validationError.value = err.message || 'Erreur de géolocalisation'
+      return false
+    }
+    finally {
       isValidating.value = false
     }
   }

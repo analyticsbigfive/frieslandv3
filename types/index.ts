@@ -3,6 +3,7 @@
 // ============================================================
 
 import { catalogueProduits, getSkus } from '../utils/products'
+import type { GpsVisite } from '../utils/repereGps'
 
 // ---- Enums & Constantes ----
 // agence : responsable du routing d'une agence (profiles.employeur), limité à ses merchandisers.
@@ -82,7 +83,7 @@ export interface PDV {
   objectif_perfect_store?: 'FLAGSHIP' | 'VIP' | 'CORE' | 'BASIC'
   // Traçabilité GPS (migration 20260930091000). Sans coordonnées :
   // dms-absent / dms-depot disent pourquoi.
-  gps_source?: 'dms' | 'dms-absent' | 'dms-depot' | 'terrain' | 'admin' | null
+  gps_source?: 'dms' | 'dms-absent' | 'dms-depot' | 'atom' | 'atom-absent' | 'atom-fichier' | 'terrain' | 'admin' | null
   gps_precision_m?: number | null
   gps_maj_par?: string | null
   gps_maj_le?: string | null
@@ -454,7 +455,9 @@ export interface VisiteData {
    * quand la précision obtenue dépassait la précision exigée (Paramètres
    * terrain) ; la visite n'est pas bloquée, l'admin le voit.
    */
-  gps?: { motif: 'precision', precision_m?: number | null, precision_exigee_m?: number | null }
+  // 1.0.12 : précision insuffisante. 1.0.15 : repère du PDV (première visite
+  // ou position admin) et distance de la tablette à ce repère.
+  gps?: GpsVisite
 }
 
 // ---- Field coaching (lot 4, 1.0.4) ----
