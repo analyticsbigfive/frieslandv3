@@ -456,15 +456,15 @@
         </div>
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Hors zone</h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">
-          Vous êtes à {{ geofenceDistance }}m du PDV.
+          Vous êtes à {{ geofenceDistance }} m de ce PDV, {{ geofenceRepere }}.
         </p>
         <p class="text-sm text-gray-400 mb-6">
-          Distance maximum autorisée : {{ geofenceRadius }}m
+          Distance maximum : {{ geofenceRayon }} m. Rapprochez-vous puis réessayez.
         </p>
         <div class="flex gap-3 justify-center">
           <UButton variant="ghost" @click="showGeofenceAlert = false">Annuler</UButton>
-          <UButton class="bg-fc-red" @click="showGeofenceAlert = false; forceSubmit()">
-            Soumettre quand même
+          <UButton class="bg-fc-red" icon="i-heroicons-arrow-path" @click="showGeofenceAlert = false; persistVisit()">
+            Réessayer
           </UButton>
         </div>
       </div>
@@ -541,7 +541,7 @@ const user = useSupabaseUser()
 const authStore = useAuthStore()
 const pdvStore = usePDVStore()
 const routingStore = useRoutingStore()
-const { validateGeofence, grabPosition, haversineDistance, error: geolocationError } = useGeofencing()
+const { grabPosition, haversineDistance, error: geolocationError } = useGeofencing()
 const { hasGps, ensureProbed: probeLocationHardware } = useLocationHardware()
 const { completeMission, geolocaliserPdv } = useRouting()
 const { addToQueue, isOnline } = useOfflineSync()
@@ -550,7 +550,6 @@ const toast = useToast()
 const router = useRouter()
 const route = useRoute()
 const { parametres } = useParametresApp()
-const geofenceRadius = computed(() => parametres.value.geofence_rayon_m)
 
 // Routing context (pre-selected PDV from routing page)
 const routingPdvId = computed(() => route.query.routing_pdv_id as string || '')
@@ -560,6 +559,8 @@ const currentTab = ref(0)
 const saving = ref(false)
 const showGeofenceAlert = ref(false)
 const geofenceDistance = ref(0)
+const geofenceRayon = ref(0)
+const geofenceRepere = ref('')
 const showCreatePDV = ref(false)
 const showCancelConfirm = ref(false)
 const formError = ref('')
@@ -1222,40 +1223,51 @@ async function persistVisit() {
     if (!position && isOnline.value && hasGps.value) throw new Error(geolocationError.value || 'Position GPS indisponible. Activez la localisation puis réessayez.')
 
     // Phase 2: Check geofence (30→50%)
+    // Règle du 22/10/2026 : la première visite d'un PDV passe sans contrôle et
+    // fixe sa position (déclencheur en base) ; ensuite la tablette doit être
+    // dans le rayon de ce repère, sans « soumettre quand même ». La distance
+    // est calculée sur la position déjà relevée (pas de second relevé GPS).
     animateProgress(50, 400)
     const selectedPDV = pdvList.value.find(p => p.pdv_id === form.pdv_id)
+    const repere = repereDuPdv(selectedPDV)
     let geofenceOk = false
     let gps: VisiteData['gps'] | undefined
 
-    if (selectedPDV?.geolocation_lat && position) {
-      try {
-        const result = await validateGeofence(selectedPDV.geolocation_lat, selectedPDV.geolocation_lng)
-        geofenceOk = result.isWithinRange
-        if (!geofenceOk) {
-          geofenceDistance.value = result.distance
-          showSaveOverlay.value = false
-          showGeofenceAlert.value = true
-          saving.value = false
-          return
-        }
+    if (position) {
+      const distance = selectedPDV?.geolocation_lat && selectedPDV?.geolocation_lng
+        ? Math.round(haversineDistance(position.lat, position.lng, selectedPDV.geolocation_lat, selectedPDV.geolocation_lng))
+        : null
+      const decision = decisionGpsVisite({
+        repere,
+        distance_m: distance,
+        precision_m: Math.round(position.accuracy),
+        rayon_m: selectedPDV?.rayon_geofence || parametres.value.geofence_rayon_m,
+        seuil_m: parametres.value.gps_precision_min_m,
+        precision_pdv_max_m: parametres.value.gps_precision_pdv_max_m,
+      })
+      if (decision.action === 'imprecis') {
+        throw new Error(`Précision GPS insuffisante (${decision.precision_m} m, ${decision.seuil_m} m demandés) pour vérifier que vous êtes au PDV. Sortez à découvert ou attendez quelques secondes, puis réessayez.`)
       }
-      catch (err: any) {
-        geofenceOk = false
-        // Précision insuffisante : la visite part sans validation GPS, sans
-        // bloquer le terrain, mais l'agent est prévenu et l'admin le voit.
-        if (err?.precisionInsuffisante) {
-          gps = { motif: 'precision', precision_m: err.precision ?? null, precision_exigee_m: parametres.value.gps_precision_min_m ?? null }
-        }
+      if (decision.action === 'trop_loin') {
+        geofenceDistance.value = decision.distance_m
+        geofenceRayon.value = decision.rayon_m
+        geofenceRepere.value = texteRepere(selectedPDV)
+        showSaveOverlay.value = false
+        showGeofenceAlert.value = true
+        saving.value = false
+        return
       }
+      geofenceOk = decision.geofenceOk
+      gps = decision.gps
     }
 
     // Phase 3: Submit (50→100%)
     animateProgress(90, 600)
     await submitVisite(position, geofenceOk, gps)
-    if (gps) {
+    if (gps?.motif === 'precision') {
       toast.add({
         title: 'Visite enregistrée sans validation GPS',
-        description: `Précision obtenue : ${gps.precision_m ?? '?'} m (exigée : ${gps.precision_exigee_m ?? '?'} m). Dans l'admin, « GPS validé » indique Non (précision).`,
+        description: `Précision obtenue : ${gps.precision_m ?? '?'} m (${gps.precision_exigee_m ?? '?'} m demandés) : la position de ce PDV sera prise à la prochaine visite.`,
         color: 'amber',
         icon: 'i-heroicons-exclamation-triangle',
         timeout: 9000,
@@ -1270,32 +1282,6 @@ async function persistVisit() {
       }
     }
 
-    saveProgress.value = 100
-    saveStatus.value = 'success'
-  }
-  catch (err: any) {
-    saveStatus.value = 'error'
-    toast.add({ title: 'Erreur', description: err.message, color: 'red' })
-  }
-  finally {
-    saving.value = false
-  }
-}
-
-async function forceSubmit() {
-  saving.value = true
-  showSaveOverlay.value = true
-  saveStatus.value = 'saving'
-  saveProgress.value = 0
-
-  try {
-    animateProgress(50, 600)
-    const position = await grabPosition()
-    // Sans puce GPS (tablettes Wi-Fi), aucune position n'est atteignable :
-    // la visite s'enregistre sans coordonnées plutôt que d'être refusée.
-    if (!position && isOnline.value && hasGps.value) throw new Error(geolocationError.value || 'Position GPS indisponible. Activez la localisation puis réessayez.')
-    animateProgress(90, 600)
-    await submitVisite(position, false)
     saveProgress.value = 100
     saveStatus.value = 'success'
   }

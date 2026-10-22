@@ -187,8 +187,16 @@
           <UIcon name="i-heroicons-map-pin" class="w-8 h-8 text-red-500" />
         </div>
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Hors zone</h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ geofenceAlertMessage }}</p>
-        <UButton variant="ghost" @click="showGeofenceAlert = false">Compris</UButton>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">{{ geofenceAlertMessage }}</p>
+        <div class="flex justify-center gap-3">
+          <UButton variant="ghost" @click="showGeofenceAlert = false">Fermer</UButton>
+          <UButton
+            v-if="geofenceRp" class="bg-fc-red hover:bg-fc-red/90" icon="i-heroicons-arrow-path"
+            :loading="isValidating" @click="reessayerDemarrage"
+          >
+            Réessayer
+          </UButton>
+        </div>
       </div>
     </UModal>
 
@@ -294,15 +302,26 @@ function formatTime(ts: string) {
   return new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 }
 
+// PDV déjà repéré (première visite faite ou position admin) : pas de
+// « démarrer quand même », seulement réessayer une fois sur place.
+const geofenceRp = ref<RoutingPDV | null>(null)
 async function handleStartMission(rp: RoutingPDV) {
   activeRpId.value = rp.id
   const ok = await startMission(rp)
 
   if (!ok && validationError.value) {
+    geofenceRp.value = rp
     geofenceAlertMessage.value = validationError.value
     showGeofenceAlert.value = true
   }
+  else if (ok) {
+    showGeofenceAlert.value = false
+    geofenceRp.value = null
+  }
   activeRpId.value = ''
+}
+function reessayerDemarrage() {
+  if (geofenceRp.value) void handleStartMission(geofenceRp.value)
 }
 
 function handleSkip(rp: RoutingPDV) {
