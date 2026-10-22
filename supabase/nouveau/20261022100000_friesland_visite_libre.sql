@@ -38,6 +38,13 @@
 -- visites importées ATOM-… ignorées, seule la visite de l'agent connecté
 -- (auth.uid() = user_id) remplit sa tournée.
 --
+-- Appliquée en production le 22/10/2026 via le MCP Supabase, puis tournées à
+-- venir refaites (fin du fichier) : 16 tournées pas commencées remplacées par
+-- un jour de visite libre (Deheo le 24/10 ; les 9 merchandisers le 29/10 ;
+-- Gui, Guihi et Yao les 30 et 31/10) et 16 autres jours des 30 et 31/10 créés
+-- directement en visite libre. Fonction Edge notifier-validation-tournee
+-- redéployée (version 2).
+--
 -- Retour arrière :
 --   select cron.unschedule('controle_visites_libres');
 --   drop trigger trg_visite_libre on public.visites;
