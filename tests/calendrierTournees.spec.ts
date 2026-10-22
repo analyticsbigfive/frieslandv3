@@ -104,4 +104,17 @@ describe('etatJourTournee', () => {
     expect(etatJourTournee(null, { regles: [], suspendues: [{ regle, motif: 'Congé' }] }, '2026-10-14', auj)).toMatchObject({ etat: 'suspendue', texte: 'Congé', cliquable: false })
     expect(etatJourTournee(null, libre, '2026-10-14', auj)).toMatchObject({ etat: 'vide', cliquable: false, regle: null })
   })
+
+  it('jour de visite libre : objectif par type de boutique', async () => {
+    const { etatJourTournee } = await import('../utils/calendrierTournees')
+    const objectifs = { type: 'visite_libre', quotas: { Boutique: 6, Porridge: 1 }, total: 7, realise: { Boutique: 4 } }
+    expect(etatJourTournee({ nb_pdv: 5, nb_faits: 5, objectifs }, couvert, auj, auj)).toMatchObject({
+      etat: 'incomplete', texte: 'Libre 4/7', titre: 'Visite libre : Boutiques 4/6 · Porridge 0/1', progression: 57,
+    })
+    expect(etatJourTournee({ nb_pdv: 7, nb_faits: 7, objectifs: { ...objectifs, realise: { Boutique: 6, Porridge: 1 } } }, couvert, '2026-10-03', auj))
+      .toMatchObject({ etat: 'faite', texte: 'Libre 7/7' })
+    expect(etatJourTournee({ nb_pdv: 0, nb_faits: 0, objectifs }, couvert, '2026-10-10', auj)).toMatchObject({
+      etat: 'planifiee', texte: 'Visite libre', titre: 'Visite libre, 7 PDV au choix : Boutiques 6 · Porridge 1',
+    })
+  })
 })

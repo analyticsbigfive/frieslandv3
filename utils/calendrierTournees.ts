@@ -3,6 +3,7 @@
 // grille lundi → dimanche et couverture des jours par les règles récurrentes.
 import { joursDeRegle, dansException, dansSemainesDuMois, type RegleRecurrente } from './routingRecurrence'
 import { toIsoJour, debutDeSemaine } from './periode'
+import { visiteLibre, totalVisiteLibre, texteBilanVisiteLibre, texteObjectifVisiteLibre, objectifAtteint } from './visiteLibre'
 
 export interface RegleCalendrier extends RegleRecurrente {
   label?: string | null
@@ -98,6 +99,8 @@ export interface TourneeDuJour {
   status?: string | null
   nb_pdv?: number | null
   nb_faits?: number | null
+  /** Objectif d'un jour de visite libre (routings.objectifs), sinon null. */
+  objectifs?: unknown
 }
 
 export interface EtatJourTournee {
@@ -128,6 +131,22 @@ export function etatJourTournee(
     const faits = tournee.nb_faits ?? 0
     if (tournee.status === 'cancelled') {
       return { etat: 'annulee', texte: `${nb} PDV`, titre: 'Tournée annulée', progression: null, cliquable: true, regle }
+    }
+    // Jour de visite libre : le merchandiser choisit ses PDV, on suit l'objectif par type.
+    const libre = visiteLibre(tournee.objectifs)
+    if (libre) {
+      const { fait, total } = totalVisiteLibre(libre)
+      if (date <= aujourdhui) {
+        return {
+          etat: objectifAtteint(libre) ? 'faite' : 'incomplete',
+          texte: `Libre ${fait}/${total}`,
+          titre: `Visite libre : ${texteBilanVisiteLibre(libre)}`,
+          progression: total ? Math.round((fait / total) * 100) : 0,
+          cliquable: true,
+          regle,
+        }
+      }
+      return { etat: 'planifiee', texte: 'Visite libre', titre: `Visite libre, ${total} PDV au choix : ${texteObjectifVisiteLibre(libre)}`, progression: null, cliquable: true, regle }
     }
     if (date <= aujourdhui) {
       const complete = nb > 0 && faits >= nb

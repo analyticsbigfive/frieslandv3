@@ -112,6 +112,39 @@ export default defineEventHandler(async (event) => {
     }))
     .sort((a, b) => a.jours[0].jour - b.jours[0].jour || a.jours[0].semaine - b.jours[0].semaine)
   const jours = (lignes.data || []).map((l: any) => ({ id: l.id, semaine: l.semaine_du_mois, jour: l.jour_semaine, pointVisite: l.point_visite || '—' }))
+  // Jours sans point de visite (lundi → samedi, semaines 1 à 4, puis les jours
+  // de la 5e semaine du mois) : visite libre, le merchandiser choisit ses PDV
+  // (migration 20261022100000). Seulement pour un merchandiser qui a un routing.
+  const prevus = new Set((lignes.data || []).map((l: any) => `${l.semaine_du_mois}-${l.jour_semaine}`))
+  const joursLibres: { semaine: number, jour: number, nomJour: string, date?: string, objectif: string }[] = []
+  if (prevus.size) {
+    // Objectif du jour : quotas par type de boutique (« 10 PDV : 6 boutiques, 1 superette… »).
+    const quotas = await service.from('routing_quota_canal').select('canal, jour_semaine, quota').gt('quota', 0)
+    if (quotas.error) throw apiError(500, quotas.error.message)
+    const objectif = (jour: number) => {
+      const q = (quotas.data || []).filter((x: any) => x.jour_semaine === jour)
+        .sort((a: any, b: any) => (b.canal === 'Boutique' ? 1 : 0) - (a.canal === 'Boutique' ? 1 : 0) || b.quota - a.quota)
+      const total = q.reduce((t: number, x: any) => t + x.quota, 0)
+      const nom = (canal: string, n: number) => canal === 'Aboki & Kiosque' ? 'aboki ou kiosque'
+        : canal === 'Porridge' ? 'porridge' : `${canal.toLowerCase()}${n > 1 ? 's' : ''}`
+      return total ? `${total} PDV : ${q.map((x: any) => `${x.quota} ${nom(x.canal, x.quota)}`).join(', ')}` : ''
+    }
+    for (let semaine = 1; semaine <= 4; semaine++) {
+      for (let jour = 1; jour <= 6; jour++) {
+        if (!prevus.has(`${semaine}-${jour}`)) joursLibres.push({ semaine, jour, nomJour: JOURS[jour]!, objectif: objectif(jour) })
+      }
+    }
+    const [a, m] = String(v.campagne.mois || '').split('-').map(Number)
+    if (a && m) {
+      for (let j = 29; j <= new Date(Date.UTC(a, m, 0)).getUTCDate(); j++) {
+        const d = new Date(Date.UTC(a, m - 1, j))
+        const jour = d.getUTCDay()
+        if (jour >= 1 && jour <= 6 && !prevus.has(`5-${jour}`)) {
+          joursLibres.push({ semaine: 5, jour, nomJour: JOURS[jour]!, date: d.toISOString().slice(0, 10), objectif: objectif(jour) })
+        }
+      }
+    }
+  }
 
   const p = profil.data || {} as any
   const territoiresActuels = uniques([p.zone_assignee, ...(p.territoires_assignes || [])])
@@ -135,6 +168,7 @@ export default defineEventHandler(async (event) => {
     remarque: v.remarque || '',
     zonesRemarque: merch.data?.zones_remarque || '',
     jours,
+    joursLibres,
     quartiers: listeQuartiers,
     zones: {
       secteursAtom: uniques((lignes.data || []).map((l: any) => l.secteur)),

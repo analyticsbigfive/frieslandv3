@@ -3,6 +3,7 @@
 // ============================================================
 
 import { catalogueProduits, getSkus } from '../utils/products'
+import type { ObjectifsVisiteLibre } from '../utils/visiteLibre'
 import type { GpsVisite } from '../utils/repereGps'
 
 // ---- Enums & Constantes ----
@@ -122,6 +123,13 @@ export interface RoutingObjectives {
   merchandising?: boolean
   prospection?: boolean
   custom?: string
+  // Visite d'un jour de visite libre (Atom), écrite par la base : voir utils/visiteLibre.ts.
+  visite_libre?: boolean
+  canal?: string | null
+  compte?: boolean
+  hors_liste?: boolean
+  deja_ce_mois?: boolean
+  hors_quota?: boolean
 }
 
 export interface RoutingPDV {
@@ -154,6 +162,8 @@ export interface Routing {
   created_by?: string
   notes?: string
   status: RoutingStatus
+  /** Jour de visite libre (Atom) : objectif par type de boutique, voir utils/visiteLibre.ts. */
+  objectifs?: ObjectifsVisiteLibre | null
   created_at: string
   updated_at: string
   // Joined

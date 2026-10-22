@@ -230,7 +230,13 @@
                   <UBadge :color="statusColor(routing.status)" variant="soft" size="sm">
                     {{ statusLabel(routing.status) }}
                   </UBadge>
-                  <span class="text-sm font-medium tabular-nums text-slate-700 dark:text-slate-200">
+                  <span v-if="visiteLibre(routing.objectifs)" class="text-right text-sm tabular-nums text-slate-700 dark:text-slate-200">
+                    <span class="font-medium">Visite libre : {{ totalVisiteLibre(visiteLibre(routing.objectifs)!).fait }}/{{ totalVisiteLibre(visiteLibre(routing.objectifs)!).total }} PDV</span>
+                    <span class="block text-xs" :class="routing.date_routing < aujourdhui && !objectifAtteint(visiteLibre(routing.objectifs)!) ? 'text-amber-700 dark:text-amber-300' : 'text-slate-500 dark:text-slate-400'">
+                      {{ texteBilanVisiteLibre(visiteLibre(routing.objectifs)!) }}
+                    </span>
+                  </span>
+                  <span v-else class="text-sm font-medium tabular-nums text-slate-700 dark:text-slate-200">
                     {{ routing.nb_faits ?? completedPdvCount(routing) }}/{{ routing.nb_pdv ?? routing.routing_pdv?.length ?? 0 }} PDV faits
                   </span>
                   <UButton size="xs" variant="ghost" icon="i-heroicons-list-bullet" @click="ouvrirTournee(routing, p.user)">
@@ -1114,7 +1120,9 @@
       :model-value="jourModal.ouvert"
       :title="`${jourLong(jourModal.date || aujourdhui)} — ${nomPersonne(jourModal.user)}`"
       :description="jourModal.routing
-        ? `Tournée ${statusLabel(jourModal.routing.status).toLowerCase()} · ${jourModal.routing.nb_pdv ?? jourModal.etapes.length} PDV. Une seule tournée par jour réunit toutes les règles de la personne.`
+        ? (visiteLibre(jourModal.routing.objectifs)
+          ? `Visite libre : pas de point de visite ce jour-là, le merchandiser choisit ses PDV. Objectif : ${texteObjectifVisiteLibre(visiteLibre(jourModal.routing.objectifs)!)}.`
+          : `Tournée ${statusLabel(jourModal.routing.status).toLowerCase()} · ${jourModal.routing.nb_pdv ?? jourModal.etapes.length} PDV. Une seule tournée par jour réunit toutes les règles de la personne.`)
         : 'Cette journée n\'est pas encore générée.'"
       icon="i-heroicons-calendar-days"
       width="sm:max-w-3xl"
@@ -1123,7 +1131,11 @@
     >
       <template v-if="jourModal.routing">
         <div class="flex flex-wrap items-center gap-3">
-          <p class="rounded-md bg-emerald-50 px-3 py-2 text-sm tabular-nums text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200">
+          <p v-if="visiteLibre(jourModal.routing.objectifs)" class="rounded-md px-3 py-2 text-sm tabular-nums" :class="objectifAtteint(visiteLibre(jourModal.routing.objectifs)!) ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200' : 'bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-200'">
+            Visite libre : <strong>{{ totalVisiteLibre(visiteLibre(jourModal.routing.objectifs)!).fait }}</strong> / {{ totalVisiteLibre(visiteLibre(jourModal.routing.objectifs)!).total }} PDV
+            <span class="block text-xs">{{ texteBilanVisiteLibre(visiteLibre(jourModal.routing.objectifs)!) }}</span>
+          </p>
+          <p v-else class="rounded-md bg-emerald-50 px-3 py-2 text-sm tabular-nums text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200">
             <strong>{{ nbFaitsJour }}</strong> / {{ jourModal.etapes.length }} PDV faits
           </p>
           <div class="ml-auto inline-flex rounded-md border border-slate-300 bg-white p-0.5 dark:border-slate-600 dark:bg-slate-800" role="radiogroup" aria-label="Points de vente affichés">
@@ -1164,8 +1176,14 @@
               </p>
             </div>
             <div class="flex flex-wrap items-center justify-end gap-1.5">
-              <template v-for="(val, key) in rp.objectifs" :key="key">
-                <UBadge v-if="val" variant="soft" size="xs" color="gray" class="hidden sm:inline-flex">{{ objectifLabel(key as string) }}</UBadge>
+              <template v-if="rp.objectifs?.visite_libre">
+                <UBadge v-if="rp.objectifs.canal" variant="soft" size="xs" color="gray" class="hidden sm:inline-flex">{{ rp.objectifs.canal }}</UBadge>
+                <UBadge v-for="r in remarquesVisiteLibre(rp.objectifs)" :key="r" variant="soft" size="xs" color="amber">{{ r }}</UBadge>
+              </template>
+              <template v-else>
+                <template v-for="(val, key) in rp.objectifs" :key="key">
+                  <UBadge v-if="val" variant="soft" size="xs" color="gray" class="hidden sm:inline-flex">{{ objectifLabel(key as string) }}</UBadge>
+                </template>
               </template>
               <span v-if="rp.geofence_validated" class="inline-flex items-center text-emerald-700 dark:text-emerald-300" title="Position GPS validée sur place">
                 <UIcon name="i-heroicons-map-pin-solid" class="h-4 w-4" aria-hidden="true" />
@@ -1306,6 +1324,7 @@ import { fetchAllRows } from '~/utils/fetchAll'
 import { JOURS_SEMAINE, joursDeRegle, libelleJours, datesDeRegle } from '~/utils/routingRecurrence'
 import { messageUtilisateur } from '~/utils/supabaseErrors'
 import { compte, pluriel } from '~/utils/pluriel'
+import { visiteLibre, totalVisiteLibre, texteBilanVisiteLibre, texteObjectifVisiteLibre, objectifAtteint, remarquesVisiteLibre } from '~/utils/visiteLibre'
 
 // Écran de PLANIFICATION : création et édition de routings, de templates et
 // d'exceptions. Admin et superviseur modifient ; agence et commercial
@@ -2150,6 +2169,11 @@ function etatJour(userId: string, d: string) {
   if (!parJour) return '…'
   const r = parJour.get(d)
   if (!r) return d < aujourdhui ? 'aucune tournée' : 'à générer'
+  const libre = visiteLibre(r.objectifs)
+  if (libre) {
+    const { fait, total } = totalVisiteLibre(libre)
+    return d <= aujourdhui ? `libre ${fait}/${total}` : 'visite libre'
+  }
   const nb = r.nb_pdv ?? 0
   return d <= aujourdhui ? `${r.nb_faits ?? 0}/${nb} faits` : `${nb} PDV`
 }
@@ -2158,7 +2182,8 @@ function classeJour(userId: string, d: string) {
   const r = tourneesParJour.value.get(userId)?.get(d)
   const base = d === aujourdhui ? 'ring-2 ring-fc-red/40 ' : ''
   if (!r) return `${base}border-dashed border-slate-300 text-slate-600 dark:border-slate-600 dark:text-slate-300`
-  if (d < aujourdhui && (r.nb_faits ?? 0) < (r.nb_pdv ?? 0)) {
+  const libre = visiteLibre(r.objectifs)
+  if (d < aujourdhui && (libre ? !objectifAtteint(libre) : (r.nb_faits ?? 0) < (r.nb_pdv ?? 0))) {
     return `${base}border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200`
   }
   return `${base}border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200`

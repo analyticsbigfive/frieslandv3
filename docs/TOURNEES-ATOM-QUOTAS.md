@@ -99,3 +99,29 @@ pèse le plus. Tout est marqué `a_confirmer = true`. Résultat au 06/10 : 49 so
 - **Pas encore saisi dans l'app** : compteurs visibilité / pose / affiche / branding, cartons, tâches
   accomplies. `data.atom{…}` reste le format de l'import. Le distributeur est déduit du PDV par trigger si
   absent.
+
+## Visite libre (22/10/2026, migration `20261022100000`)
+
+Décision de Jean Luc : « les jours sans routing - visite libre. les jours avec routing on suit la logique de l'app ».
+
+- **Quel jour ?** Un jour du lundi au samedi où un merchandiser Atom qui a un routing mensuel n'a **pas de point de
+  visite** : le samedi de la semaine 4 de Deheo Wilfried, les jours de la 5e semaine (29, 30, 31 octobre), tout
+  autre trou du routing. Rien à cocher : l'absence de ligne suffit (`jour_visite_libre`).
+- **Pas de PDV imposé.** La tournée du jour existe, vide, avec son objectif : les quotas par type de boutique du jour
+  (`routings.objectifs`, samedi : 6 boutiques, 1 superette, 1 aboki ou kiosque, 1 pushcart, 1 porridge).
+- **Les visites remplissent la tournée.** Chaque visite du merchandiser ce jour-là devient un PDV fait, dans l'ordre
+  des visites (déclencheur `trg_visite_libre`). Elle compte dans l'objectif de son type, sauf si le PDV a déjà été
+  visité ou prévu dans une autre tournée du mois, ou si le quota du type est déjà atteint (la 7e boutique d'un samedi).
+  Un PDV hors de sa liste compte (« Oui, elle compte ») : il est seulement signalé. Aucune visite n'est refusée.
+- **Admin.** Liste des tournées et calendrier : « Visite libre : 4/10 PDV » et le détail « Boutiques 4/6 · … » ;
+  le jour passe en orange s'il manque des PDV. Dans la tournée du jour, chaque PDV porte ses remarques
+  (« Hors de sa liste », « Quota du type déjà atteint, ne compte pas »…).
+- **Alerte du soir.** À 20 h (lundi → samedi), `controler_visites_libres` note les jours sous l'objectif dans
+  `alerte_visite_libre` et envoie un e-mail aux responsables par la fonction Edge `notifier-validation-tournee`
+  (mêmes secrets que la validation des tournées : `RESEND_API_KEY`, `NOTIF_DESTINATAIRES` — y mettre l'adresse du
+  superviseur). Sans ces secrets, rien n'est envoyé ; l'admin montre quand même le résultat.
+- **App mobile.** Rien ne change dans l'app actuelle : ce jour-là elle affiche une tournée vide (0/0), le
+  merchandiser fait ses visites hors tournée, et elles apparaissent ensuite comme faites. L'affichage
+  « Visite libre : 4/10 » et les suggestions par type manquant viendront dans une prochaine version.
+- **Ne change pas :** les jours avec un point de visite, et la position GPS fixée par la première visite d'un PDV
+  (`pdv_gps_depuis_visite`, app 1.0.15).
