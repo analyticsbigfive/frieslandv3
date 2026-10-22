@@ -11,6 +11,7 @@
 --    superviseur et la clé service (request.jwt.claims + set local role).
 --    Avec le choix B (PDV déjà visités avant le contrôle, liste figée).
 --    Résultat du 22/10/2026 : tous les cas OK (voir la PR).
+-- 3. Tests du correctif 20261022141000 (date de la visite), même principe.
 -- Les identifiants de comptes sont ceux de la production au 22/10/2026.
 -- ============================================================================
 
@@ -480,6 +481,233 @@ create trigger trg_visite_pdv_lisible
     res := res || text 'T12 OK : import ATOM- par la clé service accepté';
   exception when others then res := res || ('T12 ÉCHEC : ' || sqlerrm); end;
   execute 'reset role';
+
+  raise exception E'RESULTATS\n%', array_to_string(res, E'\n');
+end
+$test$;
+
+-- 3. Tests du correctif sur la date (20261022141000) ----------------------
+do $test$
+declare
+  v_deheo uuid := '32c4977a-fd80-4c5a-b137-f10f18f174fc';
+  p_liste text; p_liste2 text; p_push text; p_etr text; p_deja text; r_auj uuid;
+  u record; arr text[]; n int; n_tot int := 0; res text[] := '{}';
+begin
+  -- 0. Correctif (annulé avec le reste par le RAISE final).
+  execute $mig$
+
+create or replace function public.peut_visiter_pdv(p_pdv_id text, p_jour date)
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_atom boolean;
+begin
+  if v_uid is null then
+    return false;
+  end if;
+  -- Même définition que pdv_ids_tournee et pdv_ids_perimetre.
+  select coalesce(pr.role = 'merchandiser' and pr.employeur = 'atom'
+                  and coalesce(pr.email, '') not like '%@friesland-test.ci', false)
+  into v_atom
+  from profiles pr where pr.id = v_uid and pr.is_active = true;
+  v_atom := coalesce(v_atom, false);
+
+  -- Du moins cher au plus cher ; s'arrête au premier trouvé.
+  return exists (select 1 from pdv p where p.pdv_id = p_pdv_id and p.created_by = v_uid)
+    -- Déjà visité avant le contrôle (choix B) : délai pas dépassé, ou visite
+    -- faite avant la fin du délai et synchronisée en retard (15 jours).
+    or exists (select 1 from visite_pdv_deja_visites d
+               where d.user_id = v_uid and d.pdv_id = p_pdv_id
+                 and (d.jusqu_au >= current_date
+                      or (p_jour >= current_date - 15 and d.jusqu_au >= p_jour)))
+    -- Sa tournée du jour de la visite (synchronisée en retard).
+    or (p_jour >= current_date - 15 and exists (
+          select 1 from routings r
+          join routing_pdv rp on rp.routing_id = r.id
+          where r.user_id = v_uid and rp.pdv_id = p_pdv_id
+            and r.date_routing between p_jour - 1 and p_jour))
+    -- Ses tournées, comme pdv_ids_tournee sans les visites.
+    or exists (
+          select 1 from routings r
+          join routing_pdv rp on rp.routing_id = r.id
+          where r.user_id = v_uid and rp.pdv_id = p_pdv_id
+            and r.date_routing >= case when v_atom then current_date - 1 else current_date - 60 end)
+    or (not v_atom and exists (
+          select 1 from routing_templates t
+          join routing_template_pdv tp on tp.template_id = t.id
+          where t.user_id = v_uid and t.is_active and tp.pdv_id = p_pdv_id))
+    -- Son périmètre (territoires, ou sa liste pour un merchandiser Atom).
+    or exists (select 1 from public.pdv_ids_perimetre() x where x = p_pdv_id);
+end;
+$$;
+
+create or replace function public.visite_pdv_lisible()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  -- Clé service (imports, cron) ou visite sans PDV.
+  if auth.uid() is null or new.pdv_id is null then
+    return new;
+  end if;
+  -- Ni le PDV ni la date ne changent (photos, statut, rejeu de la même visite).
+  if tg_op = 'UPDATE' and new.pdv_id is not distinct from old.pdv_id
+     and new.date_visite is not distinct from old.date_visite then
+    return new;
+  end if;
+  -- Rejeu d'une visite déjà reçue : l'upsert passera par la mise à jour,
+  -- contrôlée ci-dessus si le PDV ou la date change, et par visites_update.
+  if tg_op = 'INSERT' and exists (select 1 from visites v where v.visite_id = new.visite_id) then
+    return new;
+  end if;
+  if public.role_actif_courant() in ('admin', 'superviseur') then
+    return new;
+  end if;
+
+  -- Datée dans le futur : le PDV resterait lisible jusqu'à cette date + 60 jours.
+  if new.date_visite > now() + interval '1 day' then
+    raise exception 'La date de la visite est dans le futur : la visite n''est pas enregistrée.'
+      using errcode = 'insufficient_privilege',
+            hint = 'Vérifiez la date et l''heure du téléphone.';
+  end if;
+
+  if public.peut_visiter_pdv(new.pdv_id, (new.date_visite at time zone 'Africa/Abidjan')::date) then
+    return new;
+  end if;
+
+  raise exception 'Ce PDV n''est pas dans vos PDV : la visite n''est pas enregistrée (PDV %).', new.pdv_id
+    using errcode = 'insufficient_privilege',
+          hint = 'Choisissez un PDV de votre liste, ou créez le PDV sur place.';
+end;
+$$;
+
+revoke all on function public.peut_visiter_pdv(text, date) from public, anon, authenticated;
+grant execute on function public.peut_visiter_pdv(text, date) to service_role;
+revoke all on function public.visite_pdv_lisible() from public, anon, authenticated;
+
+drop trigger if exists trg_visite_pdv_lisible on public.visites;
+create trigger trg_visite_pdv_lisible
+  before insert or update of pdv_id, date_visite on public.visites
+  for each row execute function public.visite_pdv_lisible();
+  $mig$;
+
+  -- T0b. Aucun PDV affiché à un merchandiser actif n'est refusé.
+  for u in select id from profiles where role = 'merchandiser' and is_active loop
+    perform set_config('request.jwt.claims', json_build_object('sub', u.id, 'role', 'authenticated')::text, true);
+    execute 'set local role authenticated';
+    arr := array(select pdv_id from pdv);
+    execute 'reset role';
+    select count(*) into n from unnest(arr) x where x not in (select pdv_ids_perimetre()) and not peut_visiter_pdv(x, current_date);
+    n_tot := n_tot + n;
+  end loop;
+  res := res || format('D0 PDV affichés mais refusés, tous merchandisers actifs = %s (attendu 0)', n_tot);
+
+  -- Jeu, lu comme Deheo.
+  perform set_config('request.jwt.claims', json_build_object('sub', v_deheo, 'role', 'authenticated')::text, true);
+  select q.pdv_id into p_liste from pdv_quartier_tournee q join pdv p on p.pdv_id = q.pdv_id
+  where q.merchandiser_id = v_deheo and canal_atom(p.sous_categorie_pdv) = 'Boutique' and q.pdv_id in (select pdv_ids_perimetre())
+    and not exists (select 1 from routing_pdv rp join routings r on r.id = rp.routing_id where r.user_id = v_deheo and rp.pdv_id = q.pdv_id and r.date_routing >= date_trunc('month', current_date))
+    and not exists (select 1 from visites v where v.user_id = v_deheo and v.pdv_id = q.pdv_id)
+  order by q.pdv_id limit 1;
+  select q.pdv_id into p_liste2 from pdv_quartier_tournee q join pdv p on p.pdv_id = q.pdv_id
+  where q.merchandiser_id = v_deheo and canal_atom(p.sous_categorie_pdv) = 'Boutique' and q.pdv_id <> p_liste and q.pdv_id in (select pdv_ids_perimetre())
+    and not exists (select 1 from routing_pdv rp join routings r on r.id = rp.routing_id where r.user_id = v_deheo and rp.pdv_id = q.pdv_id and r.date_routing >= date_trunc('month', current_date))
+    and not exists (select 1 from visites v where v.user_id = v_deheo and v.pdv_id = q.pdv_id)
+  order by q.pdv_id limit 1;
+  select q.pdv_id into p_push from pdv_quartier_tournee q join pdv p on p.pdv_id = q.pdv_id
+  where q.merchandiser_id = v_deheo and canal_atom(p.sous_categorie_pdv) = 'Pushcart' and q.pdv_id in (select pdv_ids_perimetre())
+    and not exists (select 1 from routing_pdv rp join routings r on r.id = rp.routing_id where r.user_id = v_deheo and rp.pdv_id = q.pdv_id and r.date_routing >= date_trunc('month', current_date))
+  order by q.pdv_id limit 1;
+  select p.pdv_id into p_etr from pdv p where p.zone ilike 'YOPOUGON%' and p.pdv_id not in (select pdv_ids_perimetre())
+    and p.pdv_id not in (select pdv_ids_tournee()) and not exists (select 1 from visite_pdv_deja_visites d where d.user_id = v_deheo and d.pdv_id = p.pdv_id)
+    and not exists (select 1 from routing_pdv rp join routings r on r.id = rp.routing_id where r.user_id = v_deheo and rp.pdv_id = p.pdv_id)
+  order by p.pdv_id limit 1;
+  select d.pdv_id into p_deja from visite_pdv_deja_visites d join pdv p on p.pdv_id = d.pdv_id
+  where d.user_id = v_deheo and p.created_by is distinct from v_deheo and d.pdv_id not in (select pdv_ids_perimetre())
+    and not exists (select 1 from routing_pdv rp join routings r on r.id = rp.routing_id where r.user_id = v_deheo and rp.pdv_id = d.pdv_id and r.date_routing >= current_date - 20)
+  order by d.pdv_id limit 1;
+  res := res || format('jeu : liste=%s liste2=%s pushcart=%s étranger=%s déjà visité=%s', p_liste, p_liste2, p_push, p_etr, p_deja);
+  if p_liste is null or p_liste2 is null or p_push is null or p_etr is null or p_deja is null then
+    raise exception 'jeu incomplet : %', res;
+  end if;
+
+  -- Délai de p_deja dépassé hier ; tournée d'aujourd'hui mise en visite libre (comme le 24/10).
+  perform set_config('request.jwt.claims', '', true);
+  update visite_pdv_deja_visites set jusqu_au = current_date - 1 where user_id = v_deheo and pdv_id = p_deja;
+  update routings r set objectifs = l.objectifs
+  from routings l where r.user_id = v_deheo and r.date_routing = current_date
+    and l.user_id = v_deheo and l.date_routing = date '2026-10-24';
+
+  perform set_config('request.jwt.claims', json_build_object('sub', v_deheo, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+
+  -- D1. Choix B, délai dépassé hier.
+  begin insert into visites (visite_id, pdv_id, user_id, date_visite) values ('TEST-D1a', p_deja, v_deheo, now());
+    res := res || text 'D1a ÉCHEC : délai dépassé, visite du jour acceptée';
+  exception when insufficient_privilege then res := res || text 'D1a OK : délai dépassé, visite du jour refusée'; end;
+  begin insert into visites (visite_id, pdv_id, user_id, date_visite) values ('TEST-D1b', p_deja, v_deheo, (current_date - 3) + time '10:00');
+    res := res || text 'D1b OK : visite faite avant la fin du délai, synchronisée 3 jours après, acceptée';
+  exception when others then res := res || ('D1b ÉCHEC : ' || sqlerrm); end;
+  begin insert into visites (visite_id, pdv_id, user_id, date_visite) values ('TEST-D1c', p_deja, v_deheo, (current_date - 30) + time '10:00');
+    res := res || text 'D1c ÉCHEC : visite antidatée de 30 jours acceptée';
+  exception when insufficient_privilege then res := res || text 'D1c OK : visite antidatée de 30 jours refusée'; end;
+
+  -- D2. Date dans le futur.
+  begin insert into visites (visite_id, pdv_id, user_id, date_visite) values ('TEST-D2a', p_liste, v_deheo, now() + interval '3 days');
+    res := res || text 'D2a ÉCHEC : visite datée dans 3 jours acceptée';
+  exception when insufficient_privilege then res := res || ('D2a OK : visite datée dans 3 jours refusée « ' || sqlerrm || ' »'); end;
+  begin insert into visites (visite_id, pdv_id, user_id, date_visite) values ('TEST-D2b', p_liste, v_deheo, now() + interval '2 hours');
+    res := res || text 'D2b OK : heure du téléphone en avance de 2 h, acceptée';
+  exception when others then res := res || ('D2b ÉCHEC : ' || sqlerrm); end;
+
+  -- D3. Changer la date d'une visite.
+  begin update visites set date_visite = now() + interval '10 days' where visite_id = 'TEST-D2b';
+    res := res || text 'D3a ÉCHEC : date reportée de 10 jours acceptée';
+  exception when insufficient_privilege then res := res || text 'D3a OK : date reportée de 10 jours refusée'; end;
+  begin update visites set date_visite = now() - interval '1 day' where visite_id = 'TEST-D2b';
+    res := res || text 'D3b OK : date changée à hier (PDV de sa liste) acceptée';
+  exception when others then res := res || ('D3b ÉCHEC : ' || sqlerrm); end;
+  begin update visites set date_visite = (current_date - 30) + time '10:00' where visite_id = 'TEST-D1b';
+    res := res || text 'D3c ÉCHEC : visite déjà visitée antidatée de 30 jours acceptée';
+  exception when insufficient_privilege then res := res || text 'D3c OK : antidater une visite hors délai refusé'; end;
+
+  -- D4. Rejeu (même date) et photos : acceptés ; rejeu avec date future : refusé.
+  begin
+    insert into visites (visite_id, pdv_id, user_id, date_visite, data)
+    select visite_id, pdv_id, user_id, date_visite, '{"rejeu":true}' from visites where visite_id = 'TEST-D1b'
+    on conflict (visite_id) do update set pdv_id = excluded.pdv_id, date_visite = excluded.date_visite, data = excluded.data;
+    update visites set image_urls = array['https://x/t.jpg'] where visite_id = 'TEST-D1b';
+    res := res || text 'D4a OK : rejeu même date + photos acceptés (délai dépassé)';
+  exception when others then res := res || ('D4a ÉCHEC : ' || sqlerrm); end;
+  begin
+    insert into visites (visite_id, pdv_id, user_id, date_visite) values ('TEST-D1b', p_deja, v_deheo, now() + interval '5 days')
+    on conflict (visite_id) do update set date_visite = excluded.date_visite;
+    res := res || text 'D4b ÉCHEC : rejeu avec date future accepté';
+  exception when insufficient_privilege then res := res || text 'D4b OK : rejeu avec date future refusé'; end;
+
+  -- D5. Non-régression : sa liste, PDV pas à lui, visite libre, pushcart.
+  begin insert into visites (visite_id, pdv_id, user_id, date_visite) values ('TEST-D5a', p_liste, v_deheo, now());
+    res := res || text 'D5a OK : PDV de sa liste accepté';
+  exception when others then res := res || ('D5a ÉCHEC : ' || sqlerrm); end;
+  begin insert into visites (visite_id, pdv_id, user_id, date_visite) values ('TEST-D5b', p_etr, v_deheo, now());
+    res := res || text 'D5b ÉCHEC : PDV pas à lui accepté';
+  exception when insufficient_privilege then res := res || text 'D5b OK : PDV pas à lui refusé'; end;
+  begin insert into visites (visite_id, pdv_id, user_id, date_visite) values ('TEST-D5c', p_liste2, v_deheo, now());
+    insert into visites (visite_id, pdv_id, user_id, date_visite) values ('TEST-D5d', p_push, v_deheo, timestamptz '2026-10-23 08:00+00');
+    res := res || text 'D5c OK : visite libre (aujourd''hui) et pushcart (23/10) acceptés';
+  exception when others then res := res || ('D5c ÉCHEC : ' || sqlerrm); end;
+  execute 'reset role';
+  select count(*) into n from routing_pdv rp join routings r on r.id = rp.routing_id
+  where r.user_id = v_deheo and ((r.date_routing = current_date and rp.pdv_id = p_liste2 and rp.objectifs ? 'visite_libre')
+                              or (r.date_routing = date '2026-10-23' and rp.pdv_id = p_push and rp.objectifs ? 'a_trouver'));
+  res := res || format('D5 étapes ajoutées (visite libre + pushcart) = %s (attendu 2)', n);
 
   raise exception E'RESULTATS\n%', array_to_string(res, E'\n');
 end

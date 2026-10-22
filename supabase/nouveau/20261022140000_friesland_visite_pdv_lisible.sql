@@ -1,6 +1,7 @@
 -- ============================================================================
 -- UNE VISITE SEULEMENT SUR UN PDV QUE L'ON VOIT DÉJÀ (22/10/2026)
--- PAS ENCORE APPLIQUÉE EN PRODUCTION (attend le oui de Jean Luc).
+-- APPLIQUÉE EN PRODUCTION le 22/10/2026 (MCP, apply_migration), avec l'accord de
+-- Jean Luc. Complétée par 20261022141000 (date de la visite).
 -- Dépend de 20261022130000 / 20261022131000 (« vos PDV », PR #44) : la
 -- fenêtre de tournée ci-dessous reprend leur pdv_ids_tournee.
 --
