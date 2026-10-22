@@ -125,3 +125,22 @@ Décision de Jean Luc : « les jours sans routing - visite libre. les jours avec
   « Visite libre : 4/10 » et les suggestions par type manquant viendront dans une prochaine version.
 - **Ne change pas :** les jours avec un point de visite, et la position GPS fixée par la première visite d'un PDV
   (`pdv_gps_depuis_visite`, app 1.0.15).
+
+## « Vos PDV » (22/10/2026, migration `20261022130000`)
+
+Décision de Jean Luc, accord de Friesland : l'app ne montre à un merchandiser Atom que **ses PDV**. Les territoires du
+fichier Friesland ne collaient pas au terrain et cachaient des PDV de sa liste ; les zones d'Atom ne s'affichent pas.
+
+- **Ses PDV** (`pdv_ids_merch_atom`) :
+  - sa liste validée : PDV de ses quartiers avec le distributeur de son routing, comme sur la page de validation ;
+  - les PDV de ses tournées d'hier et des jours à venir ;
+  - les PDV visités avec l'app ces 60 derniers jours (pas les visites importées ATOM-…) ;
+  - ceux qu'il a créés.
+- La base ne lui laisse lire que ceux-là (`pdv_ids_perimetre`, `pdv_ids_tournee`). Les anciennes listes DMS des règles
+  quota et les tournées passées ne sont plus lisibles.
+- L'app 1.0.15 filtre encore sur le profil. `synchroniser_zones_atom` (cron 02 h 50) vide la zone et les quartiers du
+  profil et met en territoires ceux où se trouvent ses PDV, pour qu'aucun ne soit caché. Ancien profil gardé dans
+  `profil_zones_avant_vos_pdv`.
+- Rien ne change pour Friesland, les commerciaux, l'agence et le compte QA Atom.
+- **À la prochaine campagne de validation** : retirer pour Atom la question sur les territoires Friesland (elle ne sert
+  plus), et dans une prochaine app, ne plus afficher le territoire du fichier sous le nom du PDV.
