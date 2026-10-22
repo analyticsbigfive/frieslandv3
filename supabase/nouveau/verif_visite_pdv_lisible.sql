@@ -4,10 +4,12 @@
 -- affiche le résultat dans le message d'erreur.
 --
 -- 1. Mesure : visites faites avec l'app ces 60 derniers jours qui seraient
---    refusées, par rôle et employeur (PDV lus avec les règles d'aujourd'hui).
+--    refusées, par rôle et employeur (PDV lus avec les règles d'aujourd'hui,
+--    sans le choix B).
 -- 2. Tests : la migration est recréée dans le bloc, puis on se connecte comme
 --    Deheo (merchandiser Atom), un merchandiser Friesland, un admin, un
 --    superviseur et la clé service (request.jwt.claims + set local role).
+--    Avec le choix B (PDV déjà visités avant le contrôle, liste figée).
 --    Résultat du 22/10/2026 : tous les cas OK (voir la PR).
 -- Les identifiants de comptes sont ceux de la production au 22/10/2026.
 -- ============================================================================
@@ -77,7 +79,8 @@ declare
   v_admin uuid := '0d6e7fa2-5945-4ca3-8e65-f1f6e17a0a9e';
   v_sup uuid := '4326e592-2c3f-43e0-8d16-b473e5ddbaa6';
   p_liste text; p_liste2 text; p_push text; p_etr text; p_etr2 text; p_etr3 text; p_etr4 text; p_etr5 text;
-  p_fr text; p_treich text; p_cree text;
+  p_fr text; p_treich text; p_cree text; p_deja text;
+  u record; arr text[]; n_tot int := 0; detail text := '';
   r7 uuid; r20 uuid;
   n int; msg text; t0 timestamptz; ms numeric;
   res text[] := '{}';
@@ -85,19 +88,97 @@ begin
   -- 0. Migration (annulée avec le reste par le RAISE final).
   execute $mig$
 
+-- ---------------------------------------------------------------------------
+-- 1. PDV déjà visités avant le contrôle (liste figée)
+-- ---------------------------------------------------------------------------
+create table if not exists public.visite_pdv_deja_visites (
+  user_id  uuid not null references public.profiles(id) on delete cascade,
+  pdv_id   text not null references public.pdv(pdv_id) on delete cascade,
+  jusqu_au date not null,
+  primary key (user_id, pdv_id)
+);
+comment on table public.visite_pdv_deja_visites is
+  'PDV visités avant le contrôle des visites (22/10/2026) : encore visitables jusqu''à jusqu_au (dernière visite + 60 jours). Liste figée.';
+alter table public.visite_pdv_deja_visites enable row level security;
+drop policy if exists visite_pdv_deja_visites_lecture on public.visite_pdv_deja_visites;
+create policy visite_pdv_deja_visites_lecture on public.visite_pdv_deja_visites for select to authenticated
+  using (public.est_admin_ou_superviseur());
+
+-- Mêmes visites que la branche visites de pdv_ids_tournee : 60 derniers jours,
+-- sans les visites importées ATOM-… pour un merchandiser Atom. Rempli une
+-- seule fois (table vide), pour qu'un nouveau passage ne l'allonge pas.
+insert into public.visite_pdv_deja_visites (user_id, pdv_id, jusqu_au)
+select v.user_id, v.pdv_id, max((v.date_visite at time zone 'Africa/Abidjan')::date) + 60
+from public.visites v
+join public.profiles pr on pr.id = v.user_id
+where v.pdv_id is not null and v.date_visite >= current_date - 60
+  and not (pr.role = 'merchandiser' and pr.employeur = 'atom'
+           and coalesce(pr.email, '') not like '%@friesland-test.ci'
+           and v.visite_id like 'ATOM-%')
+  and not exists (select 1 from public.visite_pdv_deja_visites)
+group by v.user_id, v.pdv_id;
+
+-- ---------------------------------------------------------------------------
+-- 2. Le contrôle
+-- ---------------------------------------------------------------------------
+-- Vrai si l'agent connecté peut enregistrer une visite du jour p_jour sur ce PDV.
+create or replace function public.peut_visiter_pdv(p_pdv_id text, p_jour date)
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_atom boolean;
+begin
+  if v_uid is null then
+    return false;
+  end if;
+  -- Même définition que pdv_ids_tournee et pdv_ids_perimetre.
+  select coalesce(pr.role = 'merchandiser' and pr.employeur = 'atom'
+                  and coalesce(pr.email, '') not like '%@friesland-test.ci', false)
+  into v_atom
+  from profiles pr where pr.id = v_uid and pr.is_active = true;
+  v_atom := coalesce(v_atom, false);
+
+  -- Du moins cher au plus cher ; s'arrête au premier trouvé.
+  return exists (select 1 from pdv p where p.pdv_id = p_pdv_id and p.created_by = v_uid)
+    -- Déjà visité avant le contrôle (choix B).
+    or exists (select 1 from visite_pdv_deja_visites d
+               where d.user_id = v_uid and d.pdv_id = p_pdv_id
+                 and d.jusqu_au >= least(current_date, p_jour))
+    -- Sa tournée du jour de la visite (synchronisée en retard).
+    or (p_jour >= current_date - 15 and exists (
+          select 1 from routings r
+          join routing_pdv rp on rp.routing_id = r.id
+          where r.user_id = v_uid and rp.pdv_id = p_pdv_id
+            and r.date_routing between p_jour - 1 and p_jour))
+    -- Ses tournées, comme pdv_ids_tournee sans les visites.
+    or exists (
+          select 1 from routings r
+          join routing_pdv rp on rp.routing_id = r.id
+          where r.user_id = v_uid and rp.pdv_id = p_pdv_id
+            and r.date_routing >= case when v_atom then current_date - 1 else current_date - 60 end)
+    or (not v_atom and exists (
+          select 1 from routing_templates t
+          join routing_template_pdv tp on tp.template_id = t.id
+          where t.user_id = v_uid and t.is_active and tp.pdv_id = p_pdv_id))
+    -- Son périmètre (territoires, ou sa liste pour un merchandiser Atom).
+    or exists (select 1 from public.pdv_ids_perimetre() x where x = p_pdv_id);
+end;
+$$;
+
 create or replace function public.visite_pdv_lisible()
 returns trigger
 language plpgsql
 security definer
 set search_path = public
 as $$
-declare
-  v_uid uuid := auth.uid();
-  v_jour date;
-  v_atom boolean;
 begin
   -- Clé service (imports, cron) ou visite sans PDV.
-  if v_uid is null or new.pdv_id is null then
+  if auth.uid() is null or new.pdv_id is null then
     return new;
   end if;
   -- Le PDV ne change pas (photos, statut, rejeu de la même visite).
@@ -113,35 +194,7 @@ begin
     return new;
   end if;
 
-  v_jour := (new.date_visite at time zone 'Africa/Abidjan')::date;
-  -- Même définition que pdv_ids_tournee et pdv_ids_perimetre.
-  select coalesce(pr.role = 'merchandiser' and pr.employeur = 'atom'
-                  and coalesce(pr.email, '') not like '%@friesland-test.ci', false)
-  into v_atom
-  from profiles pr where pr.id = v_uid and pr.is_active = true;
-  v_atom := coalesce(v_atom, false);
-
-  -- Du moins cher au plus cher ; s'arrête au premier trouvé.
-  if exists (select 1 from pdv p where p.pdv_id = new.pdv_id and p.created_by = v_uid)
-     -- Sa tournée du jour de la visite (synchronisée en retard).
-     or (v_jour >= current_date - 15 and exists (
-           select 1 from routings r
-           join routing_pdv rp on rp.routing_id = r.id
-           where r.user_id = v_uid and rp.pdv_id = new.pdv_id
-             and r.date_routing between v_jour - 1 and v_jour))
-     -- Ses tournées, comme pdv_ids_tournee sans les visites.
-     or exists (
-           select 1 from routings r
-           join routing_pdv rp on rp.routing_id = r.id
-           where r.user_id = v_uid and rp.pdv_id = new.pdv_id
-             and r.date_routing >= case when v_atom then current_date - 1 else current_date - 60 end)
-     or (not v_atom and exists (
-           select 1 from routing_templates t
-           join routing_template_pdv tp on tp.template_id = t.id
-           where t.user_id = v_uid and t.is_active and tp.pdv_id = new.pdv_id))
-     -- Son périmètre (territoires, ou sa liste pour un merchandiser Atom).
-     or exists (select 1 from public.pdv_ids_perimetre() x where x = new.pdv_id)
-  then
+  if public.peut_visiter_pdv(new.pdv_id, (new.date_visite at time zone 'Africa/Abidjan')::date) then
     return new;
   end if;
 
@@ -151,6 +204,8 @@ begin
 end;
 $$;
 
+revoke all on function public.peut_visiter_pdv(text, date) from public, anon, authenticated;
+grant execute on function public.peut_visiter_pdv(text, date) to service_role;
 revoke all on function public.visite_pdv_lisible() from public, anon, authenticated;
 
 drop trigger if exists trg_visite_pdv_lisible on public.visites;
@@ -205,6 +260,32 @@ create trigger trg_visite_pdv_lisible
     raise exception 'jeu incomplet : %', res;
   end if;
 
+  -- T0b. Choix B : aucun PDV affiché (lisible) à un merchandiser actif n'est refusé.
+  select count(*), count(distinct user_id) into n, ms from visite_pdv_deja_visites;
+  res := res || format('T0b liste figée : %s PDV déjà visités, %s agents', n, ms);
+  for u in select id, nom from profiles where role = 'merchandiser' and is_active order by nom loop
+    perform set_config('request.jwt.claims', json_build_object('sub', u.id, 'role', 'authenticated')::text, true);
+    execute 'set local role authenticated';
+    arr := array(select pdv_id from pdv);
+    execute 'reset role';
+    select count(*) into n from unnest(arr) x
+    where x not in (select pdv_ids_perimetre()) and not peut_visiter_pdv(x, current_date);
+    n_tot := n_tot + n;
+    if n > 0 then detail := detail || format(' %s=%s', u.nom, n); end if;
+  end loop;
+  res := res || format('T0b PDV affichés mais refusés, tous merchandisers actifs = %s (attendu 0)%s', n_tot, detail);
+  -- PDV que Deheo a visité avant le contrôle, hors de sa liste et de sa tournée.
+  perform set_config('request.jwt.claims', json_build_object('sub', v_deheo, 'role', 'authenticated')::text, true);
+  select d.pdv_id into p_deja from visite_pdv_deja_visites d join pdv p on p.pdv_id = d.pdv_id
+  where d.user_id = v_deheo and d.jusqu_au >= current_date
+    and p.created_by is distinct from v_deheo
+    and d.pdv_id not in (select pdv_ids_perimetre())
+    and not exists (select 1 from routing_pdv rp join routings r on r.id = rp.routing_id
+                    where r.user_id = v_deheo and rp.pdv_id = d.pdv_id and r.date_routing >= current_date - 1)
+  order by d.pdv_id limit 1;
+  res := res || format('jeu : déjà visité par Deheo avant le contrôle = %s', p_deja);
+  if p_deja is null then raise exception 'jeu incomplet : %', res; end if;
+
   -- Tournées passées de Deheo (il y a 7 et 20 jours) avec un PDV qu'il ne voit pas.
   perform set_config('request.jwt.claims', '', true);
   select id into r7 from routings where user_id = v_deheo and date_routing = current_date - 7;
@@ -225,7 +306,6 @@ create trigger trg_visite_pdv_lisible
   select count(*) into n from pdv where pdv_id = p_etr4;
   res := res || format('T0 faille : visite posée sans contrôle → PDV lisible par Deheo = %s (attendu 1)', n);
   execute 'reset role';
-  delete from visites where visite_id = 'TEST-T0';
 
   -- Comme Deheo (merchandiser Atom), RLS active.
   perform set_config('request.jwt.claims', json_build_object('sub', v_deheo, 'role', 'authenticated')::text, true);
@@ -326,6 +406,29 @@ create trigger trg_visite_pdv_lisible
   select count(*) into n from routing_pdv rp join routings r on r.id = rp.routing_id
   where r.user_id = v_deheo and r.date_routing = date '2026-10-23' and rp.pdv_id in (p_push, p_cree) and rp.objectifs ? 'a_trouver';
   res := res || format('T8 étapes pushcart ajoutées au 23/10 = %s (attendu 2)', n);
+
+  -- T13. Choix B : PDV visité avant le contrôle, hors liste et hors tournée : accepté.
+  perform set_config('request.jwt.claims', json_build_object('sub', v_deheo, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  begin
+    insert into visites (visite_id, pdv_id, user_id, date_visite) values ('TEST-T13', p_deja, v_deheo, now());
+    res := res || text 'T13 OK : PDV déjà visité avant le contrôle, accepté';
+  exception when others then res := res || ('T13 ÉCHEC : ' || sqlerrm); end;
+  -- T13b. Délai dépassé (jusqu_au hier) : refusé, même s'il vient d'être visité.
+  execute 'reset role';
+  update visite_pdv_deja_visites set jusqu_au = current_date - 1 where user_id = v_deheo and pdv_id = p_deja;
+  execute 'set local role authenticated';
+  begin
+    insert into visites (visite_id, pdv_id, user_id, date_visite) values ('TEST-T13b', p_deja, v_deheo, now());
+    res := res || text 'T13b ÉCHEC : accepté après le délai';
+  exception when insufficient_privilege then res := res || text 'T13b OK : après le délai de 60 jours, refusé'; end;
+  -- T13c. Visite posée après le contrôle (T0) : le PDV est affiché mais n'entre pas dans la liste figée.
+  select count(*) into n from pdv where pdv_id = p_etr4;
+  begin
+    insert into visites (visite_id, pdv_id, user_id, date_visite) values ('TEST-T13c', p_etr4, v_deheo, now());
+    res := res || text 'T13c ÉCHEC : visite postérieure au contrôle a ouvert le PDV';
+  exception when insufficient_privilege then res := res || format('T13c OK : PDV affiché (%s) par une visite postérieure, nouvelle visite refusée', n); end;
+  execute 'reset role';
 
   -- T9. Merchandiser Friesland : son territoire oui, Yopougon non.
   perform set_config('request.jwt.claims', json_build_object('sub', v_assamoi, 'role', 'authenticated')::text, true);
