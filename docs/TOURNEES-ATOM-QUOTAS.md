@@ -141,3 +141,23 @@ Friesland : « les pushcarts sont itinérants, donc difficiles à géolocaliser 
 - **Admin** : « Pushcarts 1/2 trouvés » sous « x/y PDV faits », en orange si le jour est passé et l'objectif manqué.
 - Les jours de visite libre ne changent pas. L'app mobile ne change pas : il faut dire aux merchandisers de trouver leurs
   pushcarts du jour (message WhatsApp).
+## « Vos PDV » (22/10/2026, migration `20261022130000`)
+
+Décision de Jean Luc, accord de Friesland : l'app ne montre à un merchandiser Atom que **ses PDV**. Les territoires du
+fichier Friesland ne collaient pas au terrain et cachaient des PDV de sa liste ; les zones d'Atom ne s'affichent pas.
+
+- **Ses PDV** (`pdv_ids_merch_atom`) :
+  - sa liste validée : PDV de ses quartiers avec le distributeur de son routing, comme sur la page de validation ;
+  - les PDV de ses tournées d'hier et des jours à venir ;
+  - ceux qu'il a créés.
+- La base ne lui laisse lire que ceux-là, plus l'historique de ses visites faites avec l'app ces 60 derniers jours
+  (`pdv_ids_perimetre`, `pdv_ids_tournee` ; pas les visites importées ATOM-…). Une visite ne fait pas entrer un PDV dans
+  « ses PDV » : elle ne fixe donc pas sa position s'il n'est pas à lui (garde-fou `20261022131000`). L'employeur du
+  profil, qui décide de cette règle, ne se change que depuis l'administration. Les anciennes listes DMS des règles
+  quota et les tournées passées ne sont plus lisibles.
+- L'app 1.0.15 filtre encore sur le profil. `synchroniser_zones_atom` (cron 02 h 50) vide la zone et les quartiers du
+  profil et met en territoires ceux où se trouvent ses PDV, pour qu'aucun ne soit caché. Ancien profil gardé dans
+  `profil_zones_avant_vos_pdv`.
+- Rien ne change pour Friesland, les commerciaux, l'agence et le compte QA Atom.
+- **À la prochaine campagne de validation** : retirer pour Atom la question sur les territoires Friesland (elle ne sert
+  plus), et dans une prochaine app, ne plus afficher le territoire du fichier sous le nom du PDV.
