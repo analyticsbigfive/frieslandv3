@@ -236,8 +236,11 @@
                       {{ texteBilanVisiteLibre(visiteLibre(routing.objectifs)!) }}
                     </span>
                   </span>
-                  <span v-else class="text-sm font-medium tabular-nums text-slate-700 dark:text-slate-200">
+                  <span v-else class="text-right text-sm font-medium tabular-nums text-slate-700 dark:text-slate-200">
                     {{ routing.nb_faits ?? completedPdvCount(routing) }}/{{ routing.nb_pdv ?? routing.routing_pdv?.length ?? 0 }} PDV faits
+                    <span v-if="aTrouver(routing.objectifs)" class="block text-xs font-normal" :class="routing.date_routing < aujourdhui && !objectifAtteint(aTrouver(routing.objectifs)!) ? 'text-amber-700 dark:text-amber-300' : 'text-slate-500 dark:text-slate-400'">
+                      {{ texteBilanVisiteLibre(aTrouver(routing.objectifs)!) }} trouvés
+                    </span>
                   </span>
                   <UButton size="xs" variant="ghost" icon="i-heroicons-list-bullet" @click="ouvrirTournee(routing, p.user)">
                     Voir les points de vente
@@ -1137,6 +1140,9 @@
           </p>
           <p v-else class="rounded-md bg-emerald-50 px-3 py-2 text-sm tabular-nums text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200">
             <strong>{{ nbFaitsJour }}</strong> / {{ jourModal.etapes.length }} PDV faits
+            <span v-if="aTrouver(jourModal.routing.objectifs)" class="block text-xs">
+              {{ texteBilanVisiteLibre(aTrouver(jourModal.routing.objectifs)!) }} trouvés (pas imposés : ils bougent)
+            </span>
           </p>
           <div class="ml-auto inline-flex rounded-md border border-slate-300 bg-white p-0.5 dark:border-slate-600 dark:bg-slate-800" role="radiogroup" aria-label="Points de vente affichés">
             <button
@@ -1176,7 +1182,7 @@
               </p>
             </div>
             <div class="flex flex-wrap items-center justify-end gap-1.5">
-              <template v-if="rp.objectifs?.visite_libre">
+              <template v-if="etapeAjoutee(rp.objectifs)">
                 <UBadge v-if="rp.objectifs.canal" variant="soft" size="xs" color="gray" class="hidden sm:inline-flex">{{ rp.objectifs.canal }}</UBadge>
                 <UBadge v-for="r in remarquesVisiteLibre(rp.objectifs)" :key="r" variant="soft" size="xs" color="amber">{{ r }}</UBadge>
               </template>
@@ -1324,7 +1330,7 @@ import { fetchAllRows } from '~/utils/fetchAll'
 import { JOURS_SEMAINE, joursDeRegle, libelleJours, datesDeRegle } from '~/utils/routingRecurrence'
 import { messageUtilisateur } from '~/utils/supabaseErrors'
 import { compte, pluriel } from '~/utils/pluriel'
-import { visiteLibre, totalVisiteLibre, texteBilanVisiteLibre, texteObjectifVisiteLibre, objectifAtteint, remarquesVisiteLibre } from '~/utils/visiteLibre'
+import { visiteLibre, aTrouver, etapeAjoutee, totalVisiteLibre, texteBilanVisiteLibre, texteObjectifVisiteLibre, objectifAtteint, remarquesVisiteLibre } from '~/utils/visiteLibre'
 
 // Écran de PLANIFICATION : création et édition de routings, de templates et
 // d'exceptions. Admin et superviseur modifient ; agence et commercial

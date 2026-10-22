@@ -117,4 +117,15 @@ describe('etatJourTournee', () => {
       etat: 'planifiee', texte: 'Visite libre', titre: 'Visite libre, 7 PDV au choix : Boutiques 6 · Porridge 1',
     })
   })
+
+  it('pushcarts à trouver : dans l\'infobulle, en plus des PDV imposés', async () => {
+    const { etatJourTournee } = await import('../utils/calendrierTournees')
+    const objectifs = { type: 'a_trouver', quotas: { Pushcart: 2 }, total: 2, realise: { Pushcart: 1 } }
+    expect(etatJourTournee({ nb_pdv: 19, nb_faits: 10, objectifs }, couvert, auj, auj)).toMatchObject({
+      etat: 'incomplete', texte: '10/19 faits', titre: '10 PDV faits sur 19 · Pushcarts 1/2',
+    })
+    expect(etatJourTournee({ nb_pdv: 18, nb_faits: 0, objectifs }, couvert, '2026-10-09', auj)).toMatchObject({
+      etat: 'planifiee', texte: '18 PDV', titre: 'Tournée planifiée : 18 PDV, plus Pushcarts 2 à trouver',
+    })
+  })
 })
