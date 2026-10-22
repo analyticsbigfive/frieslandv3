@@ -448,9 +448,9 @@ begin
 end;
 $$;
 
--- Droits : rien d'ouvert à anon ; les fonctions internes au serveur seulement.
-revoke all on function public.jour_visite_libre(uuid, date) from public, anon;
-grant execute on function public.jour_visite_libre(uuid, date) to authenticated, service_role;
+-- Droits : jour_visite_libre suit etapes_quota_du_jour (exécutable par tous,
+-- qui l'appelle) ; les fonctions internes au serveur seulement.
+grant execute on function public.jour_visite_libre(uuid, date) to public, anon, authenticated, service_role;
 revoke all on function public.objectifs_visite_libre(date) from public, anon;
 grant execute on function public.objectifs_visite_libre(date) to authenticated, service_role;
 revoke all on function public.bilan_visite_libre(uuid) from public, anon, authenticated;
