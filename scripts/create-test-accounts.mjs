@@ -32,6 +32,9 @@ const COMPTES = [
   { email: 'qa.superviseur@friesland-test.ci', nom: 'QA Superviseur', role: 'superviseur', zone: null },
   { email: 'qa.merchandiser@friesland-test.ci', nom: 'QA Merchandiser', role: 'merchandiser', zone: ZONE },
   { email: 'qa.commercial@friesland-test.ci', nom: 'QA Commercial', role: 'commercial', zone: ZONE },
+  // Compte agence de démo : rattaché à Atom (profiles_agence_rattachee interdit 'friesland'),
+  // sans territoire — il voit les merchandisers de son agence.
+  { email: 'qa.agence@friesland-test.ci', nom: 'QA Agence Atom', role: 'agence', zone: null, employeur: 'atom' },
 ]
 
 async function trouverUser(email) {
@@ -59,6 +62,7 @@ for (const c of COMPTES) {
   const { error: pe } = await admin.from('profiles').upsert({
     id: user.id, email: c.email, nom: c.nom, role: c.role, is_active: true,
     zone_assignee: c.zone, territoires_assignes: c.zone ? [c.zone] : [], quartiers_assignes: [], region: null,
+    ...(c.employeur ? { employeur: c.employeur } : {}),
   }, { onConflict: 'id' })
   if (pe) { console.error('❌ profil', c.email, pe.message); process.exit(1) }
   console.log(`✅ ${c.role.padEnd(12)} ${c.email}${c.zone ? `  (zone ${c.zone})` : ''}`)
