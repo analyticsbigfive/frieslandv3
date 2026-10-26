@@ -3,7 +3,7 @@
  *
  * Usage :
  *   node scripts/generer-guides-pdf.mjs
- *       -> les 6 guides génériques : docs/guides/GUIDE-{ADMIN,ADMIN-ATOM,COMMERCIAL,MERCHANDISER,MERCHANDISER-MT,MERCHANDISER-ATOM}.pdf
+ *       -> les 7 guides génériques : docs/guides/GUIDE-{ADMIN,ADMIN-ATOM,SUPERVISEUR,COMMERCIAL,MERCHANDISER,MERCHANDISER-MT,MERCHANDISER-ATOM}.pdf
  *   node scripts/generer-guides-pdf.mjs --utilisateurs
  *       -> en plus, un guide personnalisé par commercial et merchandiseur actif
  *          (nom, e-mail, territoires, équipe / commercial responsable) dans
@@ -57,8 +57,14 @@ const ROLES = {
   admin: {
     fichier: 'GUIDE-ADMIN',
     titre: 'Guide du back-office',
-    libelleRole: 'Administrateur, superviseur, commercial · back-office web',
+    libelleRole: 'Administrateur · back-office web',
     intro: 'Ce guide accompagne les utilisateurs du back-office Perfect Store, sans connaissance technique : se repérer, suivre la performance des points de vente, préparer les tournées, analyser le marché et tenir les réglages à jour.',
+  },
+  superviseur: {
+    fichier: 'GUIDE-SUPERVISEUR',
+    titre: 'Guide du superviseur',
+    libelleRole: 'Superviseur · back-office web et application',
+    intro: 'Ce guide accompagne les superviseurs : suivre le terrain chaque jour, lire le contrôle GPS des visites, modifier les tournées, analyser les points de vente et travailler sur le téléphone (visites de l’équipe, actions commerciales, field coaching).',
   },
   commercial: {
     fichier: 'GUIDE-COMMERCIAL',
@@ -412,7 +418,7 @@ try {
   // (server/routes/guides/[nom].get.ts) : copie dans les assets du serveur.
   const ASSETS_GUIDES = join(RACINE, 'server', 'assets', 'guides')
   await mkdir(ASSETS_GUIDES, { recursive: true })
-  for (const fichier of ['GUIDE-ADMIN.pdf', 'GUIDE-ADMIN-ATOM.pdf']) {
+  for (const fichier of ['GUIDE-ADMIN.pdf', 'GUIDE-ADMIN-ATOM.pdf', 'GUIDE-SUPERVISEUR.pdf', 'GUIDE-COMMERCIAL.pdf']) {
     await copyFile(join(SORTIE, fichier), join(ASSETS_GUIDES, fichier))
   }
 

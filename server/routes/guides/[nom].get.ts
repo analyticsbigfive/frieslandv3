@@ -9,6 +9,8 @@ import { serverSupabaseUser } from '#supabase/server'
 const GUIDES: Record<string, { type: string, disposition: 'inline' | 'attachment' }> = {
   'GUIDE-ADMIN.pdf': { type: 'application/pdf', disposition: 'inline' },
   'GUIDE-ADMIN-ATOM.pdf': { type: 'application/pdf', disposition: 'inline' },
+  'GUIDE-SUPERVISEUR.pdf': { type: 'application/pdf', disposition: 'inline' },
+  'GUIDE-COMMERCIAL.pdf': { type: 'application/pdf', disposition: 'inline' },
   'exemple-routing-mensuel.csv': { type: 'text/csv; charset=utf-8', disposition: 'attachment' },
   'exemple-liste-pdv.csv': { type: 'text/csv; charset=utf-8', disposition: 'attachment' },
 }

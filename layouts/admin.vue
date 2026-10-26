@@ -175,7 +175,11 @@ useHead(() => ({ title: titreCourant.value ? `${titreCourant.value} · Bonnet Ro
 
 // Guide d'utilisation : celui du compte agence pour l'agence, le guide
 // administrateur sinon (server/routes/guides/[nom].get.ts).
-const lienGuide = computed(() => (authStore.isAgence ? '/guides/GUIDE-ADMIN-ATOM.pdf' : '/guides/GUIDE-ADMIN.pdf'))
+const lienGuide = computed(() => (authStore.isAgence
+  ? '/guides/GUIDE-ADMIN-ATOM.pdf'
+  // isSuperviseur vaut aussi pour l'admin : on teste le rôle exact.
+  : authStore.profile?.role === 'superviseur' ? '/guides/GUIDE-SUPERVISEUR.pdf'
+    : authStore.isCommercial ? '/guides/GUIDE-COMMERCIAL.pdf' : '/guides/GUIDE-ADMIN.pdf'))
 
 // Personnes « en tournée » : un point GPS envoyé dans les 10 dernières minutes
 // (l'app mobile émet un point toutes les 1 à 2 min pendant une tournée).

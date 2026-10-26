@@ -4,7 +4,7 @@
     <span class="encadre__titre">Se connecter</span>
     <p>Adresse : <strong>https://frieslandv3.vercel.app/login</strong>, sur un ordinateur (Chrome conseillé). Votre identifiant est votre adresse e-mail. Le mot de passe provisoire vous est remis séparément : il ne figure jamais dans ce guide ni dans un e-mail. À la première connexion, l’application vous demande d’en choisir un.</p>
   </div>
-  <p>Ce guide s’adresse au responsable du routing d’une agence (par exemple Atom BTL). Il décrit ce que vous faites seul, sans passer par l’équipe technique : <strong>charger le routing du mois</strong> de vos merchandisers, <strong>corriger une case</strong> en cours de mois, <strong>contrôler les tournées</strong> et suivre la couverture du mois.</p>
+  <p>Ce guide s’adresse au responsable du routing d’une agence (par exemple Atom BTL). Il décrit ce que vous faites seul, sans passer par l’équipe technique : <strong>charger le routing du mois</strong> de vos merchandisers, <strong>corriger une ligne</strong> en cours de mois, <strong>faire valider les tournées</strong> par vos merchandisers, <strong>contrôler les tournées</strong> et suivre la couverture du mois.</p>
   <div class="encadre encadre--regle">
     <span class="encadre__titre">Ce que votre compte voit</span>
     <ul>
@@ -26,7 +26,7 @@
       <tr><td><strong>Piloter</strong></td><td><span class="ui">Perfect Store</span></td><td>La vue d’ensemble des points de vente visités par vos merchandisers.</td></tr>
       <tr><td></td><td><span class="ui">Activité</span></td><td>Les visites du jour, qui est en tournée.</td></tr>
       <tr><td></td><td><span class="ui">Carte et suivi</span></td><td>La carte des points de vente et le trajet d’un merchandiser sur une journée.</td></tr>
-      <tr><td><strong>Terrain</strong></td><td><span class="ui">Planning</span></td><td>Quatre onglets : <span class="ui">Tournées</span>, <span class="ui">Règles récurrentes</span>, <span class="ui">Programme merchandiser</span>, <span class="ui">Écarts de tournée</span>.</td></tr>
+      <tr><td><strong>Terrain</strong></td><td><span class="ui">Planning</span></td><td>Six onglets : <span class="ui">Tournées</span>, <span class="ui">Règles récurrentes</span>, <span class="ui">Routing du mois</span>, <span class="ui">Validation des tournées</span>, <span class="ui">Programme merchandiser</span>, <span class="ui">Écarts de tournée</span>.</td></tr>
       <tr><td></td><td><span class="ui">Visites</span></td><td>Chaque visite enregistrée, son détail et ses photos.</td></tr>
       <tr><td><strong>Réglages</strong></td><td><span class="ui">Paramètres</span></td><td>Trois onglets : <span class="ui">Référentiels</span> (routing mensuel, alias d’import), <span class="ui">Versions de l’app</span>, <span class="ui">Import / Export</span>.</td></tr>
     </tbody>
@@ -39,8 +39,9 @@
     <tbody>
       <tr><td>Charger le routing du mois</td><td>Mode d’emploi en trois étapes : <span class="ui">Planning › Routing du mois</span>. Import : <span class="ui">Paramètres › Import / Export</span>, carte <span class="ui">Routing mensuel des merchandisers (fichier de l’agence)</span></td></tr>
       <tr><td>Ajouter une liste de points de vente par jour</td><td><span class="ui">Paramètres › Import / Export</span>, carte <span class="ui">Liste de PDV par jour (fichier de l’agence)</span></td></tr>
-      <tr><td>Corriger une case (lieu, point GPS, SSF)</td><td><span class="ui">Paramètres › Référentiels</span>, liste <span class="ui">Routing mensuel</span></td></tr>
+      <tr><td>Corriger une ligne du routing (point de visite, point GPS, SSF)</td><td><span class="ui">Paramètres › Référentiels</span>, liste <span class="ui">Routing mensuel</span></td></tr>
       <tr><td>Faire reconnaître un nom ou un lieu</td><td><span class="ui">Paramètres › Référentiels</span>, liste <span class="ui">Alias d’import (orthographes)</span></td></tr>
+      <tr><td>Faire vérifier ses tournées par chaque merchandiser</td><td><span class="ui">Planning › Validation des tournées</span></td></tr>
       <tr><td>Voir les tournées de la semaine</td><td><span class="ui">Planning › Tournées</span>, affichage <span class="ui">Planning</span></td></tr>
       <tr><td>Suivre la couverture du mois</td><td><span class="ui">Planning › Programme merchandiser</span></td></tr>
       <tr><td>Comparer merchandiser et vendeur du distributeur</td><td><span class="ui">Planning › Écarts de tournée</span></td></tr>
@@ -55,7 +56,7 @@
   <p>Ces règles sont celles du client ; l’application les applique d’elle-même.</p>
   <ul>
     <li>10 merchandisers couvrent 4 200 points de vente : <strong>420 points de vente par merchandiser et par mois</strong>, chacun <strong>visité une fois par mois</strong>.</li>
-    <li>Chaque jour, la tournée prend un nombre de points de vente par canal :</li>
+    <li>Chaque jour, la tournée prend un nombre de points de vente par type de boutique :</li>
   </ul>
   <table>
     <thead><tr><th>Jours</th><th>Supérette</th><th>Boutique</th><th>Aboki et kiosque</th><th>Pushcart</th><th>Porridge</th><th>Total</th></tr></thead>
@@ -66,20 +67,27 @@
     </tbody>
   </table>
   <div class="encadre encadre--regle">
-    <span class="encadre__titre">Le quota du jour est toujours atteint</span>
-    <ul>
+    <span class="encadre__titre">Comment la tournée du jour est choisie (depuis le 20/10/2026)</span>
+    <ol>
+      <li>Les points de vente pris en compte sont ceux du <strong>fichier Atom</strong> (avec leur position GPS), quel que soit le merchandiser qui les a recensés.</li>
+      <li>Le <strong>quartier</strong> d’un point de vente est le <strong>point de visite le plus proche</strong>, parmi les points de tous les merchandisers Atom.</li>
+      <li>Un jour de tournée prend les points de vente <strong>du distributeur de la ligne</strong> du routing, dans le quartier de son point de visite. Exemple : Zogbolou, lundi semaine 1, Zone industrielle.</li>
       <li>S’il manque une supérette, un aboki, un pushcart ou un porridge, <strong>des boutiques les remplacent</strong>.</li>
-      <li>Si le lieu du jour n’a pas assez de points de vente, la tournée est <strong>complétée au plus près</strong>, avec les points de vente du portefeuille du merchandiser les plus proches du lieu, à moins de <strong>1,5 km</strong>. Au-delà, une boutique proche remplace un canal manquant ; un point de vente plus lointain n’est pris qu’en dernier recours, pour atteindre le quota.</li>
-      <li>Le merchandiser <strong>ne sort pas de son portefeuille</strong> : les clients du distributeur qui lui sont affectés dans le fichier du distributeur (DMS).</li>
+      <li>Un jour trop court est complété avec les boutiques du <strong>même distributeur</strong>, chez le même merchandiser, dans le <strong>quartier voisin</strong> le plus proche. Jamais avec un autre distributeur.</li>
       <li>Un point de vente déjà visité ou déjà prévu dans le mois n’est pas repris.</li>
-    </ul>
+    </ol>
   </div>
+  <ul>
+    <li><strong>Pushcarts</strong> : ils se déplacent, donc ils ne sont pas imposés par leur nom. La tournée affiche « Pushcarts 1/2 trouvés » : chaque pushcart que le merchandiser visite compte.</li>
+    <li><strong>Visite libre</strong> : un jour <strong>sans point de visite</strong> dans le routing (par exemple le samedi de la semaine 4), aucun point de vente n’est imposé. Le merchandiser choisit ses points de vente ; chaque visite compte dans le quota de son type. Le planning affiche « libre 4/10 » ; dès le lendemain, un quota non atteint s’affiche en orange.</li>
+    <li>Un merchandiser Atom ne voit dans l’application que <strong>ses points de vente</strong> : ceux de ses tournées et ceux qu’il a créés ou visités. Une visite sur un autre magasin est refusée.</li>
+  </ul>
   <p>Chaque nuit, l’application prépare les tournées des 7 jours suivants. Une tournée commencée n’est jamais modifiée.</p>
 </section>
 
 <section class="chapitre">
   <h2>Préparer le fichier du mois</h2>
-  <p>Un fichier Excel ou CSV, <strong>une ligne par case</strong> : un merchandiser, un jour, une semaine du mois. Un exemple est proposé sur la carte d’import : <span class="ui">Télécharger un exemple de fichier</span>. Il utilise un merchandiser fictif (« EXEMPLE Merchandiser ») : le simuler tel quel n’écrit rien.</p>
+  <p>Un fichier Excel ou CSV, <strong>une ligne par jour de travail</strong> : un merchandiser, un jour, une semaine du mois (ex. Zogbolou, lundi, semaine 1). Un exemple est proposé sur la carte d’import : <span class="ui">Télécharger un exemple de fichier</span>. Il utilise un merchandiser fictif (« EXEMPLE Merchandiser ») : le simuler tel quel n’écrit rien.</p>
   <table>
     <thead><tr><th>Colonne</th><th>Contenu</th></tr></thead>
     <tbody>
@@ -87,26 +95,25 @@
       <tr><td><strong>Commune</strong></td><td>Commune du lieu (ex. Abobo). Le lieu n’est jamais cherché hors de cette commune.</td></tr>
       <tr><td><strong>Quartier</strong></td><td>Quartier du lieu, si vous le connaissez.</td></tr>
       <tr><td><strong>Merchandiser</strong></td><td>Nom du merchandiser (une autre orthographe est reconnue et signalée).</td></tr>
-      <tr><td><strong>Distributeur</strong>, <strong>Sales rep</strong></td><td>Distributeur du vendeur et commercial FrieslandCampina.</td></tr>
+      <tr><td><strong>Distributeur</strong>, <strong>Sales rep</strong></td><td>Distributeur du vendeur et commercial FrieslandCampina. <strong>Le distributeur décide des points de vente du jour</strong> : écrivez-le exactement.</td></tr>
       <tr><td><strong>Jour</strong></td><td>Lundi à samedi.</td></tr>
       <tr><td><strong>Occurrence</strong></td><td>Semaine du mois, de 1 à 4 (plusieurs : « 1, 3 »). Vide : la ligne vaut pour les 4 semaines.</td></tr>
-      <tr><td><strong>Point de visite</strong></td><td>Le lieu du jour (marché, carrefour, quartier).</td></tr>
+      <tr><td><strong>Point de visite</strong></td><td>Le lieu du jour (marché, carrefour, quartier). Une ligne absente un jour = visite libre ce jour-là.</td></tr>
       <tr><td><strong>SSF</strong>, <strong>Type SSF</strong></td><td>Le vendeur du distributeur ce jour-là, ou « Aucun SSF » ; son engin (mini van, moto…).</td></tr>
-      <tr><td><strong>Latitude</strong>, <strong>Longitude</strong></td><td>Position du lieu. Facultatif, mais <strong>fortement conseillé</strong>.</td></tr>
-      <tr><td><strong>Rayon</strong></td><td>En mètres, de 100 à 3 000. Vide : 500 m.</td></tr>
+      <tr><td><strong>Latitude</strong>, <strong>Longitude</strong></td><td>Position du point de visite. <strong>À renseigner sur chaque ligne</strong> : c’est elle qui définit le quartier.</td></tr>
+      <tr><td><strong>Rayon</strong></td><td>En mètres, de 100 à 3 000. Ne sert que pour une ligne sans point GPS. Vide : 500 m.</td></tr>
     </tbody>
   </table>
-  <h3>Le point GPS : la façon la plus sûre de viser un lieu</h3>
-  <p>Avec une latitude et une longitude, la tournée du jour prend les points de vente du portefeuille du merchandiser <strong>dans le rayon autour du point</strong>. Elle ne dépend plus de l’orthographe du quartier.</p>
+  <h3>Le point GPS du point de visite</h3>
+  <p>Avec une latitude et une longitude, chaque point de vente Atom est rangé au point de visite le plus proche : c’est son quartier. La tournée ne dépend plus de l’orthographe du quartier.</p>
   <ol class="etapes">
     <li>Dans Google Maps, faites un clic droit sur le lieu : la première ligne du menu affiche la position (ex. <code>5.3673, -4.0217</code>). Un clic la copie.</li>
     <li>Collez le premier nombre dans <strong>Latitude</strong> et le second (négatif à Abidjan) dans <strong>Longitude</strong>. La virgule décimale est acceptée.</li>
-    <li>Laissez <strong>Rayon</strong> vide (500 m). Passez à 800 ou 1 000 m pour un lieu où les points de vente sont peu nombreux.</li>
+    <li>Laissez <strong>Rayon</strong> vide.</li>
   </ol>
-  <p>Sans point GPS, le lieu est cherché par son nom dans la commune. S’il n’est pas trouvé, la tournée prend le portefeuille du merchandiser dans la commune.</p>
   <div class="encadre encadre--attention">
-    <span class="encadre__titre">Un lieu hors du portefeuille</span>
-    <p>Si aucun point de vente du portefeuille du merchandiser n’est dans le rayon, le point est ignoré et la case suit la commune. Vérifiez le lieu, ou demandez à FrieslandCampina d’élargir son affectation.</p>
+    <span class="encadre__titre">Une ligne sans point GPS</span>
+    <p>Elle garde l’ancien calcul : le lieu est cherché par son nom dans la commune, avec le rayon. C’est moins sûr : un nom mal écrit ou un lieu absent donne une tournée hors du point de visite. Renseignez le point GPS de chaque ligne.</p>
   </div>
 </section>
 
@@ -114,20 +121,20 @@
   <h2>Charger le routing : simuler, puis appliquer</h2>
   <ol class="etapes">
     <li><span class="ui">Paramètres › Import / Export</span>. Sur la carte <span class="ui">Routing mensuel des merchandisers (fichier de l’agence)</span>, choisissez le fichier.</li>
-    <li>Laissez cochée la case <span class="ui">Recalculer les tournées des 7 prochains jours</span>.</li>
+    <li>Laissez cochée l’option <span class="ui">Recalculer les tournées des 7 prochains jours</span>.</li>
     <li><span class="ui">Simuler</span> : <strong>rien n’est écrit</strong>. Le résumé et le rapport s’affichent ; ils se téléchargent.</li>
     <li>Relisez le rapport (ci-dessous). Une erreur se corrige dans le fichier ou par un alias, puis on simule à nouveau.</li>
-    <li><span class="ui">Appliquer</span> (le bouton rouge indique le nombre d’écritures) et confirmez. Le routing est mis à jour par lots, avec une barre de progression. Relancer le même fichier ne crée pas de doublon. Les cases d’un merchandiser qui ne sont plus dans le fichier sont désactivées ; les merchandisers absents du fichier ne changent pas.</li>
+    <li><span class="ui">Appliquer</span> (le bouton rouge indique le nombre d’écritures) et confirmez. Le routing est mis à jour par lots, avec une barre de progression. Relancer le même fichier ne crée pas de doublon. Les lignes d’un merchandiser qui ne sont plus dans le fichier sont désactivées ; les merchandisers absents du fichier ne changent pas.</li>
     <li>Contrôlez le résultat (chapitre « Contrôler les tournées »).</li>
   </ol>
   <h3>Lire le rapport</h3>
   <ul>
-    <li><strong>Résumé</strong> : merchandisers reconnus ou non, nombre de cases par point GPS, par lieu, par commune ; vendeurs (SSF) à créer ou à relier.</li>
+    <li><strong>Résumé</strong> : merchandisers reconnus ou non, nombre de lignes par point GPS, par lieu, par commune ; vendeurs (SSF) à créer ou à relier.</li>
     <li><strong>Reconnus malgré une orthographe différente</strong> : vérifiez que chaque nom désigne la bonne personne.</li>
-    <li><strong>Lieux approchés</strong> : un lieu rattaché malgré une faute ou un numéro. À relire.</li>
-    <li><strong>Lieux à rattacher</strong> : le lieu n’a pas été trouvé ; la case suit la commune. Ajoutez un point GPS ou un alias.</li>
-    <li><strong>Points GPS avec peu de points de vente</strong> : moins de 10 dans le rayon. La journée sera complétée au plus près ; vérifiez le point.</li>
-    <li><strong>Planning par merchandiser</strong> : un tableau jour × semaine. Chaque case dit comment le lieu a été trouvé : par point GPS (avec le nombre de points de vente dans le rayon), par un lieu approché, par la commune seule, ou ni l’un ni l’autre (tout le portefeuille ce jour-là).</li>
+    <li><strong>Lieux approchés</strong> : un lieu reconnu malgré une faute ou un numéro. À relire.</li>
+    <li><strong>Lieux à rattacher</strong> : le lieu n’a pas été trouvé ; la ligne suit la commune. Ajoutez un point GPS.</li>
+    <li><strong>Points GPS avec peu de points de vente</strong> : moins de 10 autour du point. La journée sera complétée par le quartier voisin ; vérifiez le point.</li>
+    <li><strong>Planning par merchandiser</strong> : un tableau jour × semaine. Chaque jour dit comment le lieu a été trouvé : par point GPS (avec le nombre de points de vente autour), par un lieu approché, par la commune seule, ou ni l’un ni l’autre.</li>
   </ul>
   <div class="encadre encadre--astuce">
     <span class="encadre__titre">Revenir en arrière</span>
@@ -152,7 +159,7 @@
 
 <section class="chapitre">
   <h2>Corriger en cours de mois</h2>
-  <h3>Une case</h3>
+  <h3>Une ligne du routing</h3>
   <ol class="etapes">
     <li><span class="ui">Paramètres › Référentiels</span>, liste <span class="ui">Routing mensuel</span>. Cherchez le merchandiser : une ligne correspond à un jour d’une semaine.</li>
     <li><span class="ui">Modifier</span> : <strong>Point de visite</strong>, <strong>Commune</strong>, <strong>Point GPS</strong> (collez « latitude, longitude » depuis Google Maps), <strong>Rayon</strong>, <strong>Quartiers</strong>, <strong>Vendeur du distributeur (SSF)</strong>, <strong>Actif</strong>.</li>
@@ -169,10 +176,24 @@
 </section>
 
 <section class="chapitre">
+  <h2>Faire valider les tournées</h2>
+  <p>Chaque mois, chaque merchandiser vérifie ses zones, ses jours et ses boutiques sur une page personnelle, ouverte par un lien que vous lui envoyez.</p>
+  <ol class="etapes">
+    <li><span class="ui">Planning › Validation des tournées</span> → <span class="ui">Ouvrir la validation d’un mois</span>.</li>
+    <li>Envoyez les liens : <span class="ui">Copier tous les liens</span> pour un message de groupe, ou <span class="ui">Envoyer sur WhatsApp</span> / <span class="ui">Copier le message</span> par merchandiser.</li>
+    <li>Suivez <span class="ui">Retours des merchandisers</span> : <span class="ui">Sans réponse</span>, <span class="ui">Jours à corriger</span>, <span class="ui">Boutiques signalées</span>, et ce que chacun propose de changer à ses zones.</li>
+    <li>Pour ses zones : <span class="ui">Retenir ces zones</span> ou <span class="ui">Ne rien changer à son profil</span>. Les choix retenus s’écrivent avec <span class="ui">Appliquer les corrections</span> ; <span class="ui">Annuler cette mise à jour</span> revient en arrière.</li>
+    <li><span class="ui">Boutiques Atom hors tournée</span> liste les boutiques qui n’entrent dans aucun jour : à corriger dans votre fichier ou avec FrieslandCampina.</li>
+    <li><span class="ui">Exporter les réponses (CSV)</span> et <span class="ui">Rapport des zones (CSV)</span> donnent les fichiers ; <span class="ui">Fermer ce mois</span> termine la campagne (<span class="ui">Rouvrir ce mois</span> si besoin).</li>
+  </ol>
+  <p>Un jour corrigé par un merchandiser se reporte dans votre fichier du mois suivant, ou dans <span class="ui">Routing mensuel</span> pour le mois en cours.</p>
+</section>
+
+<section class="chapitre">
   <h2>Contrôler les tournées</h2>
   <ol class="etapes">
-    <li><span class="ui">Planning › Tournées</span>, affichage <span class="ui">Planning</span> : une ligne par merchandiser, une colonne par jour. Chaque case montre le nombre de points de vente et le vendeur du jour ; un clic ouvre la liste. Vérifiez qu’<strong>aucune journée n’est vide</strong> et que chaque journée a son total : 20, 15 le vendredi, 10 le samedi. L’affichage <span class="ui">Calendrier</span> montre le mois d’une personne choisie dans le filtre <span class="ui">Personne</span>.</li>
-    <li><span class="ui">Planning › Programme merchandiser</span> : pour le mois et par merchandiser, le portefeuille, les points de vente prévus, visités, l’objectif et le reste à visiter.</li>
+    <li><span class="ui">Planning › Tournées</span>, affichage <span class="ui">Planning</span> : une ligne par merchandiser, une colonne par jour. Chaque jour montre le nombre de points de vente et le vendeur du jour ; un clic ouvre la liste. Vérifiez que chaque journée a son total : 20, 15 le vendredi, 10 le samedi. Une journée affichée « libre » est un jour sans point de visite : c’est voulu. L’affichage <span class="ui">Calendrier</span> montre le mois d’une personne choisie dans le filtre <span class="ui">Personne</span>.</li>
+    <li><span class="ui">Planning › Programme merchandiser</span> : pour le mois et par merchandiser, ses points de vente, ceux prévus, visités, l’objectif et le reste à visiter.</li>
     <li><span class="ui">Planning › Écarts de tournée</span> : pour un jour, la tournée de chaque merchandiser comparée à celle du vendeur du distributeur qui l’accompagne. « Tournée du vendeur manquante » signifie que FrieslandCampina n’a pas encore chargé le fichier de ce vendeur.</li>
     <li><span class="ui">Paramètres › Versions de l’app</span> : qui a installé la version exigée, qui ne l’a pas encore fait.</li>
     <li><span class="ui">Carte et suivi › Suivi des équipes</span> : le trajet et les visites d’un merchandiser pour un jour donné.</li>
@@ -180,9 +201,9 @@
   <div class="aide">
     <h3>Questions fréquentes</h3>
     <ul>
-      <li><strong>Une tournée n’est pas sur le bon lieu</strong> : vérifiez la case (point GPS, commune) dans <span class="ui">Routing mensuel</span>, puis enregistrez-la à nouveau.</li>
-      <li><strong>Un jour sans tournée</strong> : la case est inactive, ou le merchandiser n’a plus de points de vente à visiter ce mois-ci.</li>
-      <li><strong>Je ne peux pas modifier une tournée</strong> : c’est voulu. Corrigez la case du routing mensuel ; les tournées des 7 jours suivants se recalculent.</li>
+      <li><strong>Une tournée n’est pas sur le bon lieu</strong> : vérifiez la ligne (point GPS, distributeur) dans <span class="ui">Routing mensuel</span>, puis enregistrez-la à nouveau.</li>
+      <li><strong>Un jour sans tournée</strong> : la ligne est inactive ou absente (visite libre), ou le merchandiser n’a plus de points de vente à visiter ce mois-ci.</li>
+      <li><strong>Je ne peux pas modifier une tournée</strong> : c’est voulu. Corrigez la ligne du routing mensuel ; les tournées des 7 jours suivants se recalculent.</li>
       <li><strong>Un merchandiser inconnu à l’import</strong> : il n’a pas de compte, ou son nom est écrit autrement. Ajoutez un alias, ou demandez la création du compte à FrieslandCampina.</li>
       <li><strong>Un point de vente manquant ou mal placé</strong> : signalez-le à FrieslandCampina avec son nom et son code client.</li>
       <li><strong>Un message d’erreur</strong> : notez l’heure et l’écran, puis prévenez FrieslandCampina. Le détail technique est conservé pour l’équipe technique.</li>

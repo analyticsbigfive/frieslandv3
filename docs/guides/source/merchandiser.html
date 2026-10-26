@@ -85,7 +85,7 @@
   <h2>Mon routing du jour</h2>
   <p>L’onglet <span class="ui">Routing</span> affiche les PDV que votre superviseur a planifiés pour aujourd’hui, avec la progression <span class="ui">Progression X/Y</span>. Chaque PDV porte ses objectifs (<span class="ui">Stock</span>, <span class="ui">Encaissement</span>, <span class="ui">Photos</span>, <span class="ui">Merchandising</span>, <span class="ui">Prospection</span>).</p>
   <ol class="etapes">
-    <li>Arrivé au magasin, appuyez sur <span class="ui">Démarrer</span>. L’application vérifie que vous êtes <strong>près du PDV</strong> (300 m aujourd’hui, distance réglée par l’administrateur) ; sinon la fenêtre <span class="ui">Hors zone</span> indique la distance : rapprochez-vous.</li>
+    <li>Arrivé au magasin, appuyez sur <span class="ui">Démarrer</span>. À la première visite d’un PDV, <span class="ui">Démarrer</span> passe sans contrôle. Aux visites suivantes, vous devez être à moins de 300 m du PDV ; sinon la fenêtre <span class="ui">Hors zone</span> donne la distance (« Vous êtes à 850 m de ce PDV, repéré sur place le 21/10 ») : rapprochez-vous, puis <span class="ui">Réessayer</span>.</li>
     <li>Appuyez sur <span class="ui">Remplir la visite</span> : la saisie s’ouvre avec le PDV déjà choisi.</li>
     <li>Une fois la visite enregistrée, le PDV passe à <span class="ui">Fait</span>.</li>
   </ol>
@@ -113,7 +113,7 @@
       <p>Elle montre la localisation (zone, quartier, région, adressage), les <strong>actions commerciales</strong> à réaliser dans ce magasin et les coordonnées GPS.</p>
       <ul>
         <li><span class="ui">Visiter</span> ouvre une visite sur ce PDV : <strong>c’est le chemin le plus sûr</strong> pour démarrer une visite sur le bon magasin.</li>
-        <li>Le crayon permet de corriger le nom, la catégorie, la localisation ou les coordonnées (avec réseau uniquement).</li>
+        <li>Le crayon permet de corriger le nom, la catégorie ou la localisation (avec réseau uniquement).</li>
       </ul>
     </div>
     <figure class="telephone">
@@ -164,7 +164,7 @@
         <li>Pour chaque produit, saisissez la <strong>quantité en rayon</strong> avec − / + ou au clavier. <strong>0 = rupture.</strong></li>
         <li>La pastille indique le niveau : <strong style="color:#C8102E">Rupture</strong> (0), <strong style="color:#b36b16">Stock bas</strong> (1 à 3), <strong style="color:#2f7d52">Disponible</strong> (au-delà).</li>
         <li>Répondez à <span class="ui">Prix respectés ?</span> (Non par défaut).</li>
-        <li>En <strong>Modern Trade</strong> (supermarchés), saisissez aussi les <strong>facings</strong> (case « F ») pour EVAP, IMP et SCM.</li>
+        <li>En <strong>Modern Trade</strong> (supermarchés), saisissez aussi les <strong>facings</strong> (champ « F ») pour EVAP, IMP et SCM.</li>
         <li>Actions rapides : <span class="ui">Tout à 0</span> (catégorie absente) ou <span class="ui">Seuils respectés</span>.</li>
       </ul>
       <p>Il faut toucher au moins un produit par catégorie pour passer à la suivante — un 0 suffit.</p>
@@ -215,13 +215,26 @@
 
   <h3>Le contrôle de proximité (GPS)</h3>
   <div class="encadre encadre--regle">
-    <span class="encadre__titre">Règle de proximité</span>
-    <p>Une visite est <strong>« GPS validé »</strong> seulement si vous êtes <strong>près du PDV</strong> (300 m aujourd’hui, réglé par l’administrateur), avec une position précise (10 m ou mieux). Si la précision est insuffisante au moment d’enregistrer, la visite est enregistrée en « GPS non validé » et un message orange vous le signale. Au-delà, la fenêtre <span class="ui">Hors zone</span> vous l’indique : <span class="ui">Soumettre quand même</span> enregistre la visite mais en <strong>« GPS non validé »</strong>, ce que voit votre superviseur.</p>
+    <span class="encadre__titre">La position du PDV se prend à la première visite</span>
+    <p>La première fois que vous visitez un PDV, sa position devient celle de votre téléphone. Aux visites suivantes, il faut être à moins de <strong>300 m</strong> de cette position. <strong>Faites donc toujours la première visite devant le magasin.</strong></p>
+  </div>
+  <table>
+    <thead><tr><th>Situation</th><th>Ce que fait l’application (version 1.0.15)</th></tr></thead>
+    <tbody>
+      <tr><td>Première visite du PDV</td><td>La visite s’enregistre et la position du téléphone devient celle du PDV. Si le GPS est imprécis, la position sera prise à la visite suivante.</td></tr>
+      <tr><td>PDV déjà repéré, vous êtes à moins de 300 m</td><td>La visite s’enregistre, « dans le rayon ».</td></tr>
+      <tr><td>PDV déjà repéré, vous êtes trop loin</td><td>L’enregistrement est bloqué : revenez au magasin et <span class="ui">Réessayer</span>.</td></tr>
+      <tr><td>GPS imprécis (plus de 30 m)</td><td>« Précision GPS insuffisante » : sortez à découvert ou attendez quelques secondes, puis réessayez.</td></tr>
+    </tbody>
+  </table>
+  <div class="encadre encadre--attention">
+    <span class="encadre__titre">Encore en version 1.0.14 ?</span>
+    <p>Tant que la 1.0.15 n’est pas installée sur votre téléphone, la fenêtre <span class="ui">Hors zone</span> propose encore <span class="ui">Soumettre quand même</span> : la visite est alors enregistrée <strong>« GPS non validé »</strong>, ce que voit votre superviseur.</p>
   </div>
   <ul>
     <li><strong>Enregistrez la visite dans le magasin</strong>, pas après être reparti.</li>
-    <li>Avant d’enregistrer, vérifiez la tuile GPS (pastille d’état) : attendez une bonne précision, à l’extérieur ou près d’une porte si besoin.</li>
-    <li>Si le PDV n’a pas de coordonnées, corrigez sa fiche (crayon) sur place pour que les prochaines visites soient validées.</li>
+    <li>Si la position d’un PDV est fausse, prévenez votre superviseur : lui ou l’administrateur la corrige dans le back-office.</li>
+    <li>Une tablette sans GPS enregistre sans position (un bandeau le signale).</li>
   </ul>
   <p>Une visite enregistrée ne peut plus être modifiée. Vous la retrouvez dans l’onglet <span class="ui">Visites</span> : son détail montre le taux <span class="ui">Relevé renseigné</span> et les rubriques oubliées.</p>
 </section>
@@ -284,9 +297,9 @@
   <div class="aide">
     <h3>Besoin d’aide ?</h3>
     <ul>
-      <li>Mot de passe oublié, compte bloqué, PDV manquant dans votre périmètre : contactez votre <strong>commercial</strong> ou l’<strong>administrateur</strong>.</li>
+      <li>Mot de passe oublié, compte bloqué, PDV manquant dans votre périmètre, ou message « Ce PDV n’est pas dans vos PDV » : contactez votre <strong>commercial</strong> ou l’<strong>administrateur</strong>.</li>
       <li>Tournée qui s’arrête : suivez le chapitre 4 (autorisation « Toujours », batterie).</li>
-      <li>Visite « GPS non validé » : vérifiez la précision GPS et les coordonnées du PDV.</li>
+      <li>Visite « GPS non validé » ou bloquée : attendez une bonne précision ; si la position du PDV est fausse, prévenez votre superviseur.</li>
     </ul>
   </div>
 </section>

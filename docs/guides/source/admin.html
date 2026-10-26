@@ -11,13 +11,14 @@
     <thead><tr><th>Rôle</th><th>Ce qu’il fait dans le back-office</th><th>Points de vente visibles</th></tr></thead>
     <tbody>
       <tr><td><strong>Administrateur</strong></td><td>Tout, y compris les utilisateurs, les permissions, les imports et la publication de l’application.</td><td>Tout le parc</td></tr>
-      <tr><td><strong>Superviseur</strong></td><td>Tous les tableaux de bord et le Planning. Les Paramètres seulement si l’administrateur les lui ouvre.</td><td>Tout le parc</td></tr>
-      <tr><td><strong>Commercial</strong></td><td>Consultation des tableaux de bord, du programme et des écarts de tournée. Son travail quotidien se fait dans l’application mobile.</td><td>Ses territoires et quartiers</td></tr>
+      <tr><td><strong>Superviseur</strong></td><td>Tous les tableaux de bord ; modifie les tournées et les points de vente, saisit des visites sur le téléphone. Les Paramètres seulement si l’administrateur les lui ouvre. Il a son propre guide.</td><td>Tout le parc</td></tr>
+      <tr><td><strong>Commercial</strong></td><td>Consultation des tableaux de bord et des tournées. Son travail quotidien se fait dans l’application mobile ; il a son propre guide.</td><td>Ses territoires et quartiers</td></tr>
       <tr><td><strong>Agence</strong></td><td>Le responsable du routing d’une agence (par exemple Atom BTL) : charge et corrige le routing du mois de ses merchandisers, consulte leurs tournées et leurs visites. Il a son propre guide.</td><td>Ceux de ses merchandisers</td></tr>
       <tr><td><strong>Merchandiser</strong></td><td>Aucun : il travaille dans l’application mobile.</td><td>Son périmètre</td></tr>
     </tbody>
   </table>
-  <p>Ce que voit un utilisateur du terrain dépend de ses <strong>territoires</strong> et, s’ils sont renseignés, de ses <strong>quartiers</strong>. Le rattachement à un commercial (Équipes) est organisationnel : il ne change pas ce qu’on voit.</p>
+  <p>Ce que voit un utilisateur du terrain dépend de ses <strong>territoires</strong> et, s’ils sont renseignés, de ses <strong>quartiers</strong>. Un merchandiser Atom ne voit que <strong>ses PDV</strong> : ceux de ses tournées et ceux qu’il a créés ou visités. Le lien entre un merchandiser et son commercial (Équipes) sert aux filtres et aux relances : il ne change pas ce qu’on voit.</p>
+  <p>Cinq écrans restent réservés quelle que soit la permission : <span class="ui">Utilisateurs</span>, <span class="ui">Équipes</span> et <span class="ui">Permissions</span> (administrateur seul) ; <span class="ui">Routing du mois</span> et <span class="ui">Validation des tournées</span> (administrateur et agence).</p>
 
   <h3>Les personnes du terrain</h3>
   <p>Le <strong>commercial</strong> (salarié FrieslandCampina) est responsable des points de vente de son territoire. Deux métiers travaillent pour lui : le <strong>vendeur du distributeur</strong> (on dit « SSF ») vend et livre ; le <strong>merchandiser</strong> (souvent employé d’une agence : Atom BTL dans les boutiques d’Abidjan, Hello Event dans les supermarchés) installe les produits et la visibilité en magasin. Ni l’un ni l’autre ne dirige l’autre : le <strong>routing mensuel</strong> de l’agence les fait simplement passer dans les mêmes points de vente le même jour.</p>
@@ -122,7 +123,7 @@
 
 <section class="chapitre">
   <h2>Le Planning</h2>
-  <p>Cinq onglets : <span class="ui">Tournées</span>, <span class="ui">Règles récurrentes</span>, <span class="ui">Routing du mois</span>, <span class="ui">Programme merchandiser</span>, <span class="ui">Écarts de tournée</span>. L’administrateur et le superviseur modifient tournées et règles ; le compte agence et le commercial les consultent, chacun pour ses merchandisers (le commercial voit ceux qui lui sont rattachés dans leur fiche). <span class="ui">Routing du mois</span>, ouvert à l’administrateur et au compte agence, rappelle les trois étapes du fichier mensuel avec les liens vers les bons écrans.</p>
+  <p>Six onglets : <span class="ui">Tournées</span>, <span class="ui">Règles récurrentes</span>, <span class="ui">Routing du mois</span>, <span class="ui">Validation des tournées</span>, <span class="ui">Programme merchandiser</span>, <span class="ui">Écarts de tournée</span>. L’administrateur et le superviseur modifient tournées et règles ; le compte agence et le commercial les consultent, chacun pour ses merchandisers (le commercial, ceux de son équipe). <span class="ui">Routing du mois</span> et <span class="ui">Validation des tournées</span> sont ouverts à l’administrateur et au compte agence seulement.</p>
   <figure class="ecran">
     <img src="guides/source/captures/guide/planning.png" alt="Le planning d’équipe">
     <figcaption>Le planning d’équipe : une ligne par personne, une colonne par jour.</figcaption>
@@ -131,7 +132,7 @@
   <h3>Voir les tournées</h3>
   <p>La bascule <span class="ui">Affichage</span> propose trois présentations des mêmes tournées :</p>
   <ul>
-    <li><span class="ui">Planning d’équipe</span> : une ligne par personne, une colonne par jour, du lundi au samedi. Chaque case montre les points de vente faits sur prévus (vert si tout est fait, orange sinon), ou « à générer » en pointillés quand une règle prévoit la tournée. Sous le nombre : le vendeur du distributeur (SSF) du jour. Un clic sur une case ouvre la tournée. Les flèches changent de semaine ; les boutons par agence et la recherche réduisent la liste.</li>
+    <li><span class="ui">Planning d’équipe</span> : une ligne par personne, une colonne par jour, du lundi au samedi. Chaque jour montre les points de vente faits sur prévus (vert si tout est fait, orange sinon), « libre 4/10 » un jour de visite libre, ou « à générer » en pointillés quand une règle prévoit la tournée. Sous le nombre : le vendeur du distributeur (SSF) du jour. Un clic sur un jour ouvre la tournée. Les flèches changent de semaine ; les boutons par agence et la recherche réduisent la liste.</li>
     <li><span class="ui">Liste par personne</span> : une carte par personne, avec ses tournées et leur avancement.</li>
     <li><span class="ui">Calendrier</span> : le mois d’une personne. Choisissez-la d’abord dans le filtre <span class="ui">Personne</span>, ou cliquez sur <span class="ui">Voir son calendrier</span> depuis sa carte.</li>
   </ul>
@@ -148,26 +149,62 @@
   <p>Une règle dit « cette personne visite ces points de vente tel jour de la semaine » ; les tournées se génèrent ensuite toutes seules, chaque nuit. <span class="ui">Nouvelle règle</span> : personne, jours, territoire, distributeur, période de validité (sans fin possible), mode et liste ordonnée de points de vente.</p>
   <ul>
     <li><strong>Tout le périmètre</strong> (salariés FrieslandCampina) : la tournée reprend tous les points de vente de la règle.</li>
-    <li><strong>Quotas</strong> (agences) : chaque jour, un nombre de points de vente par canal, chaque point de vente une fois par mois. Si le lieu du jour n’en a pas assez, la tournée est complétée avec les points de vente du portefeuille les plus proches, à moins de <strong>1,5 km</strong> ; au-delà, une boutique proche remplace un canal manquant, et un point de vente plus lointain n’est pris qu’en dernier recours.</li>
-    <li><span class="ui">Décocher une semaine</span> enregistre une exception (congé, magasin fermé). <span class="ui">Générer les 7 prochains jours</span> et <span class="ui">Générer sur une période</span> créent les tournées à l’avance.</li>
+    <li><strong>Quotas</strong> (agences) : chaque jour, un nombre de points de vente par type de boutique, chaque point de vente une fois par mois (voir « Les tournées des merchandisers Atom » ci-dessous).</li>
+    <li><span class="ui">Décocher une semaine</span> enregistre une absence (congé, magasin fermé). <span class="ui">Générer les 7 prochains jours</span> et <span class="ui">Générer sur une période</span> créent les tournées à l’avance.</li>
     <li>Modifier une règle ne change pas les tournées déjà générées : lancez ensuite <span class="ui">Recalculer les tournées à venir</span> (Paramètres › Référentiels › Tâches automatiques).</li>
   </ul>
 
+  <h3>Les tournées des merchandisers Atom</h3>
+  <p>Chaque nuit, l’application prépare les tournées des 7 jours suivants à partir du <strong>routing du mois</strong>. Une tournée commencée ne change plus.</p>
+  <ol class="etapes">
+    <li>Le routing donne, pour chaque merchandiser, chaque jour de chaque semaine du mois : un <strong>point de visite</strong>, un distributeur et le SSF. Exemple : Zogbolou, lundi semaine 1, Zone industrielle.</li>
+    <li>Le <strong>quartier</strong> d’un point de vente Atom est le point de visite le plus proche de sa position GPS.</li>
+    <li>La tournée du jour prend les points de vente <strong>du distributeur de la ligne</strong> dans ce quartier, chacun une fois par mois, selon les quotas ci-dessous.</li>
+    <li>Un type de boutique qui manque est remplacé par des boutiques.</li>
+    <li>Un jour trop court est complété avec les boutiques du même distributeur, chez le même merchandiser, dans le <strong>quartier voisin</strong> le plus proche. Jamais avec un autre distributeur.</li>
+  </ol>
+  <table>
+    <thead><tr><th>Type de boutique</th><th>Lundi à jeudi</th><th>Vendredi</th><th>Samedi</th></tr></thead>
+    <tbody>
+      <tr><td>Superette</td><td>2</td><td>1</td><td>1</td></tr>
+      <tr><td>Boutique</td><td>13</td><td>11</td><td>6</td></tr>
+      <tr><td>Aboki &amp; Kiosque</td><td>2</td><td>1</td><td>1</td></tr>
+      <tr><td>Pushcart</td><td>2</td><td>1</td><td>1</td></tr>
+      <tr><td>Porridge</td><td>1</td><td>1</td><td>1</td></tr>
+      <tr><td><strong>Total</strong></td><td><strong>20</strong></td><td><strong>15</strong></td><td><strong>10</strong></td></tr>
+    </tbody>
+  </table>
+  <ul>
+    <li><strong>Pushcarts</strong> : ils se déplacent, donc ils ne sont pas imposés par leur nom. La tournée affiche « Pushcarts 1/2 trouvés » : chaque pushcart visité compte.</li>
+    <li><strong>Visite libre</strong> : un jour sans point de visite dans le routing (par exemple le samedi de la semaine 4), aucun point de vente n’est imposé. Le merchandiser choisit ses points de vente ; chaque visite compte dans le quota de son type. Le planning affiche « libre 4/10 » ; dès le lendemain, un quota non atteint s’affiche en orange.</li>
+  </ul>
+
+  <h3>Validation des tournées</h3>
+  <p>Réservé à l’administrateur et au compte agence. Chaque mois, chaque merchandiser Atom vérifie ses zones, ses jours et ses boutiques sur une page personnelle.</p>
+  <ol class="etapes">
+    <li><span class="ui">Ouvrir la validation d’un mois</span>.</li>
+    <li>Envoyez les liens : <span class="ui">Copier tous les liens</span> pour un message de groupe, ou <span class="ui">Envoyer sur WhatsApp</span> / <span class="ui">Copier le message</span> par merchandiser.</li>
+    <li>Suivez <span class="ui">Retours des merchandisers</span> : <span class="ui">Sans réponse</span>, <span class="ui">Jours à corriger</span>, <span class="ui">Boutiques signalées</span>, et ce qu’il propose de changer à ses zones.</li>
+    <li>Pour ses zones : <span class="ui">Retenir ces zones</span> ou <span class="ui">Ne rien changer à son profil</span>. Les choix retenus s’écrivent avec <span class="ui">Appliquer les corrections</span> ; <span class="ui">Annuler cette mise à jour</span> revient en arrière.</li>
+    <li><span class="ui">Boutiques Atom hors tournée</span> liste les boutiques qui n’entrent dans aucun jour : à corriger dans la fiche du point de vente ou avec Atom.</li>
+    <li><span class="ui">Exporter les réponses (CSV)</span> et <span class="ui">Rapport des zones (CSV)</span> donnent les fichiers ; <span class="ui">Fermer ce mois</span> termine la campagne (<span class="ui">Rouvrir ce mois</span> si besoin).</li>
+  </ol>
+
   <h3>Le programme merchandiser</h3>
-  <p>Les merchandisers des agences (Atom BTL à Abidjan, l’agence de l’intérieur) visitent chaque point de vente de leur portefeuille <strong>une fois par mois</strong>, selon le <strong>routing mensuel</strong> fourni par l’agence : chaque jour de chaque semaine du mois, un lieu et, souvent, le vendeur du distributeur qui l’accompagne. L’onglet <span class="ui">Programme merchandiser</span> montre, pour la direction choisie (<span class="ui">South</span> ou <span class="ui">North</span>) et le mois : portefeuille, points de vente éligibles, planifiés, visités, en Perfect Store, objectif et reste à visiter.</p>
+  <p>Les merchandisers des agences (Atom BTL à Abidjan, l’agence de l’intérieur) visitent chacun de leurs points de vente <strong>une fois par mois</strong>, selon le <strong>routing mensuel</strong> fourni par l’agence. L’onglet <span class="ui">Programme merchandiser</span> montre, pour la direction choisie (<span class="ui">South</span> ou <span class="ui">North</span>) et le mois : points de vente du merchandiser, éligibles, planifiés, visités, en Perfect Store, objectif et reste à visiter.</p>
   <table>
     <thead><tr><th>Je veux…</th><th>Où</th></tr></thead>
     <tbody>
       <tr><td>Créer une agence, lui donner sa direction</td><td><span class="ui">Paramètres › Référentiels › Agences</span></td></tr>
-      <tr><td>Rattacher un merchandiser à son agence</td><td><span class="ui">Paramètres › Utilisateurs</span>, champ <span class="ui">Employeur (agence)</span></td></tr>
+      <tr><td>Indiquer l’agence d’un merchandiser</td><td><span class="ui">Paramètres › Utilisateurs</span>, champ <span class="ui">Employeur (agence)</span></td></tr>
       <tr><td>Créer le compte du responsable d’une agence</td><td><span class="ui">Paramètres › Utilisateurs</span>, rôle <span class="ui">Agence</span> et son agence</td></tr>
-      <tr><td>Charger le routing du mois</td><td><span class="ui">Paramètres › Import / Export › Imports terrain › Routing mensuel</span></td></tr>
-      <tr><td>Corriger une case du routing</td><td><span class="ui">Paramètres › Référentiels › Routing mensuel</span> (les tournées des 7 jours à venir suivent aussitôt)</td></tr>
-      <tr><td>Rattacher un nom de lieu à un quartier</td><td><span class="ui">Paramètres › Référentiels › Alias d’import</span>, type « quartier »</td></tr>
-      <tr><td>Changer le nombre de points de vente par canal et par jour</td><td><span class="ui">Paramètres › Référentiels › Quotas du programme merchandiser</span></td></tr>
+      <tr><td>Charger le routing du mois</td><td><span class="ui">Planning › Routing du mois</span>, puis <span class="ui">Paramètres › Import / Export › Imports terrain › Routing mensuel</span></td></tr>
+      <tr><td>Corriger un point de visite ou un SSF du routing</td><td><span class="ui">Paramètres › Référentiels › Routing mensuel</span> (les tournées des 7 jours à venir suivent aussitôt)</td></tr>
+      <tr><td>Faire reconnaître une autre orthographe d’un lieu</td><td><span class="ui">Paramètres › Référentiels › Alias d’import</span>, type « quartier »</td></tr>
+      <tr><td>Changer le nombre de points de vente par type de boutique et par jour</td><td><span class="ui">Paramètres › Référentiels › Quotas du programme merchandiser</span></td></tr>
     </tbody>
   </table>
-  <p>Le guide du compte agence détaille le fichier du mois, ses points GPS et les règles de rattachement des lieux.</p>
+  <p>Le guide du compte agence détaille le fichier du mois et ses points GPS.</p>
 
   <h3>Les écarts de tournée</h3>
   <p><span class="ui">Écarts de tournée</span> compare, pour un jour, la tournée de chaque merchandiser aux clients du vendeur du distributeur prévu ce jour-là : <strong>Aligné</strong>, <strong>Écart</strong> (avec les points de vente concernés), <strong>Tournée du vendeur manquante</strong> (le fichier de ce vendeur n’a pas été chargé) ou <strong>Sans vendeur ce jour</strong>. Filtres : direction, commercial, statut ; <span class="ui">Exporter</span> produit le fichier.</p>
@@ -186,6 +223,10 @@
     <span class="encadre__titre">Un point de vente sans territoire est invisible</span>
     <p>Pour tout le terrain. Retrouvez-les avec le filtre <span class="ui">Sans territoire</span> de la liste.</p>
   </div>
+  <div class="encadre encadre--regle">
+    <span class="encadre__titre">La position GPS se prend à la première visite (depuis le 22/10/2026)</span>
+    <p>La première visite d’un point de vente fixe sa position à l’endroit où se trouve le téléphone. Ensuite, avec l’application 1.0.15, le merchandiser doit être dans le rayon (300 m) pour démarrer et enregistrer ; en 1.0.14, il peut encore soumettre quand même, et la visite est « GPS non validé ». Si la première visite a été faite au mauvais endroit, corrigez la position dans la fiche du point de vente (un superviseur le peut aussi) : elle devient la référence, et aucune visite ne la déplace plus.</p>
+  </div>
   <h3>Historique d’un point de vente</h3>
   <p>Visite par visite : disponibilité, visibilité, promotion et score ; comparaison avec un second point de vente ou entre deux périodes.</p>
 </section>
@@ -194,7 +235,8 @@
   <h2>Visites et coaching terrain</h2>
   <p>Onglets : <span class="ui">Toutes les visites</span>, <span class="ui">Évolution</span>, <span class="ui">Par catégorie</span>, <span class="ui">Par merchandiser</span>, <span class="ui">Coaching terrain</span>.</p>
   <ul>
-    <li><strong>Toutes les visites</strong> : filtres période et merchandiser ; export Excel (5 000 lignes au plus) ; détail de chaque visite avec ses photos. La suppression d’une visite est <strong>définitive</strong> : elle est réservée à l’administrateur et au superviseur, et demande confirmation.</li>
+    <li><strong>Toutes les visites</strong> : filtres période et merchandiser ; export Excel (5 000 lignes au plus) ; détail de chaque visite avec ses photos. La suppression d’une visite est <strong>définitive</strong> : elle est réservée à l’administrateur et demande confirmation.</li>
+    <li>La ligne <span class="ui">Dans le rayon de visite</span> du détail dit d’où vient la position : « 1re visite : position du PDV fixée ici », « Oui, à 45 m du repère », ou « Non, position GPS imprécise (40 m) ».</li>
     <li><strong>Évolution</strong> et <strong>Par catégorie</strong> : volumes par jour, semaine ou mois, par canal et par type de point de vente.</li>
     <li><strong>Par merchandiser</strong> : visites, points de vente distincts, visites par jour, dernière visite.</li>
   </ul>
@@ -227,10 +269,10 @@
   <p><span class="ui">Produits</span> › <span class="ui">Objectifs</span> compare, pour un trimestre, le réalisé aux objectifs fixés par FrieslandCampina, par canal : <strong>boutiques d’Abidjan (GT)</strong>, <strong>boutiques de l’intérieur (GT)</strong>, <strong>supermarchés (MT)</strong> et <strong>National</strong>. On y lit les 15 produits du fichier des objectifs, la PLV extérieure et intérieure, et le respect des prix par famille.</p>
   <ul>
     <li>En haut : objectifs atteints, nombre de retards, plus gros écart, points de vente relevés, puis la liste <span class="ui">À rattraper en priorité</span> (les 5 plus gros écarts).</li>
-    <li>Chaque case donne le réalisé, l’objectif, l’écart en points et le nombre de points de vente mesurés. <strong>Atteint</strong> : réalisé au moins égal à l’objectif ; <strong>Proche</strong> : à 5 points ou moins ; <strong>En retard</strong> au-delà. Sous 30 points de vente, la case n’est pas jugée (« base faible »).</li>
+    <li>Chaque produit et chaque canal donnent le réalisé, l’objectif, l’écart en points et le nombre de points de vente mesurés. <strong>Atteint</strong> : réalisé au moins égal à l’objectif ; <strong>Proche</strong> : à 5 points ou moins ; <strong>En retard</strong> au-delà. Sous 30 points de vente, le résultat n’est pas jugé (« base faible »).</li>
     <li>Un point de vente compte une fois : sa dernière visite du trimestre avec un relevé produit. Disponible = quantité au standard Perfect Store de son type (en supermarché, le standard MT et les faces). Un produit sans seuil pour un type de point de vente n’y est pas attendu : ces points de vente sortent de sa base.</li>
     <li>Le trimestre en cours est signalé comme provisoire. Tant qu’il compte moins de 30 points de vente relevés, l’écran ouvre le dernier trimestre complet. Le trimestre et le territoire choisis restent dans l’adresse de la page : on peut la partager.</li>
-    <li>L’objectif National est la moyenne des objectifs des canaux, comme dans le fichier du client. <span class="ui">Exporter (CSV)</span> donne toutes les cases.</li>
+    <li>L’objectif National est la moyenne des objectifs des canaux, comme dans le fichier du client. <span class="ui">Exporter (CSV)</span> donne tout le tableau.</li>
   </ul>
   <figure class="ecran">
     <img src="guides/source/captures/guide/objectifs.png" alt="Les objectifs de disponibilité du trimestre">
@@ -249,9 +291,9 @@
     <figcaption>Choisir une liste à gauche ; la modifier à droite.</figcaption>
   </figure>
   <ul>
-    <li><strong>Objectifs de disponibilité</strong> (Produits) : la grille des objectifs d’un trimestre, en %, par produit et par canal ; une case vide = pas d’objectif. <span class="ui">Reprendre le T… </span> recopie le trimestre précédent (rien n’est enregistré avant <span class="ui">Enregistrer les objectifs</span>). Changer de trimestre ou de page avec des saisies non enregistrées demande confirmation. Réservé à l’administrateur et au superviseur.</li>
+    <li><strong>Objectifs de disponibilité</strong> (Produits) : la grille des objectifs d’un trimestre, en %, par produit et par canal ; vide = pas d’objectif. <span class="ui">Reprendre le T… </span> recopie le trimestre précédent (rien n’est enregistré avant <span class="ui">Enregistrer les objectifs</span>). Changer de trimestre ou de page avec des saisies non enregistrées demande confirmation. Réservé à l’administrateur et au superviseur.</li>
     <li><strong>Agences</strong> (Distribution et vendeurs) : les employeurs des merchandisers (FrieslandCampina, Atom BTL, Hello Event…), avec leur direction et l’indication « programme » (tournées par quotas et routing mensuel).</li>
-    <li><strong>Paramètres terrain</strong> (Application mobile) : rayon de visite par défaut (300 m), précision GPS exigée (10 m), suivi de tournée, objectif de visites par jour… Les téléphones relisent ces valeurs à chaque ouverture.</li>
+    <li><strong>Paramètres terrain</strong> (Application mobile) : rayon de visite par défaut (300 m), précision GPS exigée (30 m depuis le 22/10), suivi de tournée, objectif de visites par jour… Les téléphones relisent ces valeurs à chaque ouverture.</li>
     <li><strong>Tâches automatiques</strong> : <span class="ui">Recalculer les tournées à venir</span>, <span class="ui">Générer les tournées manquantes</span>, <span class="ui">Rafraîchir les statistiques maintenant</span>, et l’état des tâches de nuit.</li>
   </ul>
 
@@ -272,6 +314,7 @@
     <li><strong>Périmètre</strong> : cochez les territoires puis, si besoin, les quartiers (vide = tous les quartiers des territoires).</li>
     <li>Enregistrez : le compte est actif tout de suite ; aucun e-mail n’est envoyé.</li>
   </ol>
+  <p>Pour un merchandiser Atom, les territoires se recalculent chaque nuit à partir de ses points de vente : inutile de les corriger à la main.</p>
   <figure class="ecran ecran--demi">
     <img src="guides/source/captures/guide/utilisateur.png" alt="La fiche d’un utilisateur">
     <figcaption>La fiche d’un utilisateur, rôle Agence.</figcaption>
@@ -284,7 +327,7 @@
 
   <h3>Équipes et permissions</h3>
   <p><span class="ui">Équipes</span> : choisissez un commercial, cochez ses merchandisers, enregistrez. Cela alimente « Mon équipe » sur le mobile et les relances WhatsApp, sans changer le périmètre.</p>
-  <p><span class="ui">Permissions</span> : une case par rôle et par section ; chaque ligne liste les écrans qu’elle ouvre. Une case s’enregistre aussitôt, et le message qui s’affiche permet d’annuler. L’administrateur a toujours tout ; Utilisateurs, Équipes et Permissions lui restent réservés.</p>
+  <p><span class="ui">Permissions</span> : pour chaque rôle, Oui ou Non sur chaque partie du back-office ; chaque ligne liste les écrans qu’elle ouvre. Un changement s’enregistre aussitôt, et le message qui s’affiche permet d’annuler. L’administrateur a toujours tout ; Utilisateurs, Équipes et Permissions lui restent réservés.</p>
 
   <h3>Versions de l’app</h3>
   <ul>
@@ -311,9 +354,11 @@
     <dt>Les scores n’ont pas bougé après un changement de standard</dt>
     <dd>Lancez <span class="ui">Recalculer toutes les visites</span> (Standards Perfect Store).</dd>
     <dt>Une personne n’a pas de tournée un jour</dt>
-    <dd>Aucune règle ne couvre ce jour, ou la règle est suspendue cette semaine-là (Planning › Règles récurrentes).</dd>
+    <dd>Aucune règle ni ligne de routing ne couvre ce jour, ou la règle est suspendue cette semaine-là (Planning › Règles récurrentes). Pour un merchandiser Atom, un jour sans point de visite est une visite libre.</dd>
     <dt>Une tournée d’agence sort du lieu du jour</dt>
-    <dd>Vérifiez la case du routing mensuel et l’alias du lieu, puis <span class="ui">Recalculer les tournées à venir</span>.</dd>
+    <dd>Vérifiez la ligne du routing mensuel (point de visite, distributeur) et l’alias du lieu, puis <span class="ui">Recalculer les tournées à venir</span>.</dd>
+    <dt>Un merchandiser voit « Ce PDV n’est pas dans vos PDV »</dt>
+    <dd>Depuis le 22/10, une visite ne s’enregistre que sur un point de vente que le merchandiser voit déjà. Vérifiez les territoires de sa fiche ; pour Atom, le distributeur et le quartier du point de vente.</dd>
     <dt>Un produit n’apparaît plus dans le formulaire</dt>
     <dd>Il est retiré, ou sa famille l’est (Produits du formulaire, Référentiels › Catégories du relevé).</dd>
     <dt>« Le serveur met trop de temps à répondre »</dt>
@@ -340,11 +385,12 @@
     <dt>Licence</dt><dd>Un compte actif de l’application ou du back-office, hors comptes de test.</dd>
     <dt>Écarts au standard</dt><dd>Les critères qui manquent à un point de vente pour atteindre le niveau visé.</dd>
     <dt>Vendeur du distributeur (SSF)</dt><dd>Il vend et livre les clients du distributeur ; il dépend, comme le merchandiser, du commercial.</dd>
-    <dt>Fichier du distributeur (DMS)</dt><dd>Le logiciel des distributeurs, d’où viennent les clients de chaque vendeur et les portefeuilles des merchandisers.</dd>
-    <dt>Portefeuille</dt><dd>Les points de vente confiés à un merchandiser (souvent ceux de son distributeur).</dd>
-    <dt>Routing mensuel</dt><dd>Le plan du mois d’une agence : pour chaque merchandiser, chaque jour de chaque semaine, un lieu et le vendeur qui l’accompagne.</dd>
+    <dt>Fichier du distributeur (DMS)</dt><dd>Le logiciel des distributeurs, d’où viennent les clients de chaque vendeur.</dd>
+    <dt>Routing mensuel</dt><dd>Le plan du mois d’une agence : pour chaque merchandiser, chaque jour de chaque semaine, un point de visite, un distributeur et le SSF qui l’accompagne.</dd>
+    <dt>Point de visite</dt><dd>Le lieu du jour dans le routing (marché, carrefour, quartier). Le quartier d’un point de vente Atom est le point de visite le plus proche.</dd>
+    <dt>Visite libre</dt><dd>Un jour sans point de visite dans le routing : aucun point de vente n’est imposé, le merchandiser choisit les siens.</dd>
     <dt>Tournée / règle récurrente</dt><dd>La liste des points de vente d’une personne pour un jour ; une règle génère les tournées chaque semaine ou chaque mois.</dd>
-    <dt>Quotas</dt><dd>Le nombre de points de vente par canal et par jour des merchandisers d’agence.</dd>
+    <dt>Quotas</dt><dd>Le nombre de points de vente par type de boutique et par jour des merchandisers d’agence.</dd>
     <dt>Rayon de visite</dt><dd>La distance au point de vente dans laquelle une visite peut démarrer et être validée.</dd>
     <dt>Direction</dt><dd>South (Abidjan), North (intérieur) ou Modern Trade.</dd>
     <dt>Zone commerciale</dt><dd>Le découpage commercial sous le territoire (area), au-dessus du quartier.</dd>
@@ -365,7 +411,7 @@
     <h3>Arrivée d’un nouvel utilisateur</h3>
     <ol>
       <li>Créer le compte : rôle, téléphone, territoires (et quartiers) ; agence pour un merchandiser ou un compte Agence.</li>
-      <li>Pour un merchandiser : le rattacher à son commercial (Équipes) et lui prévoir des tournées (règle récurrente, routing mensuel, ou liste de points de vente par jour importée depuis Import / Export › Imports terrain). Sans tournée, il visite depuis l’onglet PDV de l’application, dans son périmètre.</li>
+      <li>Pour un merchandiser : l’ajouter à l’équipe de son commercial (Équipes) et lui prévoir des tournées (règle récurrente, routing mensuel, ou liste de points de vente par jour importée depuis Import / Export › Imports terrain). Sans tournée, il visite depuis l’onglet PDV de l’application, dans son périmètre.</li>
       <li><span class="ui">Réinitialiser le mot de passe</span> pour lui imposer un mot de passe personnel ; noter le mot de passe provisoire sur sa fiche.</li>
       <li>Lui remettre son guide et vérifier sa première connexion.</li>
     </ol>

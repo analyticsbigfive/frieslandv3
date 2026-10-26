@@ -1,0 +1,150 @@
+<section class="chapitre">
+  <h2>Votre rôle</h2>
+  <p>Le superviseur suit le terrain depuis le back-office et peut aussi travailler sur le téléphone : il modifie les tournées, décide des actions commerciales, fait des field coachings et peut saisir une visite lui-même.</p>
+  <table>
+    <thead><tr><th></th><th>Back-office (ordinateur)</th><th>Application (téléphone)</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Arrivée</strong></td><td><span class="ui">Perfect Store › Vue d’ensemble</span></td><td><span class="ui">Visites</span></td></tr>
+      <tr><td><strong>Ce que vous ouvrez</strong></td><td>Tout le menu sauf <span class="ui">Paramètres</span></td><td><span class="ui">Visites</span>, <span class="ui">Routing</span>, <span class="ui">PDV</span>, <span class="ui">Plus</span></td></tr>
+      <tr><td><strong>Ce que vous modifiez</strong></td><td>Tournées et règles, points de vente</td><td>Visites, points de vente, actions commerciales, field coachings</td></tr>
+      <tr><td><strong>Ce qui vous reste fermé</strong></td><td><span class="ui">Routing du mois</span>, <span class="ui">Validation des tournées</span>, <span class="ui">Paramètres</span></td><td>Les écrans du back-office</td></tr>
+    </tbody>
+  </table>
+  <div class="encadre encadre--astuce">
+    <span class="encadre__titre">Se connecter</span>
+    <p>Sur ordinateur : <strong>https://frieslandv3.vercel.app/login</strong>, dans Chrome. Sur téléphone : l’application <strong>Bonnet Rouge</strong>. Le même e-mail et le même mot de passe servent aux deux. Le mot de passe vous est remis en main propre ; il ne figure jamais dans un guide.</p>
+  </div>
+  <ul>
+    <li><strong>Ce que vous voyez</strong> : tout le parc, sauf si l’administrateur a limité vos territoires.</li>
+    <li><strong>Ce qui ne dépend pas de vous</strong> : les comptes, les mots de passe, les équipes et les standards Perfect Store se demandent à l’administrateur. Il peut aussi vous ouvrir les Paramètres (<span class="ui">Paramètres › Permissions</span>).</li>
+  </ul>
+  <p>Le back-office se lit comme celui de l’administrateur : menu des domaines à gauche (Piloter, Terrain, Marché), onglets en haut, période et filtres communs à tous les écrans. Le guide du back-office les décrit en détail.</p>
+</section>
+
+<section class="chapitre">
+  <h2>Suivre le terrain chaque jour</h2>
+  <p>Une routine de 15 minutes, le matin pour la veille et en fin de journée pour le jour même :</p>
+  <ol class="etapes">
+    <li><strong>Qui est sur le terrain</strong> : le compteur <span class="ui">N en tournée</span> en haut de l’écran (positions reçues depuis moins de 10 minutes). Un clic ouvre <span class="ui">Carte et suivi › Suivi des équipes</span>.</li>
+    <li><strong>Les alertes</strong> : dans <span class="ui">Suivi des équipes</span>, choisissez la personne et le jour. <span class="ui">GPS non démarré</span>, <span class="ui">Pas de tournée</span>, <span class="ui">Immobile</span> ou <span class="ui">Sans signal</span> demandent un appel. Le trajet montre les arrêts de plus de 5 minutes et les visites faites hors du rayon.</li>
+    <li><strong>L’avancement des tournées</strong> : <span class="ui">Planning › Tournées</span>, affichage <span class="ui">Planning d’équipe</span>. Orange = points de vente prévus non faits. Pour un merchandiser Atom en visite libre, le jour affiche « libre 4/10 » ; un quota non atteint s’affiche en orange dès le lendemain.</li>
+    <li><strong>Les visites</strong> : <span class="ui">Visites › Toutes les visites</span>, filtrées sur la période. Ouvrez une visite pour vérifier son relevé et ses photos.</li>
+    <li><strong>Les points chauds</strong> : <span class="ui">Activité</span>, bloc <span class="ui">À traiter maintenant</span> (catégorie sous 40 % de disponibilité, Perfect Store sous le seuil).</li>
+  </ol>
+
+  <h3>Lire le contrôle GPS d’une visite</h3>
+  <p>La ligne <span class="ui">Dans le rayon de visite</span> du détail d’une visite :</p>
+  <table>
+    <thead><tr><th>Ce qui est écrit</th><th>Ce que cela veut dire</th></tr></thead>
+    <tbody>
+      <tr><td>1re visite : position du PDV fixée ici</td><td>Première visite de ce point de vente : sa position est désormais celle du téléphone ce jour-là</td></tr>
+      <tr><td>Oui, à 45 m du repère</td><td>Le merchandiser était au point de vente</td></tr>
+      <tr><td>Non, position GPS imprécise (40 m)</td><td>Le téléphone n’a pas eu une position assez précise (30 m demandés)</td></tr>
+    </tbody>
+  </table>
+  <div class="encadre encadre--attention">
+    <span class="encadre__titre">Une première visite au mauvais endroit</span>
+    <p>Elle fausse la position du point de vente pour la suite. Corrigez-la dans la fiche du point de vente (<span class="ui">Points de vente › Liste</span>) : votre correction devient la référence, et aucune visite ne la déplace plus.</p>
+  </div>
+</section>
+
+<section class="chapitre">
+  <h2>Planning : voir et modifier les tournées</h2>
+  <p>Vous ouvrez quatre onglets : <span class="ui">Tournées</span>, <span class="ui">Règles récurrentes</span>, <span class="ui">Programme merchandiser</span>, <span class="ui">Écarts de tournée</span>. Le routing du mois d’Atom et sa validation restent à l’administrateur et à l’agence.</p>
+  <ul>
+    <li><strong>Voir</strong> : <span class="ui">Affichage</span> → <span class="ui">Planning d’équipe</span> (une ligne par personne, une colonne par jour), <span class="ui">Liste par personne</span> ou <span class="ui">Calendrier</span> (le mois d’une personne). Chaque jour montre les points de vente faits sur prévus et le SSF.</li>
+    <li><strong>Créer une tournée</strong> : <span class="ui">Nouvelle tournée</span> → personne et date → points de vente (ceux de son périmètre) → ordre par glisser-déposer → objectifs → <span class="ui">Enregistrer</span>.</li>
+    <li><strong>Modifier, dupliquer, supprimer</strong> : menu de la tournée. Une tournée commencée par le merchandiser ne se recalcule plus.</li>
+    <li><strong>Règles récurrentes</strong> : elles créent les tournées chaque nuit. Décocher une semaine enregistre une absence (congé, magasin fermé). Après une modification, les tournées déjà créées ne changent pas : demandez à l’administrateur de les recalculer.</li>
+    <li><strong>Merchandisers Atom</strong> : leurs tournées viennent du routing du mois (20 points de vente du lundi au jeudi, 15 le vendredi, 10 le samedi). Ne les modifiez pas à la main : signalez l’erreur à l’administrateur, qui corrige le routing.</li>
+    <li><strong>Programme merchandiser</strong> : la couverture du mois des merchandisers d’agence (éligibles, planifiés, visités, reste à visiter).</li>
+    <li><strong>Écarts de tournée</strong> : les jours où le merchandiser et le SSF ne sont pas passés aux mêmes endroits.</li>
+  </ul>
+</section>
+
+<section class="chapitre">
+  <h2>Analyser</h2>
+  <table>
+    <thead><tr><th>Écran</th><th>À quoi il sert</th></tr></thead>
+    <tbody>
+      <tr><td><span class="ui">Perfect Store › Vue d’ensemble</span></td><td>Les points de vente à traiter et ce qui leur manque : la liste à transmettre aux commerciaux</td></tr>
+      <tr><td><span class="ui">Perfect Store › Synthèse par zone</span></td><td>Les niveaux par territoire et par quartier</td></tr>
+      <tr><td><span class="ui">Perfect Store › Écarts au standard</span></td><td>Ce qui manque le plus souvent pour atteindre le niveau visé</td></tr>
+      <tr><td><span class="ui">Points de vente › Liste</span></td><td>Chercher, créer, corriger un point de vente ; <span class="ui">Sans GPS</span> et <span class="ui">Sans territoire</span> pour le ménage</td></tr>
+      <tr><td><span class="ui">Points de vente › Historique</span></td><td>Un point de vente visite par visite, comparé à un autre ou entre deux périodes</td></tr>
+      <tr><td><span class="ui">Visites › Par merchandiser</span></td><td>Visites, points de vente distincts et visites par jour de chaque personne</td></tr>
+      <tr><td><span class="ui">Visites › Coaching terrain</span></td><td>Les scores des field coachings (vert dès 70 %)</td></tr>
+      <tr><td><span class="ui">Visibilité</span>, <span class="ui">Concurrence</span></td><td>Présence des éléments, conformité, concurrents en activité</td></tr>
+      <tr><td><span class="ui">Produits › Objectifs</span></td><td>Le réalisé du trimestre face aux objectifs de disponibilité, par canal</td></tr>
+      <tr><td><span class="ui">Actions › Actions commerciales</span></td><td>Les actions décidées, ouvertes, en retard ou faites</td></tr>
+    </tbody>
+  </table>
+  <table>
+    <thead><tr><th>Niveau Perfect Store</th><th>Disponibilité en rayon</th><th>Visibilité</th></tr></thead>
+    <tbody>
+      <tr><td>Flagship</td><td>95 % ou plus</td><td>100 % des éléments exigés</td></tr>
+      <tr><td>VIP</td><td>85 % ou plus</td><td>100 %</td></tr>
+      <tr><td>Core</td><td>75 % ou plus</td><td>100 %</td></tr>
+      <tr><td>Basic</td><td>60 % ou plus</td><td>100 %</td></tr>
+    </tbody>
+  </table>
+  <p>La promotion compte aussi, à 100 %, quand « Promotion en cours » est coché pendant la visite. La suppression d’une visite est réservée à l’administrateur.</p>
+</section>
+
+<section class="chapitre">
+  <h2>Sur le téléphone</h2>
+  <p>Sur l’application, vous avez la barre du merchandiser (<span class="ui">Visites</span>, <span class="ui">Routing</span>, <span class="ui">PDV</span>, <span class="ui">Plus</span>) et, dans <span class="ui">Plus</span>, les écrans de suivi.</p>
+  <table>
+    <thead><tr><th>Où</th><th>Ce que vous y faites</th></tr></thead>
+    <tbody>
+      <tr><td><span class="ui">Plus › Visites de l’équipe</span></td><td>Le fil des visites des merchandisers ; <span class="ui">Mon équipe</span> ou <span class="ui">Tout le territoire</span>, recherche, période. Un appui ouvre le détail.</td></tr>
+      <tr><td><span class="ui">Plus › Actions commerciales</span></td><td>Les actions ouvertes, faites ou toutes, et <span class="ui">Prévenir par WhatsApp</span></td></tr>
+      <tr><td><span class="ui">Plus › Field coaching</span></td><td>Le questionnaire de field coaching et l’historique</td></tr>
+      <tr><td><span class="ui">Plus › Calendrier des tournées</span>, <span class="ui">Objectifs du mois</span></td><td>Vos tournées et vos objectifs, si vous en avez</td></tr>
+      <tr><td><span class="ui">Plus › Contacts</span>, <span class="ui">Carte</span></td><td>L’annuaire (appel, e-mail) et les points de vente autour de vous</td></tr>
+      <tr><td><span class="ui">Visites</span>, <span class="ui">PDV</span></td><td>Saisir une visite ou créer un point de vente, comme un merchandiser (voir son guide)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Décider une action commerciale</h3>
+  <ol class="etapes">
+    <li>Depuis la fiche d’un point de vente ou le détail d’une visite : <span class="ui">Nouvelle action</span>.</li>
+    <li>Type d’action, merchandiser assigné, échéance, consigne.</li>
+    <li><span class="ui">Créer l’action</span>. Il faut du réseau ; le merchandiser reçoit une notification.</li>
+  </ol>
+  <p>Statuts : <span class="ui">À faire</span> → <span class="ui">En cours</span> → <span class="ui">Faite</span> ; une action ouverte dont l’échéance est passée passe en rouge.</p>
+
+  <h3>Relancer par WhatsApp</h3>
+  <p>Dans <span class="ui">Actions commerciales</span>, une pastille par merchandiser qui a des actions ouvertes (« Nom · 3 »). Un appui ouvre WhatsApp avec la liste de ses actions déjà rédigée. Pastille grise = téléphone manquant sur sa fiche.</p>
+
+  <h3>Field coaching</h3>
+  <p>Il évalue le <strong>vendeur du distributeur (SSF)</strong> dans un point de vente, pas le merchandiser. Le questionnaire compte 5 étapes et 13 questions Oui / Non / Not Applicable ; le déroulé est décrit dans le guide du commercial.</p>
+  <div class="encadre encadre--attention">
+    <span class="encadre__titre">Les tableaux de bord ne s’ouvrent pas sur le téléphone</span>
+    <p>Dans l’application Android, les écrans du back-office ne s’ouvrent pas : utilisez un ordinateur.</p>
+  </div>
+</section>
+
+<section class="chapitre">
+  <h2>Je veux…</h2>
+  <table>
+    <thead><tr><th>Je veux…</th><th>Où</th></tr></thead>
+    <tbody>
+      <tr><td>Savoir qui travaille en ce moment</td><td>Compteur <span class="ui">N en tournée</span>, puis <span class="ui">Carte et suivi › Suivi des équipes</span></td></tr>
+      <tr><td>Revoir la journée d’un merchandiser</td><td><span class="ui">Carte et suivi › Suivi des équipes</span>, personne + jour</td></tr>
+      <tr><td>Voir les tournées de la semaine</td><td><span class="ui">Planning › Tournées</span>, affichage <span class="ui">Planning d’équipe</span></td></tr>
+      <tr><td>Créer ou modifier une tournée</td><td><span class="ui">Planning › Tournées › Nouvelle tournée</span>, ou menu de la tournée</td></tr>
+      <tr><td>Mettre une absence sur une règle</td><td><span class="ui">Planning › Règles récurrentes</span>, décocher la semaine</td></tr>
+      <tr><td>Vérifier une visite et ses photos</td><td><span class="ui">Visites › Toutes les visites</span></td></tr>
+      <tr><td>Trouver les points de vente à faire progresser</td><td><span class="ui">Perfect Store › Vue d’ensemble</span>, bloc des points de vente à traiter</td></tr>
+      <tr><td>Corriger un point de vente ou sa position</td><td><span class="ui">Points de vente › Liste</span>, fiche du point de vente</td></tr>
+      <tr><td>Demander une action à un merchandiser</td><td>Application : fiche du point de vente › <span class="ui">Nouvelle action</span></td></tr>
+      <tr><td>Relancer un merchandiser</td><td>Application : <span class="ui">Plus › Actions commerciales › Prévenir par WhatsApp</span></td></tr>
+      <tr><td>Faire un field coaching</td><td>Application : <span class="ui">Plus › Field coaching</span></td></tr>
+    </tbody>
+  </table>
+  <div class="aide">
+    <h3>À demander à l’administrateur</h3>
+    <p>Un compte ou un mot de passe, une équipe, une correction du routing Atom, un recalcul des tournées, un changement de standard Perfect Store, l’ouverture d’un écran fermé.</p>
+  </div>
+</section>
