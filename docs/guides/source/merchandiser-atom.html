@@ -61,23 +61,23 @@
   <h2>Ma semaine : mes lieux et mes SSF</h2>
   <p><span class="ui">Plus</span> → <span class="ui">Ma semaine (SSF)</span> affiche, du lundi au samedi, où vous travaillez et avec qui :</p>
   <ul>
-    <li>le <strong>lieu de visite</strong> du jour et ses <strong>quartiers</strong> (version suivante de l’application : aussi la semaine du mois) ;</li>
+    <li>le <strong>point de visite</strong> du jour et ses <strong>quartiers</strong> (version suivante de l’application : aussi la semaine du mois) ;</li>
     <li>le <strong>SSF</strong> du jour et son <strong>distributeur</strong>, ou « Sans SSF ce jour-là » ;</li>
     <li>son <strong>téléphone</strong> : un appui l’appelle directement.</li>
   </ul>
-  <p>Le jour en cours est encadré en rouge. Votre programme change d’une semaine à l’autre : le 1er lundi du mois n’est pas au même endroit que le 2e. Un jour sans lieu affiche « Pas de lieu prévu » : votre tournée suit alors votre portefeuille habituel.</p>
+  <p>Le jour en cours est encadré en rouge. Votre programme change d’une semaine à l’autre : le 1er lundi du mois n’est pas au même endroit que le 2e. Un jour sans lieu affiche « Pas de lieu prévu » : c’est un jour de <strong>visite libre</strong> (voir le chapitre « Ma tournée du jour »).</p>
   <div class="encadre encadre--regle">
-    <span class="encadre__titre">La règle du lieu du jour</span>
-    <p>Restez <strong>dans le lieu prévu</strong>, pour passer dans les mêmes magasins que le SSF. Votre tournée du jour y est déjà limitée. Si un magasin vous semble mal placé (mauvais quartier), signalez-le à votre commercial plutôt que d’en sortir.</p>
+    <span class="encadre__titre">Restez dans le point de visite du jour</span>
+    <p>Restez <strong>dans le point de visite prévu</strong>, pour passer dans les mêmes magasins que le SSF. Votre tournée du jour y est déjà limitée. Si un magasin vous semble mal placé (mauvais quartier), signalez-le à votre commercial plutôt que d’en sortir.</p>
   </div>
   <p>Votre routing est préparé par votre agence. Ouvrez l’écran une première fois avec du réseau : il reste ensuite disponible <strong>sans connexion</strong>. Si votre version imprimée de ce guide contient une page « Ma semaine », c’est le planning du jour de l’impression : l’application fait foi.</p>
 </section>
 
 <section class="chapitre">
   <h2>Ma tournée du jour</h2>
-  <p>Chaque nuit, l’application prépare votre tournée des jours suivants. Elle choisit, dans les quartiers de votre lieu du jour, des PDV <strong>pas encore visités ce mois-ci</strong>, selon une grille par canal :</p>
+  <p>Chaque nuit, l’application prépare votre tournée des jours suivants. Elle prend les PDV <strong>du distributeur du jour</strong>, dans le quartier de votre point de visite, <strong>pas encore visités ce mois-ci</strong>, selon une grille par type de boutique :</p>
   <table>
-    <thead><tr><th>Canal</th><th>Lundi à jeudi</th><th>Vendredi</th><th>Samedi</th></tr></thead>
+    <thead><tr><th>Type de boutique</th><th>Lundi à jeudi</th><th>Vendredi</th><th>Samedi</th></tr></thead>
     <tbody>
       <tr><td>Superette</td><td>2</td><td>1</td><td>1</td></tr>
       <tr><td>Boutique</td><td>13</td><td>11</td><td>6</td></tr>
@@ -87,12 +87,27 @@
       <tr><td><strong>Total</strong></td><td><strong>20</strong></td><td><strong>15</strong></td><td><strong>10</strong></td></tr>
     </tbody>
   </table>
-  <p>Cette grille est celle du lancement : l’administrateur peut la modifier. Quand un canal manque dans ces quartiers (par exemple pas de porridge), la tournée est complétée par des boutiques.</p>
+  <p>Cette grille est celle du lancement : l’administrateur peut la modifier.</p>
+  <ul>
+    <li>Un type qui manque dans le quartier (par exemple pas de porridge) est remplacé par des boutiques.</li>
+    <li>Si le quartier n’a pas assez de PDV, la tournée est complétée avec des boutiques du <strong>même distributeur</strong> dans le <strong>quartier voisin</strong> le plus proche.</li>
+  </ul>
+
+  <h3>Les pushcarts</h3>
+  <p>Les pushcarts se déplacent : ils ne sont pas inscrits par leur nom dans votre tournée. Trouvez-en 2 dans le quartier du jour (1 le vendredi et le samedi) et visitez-les depuis l’onglet <span class="ui">PDV</span> ; chacun compte. Un pushcart absent de la liste : créez-le sur place.</p>
+
+  <h3>La visite libre</h3>
+  <p>Un jour <strong>sans point de visite</strong> dans votre routing (par exemple le samedi de la semaine 4) est un jour de visite libre : aucun PDV n’est imposé.</p>
+  <ul>
+    <li>L’onglet <span class="ui">Routing</span> n’affiche rien ce jour-là (0/0) : c’est normal.</li>
+    <li>Choisissez vous-même vos PDV et visitez-les depuis l’onglet <span class="ui">PDV</span>.</li>
+    <li>Chaque visite compte dans le quota de son type de boutique (10 PDV le samedi). Choisissez des PDV pas encore prévus ce mois-ci : un PDV déjà prévu un autre jour ne compte pas.</li>
+  </ul>
 
   <h3>Dans chaque magasin</h3>
   <ol class="etapes">
     <li>Onglet <span class="ui">Routing</span> : le badge de chaque ligne indique le canal du PDV.</li>
-    <li>Arrivé au magasin, appuyez sur <span class="ui">Démarrer</span>. L’application vérifie que vous êtes <strong>près du PDV</strong> (300 m aujourd’hui, distance réglée par l’administrateur) avec une position GPS précise. Sinon, la fenêtre <span class="ui">Hors zone</span> indique la distance : rapprochez-vous.</li>
+    <li>Arrivé au magasin, appuyez sur <span class="ui">Démarrer</span>. À la première visite d’un PDV, <span class="ui">Démarrer</span> passe sans contrôle. Aux visites suivantes, vous devez être à moins de 300 m du PDV ; sinon la fenêtre <span class="ui">Hors zone</span> donne la distance : rapprochez-vous, puis <span class="ui">Réessayer</span>.</li>
     <li>Appuyez sur <span class="ui">Remplir la visite</span> : la saisie s’ouvre avec le PDV et le SSF du jour déjà choisis.</li>
     <li>Une fois la visite enregistrée, le PDV passe à <span class="ui">Fait</span>.</li>
   </ol>
@@ -137,9 +152,14 @@
     <li>Le message <span class="ui">Visite enregistrée</span> confirme la sauvegarde.</li>
   </ol>
   <div class="encadre encadre--regle">
-    <span class="encadre__titre">Le contrôle GPS</span>
-    <p>Une visite est <strong>« GPS validé »</strong> quand vous êtes près du PDV avec une position précise (10 m ou mieux). Si la précision est insuffisante au moment d’enregistrer, la visite est quand même enregistrée, mais un message orange <strong>« Visite enregistrée sans validation GPS »</strong> vous le dit : votre superviseur la verra comme non validée. Pour l’éviter, attendez une bonne précision, dehors ou près de la porte.</p>
+    <span class="encadre__titre">Le contrôle GPS : la première visite fait foi</span>
+    <p>La première fois que vous visitez un PDV, sa position devient celle de votre téléphone : <strong>faites-la devant le magasin</strong>. Aux visites suivantes (version 1.0.15), il faut être à moins de 300 m de cette position, avec une précision de 30 m ou mieux ; sinon l’enregistrement est bloqué : revenez au magasin, attendez une bonne précision, puis <span class="ui">Réessayer</span>.</p>
   </div>
+  <div class="encadre encadre--attention">
+    <span class="encadre__titre">Encore en version 1.0.14 ?</span>
+    <p>Tant que la 1.0.15 n’est pas installée, la fenêtre <span class="ui">Hors zone</span> propose encore <span class="ui">Soumettre quand même</span> : la visite est alors enregistrée « GPS non validé », ce que voit votre superviseur.</p>
+  </div>
+  <p><strong>Vos PDV</strong> : l’application ne montre que vos PDV (ceux de vos tournées, ceux que vous avez créés et ceux que vous avez visités récemment). Une visite sur un autre magasin est refusée avec le message « Ce PDV n’est pas dans vos PDV ».</p>
   <p>Enregistrez toujours la visite <strong>dans le magasin</strong>, pas après être reparti.</p>
 </section>
 
@@ -148,10 +168,10 @@
   <p>Un magasin de vos quartiers n’existe pas dans l’application ? Créez-le pendant la visite (<span class="ui">PDV introuvable ? Créer un PDV</span>) ou depuis l’onglet <span class="ui">PDV</span> :</p>
   <ol class="etapes">
     <li>Nom, catégorie et sous-catégorie : la sous-catégorie fixe le <strong>canal</strong> du PDV, soyez précis.</li>
-    <li><strong>Quartier</strong> : choisissez le quartier réel du magasin. C’est lui qui rattache le PDV à votre lieu de visite et aux prochaines tournées.</li>
+    <li><strong>Quartier</strong> : choisissez le quartier réel du magasin. Choisissez son vrai quartier.</li>
     <li>Devant le magasin, appuyez sur <span class="ui">Utiliser mon GPS</span>, puis <span class="ui">Créer le PDV</span>.</li>
   </ol>
-  <p>Ne créez des PDV que dans les quartiers de votre lieu du jour. Un PDV créé dans ces quartiers peut revenir dans vos tournées dès le mois suivant, ou plus tôt s’il reste de la place.</p>
+  <p>Ne créez des PDV que dans les quartiers de votre point de visite du jour. Un PDV que vous créez rejoint vos PDV, mais pas les tournées préparées la nuit : elles ne prennent que les PDV du fichier Atom.</p>
 </section>
 
 <section class="chapitre">
@@ -189,7 +209,8 @@
     <ul>
       <li>SSF absent, planning faux, magasin dans le mauvais quartier : prévenez votre <strong>commercial</strong> et votre agence.</li>
       <li>Mot de passe oublié, compte bloqué : contactez l’<strong>administrateur</strong>.</li>
-      <li>Visite « sans validation GPS » : attendez une meilleure précision avant d’enregistrer, et vérifiez la position du PDV.</li>
+      <li>Visite bloquée ou « GPS non validé » : attendez une meilleure précision ; si la position du PDV est fausse, prévenez votre superviseur.</li>
+      <li>« Ce PDV n’est pas dans vos PDV » : vérifiez que vous êtes sur le bon magasin ; s’il manque, créez-le ou prévenez votre superviseur.</li>
     </ul>
   </div>
 </section>

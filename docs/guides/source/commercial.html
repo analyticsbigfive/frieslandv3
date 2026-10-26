@@ -16,7 +16,7 @@
 
   <h3>Votre périmètre</h3>
   <p>Vous voyez les points de vente, visites, actions et coachings de <strong>vos territoires</strong> (et, s’ils sont définis, de vos quartiers). Ce périmètre est fixé par l’administrateur ; vous ne pouvez pas le modifier vous-même. Si un point de vente ou un merchandiseur manque, demandez à l’administrateur de vérifier vos territoires.</p>
-  <p>Votre <strong>équipe</strong> (les merchandiseurs rattachés à vous) est aussi définie par l’administrateur. Elle sert aux filtres « Mon équipe » et aux relances ; elle n’élargit pas ce que vous voyez.</p>
+  <p>Votre <strong>équipe</strong> (les merchandiseurs que l’administrateur vous a confiés) est aussi définie par l’administrateur. Elle sert aux filtres « Mon équipe » et aux relances ; elle n’élargit pas ce que vous voyez.</p>
 </section>
 
 <section class="chapitre">
@@ -69,7 +69,7 @@
   <ol class="etapes">
     <li><strong>Rechercher</strong> : tapez un nom de PDV ou de merchandiseur dans <span class="ui">PDV ou merchandiseur…</span></li>
     <li><strong>Choisir une période</strong> : renseignez les deux dates (la date de fin est incluse) ; la croix efface le filtre.</li>
-    <li><strong>Restreindre à votre équipe</strong> : basculez de <span class="ui">Tout le territoire</span> à <span class="ui">Mon équipe</span> (visible seulement si des merchandiseurs vous sont rattachés).</li>
+    <li><strong>Restreindre à votre équipe</strong> : basculez de <span class="ui">Tout le territoire</span> à <span class="ui">Mon équipe</span> (visible seulement si l’administrateur vous a confié des merchandiseurs).</li>
     <li><strong>Ouvrir une visite</strong> : appuyez sur sa carte pour en voir le détail.</li>
   </ol>
   <p>Chaque carte indique le PDV, le merchandiseur, la date, la zone, le statut (<span class="ui">Soumise</span>, <span class="ui">Validée</span>, <span class="ui">Rejetée</span>) et si la position GPS a été validée. Le compteur en haut à droite donne le nombre de visites du jour.</p>
@@ -85,7 +85,7 @@
     <li><strong>Produits en rayon</strong> : quantités par référence et par famille (EVAP, IMP, SCM…), ruptures, respect des prix ;</li>
     <li><strong>Concurrence</strong> : marques présentes, activités et visibilité concurrentes ;</li>
     <li><strong>Actions réalisées</strong> par le merchandiseur (référencement, FIFO, rangement, pose d’affiches…) et son commentaire ;</li>
-    <li><strong>Actions décidées</strong> : le bouton <span class="ui">Nouvelle action</span> crée une action rattachée à cette visite ;</li>
+    <li><strong>Actions décidées</strong> : le bouton <span class="ui">Nouvelle action</span> crée une action liée à cette visite ;</li>
     <li><strong>Photos</strong>.</li>
   </ul>
 </section>
@@ -224,8 +224,10 @@
     <thead><tr><th>Rubrique</th><th>Usage pour le commercial</th></tr></thead>
     <tbody>
       <tr><td><span class="ui">Perfect Store</span></td><td>Niveau des magasins, critères manquants pour passer au niveau supérieur.</td></tr>
-      <tr><td><span class="ui">Activité</span> / <span class="ui">Carte</span></td><td>Volume de visites, couverture du parc.</td></tr>
-      <tr><td><span class="ui">Visites</span> → <span class="ui">Field coaching</span></td><td>Rapport des coachings par période, superviseur et zone, avec scores, <span class="ui">Export CSV</span> et <span class="ui">Imprimer</span>.</td></tr>
+      <tr><td><span class="ui">Activité</span> / <span class="ui">Carte et suivi</span></td><td>Volume de visites, couverture du parc, trajet d’un merchandiseur sur une journée.</td></tr>
+      <tr><td><span class="ui">Planning</span> → <span class="ui">Tournées</span></td><td>Les tournées de votre équipe, en consultation : pour les modifier, adressez-vous à votre superviseur.</td></tr>
+      <tr><td><span class="ui">Planning</span> → <span class="ui">Programme merchandiser</span>, <span class="ui">Écarts de tournée</span></td><td>La couverture du mois ; les jours où merchandiseur et SSF ne sont pas passés aux mêmes endroits.</td></tr>
+      <tr><td><span class="ui">Visites</span> → <span class="ui">Coaching terrain</span></td><td>Rapport des coachings par période, superviseur et zone, avec scores, <span class="ui">Export CSV</span> et <span class="ui">Imprimer</span>.</td></tr>
       <tr><td><span class="ui">Actions</span> → <span class="ui">Actions commerciales</span></td><td>Suivi par statut, merchandiseur, auteur et zone ; export CSV et relances WhatsApp groupées.</td></tr>
       <tr><td><span class="ui">Visibilité extérieure</span>, <span class="ui">Concurrence</span>, <span class="ui">Produits</span></td><td>Analyses détaillées des relevés.</td></tr>
     </tbody>

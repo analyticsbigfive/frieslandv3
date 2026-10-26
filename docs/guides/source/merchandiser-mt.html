@@ -102,7 +102,7 @@
       <h3>Produits : quantité et facings</h3>
       <ul>
         <li>Pour chaque produit, saisissez la <strong>quantité en rayon</strong> (unités visibles). <strong>0 = rupture.</strong></li>
-        <li>En supermarché, saisissez aussi les <strong>facings</strong> dans la case « F » : le nombre de produits de face, visibles au premier rang du rayon.</li>
+        <li>En supermarché, saisissez aussi les <strong>facings</strong> dans le champ « F » : le nombre de produits de face, visibles au premier rang du rayon.</li>
         <li>Répondez à <span class="ui">Prix respectés ?</span> pour chaque famille (EVAP, IMP, SCM), en comparant aux prix conseillés (tableau ci-dessous).</li>
         <li>Ruptures, commandes passées ou reçues : notez-les dans le <span class="ui">Commentaire</span> de la visite.</li>
       </ul>
@@ -215,8 +215,12 @@
     <li>Le message <span class="ui">Visite enregistrée</span> confirme la sauvegarde.</li>
   </ol>
   <div class="encadre encadre--regle">
-    <span class="encadre__titre">Enregistrez dans le magasin</span>
-    <p>Une visite est <strong>« GPS validé »</strong> seulement si vous êtes près du magasin (300 m aujourd’hui) avec une bonne précision GPS. Dans un grand supermarché, le GPS est moins précis : si besoin, enregistrez près de l’entrée. Une visite enregistrée hors zone reste en <strong>« GPS non validé »</strong>, ce que voit votre responsable.</p>
+    <span class="encadre__titre">Enregistrez dans le magasin : la première visite fait foi</span>
+    <p>La première fois que vous visitez un magasin, sa position devient celle de votre téléphone : faites-la dans le magasin ou devant l’entrée. Aux visites suivantes (version 1.0.15), il faut être à moins de 300 m de cette position, avec une précision de 30 m ou mieux ; sinon l’enregistrement est bloqué : revenez dans le magasin, puis <span class="ui">Réessayer</span>. Dans un grand supermarché, le GPS est moins précis : si besoin, enregistrez près de l’entrée.</p>
+  </div>
+  <div class="encadre encadre--attention">
+    <span class="encadre__titre">Encore en version 1.0.14 ?</span>
+    <p>Tant que la 1.0.15 n’est pas installée, la fenêtre <span class="ui">Hors zone</span> propose encore <span class="ui">Soumettre quand même</span> : la visite est alors enregistrée « GPS non validé », ce que voit votre responsable.</p>
   </div>
   <p>Une visite enregistrée ne peut plus être modifiée. Vous la retrouvez dans l’onglet <span class="ui">Visites</span>.</p>
 </section>
@@ -246,7 +250,7 @@
     <ul>
       <li>Mot de passe oublié, compte bloqué, magasin hors de votre périmètre : votre <strong>responsable Hello Event</strong>, qui transmet à l’administrateur.</li>
       <li>Tournée qui s’arrête : chapitre 4 (autorisation « Toujours », batterie).</li>
-      <li>Visite « GPS non validé » : vérifiez la précision GPS et les coordonnées du magasin (crayon de la fiche, sur place).</li>
+      <li>Visite bloquée ou « GPS non validé » : attendez une meilleure précision près de l’entrée ; si la position du magasin est fausse, prévenez votre responsable, qui la fait corriger.</li>
     </ul>
   </div>
 </section>
