@@ -356,7 +356,7 @@ const sousRegionOpts = () => opt(store.sous_region || [], r => r.code, r => `${r
 const territoireOpts = () => opt(store.territoire || [], r => r.code, r => `${r.nom} · ${r.code}`)
 const territoireIdOpts = () => opt(store.territoire || [], r => r.id, r => `${r.nom} · ${r.code}`)
 const distributeurIdOpts = () => opt(store.distributeur || [], r => r.id, r => r.nom)
-const zoneIdOpts = () => opt(store.zone || [], r => r.id, r => `${r.code} · ${maps.territoire_code?.get(r.territoire_code)?.nom || r.territoire_code}`)
+const zoneIdOpts = () => opt(store.zone || [], r => r.id, r => `${r.code} · ${r.nom} · ${maps.territoire_code?.get(r.territoire_code)?.nom || r.territoire_code}`)
 const categoriePdvOpts = () => opt(store.categorie_pdv || [], r => r.id, r => `${r.nom}${r.canal ? ' · ' + r.canal : ''}`)
 const typePdvOpts = () => opt(store.type_pdv || [], r => r.id, r => r.nom)
 const categorieProduitOpts = () => opt(store.categorie_produit || [], r => r.id, r => `${r.nom} (${r.code})`)
@@ -375,7 +375,7 @@ const distributeurNameOf = (id: number) => maps.distributeur_id?.get(id)?.nom ||
 // on l'affiche par code + territoire, et les quartiers vivent dans leur propre
 // référentiel « Quartiers ». zoneNameOf reste pour le picker (options).
 const zoneOf = (id: number) => maps.zone_id?.get(id)
-const zoneCodeOf = (id: number) => zoneOf(id)?.code || `#${id}`
+const zoneCodeOf = (id: number) => { const z = zoneOf(id); return z ? `${z.code} · ${z.nom}` : `#${id}` }
 const zoneTerrLabelOf = (id: number) => { const z = zoneOf(id); return z ? (maps.territoire_code?.get(z.territoire_code)?.nom || z.territoire_code) : '—' }
 const zoneDistribOf = (id: number) => { const did = maps.zoneDistrib?.get(id); return did ? distributeurNameOf(did) : '—' }
 const quartierCountOf = (id: number) => maps.quartierCount?.get(id) || 0
@@ -511,7 +511,8 @@ const defs: Def[] = [
   },
   {
     id: 'territoire', section: 'geo', label: 'Territoires', table: 'territoire',
-    select: 'id, code, nom, sous_region_code', order: q => q.order('nom'),
+    // Archivés (découpage d'avant le 28/10) masqués.
+    select: 'id, code, nom, sous_region_code', order: q => q.eq('actif', true).order('nom'),
     columns: [
       { label: 'Code', cell: r => r.code, kind: 'mono' },
       { label: 'Nom', cell: r => r.nom },
@@ -533,21 +534,22 @@ const defs: Def[] = [
   },
   {
     id: 'zone', section: 'geo', label: 'Zones commerciales (areas)', table: 'zone',
-    select: 'id, code, nom, territoire_code', order: q => q.order('territoire_code').order('code'),
+    select: 'id, code, nom, territoire_code', order: q => q.eq('actif', true).order('territoire_code').order('code'),
     columns: [
       { label: 'Code de la zone', cell: r => r.code || '—', kind: 'mono' },
+      { label: 'Nom', cell: r => r.nom },
       { label: 'Territoire', cell: r => maps.territoire_code?.get(r.territoire_code)?.nom || r.territoire_code, muted: true },
       { label: 'Distributeur', cell: r => zoneDistribOf(r.id), muted: true },
       { label: 'Quartiers', cell: r => quartierCountOf(r.id), align: 'c', kind: 'num' },
     ],
     fields: [
       { key: 'code', label: 'Code de la zone', type: 'text', required: true },
-      { key: 'nom', label: 'Ancien libellé (facultatif)', type: 'text', hint: 'Ancien nom de la zone, qui regroupait ses quartiers. Les quartiers se gèrent maintenant dans la liste « Quartiers ».' },
+      { key: 'nom', label: 'Nom de la zone', type: 'text', hint: 'Tel qu\'il figure dans le découpage sectoriel. Les quartiers se gèrent dans la liste « Quartiers ».' },
       { key: 'territoire_code', label: 'Territoire', type: 'select', opts: territoireOpts, required: true },
     ],
     blank: () => ({ code: '', nom: '', territoire_code: '' }),
     fill: r => ({ ...r }),
-    rowKey: r => String(r.id), search: r => `${r.code} ${maps.territoire_code?.get(r.territoire_code)?.nom || r.territoire_code}`.toLowerCase(),
+    rowKey: r => String(r.id), search: r => `${r.code} ${r.nom} ${maps.territoire_code?.get(r.territoire_code)?.nom || r.territoire_code}`.toLowerCase(),
     valid: f => !!f.code && !!f.territoire_code,
     save: (f, e) => e
       ? supabase.from('zone').update({ code: f.code || null, nom: f.nom || f.code, territoire_code: f.territoire_code }).eq('id', f.id)
@@ -556,7 +558,8 @@ const defs: Def[] = [
   },
   {
     id: 'quartier', section: 'geo', label: 'Quartiers', table: 'quartier',
-    select: 'id, zone_id, nom, ordre', order: q => q.order('zone_id').order('ordre'),
+    // Quartiers des zones archivées masqués avec elles.
+    select: 'id, zone_id, nom, ordre, zone!inner(actif)', order: q => q.eq('zone.actif', true).order('zone_id').order('ordre'),
     columns: [
       { label: 'Territoire', cell: r => zoneTerrLabelOf(r.zone_id), muted: true },
       { label: 'Zone commerciale', cell: r => zoneCodeOf(r.zone_id), kind: 'mono' },
@@ -626,7 +629,7 @@ const defs: Def[] = [
   },
   {
     id: 'territoire_distributeur', section: 'distrib', label: 'Territoires des distributeurs', table: 'territoire_distributeur',
-    select: 'territoire_id, distributeur_id',
+    select: 'territoire_id, distributeur_id, territoire!inner(actif)', order: q => q.eq('territoire.actif', true),
     columns: [
       { label: 'Territoire', cell: r => territoireNameOf(r.territoire_id) },
       { label: 'Distributeur', cell: r => distributeurNameOf(r.distributeur_id) },
@@ -645,7 +648,7 @@ const defs: Def[] = [
   },
   {
     id: 'zone_distributeur', section: 'distrib', label: 'Zones des distributeurs', table: 'zone_distributeur',
-    select: 'zone_id, distributeur_id',
+    select: 'zone_id, distributeur_id, zone!inner(actif)', order: q => q.eq('zone.actif', true),
     columns: [
       { label: 'Zone commerciale', cell: r => zoneCodeOf(r.zone_id), kind: 'mono' },
       { label: 'Territoire', cell: r => zoneTerrLabelOf(r.zone_id), muted: true },

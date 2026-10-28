@@ -62,8 +62,9 @@ export function useReferentiels() {
         supabase.from('distributeur').select('nom, national').order('nom'),
         supabase.from('region').select('code, nom, nom_affichage').order('nom'),
         supabase.from('sous_region').select('code, nom, nom_affichage, region_code').order('nom'),
-        supabase.from('territoire').select('code, nom, sous_region_code').order('nom'),
-        supabase.from('zone').select('id, code, nom, territoire_code').order('territoire_code').order('nom'),
+        // Territoires et zones archivés (découpage d'avant le 28/10) : masqués.
+        supabase.from('territoire').select('code, nom, sous_region_code').eq('actif', true).order('nom'),
+        supabase.from('zone').select('id, code, nom, territoire_code').eq('actif', true).order('territoire_code').order('nom'),
         supabase.from('quartier').select('id, zone_id, nom, ordre').order('zone_id').order('ordre'),
         // select('*') : tolère l'absence de la colonne nom_fr tant que la
         // migration 20260717130000 n'est pas appliquée.

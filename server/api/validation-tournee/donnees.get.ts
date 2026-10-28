@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
   const service = getServiceClient(event)
   const v = await validationDuJeton(event, service)
 
-  const [lignes, quartiersPdv, profil, reponses, retours, zones, merch, territoires, secteurs] = await Promise.all([
+  const [lignes, quartiersPdv, profil, reponses, retours, zones, merch, territoires, secteurs, alias] = await Promise.all([
     service.from('routing_mensuel')
       .select('id, jour_semaine, semaine_du_mois, point_visite, secteur, commune, latitude, longitude, distributeur, ssf_texte, type_engin, ssf:ssf(nom)')
       .eq('merchandiser_id', v.merchandiser_id).eq('actif', true)
@@ -52,10 +52,14 @@ export default defineEventHandler(async (event) => {
     service.from('validation_tournee_pdv_retour').select('pdv_id, motif, commentaire').eq('validation_merch_id', v.id),
     service.from('validation_tournee_zone').select('type, libelle, decision, commentaire').eq('validation_merch_id', v.id),
     service.from('validation_tournee_merch').select('zones_remarque, zones_proposees').eq('id', v.id).maybeSingle(),
-    service.from('territoire').select('code, nom, sous_region_code, zone(id, quartier(nom, ordre))').in('sous_region_code', SOUS_REGIONS).order('nom'),
+    // Territoires actifs seulement ; toutes leurs zones, archivées comprises :
+    // les quartiers des profils gardent les noms de l'ancien découpage.
+    service.from('territoire').select('code, nom, sous_region_code, zone(id, quartier(nom, ordre))').in('sous_region_code', SOUS_REGIONS).eq('actif', true).order('nom'),
     service.from('profiles').select('id').eq('employeur', 'atom').eq('role', 'merchandiser'),
+    // Anciens libellés (« COCODY 1 », « ADJAME »…) → territoire du découpage du 28/10.
+    service.from('territoire_alias').select('alias, territoire_code'),
   ])
-  for (const r of [lignes, quartiersPdv, profil, reponses, retours, zones, merch, territoires, secteurs]) if (r.error) throw apiError(500, r.error.message)
+  for (const r of [lignes, quartiersPdv, profil, reponses, retours, zones, merch, territoires, secteurs, alias]) if (r.error) throw apiError(500, r.error.message)
   if (String(profil.data?.email || '').endsWith('@friesland-test.ci') && !(quartiersPdv.data || []).length) {
     const points = new Set((lignes.data || []).filter((l: any) => l.latitude != null).map((l: any) => `${(+l.latitude).toFixed(5)},${(+l.longitude).toFixed(5)}`))
     const autres = await service.from('routing_mensuel').select('merchandiser_id, latitude, longitude').eq('actif', true).neq('merchandiser_id', v.merchandiser_id).not('latitude', 'is', null)
@@ -158,7 +162,9 @@ export default defineEventHandler(async (event) => {
       sousRegion: t.sous_region_code,
       quartiers: uniques((t.zone || []).flatMap((z: any) => (z.quartier || []).map((q: any) => q.nom))).sort((a, b) => a.localeCompare(b, 'fr')),
     }))
-  const codeDuNom = (nom: string) => referentiel.find((t: any) => cle(t.nom) === cle(nom))?.code || null
+  const codeDuNom = (nom: string) => referentiel.find((t: any) => cle(t.nom) === cle(nom))?.code
+    || referentiel.find((t: any) => t.code === (alias.data || []).find((a: any) => cle(a.alias) === cle(nom))?.territoire_code)?.code
+    || null
 
   return {
     campagne: { libelle: v.campagne.libelle, mois: v.campagne.mois },

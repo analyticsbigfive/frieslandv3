@@ -687,7 +687,7 @@ const territoryCascadeOptions = computed(() => territories.value
   .map(t => ({ value: t.code, label: t.name })))
 const areaCascadeOptions = computed(() => areas.value
   .filter(a => !pdvForm.value.territory_code || a.territory_code === pdvForm.value.territory_code)
-  .map(a => ({ value: a.code, label: a.code })))
+  .map(a => ({ value: a.code, label: a.name ? `${a.code} · ${a.name}` : a.code })))
 // zone.id de l'area sélectionnée (territoire + code) : clé pour désambiguïser les
 // quartiers homonymes (ex SLEIL sur GAG 1 vs GAG 2).
 const selectedZoneId = computed(() => areas.value.find(a =>

@@ -541,7 +541,7 @@ async function charger(avecPlans = true) {
       supabase.from('validation_tournee_zone').select('validation_merch_id, type, libelle, decision').in('validation_merch_id', ids.length ? ids : vide),
       supabase.from('routing_mensuel').select('id, merchandiser_id, jour_semaine, semaine_du_mois, point_visite, secteur, quartiers').eq('actif', true).in('merchandiser_id', merchs.length ? merchs : vide).order('semaine_du_mois').order('jour_semaine'),
       supabase.from('profiles').select('id, nom, email, telephone, zone_assignee, territoires_assignes, quartiers_assignes').in('id', merchs.length ? merchs : vide),
-      supabase.from('territoire').select('code, nom, sous_region_code, zone(quartier(nom))'),
+      supabase.from('territoire').select('code, nom, sous_region_code, zone(quartier(nom))').eq('actif', true),
       (supabase.from('validation_tournee_application') as any).select('lot, applique_le, annule_le').eq('campagne_id', campagneId.value).order('applique_le', { ascending: false }),
     ])
     for (const x of [r, p, z, rm, pr, te, ap]) if (x.error) throw x.error
