@@ -29,6 +29,7 @@ export const TEXTES_GPS = {
   recherche: 'Recherche de la position…',
   precisionActuelle: (m: number) => `précision actuelle : ${Math.round(m)} m`,
   precisionDemandee: (m: number) => `${Math.round(m)} m demandés`,
+  meilleurePrecision: (m: number) => `Meilleure précision obtenue : ${Math.round(m)} m`,
   attente: 'Restez immobile, si possible près d\'une porte ou d\'une fenêtre.',
   reessayer: 'Réessayer',
   fermer: 'Fermer',

@@ -26,20 +26,6 @@
       </li>
     </ol>
 
-    <template v-if="etapesChrome.length">
-      <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Dans Chrome</h3>
-      <ol class="space-y-3" :start="etapes.length + 1">
-        <li
-          v-for="(etape, i) in etapesChrome"
-          :key="`chrome-${i}`"
-          class="flex items-start gap-4 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
-        >
-          <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-fc-red text-lg font-bold text-white" aria-hidden="true">{{ etapes.length + i + 1 }}</span>
-          <p class="min-w-0 pt-1.5 text-lg font-semibold leading-snug text-gray-900 dark:text-gray-100">{{ etape.texte }}</p>
-        </li>
-      </ol>
-    </template>
-
     <p class="text-sm text-gray-500 dark:text-gray-400">{{ TEXTES_GPS.noteMenus }}</p>
 
     <div v-if="avecBoutons" class="flex flex-col gap-3 sm:flex-row-reverse">
@@ -78,15 +64,19 @@ const idTitre = useId()
 
 const casAffiche = computed<CasAideGps>(() => props.cas || (props.cause ? casAideGps(props.cause) : 'C'))
 const bloc = computed(() => CAS_AIDE_GPS[casAffiche.value])
-const etapes = computed(() => ETAPES_AIDE_GPS[casAffiche.value])
-// Dans le navigateur, le site doit aussi être autorisé dans Chrome.
-const etapesChrome = computed(() => (casAffiche.value === 'B' && !estNatif.value ? ETAPES_AIDE_GPS_CHROME : []))
+// Dans le navigateur, le site doit aussi être autorisé dans Chrome : ces
+// étapes passent avant la dernière (« Revenez… et appuyez sur Réessayer »).
+const etapes = computed(() => {
+  const base = ETAPES_AIDE_GPS[casAffiche.value]
+  if (casAffiche.value !== 'B' || estNatif.value) return base
+  return [...base.slice(0, -1), ...ETAPES_AIDE_GPS_CHROME, ...base.slice(-1)]
+})
 const icone = computed(() => ({ A: 'i-heroicons-map-pin', B: 'i-heroicons-lock-closed', C: 'i-heroicons-signal' } as const)[casAffiche.value])
 
 const lignePrecision = computed(() => {
   if (props.cause === 'approximative') return 'La tablette donne seulement une position approximative.'
   if (casAffiche.value !== 'C' || props.precision == null) return ''
   const demandee = props.max ? ` (${TEXTES_GPS.precisionDemandee(props.max)})` : ''
-  return `Meilleure position trouvée : ${TEXTES_GPS.precisionActuelle(props.precision)}${demandee}.`
+  return `${TEXTES_GPS.meilleurePrecision(props.precision)}${demandee}.`
 })
 </script>

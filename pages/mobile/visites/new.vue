@@ -1210,6 +1210,7 @@ async function persistVisit(options: { position?: PositionVisite, confirmation?:
   // le brouillon reste.
   const position = options.position || await exigerPosition()
   if (!position) {
+    showSaveOverlay.value = false
     formError.value = 'Pas de position : la visite n’est pas enregistrée. Votre saisie est gardée, réessayez une fois la position trouvée.'
     return
   }
@@ -1232,6 +1233,7 @@ async function persistVisit(options: { position?: PositionVisite, confirmation?:
     confirmation: options.confirmation,
   })
   if (decision.action === 'confirmer') {
+    showSaveOverlay.value = false
     positionAConfirmer.value = position
     distanceConfirmation.value = decision.distance_m
     showConfirmDevant.value = true
