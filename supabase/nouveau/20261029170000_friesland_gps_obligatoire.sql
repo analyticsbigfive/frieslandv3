@@ -398,7 +398,9 @@ $$;
 
 -- PDV actifs autour d'une position, pour le contrôle avant création. Tous les
 -- PDV, pas seulement ceux du périmètre : un doublon peut être chez un
--- collègue (dans_perimetre = faux, l'app dit de prévenir le superviseur).
+-- collègue. Cloisonnement : un PDV hors du périmètre de l'agent ne montre que
+-- son existence (ni nom, ni quartier, ni photo, distance arrondie à 5 m), et
+-- le rayon ne dépasse jamais « Rayon des doublons » (pas de balayage).
 create or replace function public.pdv_voisins(p_lat double precision, p_lng double precision, p_rayon integer default null)
 returns table (pdv_id text, nom_pdv text, quartier text, image_url text, distance_m integer, dans_perimetre boolean)
 language sql
@@ -406,8 +408,10 @@ stable
 security definer
 set search_path = public
 as $$
-  with r as (
-    select least(greatest(coalesce(p_rayon, parametre_app_valeur('doublon_rayon_m')::int, 30), 5), 200)::double precision as m
+  with param as (
+    select least(greatest(coalesce(parametre_app_valeur('doublon_rayon_m'), 30), 5), 200)::double precision as max_m
+  ), r as (
+    select least(coalesce(p_rayon::double precision, param.max_m), param.max_m) as m from param
   ), proches as (
     select p.pdv_id, p.nom_pdv, p.quartier, p.image_url, p.created_by,
            distance_m(p_lat, p_lng, p.geolocation_lat, p.geolocation_lng) as d, r.m
@@ -418,12 +422,19 @@ as $$
       and p.geolocation_lat between p_lat - r.m / 111000.0 and p_lat + r.m / 111000.0
       and p.geolocation_lng between p_lng - r.m / (111000.0 * greatest(cos(radians(p_lat)), 0.01))
                                 and p_lng + r.m / (111000.0 * greatest(cos(radians(p_lat)), 0.01))
+  ), vus as (
+    select x.*, (x.created_by = auth.uid() or x.pdv_id in (select y from public.pdv_ids_perimetre() y)) as dedans
+    from proches x
+    where x.d <= x.m
   )
-  select x.pdv_id, x.nom_pdv, x.quartier, x.image_url, round(x.d)::int,
-         x.created_by = auth.uid() or x.pdv_id in (select y from public.pdv_ids_perimetre() y)
-  from proches x
-  where x.d <= x.m
-  order by x.d
+  select v.pdv_id,
+         case when v.dedans then v.nom_pdv end,
+         case when v.dedans then v.quartier end,
+         case when v.dedans then v.image_url end,
+         case when v.dedans then round(v.d)::int else (round(v.d / 5) * 5)::int end,
+         v.dedans
+  from vus v
+  order by v.d
   limit 20
 $$;
 

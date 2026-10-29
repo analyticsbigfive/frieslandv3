@@ -26,7 +26,9 @@
             <img v-if="v.image_url" :src="v.image_url" :alt="`Devanture de ${v.nom_pdv || 'ce point de vente'}`" class="h-20 w-20 shrink-0 rounded-lg object-cover" loading="lazy">
             <div v-else class="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-center text-[11px] text-gray-500 dark:bg-gray-700 dark:text-gray-400">Pas de photo</div>
             <div class="min-w-0 flex-1">
-              <p class="truncate font-semibold text-gray-900 dark:text-gray-100">{{ v.nom_pdv || 'Point de vente sans nom' }}</p>
+              <p class="truncate font-semibold text-gray-900 dark:text-gray-100">
+                {{ v.dans_perimetre === false ? 'Point de vente d\'un autre secteur' : (v.nom_pdv || 'Point de vente sans nom') }}
+              </p>
               <p class="text-xs text-gray-500 dark:text-gray-400">à {{ v.distance_m }} m{{ v.quartier ? ` · ${v.quartier}` : '' }}</p>
               <UButton size="sm" variant="soft" class="mt-2" icon="i-heroicons-check" @click="choisirExistant(v)">C'est ce PDV</UButton>
             </div>
