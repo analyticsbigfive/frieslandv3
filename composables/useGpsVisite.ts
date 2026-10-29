@@ -131,7 +131,7 @@ export function useGpsVisite() {
    */
   function exigerPosition(): Promise<PositionVisite | null> {
     if (demande) return demande
-    cheminDemande.value = router.currentRoute.value.fullPath
+    cheminDemande.value = router.currentRoute.value.path
     demande = new Promise((resolve) => { finDemande = resolve })
     void lancer()
     return demande

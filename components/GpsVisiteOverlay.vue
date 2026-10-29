@@ -44,7 +44,7 @@ const visible = computed(() => etat.value.phase !== 'ferme' && !explicationOuver
 // Retour Android ou changement d'écran : la recherche s'arrête, l'écran qui
 // l'attendait reçoit « pas de position ».
 const route = useRoute()
-watch(() => route.fullPath, (chemin) => {
+watch(() => route.path, (chemin) => {
   if (etat.value.phase !== 'ferme' && chemin !== cheminDemande.value) fermer()
 })
 </script>
