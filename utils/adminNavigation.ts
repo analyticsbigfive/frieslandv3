@@ -163,6 +163,15 @@ export const ADMIN_DOMAINS: AdminDomain[] = [
   },
   // ---- Marché ----
   {
+    id: 'decoupage',
+    label: 'Découpage',
+    icon: 'i-heroicons-squares-2x2',
+    group: 'marche',
+    tabs: [
+      { id: 'decoupage.carte', label: 'Découpage', title: 'Découpage sectoriel', path: '/admin/decoupage', access: 'principal', roles: ['admin', 'superviseur', 'commercial'], aide: 'Territoires, zones, secteurs et commerciaux du découpage en vigueur, sur la carte. Boutiques rattachées à leur territoire, en attendant leur reclassement par secteur.' },
+    ],
+  },
+  {
     id: 'visibilite',
     label: 'Visibilité',
     icon: 'i-heroicons-eye',

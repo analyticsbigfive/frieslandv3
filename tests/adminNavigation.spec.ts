@@ -31,6 +31,8 @@ function ancienneSection(path: string): string | null {
     || path.startsWith('/admin/distributeurs')
   ) return 'parametres'
   if (path === '/admin' || path.startsWith('/admin/activite') || path.startsWith('/admin/routing') || path.startsWith('/admin/map') || path.startsWith('/admin/trajets')) return 'principal'
+  // Pages créées après le registre, avec la section choisie à leur création.
+  if (path.startsWith('/admin/decoupage')) return 'principal'
   if (path.startsWith('/admin/perfect-store')) return 'perfect-store'
   if (path.startsWith('/admin/pdv')) return 'pdv'
   if (path.startsWith('/admin/visites')) return 'visites'
