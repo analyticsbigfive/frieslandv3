@@ -8,10 +8,6 @@
       <span class="min-w-0 truncate"><strong>Présélectionné :</strong> {{ preselectionLabel }}</span>
       <button type="button" class="shrink-0 font-semibold underline underline-offset-2" @click="clearPreselection">Modifier</button>
     </div>
-    <div v-if="!hasGps" class="mx-4 mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100" role="status">
-      <UIcon name="i-heroicons-signal-slash" class="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-      <span>Cet appareil n’a pas de GPS. La visite s’enregistre normalement, mais sans position ni contrôle de proximité du PDV.</span>
-    </div>
     <div v-if="previousVisit" class="mx-4 mt-3 flex items-center justify-between gap-3 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs text-violet-900 dark:border-violet-900/60 dark:bg-violet-950/30 dark:text-violet-100">
       <span class="min-w-0 truncate">Dernière visite disponible pour ce PDV ({{ previousVisitDateLabel }}).</span>
       <button type="button" class="shrink-0 font-semibold underline underline-offset-2" @click="showPreviousVisitConfirm = true">Reprendre</button>
@@ -440,7 +436,7 @@
       success-message="Les données ont été sauvegardées avec succès."
       @update:visible="showSaveOverlay = $event"
       @closed="onSaveComplete"
-      @retry="persistVisit"
+      @retry="persistVisit()"
     />
 
     <!-- Modals -->
@@ -449,22 +445,26 @@
       @created="handlePDVCreated"
     />
 
-    <UModal v-model="showGeofenceAlert">
+    <UModal v-model="showConfirmDevant" prevent-close>
       <div class="p-6 text-center">
-        <div class="w-16 h-16 mx-auto mb-4 bg-red-50 rounded-full flex items-center justify-center">
-          <UIcon name="i-heroicons-map-pin" class="w-8 h-8 text-red-500" />
+        <div class="w-16 h-16 mx-auto mb-4 bg-amber-50 rounded-full flex items-center justify-center dark:bg-amber-950/40">
+          <UIcon name="i-heroicons-map-pin" class="w-8 h-8 text-amber-500" />
         </div>
-        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Hors zone</h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">
-          Vous êtes à {{ geofenceDistance }} m de ce PDV, {{ geofenceRepere }}.
+        <p class="text-base text-gray-700 dark:text-gray-200 mb-2">
+          Vous êtes à {{ distanceConfirmation }} m de la position enregistrée de ce point de vente.
         </p>
-        <p class="text-sm text-gray-400 mb-6">
-          Distance maximum : {{ geofenceRayon }} m. Rapprochez-vous puis réessayez.
+        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
+          Êtes-vous bien devant {{ selectedPDV?.nom_pdv || 'ce point de vente' }} ?
+        </h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
+          Si oui, votre position devient la nouvelle position de ce point de vente.
         </p>
-        <div class="flex gap-3 justify-center">
-          <UButton variant="ghost" @click="showGeofenceAlert = false">Annuler</UButton>
-          <UButton class="bg-fc-red" icon="i-heroicons-arrow-path" @click="showGeofenceAlert = false; persistVisit()">
-            Réessayer
+        <div class="flex flex-col gap-3 sm:flex-row-reverse sm:justify-center">
+          <UButton size="lg" color="red" icon="i-heroicons-check" class="justify-center" @click="confirmerDevant">
+            Oui, je suis devant
+          </UButton>
+          <UButton size="lg" color="gray" variant="ghost" class="justify-center" @click="annulerDevant">
+            Non, annuler
           </UButton>
         </div>
       </div>
@@ -530,6 +530,7 @@ import { CATEGORIES_RELEVE, categorieRenseignee } from '~/utils/visiteCompletude
 import { ssfDuJour, pdvDansSousZone, libelleSousZone } from '~/utils/ssfTerrain'
 import { describeSupabaseError, estErreurReseau } from '~/utils/supabaseErrors'
 import type { WizardStep } from '~/components/FormWizard.vue'
+import type { PositionVisite } from '~/composables/useGpsVisite'
 
 definePageMeta({
   middleware: ['auth', 'terrain-write'],
@@ -541,8 +542,11 @@ const user = useSupabaseUser()
 const authStore = useAuthStore()
 const pdvStore = usePDVStore()
 const routingStore = useRoutingStore()
-const { grabPosition, haversineDistance, error: geolocationError } = useGeofencing()
-const { hasGps, ensureProbed: probeLocationHardware } = useLocationHardware()
+const { haversineDistance } = useGeofencing()
+// 1.0.17 : pas de position, pas de visite (ni hors ligne, ni sur une tablette
+// sans puce GPS). L'écran d'aide GPS dit pourquoi et propose « Réessayer ».
+const { exigerPosition, positionRecente } = useGpsVisite()
+const { modeleAppareil } = useAppareil()
 const { completeMission, geolocaliserPdv } = useRouting()
 const { addToQueue, isOnline } = useOfflineSync()
 const { uploadImages, compressImage } = useImageUpload()
@@ -557,10 +561,10 @@ const preselectedPdvId = computed(() => route.query.pdv_id as string || '')
 
 const currentTab = ref(0)
 const saving = ref(false)
-const showGeofenceAlert = ref(false)
-const geofenceDistance = ref(0)
-const geofenceRayon = ref(0)
-const geofenceRepere = ref('')
+// Loin du repère du PDV : « Êtes-vous bien devant… ? » (plus de « Hors zone »).
+const showConfirmDevant = ref(false)
+const distanceConfirmation = ref(0)
+const positionAConfirmer = ref<PositionVisite | null>(null)
 const showCreatePDV = ref(false)
 const showCancelConfirm = ref(false)
 const formError = ref('')
@@ -837,17 +841,9 @@ function clearPreselection() {
 async function suggestNearestPdv() {
   nearestPdvLoading.value = true
   try {
-    const position = await grabPosition()
-    if (!position) {
-      toast.add({
-        title: 'Position indisponible',
-        description: hasGps.value
-          ? 'Autorisez le GPS pour rechercher le PDV le plus proche.'
-          : 'Cet appareil n’a pas de GPS : sélectionnez le PDV dans la liste.',
-        color: 'amber',
-      })
-      return
-    }
+    // Position prise à l'ouverture du formulaire, sinon nouvelle recherche.
+    const position = positionRecente() || await exigerPosition()
+    if (!position) return
     const nearest = filteredPdvList.value
       .filter(pdv => Number.isFinite(Number(pdv.geolocation_lat)) && Number.isFinite(Number(pdv.geolocation_lng)))
       .map(pdv => ({ pdv, distance: haversineDistance(position.lat, position.lng, Number(pdv.geolocation_lat), Number(pdv.geolocation_lng)) }))
@@ -1200,7 +1196,7 @@ function confirmReview() {
   void persistVisit()
 }
 
-async function persistVisit() {
+async function persistVisit(options: { position?: PositionVisite, confirmation?: 'devant' } = {}) {
   formError.value = ''
 
   if (!form.pdv_id) {
@@ -1209,65 +1205,52 @@ async function persistVisit() {
     return
   }
 
+  // Phase 1 : position fraîche et assez précise (écran de recherche, puis
+  // aide A/B/C si elle ne vient pas). Sans position, rien n'est enregistré et
+  // le brouillon reste.
+  const position = options.position || await exigerPosition()
+  if (!position) {
+    formError.value = 'Pas de position : la visite n’est pas enregistrée. Votre saisie est gardée, réessayez une fois la position trouvée.'
+    return
+  }
+
+  // Phase 2 : distance au repère du PDV. Elle ne bloque plus : au-delà de la
+  // distance d'alerte, l'agent confirme qu'il est devant, et le déclencheur
+  // pdv_gps_depuis_visite déplace le PDV jusqu'à lui (historique gardé). Un
+  // PDV sans repère prend la position de sa première visite, sans question.
+  const selectedPDV = pdvList.value.find(p => p.pdv_id === form.pdv_id)
+  const distance = selectedPDV?.geolocation_lat && selectedPDV?.geolocation_lng
+    ? Math.round(haversineDistance(position.lat, position.lng, selectedPDV.geolocation_lat, selectedPDV.geolocation_lng))
+    : null
+  const decision = decisionGpsVisite({
+    repere: repereDuPdv(selectedPDV),
+    distance_m: distance,
+    precision_m: Math.round(position.accuracy),
+    rayon_m: selectedPDV?.rayon_geofence || parametres.value.geofence_rayon_m,
+    distance_alerte_m: parametres.value.distance_alerte_m,
+    precision_pdv_max_m: parametres.value.gps_precision_pdv_max_m,
+    confirmation: options.confirmation,
+  })
+  if (decision.action === 'confirmer') {
+    positionAConfirmer.value = position
+    distanceConfirmation.value = decision.distance_m
+    showConfirmDevant.value = true
+    return
+  }
+
   saving.value = true
   showSaveOverlay.value = true
   saveStatus.value = 'saving'
-  saveProgress.value = 0
+  saveProgress.value = 30
 
   try {
-    // Phase 1: Grab GPS (0→30%)
-    animateProgress(30, 800)
-    const position = await grabPosition()
-    // Sans puce GPS (tablettes Wi-Fi), aucune position n'est atteignable :
-    // la visite s'enregistre sans coordonnées plutôt que d'être refusée.
-    if (!position && isOnline.value && hasGps.value) throw new Error(geolocationError.value || 'Position GPS indisponible. Activez la localisation puis réessayez.')
-
-    // Phase 2: Check geofence (30→50%)
-    // Règle du 22/10/2026 : la première visite d'un PDV passe sans contrôle et
-    // fixe sa position (déclencheur en base) ; ensuite la tablette doit être
-    // dans le rayon de ce repère, sans « soumettre quand même ». La distance
-    // est calculée sur la position déjà relevée (pas de second relevé GPS).
-    animateProgress(50, 400)
-    const selectedPDV = pdvList.value.find(p => p.pdv_id === form.pdv_id)
-    const repere = repereDuPdv(selectedPDV)
-    let geofenceOk = false
-    let gps: VisiteData['gps'] | undefined
-
-    if (position) {
-      const distance = selectedPDV?.geolocation_lat && selectedPDV?.geolocation_lng
-        ? Math.round(haversineDistance(position.lat, position.lng, selectedPDV.geolocation_lat, selectedPDV.geolocation_lng))
-        : null
-      const decision = decisionGpsVisite({
-        repere,
-        distance_m: distance,
-        precision_m: Math.round(position.accuracy),
-        rayon_m: selectedPDV?.rayon_geofence || parametres.value.geofence_rayon_m,
-        seuil_m: parametres.value.gps_precision_min_m,
-        precision_pdv_max_m: parametres.value.gps_precision_pdv_max_m,
-      })
-      if (decision.action === 'imprecis') {
-        throw new Error(`Précision GPS insuffisante (${decision.precision_m} m, ${decision.seuil_m} m demandés) pour vérifier que vous êtes au PDV. Sortez à découvert ou attendez quelques secondes, puis réessayez.`)
-      }
-      if (decision.action === 'trop_loin') {
-        geofenceDistance.value = decision.distance_m
-        geofenceRayon.value = decision.rayon_m
-        geofenceRepere.value = texteRepere(selectedPDV)
-        showSaveOverlay.value = false
-        showGeofenceAlert.value = true
-        saving.value = false
-        return
-      }
-      geofenceOk = decision.geofenceOk
-      gps = decision.gps
-    }
-
-    // Phase 3: Submit (50→100%)
+    // Phase 3 : envoi (30→100 %)
     animateProgress(90, 600)
-    await submitVisite(position, geofenceOk, gps)
-    if (gps?.motif === 'precision') {
+    await submitVisite(position, decision.geofenceOk, decision.gps)
+    if (decision.gps.motif === 'precision') {
       toast.add({
-        title: 'Visite enregistrée sans validation GPS',
-        description: `Précision obtenue : ${gps.precision_m ?? '?'} m (${gps.precision_exigee_m ?? '?'} m demandés) : la position de ce PDV sera prise à la prochaine visite.`,
+        title: 'Position du PDV non prise',
+        description: `Précision obtenue : ${decision.gps.precision_m ?? '?'} m (${decision.gps.precision_exigee_m ?? '?'} m demandés) : la position de ce PDV sera prise à la prochaine visite.`,
         color: 'amber',
         icon: 'i-heroicons-exclamation-triangle',
         timeout: 9000,
@@ -1275,7 +1258,7 @@ async function persistVisit() {
     }
 
     // PDV sans GPS (import DMS) : la position de la visite devient la sienne.
-    if (selectedPDV && !selectedPDV.geolocation_lat && position && isOnline.value) {
+    if (selectedPDV && !selectedPDV.geolocation_lat && isOnline.value) {
       if (await geolocaliserPdv(selectedPDV.pdv_id, position)) {
         selectedPDV.geolocation_lat = position.lat
         selectedPDV.geolocation_lng = position.lng
@@ -1294,12 +1277,24 @@ async function persistVisit() {
   }
 }
 
+function confirmerDevant() {
+  const position = positionAConfirmer.value
+  showConfirmDevant.value = false
+  positionAConfirmer.value = null
+  if (position) void persistVisit({ position, confirmation: 'devant' })
+}
+
+function annulerDevant() {
+  showConfirmDevant.value = false
+  positionAConfirmer.value = null
+}
+
 function onSaveComplete() {
   router.push('/mobile')
 }
 
 async function submitVisite(
-  position: { lat: number; lng: number; accuracy: number } | null,
+  position: PositionVisite,
   geofenceOk: boolean,
   gps?: VisiteData['gps'],
 ) {
@@ -1385,10 +1380,12 @@ async function submitVisite(
     date_visite: new Date(form.date_visite).toISOString(),
     commercial: authStore.profile?.nom || '',
     email: user.value?.email || '',
-    geolocation_lat: position?.lat || null,
-    geolocation_lng: position?.lng || null,
+    geolocation_lat: position.lat,
+    geolocation_lng: position.lng,
     geofence_validated: geofenceOk,
-    precision_gps: position?.accuracy || null,
+    precision_gps: position.accuracy,
+    // Modèle de la tablette (SM-X130 = Wi-Fi seul, sans puce GPS).
+    appareil_modele: await modeleAppareil(),
     data: visiteData,
     image_urls: imageUrls,
     sync_status: 'synced',
@@ -1441,11 +1438,24 @@ async function submitVisite(
   activeVisiteId.value = null
 }
 
+// Ouverture du formulaire : une position assez précise est exigée avant de
+// commencer (sauf si « Démarrer » vient d'en prendre une). Sans position, on
+// revient à l'écran précédent.
+async function exigerPositionOuverture() {
+  if (positionRecente(60_000)) return
+  const position = await exigerPosition()
+  if (position || router.currentRoute.value.path !== route.path) return
+  toast.add({ title: 'Pas de position, pas de visite', description: 'Allumez la localisation de la tablette, puis rouvrez la visite.', color: 'amber', icon: 'i-heroicons-map-pin' })
+  if (window.history.length > 1) router.back()
+  else router.push('/mobile')
+}
+
 onMounted(async () => {
   if (!authStore.profile) {
     await authStore.fetchProfile()
   }
-  void probeLocationHardware()
+  void modeleAppareil()
+  void exigerPositionOuverture()
   void fetchThresholds()
   void fetchVisibilityElements()
   void fetchTypePdvLabels()

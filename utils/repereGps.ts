@@ -2,9 +2,11 @@
 // Repère du PDV (22/10/2026, décision de Jean Luc) : la première visite d'un
 // PDV passe sans contrôle de distance et fixe sa position (déclencheur
 // pdv_gps_depuis_visite, gps_source = 'terrain') ; l'admin peut la corriger
-// (gps_source = 'admin'). Ensuite la tablette doit être dans le rayon de ce
-// repère, sans « soumettre quand même ». Voir
+// (gps_source = 'admin'). Voir
 // supabase/nouveau/20261022100000_friesland_gps_premiere_visite.sql.
+// 1.0.17 (29/10/2026) : la position prise à la création du PDV ('creation') et
+// celle d'une visite où l'agent a confirmé être devant ('visite_validee')
+// sont aussi des repères. La règle de la visite est dans utils/gpsVisite.ts.
 
 export type PdvPosition = {
   geolocation_lat?: number | null
@@ -13,7 +15,10 @@ export type PdvPosition = {
   gps_maj_le?: string | null
 } | null | undefined
 
-export type RepereGps = 'terrain' | 'admin'
+export type RepereGps = 'terrain' | 'admin' | 'creation' | 'visite_validee'
+
+/** Sources qui valent repère : une visite (ou la création) ne les remplace plus sans confirmation. */
+export const SOURCES_REPERE: readonly RepereGps[] = ['terrain', 'admin', 'creation', 'visite_validee']
 
 export type GpsVisite = {
   motif?: 'precision'
@@ -22,60 +27,22 @@ export type GpsVisite = {
   repere?: 'premiere_visite' | RepereGps
   distance_m?: number | null
   rayon_m?: number | null
+  /** 1.0.17 : l'agent, loin du repère, a répondu « Oui, je suis devant ». */
+  confirmation?: 'devant'
 }
 
-/** Repère du PDV, ou null tant qu'aucune visite (ni l'admin) ne l'a fixé. */
+/** Repère du PDV, ou null tant qu'aucune visite (ni l'admin, ni la création) ne l'a fixé. */
 export function repereDuPdv(pdv: PdvPosition): RepereGps | null {
   if (!pdv?.geolocation_lat || !pdv?.geolocation_lng) return null
-  return pdv.gps_source === 'terrain' || pdv.gps_source === 'admin' ? pdv.gps_source : null
+  return (SOURCES_REPERE as readonly string[]).includes(pdv.gps_source || '') ? pdv.gps_source as RepereGps : null
 }
 
-/** « repéré sur place le 21/10 » ou « placé par l'administrateur ». */
+/** « repéré sur place le 21/10 », « placé par l'administrateur »… */
 export function texteRepere(pdv: PdvPosition): string {
-  if (repereDuPdv(pdv) === 'admin') return 'placé par l\'administrateur'
+  const repere = repereDuPdv(pdv)
+  if (repere === 'admin') return 'placé par l\'administrateur'
   const le = pdv?.gps_maj_le ? new Date(pdv.gps_maj_le).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) : ''
+  if (repere === 'creation') return le ? `repéré à sa création le ${le}` : 'repéré à sa création'
+  if (repere === 'visite_validee') return le ? `confirmé sur place le ${le}` : 'confirmé sur place'
   return le ? `repéré sur place le ${le}` : 'repéré sur place'
-}
-
-export type DecisionGps =
-  | { action: 'trop_loin', distance_m: number, rayon_m: number }
-  | { action: 'imprecis', precision_m: number, seuil_m: number }
-  | { action: 'enregistrer', geofenceOk: boolean, gps: GpsVisite }
-
-/**
- * Ce que fait le formulaire de visite avec la position relevée.
- * - PDV repéré : précision au-delà du seuil → réessayer ; au-delà du rayon →
- *   bloqué (réessayer une fois sur place) ; sinon enregistrée « dans le rayon ».
- * - Première visite : toujours enregistrée ; « dans le rayon » si la position
- *   est assez précise pour devenir le repère du PDV.
- */
-export function decisionGpsVisite(p: {
-  repere: RepereGps | null
-  distance_m: number | null
-  precision_m: number
-  rayon_m: number
-  seuil_m: number
-  precision_pdv_max_m: number
-}): DecisionGps {
-  if (p.repere) {
-    if (p.seuil_m > 0 && p.precision_m > p.seuil_m) {
-      return { action: 'imprecis', precision_m: p.precision_m, seuil_m: p.seuil_m }
-    }
-    if (p.distance_m != null && p.distance_m > p.rayon_m) {
-      return { action: 'trop_loin', distance_m: p.distance_m, rayon_m: p.rayon_m }
-    }
-    return {
-      action: 'enregistrer',
-      geofenceOk: true,
-      gps: { repere: p.repere, distance_m: p.distance_m, rayon_m: p.rayon_m, precision_m: p.precision_m },
-    }
-  }
-  const assezPrecis = p.precision_m <= p.precision_pdv_max_m
-  return {
-    action: 'enregistrer',
-    geofenceOk: assezPrecis,
-    gps: assezPrecis
-      ? { repere: 'premiere_visite', distance_m: p.distance_m, precision_m: p.precision_m }
-      : { repere: 'premiere_visite', motif: 'precision', distance_m: p.distance_m, precision_m: p.precision_m, precision_exigee_m: p.precision_pdv_max_m },
-  }
 }

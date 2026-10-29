@@ -4,6 +4,7 @@
   </NuxtLayout>
   <ClientOnly>
     <LocationDisclosureModal />
+    <GpsVisiteOverlay />
     <MiseAJourObligatoire />
   </ClientOnly>
 </template>

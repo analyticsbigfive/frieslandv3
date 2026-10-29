@@ -143,10 +143,13 @@ export default defineNuxtConfig({
       // d'une hydratation (voir composables/usePlateforme.ts).
       buildNatif: isCapacitor,
       geofenceRadius: 200, // TODO confirmer client (valeur réunion : 200 m)
-      gpsMinAccuracy: 10,
+      // 1.0.17 : la visite attend une position à 50 m près (« Précision GPS
+      // exigée » en base, 20261029150000). Valeur utilisée tant que la base
+      // n'a pas répondu (premier lancement hors ligne).
+      gpsMinAccuracy: 50,
       // Précision maximale acceptée pour enregistrer la position d'un PDV sans
       // GPS depuis le terrain (RPC geolocaliser_pdv, même seuil côté base).
-      gpsPdvPrecisionMax: 30,
+      gpsPdvPrecisionMax: 50,
       // Tracking de tournée (app native) : échantillonnage GPS régulier,
       // filtre distance mini entre points, envoi groupé par batch.
       // Intervalle à 2 min = compromis autonomie batterie / finesse du trajet.
