@@ -193,4 +193,37 @@ export interface DecoupageDonnees {
   distributeurs: string[]
   merchs: DecoupageMerch[]
   points: DecoupagePoint[]
+  /** Emprise des territoires (grille), calculée sur toutes les boutiques : aucune donnée de boutique. */
+  emprise: CaseEmprise[]
+  /** Centre de chaque territoire (moyenne de ses boutiques), null s'il n'en a pas. */
+  centres: ([number, number] | null)[]
+}
+
+/**
+ * Ce qu'un commercial reçoit : tout le découpage (hiérarchie, commerciaux,
+ * compteurs, emprise), mais le détail des boutiques limité à son périmètre,
+ * comme la RLS de pdv (pdv_ids_perimetre) : ses boutiques, et celles d'un
+ * territoire partagé sans quartier saisi. Merchandisers et points de visite :
+ * ceux de ses binômes seulement (RLS de routing_mensuel). Les indices de
+ * merchandiser sont renumérotés.
+ */
+export function restreindreAuCommercial(D: DecoupageDonnees, moi: number): DecoupageDonnees {
+  const B = D.boutiques
+  const garder = (i: number) => moi >= 0 && (B.c[i] === moi
+    || (B.c[i] === PARTAGE && !B.quartier[i] && !!D.territoires[B.t[i]!]?.coms.includes(moi)))
+  const nouveauMerch = new Map<number, number>()
+  const merchs = D.merchs.filter((m, i) => {
+    if (moi < 0 || m.binome !== moi) return false
+    nouveauMerch.set(i, nouveauMerch.size)
+    return true
+  })
+  const b: DecoupageDonnees['boutiques'] = { id: [], nom: [], quartier: [], lat: [], lng: [], t: [], c: [], a: [], m: [], d: [] }
+  for (let i = 0; i < B.id.length; i++) {
+    if (!garder(i)) continue
+    b.id.push(B.id[i]!); b.nom.push(B.nom[i]!); b.quartier.push(B.quartier[i]!)
+    b.lat.push(B.lat[i]!); b.lng.push(B.lng[i]!); b.t.push(B.t[i]!); b.c.push(B.c[i]!)
+    b.a.push(B.a[i]!); b.m.push(nouveauMerch.get(B.m[i]!) ?? -1); b.d.push(B.d[i]!)
+  }
+  const points = D.points.filter(p => nouveauMerch.has(p.merch)).map(p => ({ ...p, merch: nouveauMerch.get(p.merch)! }))
+  return { ...D, boutiques: b, merchs, points }
 }

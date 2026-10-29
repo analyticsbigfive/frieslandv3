@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   PARTAGE, SANS_COMMERCIAL, commercialDeBoutique, commerciauxParTerritoire, estACheval, grilleEmprise,
-  nomAffiche, personnesCommerciales, resolveurTerritoire,
+  nomAffiche, personnesCommerciales, resolveurTerritoire, restreindreAuCommercial, type DecoupageDonnees,
 } from '../utils/decoupage'
 
 const territoires = [
@@ -121,5 +121,54 @@ describe('nom affiché', () => {
   it('casse des noms propres', () => {
     expect(nomAffiche('GAI KAMI')).toBe('Gai Kami')
     expect(nomAffiche("N'GUESSAN OPHELIA")).toBe("N'Guessan Ophelia")
+  })
+})
+
+describe('ce qu’un commercial reçoit', () => {
+  // Territoire 0 à lui seul (commercial 0) ; territoire 1 partagé (0 et 1).
+  const D: DecoupageDonnees = {
+    maj: '',
+    commerciaux: [{ nom: 'A', ids: ['a'] }, { nom: 'B', ids: ['b'] }],
+    territoires: [
+      { code: 'T0', nom: 'T0', sousRegion: 'SOUTH1', coms: [0], zones: [], n: 1, na: 0 },
+      { code: 'T1', nom: 'T1', sousRegion: 'SOUTH1', coms: [0, 1], zones: [], n: 3, na: 1 },
+    ],
+    boutiques: {
+      id: ['p0', 'p1', 'p2', 'p3'], nom: ['', '', '', ''], quartier: ['Q', 'Q', '', 'R'],
+      lat: [5, 5, 5, 5], lng: [-4, -4, -4, -4], t: [0, 1, 1, 1], c: [0, 1, PARTAGE, PARTAGE],
+      a: [0, 1, 0, 0], m: [-1, 1, -1, -1], d: [-1, -1, -1, -1],
+    },
+    distributeurs: [],
+    merchs: [
+      { id: 'm0', nom: 'M0', binome: 0, total: 1, hors: 0, parCom: [[0, 1]] },
+      { id: 'm1', nom: 'M1', binome: 1, total: 1, hors: 0, parCom: [[1, 1]] },
+    ],
+    points: [
+      { lat: 5, lng: -4, nom: 'P0', merch: 0, nb: 1, t: [0], c: [0], cheval: false },
+      { lat: 5, lng: -4, nom: 'P1', merch: 1, nb: 1, t: [1], c: [1], cheval: false },
+    ],
+    emprise: [{ lat: 5, lng: -4, t: 0 }],
+    centres: [[5, -4], [5, -4]],
+  }
+
+  it('ses boutiques, et celles d’un territoire partagé sans quartier saisi', () => {
+    expect(restreindreAuCommercial(D, 1).boutiques.id).toEqual(['p1', 'p2'])
+    expect(restreindreAuCommercial(D, 0).boutiques.id).toEqual(['p0', 'p2'])
+  })
+
+  it('ses binômes seulement, indices renumérotés', () => {
+    const r = restreindreAuCommercial(D, 1)
+    expect(r.merchs.map(m => m.id)).toEqual(['m1'])
+    expect(r.boutiques.m).toEqual([0, -1])
+    expect(r.points.map(p => [p.nom, p.merch])).toEqual([['P1', 0]])
+  })
+
+  it('le découpage reste entier ; un compte hors découpage ne reçoit aucune boutique', () => {
+    const r = restreindreAuCommercial(D, -1)
+    expect(r.territoires).toHaveLength(2)
+    expect(r.emprise).toHaveLength(1)
+    expect(r.boutiques.id).toEqual([])
+    expect(r.merchs).toEqual([])
+    expect(r.points).toEqual([])
   })
 })

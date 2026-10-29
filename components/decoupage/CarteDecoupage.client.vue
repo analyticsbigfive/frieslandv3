@@ -10,7 +10,7 @@
 // visite (tirets rouges quand ils sont à cheval), nom des territoires.
 // Tuiles OSM claires, comme les autres cartes du back-office.
 import { AUTRE, STATUT } from '~/utils/chartPalette'
-import { grilleEmprise, type CouchesDecoupage, type DecoupageDonnees } from '~/utils/decoupage'
+import type { CouchesDecoupage, DecoupageDonnees } from '~/utils/decoupage'
 
 const props = defineProps<{
   donnees: DecoupageDonnees
@@ -77,8 +77,9 @@ function dessiner() {
   const B = D.boutiques
   for (const g of Object.values(groupes)) g.clearLayers()
 
-  // Emprise : une case par 0,004° (≈ 450 m), territoire majoritaire de ses boutiques.
-  cases = grilleEmprise(B.lat, B.lng, B.t, PAS_EMPRISE).map((c) => {
+  // Emprise : une case par 0,004° (≈ 450 m), territoire majoritaire de ses boutiques
+  // (calculée sur toutes les boutiques, côté serveur).
+  cases = D.emprise.map((c) => {
     const lyr = L.rectangle([[c.lat, c.lng], [c.lat + PAS_EMPRISE, c.lng + PAS_EMPRISE]], { renderer: groupes.rendEmprise, stroke: false, fillOpacity: 0.18, interactive: true })
     lyr.on('click', () => emit('choisir-territoire', c.t))
     lyr.bindTooltip(() => `<b>${esc(D.territoires[c.t]?.nom)}</b> · ${esc((D.territoires[c.t]?.coms || []).map(nomCommercial).join(' / ') || 'sans commercial')}`, { sticky: true })
@@ -98,11 +99,9 @@ function dessiner() {
   })
 
   // Nom du territoire au centre de ses boutiques.
-  const somme = D.territoires.map(() => ({ lat: 0, lng: 0, n: 0 }))
-  B.t.forEach((t, i) => { somme[t]!.lat += B.lat[i]!; somme[t]!.lng += B.lng[i]!; somme[t]!.n++ })
-  noms = somme.flatMap((s, t) => s.n ? [{
+  noms = D.centres.flatMap((centre, t) => centre ? [{
     t,
-    lyr: L.marker([s.lat / s.n, s.lng / s.n], {
+    lyr: L.marker(centre, {
       interactive: false,
       keyboard: false,
       icon: L.divIcon({ className: 'decoupage-nom', html: `<span>${esc(D.territoires[t]!.nom)}</span>`, iconSize: null }),
@@ -166,10 +165,11 @@ function cadrer() {
     s = Math.min(s, B.lat[i]!); n = Math.max(n, B.lat[i]!); o = Math.min(o, B.lng[i]!); e = Math.max(e, B.lng[i]!)
   }
   if (!k) {
-    // Territoire sans boutique rattachée : ses points de visite, sinon rien.
-    const pts = props.donnees.points.filter(p => p.t.includes(props.territoire))
-    if (!pts.length) return
-    for (const p of pts) { s = Math.min(s, p.lat); n = Math.max(n, p.lat); o = Math.min(o, p.lng); e = Math.max(e, p.lng) }
+    // Rien à montrer en boutiques (territoire vide, ou hors du périmètre d'un
+    // commercial) : l'emprise du territoire ou du découpage.
+    const cellules = props.donnees.emprise.filter(c => props.territoire >= 0 ? c.t === props.territoire : !props.masques.has(c.t))
+    if (!cellules.length) return
+    for (const c of cellules) { s = Math.min(s, c.lat); n = Math.max(n, c.lat + PAS_EMPRISE); o = Math.min(o, c.lng); e = Math.max(e, c.lng + PAS_EMPRISE) }
   }
   map.invalidateSize()
   map.fitBounds([[s, o], [n, e]], { padding: [30, 30], maxZoom: 15 })

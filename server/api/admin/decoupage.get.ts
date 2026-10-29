@@ -4,13 +4,15 @@
 // libellé (pdv.zone ou alias), sans secteur tant qu'elles ne sont pas
 // reclassées ; merchandisers Atom (liste = pdv_ids_merch_atom) ; points de
 // visite du routing mensuel. Réponse en colonnes (≈ 22 000 boutiques).
-// Données communes à tous les appelants, gardées 5 minutes ; la garde passe à
-// chaque appel et seul `moi` (commercial connecté) dépend de l'appelant.
+// Données communes gardées 5 minutes ; la garde passe à chaque appel. La clé
+// service contourne la RLS : un commercial ne reçoit le détail des boutiques,
+// merchandisers et points de visite que de son périmètre (restreindreAuCommercial),
+// le reste du découpage (hiérarchie, compteurs, emprise) sans donnée de boutique.
 import type { H3Event } from 'h3'
 import { fetchAllRows } from '~/utils/fetchAll'
 import {
   PARTAGE, SANS_COMMERCIAL, cleNom, commercialDeBoutique, commerciauxParTerritoire, estACheval,
-  personnesCommerciales, resolveurTerritoire,
+  grilleEmprise, personnesCommerciales, resolveurTerritoire, restreindreAuCommercial,
   type DecoupageDonnees, type DecoupageMerch, type DecoupagePoint, type DecoupageTerritoire,
 } from '~/utils/decoupage'
 
@@ -175,6 +177,9 @@ async function charger(event: H3Event): Promise<DecoupageDonnees> {
     return { lat: p.lat, lng: p.lng, nom: p.noms.join(' / ') || '—', merch: p.merch, nb: p.ids.length, t: [...t], c: [...c], cheval: estACheval([...t], [...c]) }
   })
 
+  const centres = terrs.map(() => ({ lat: 0, lng: 0, n: 0 }))
+  b.t.forEach((t, i) => { centres[t]!.lat += b.lat[i]!; centres[t]!.lng += b.lng[i]!; centres[t]!.n++ })
+
   return {
     maj: new Date().toISOString(),
     commerciaux: personnes.map(p => ({ nom: p.nom, ids: p.ids })),
@@ -183,6 +188,8 @@ async function charger(event: H3Event): Promise<DecoupageDonnees> {
     distributeurs,
     merchs: merchsSortie,
     points: pointsSortie,
+    emprise: grilleEmprise(b.lat, b.lng, b.t),
+    centres: centres.map(c => c.n ? [arrondi(c.lat / c.n), arrondi(c.lng / c.n)] as [number, number] : null),
   }
 }
 
@@ -196,8 +203,9 @@ export default defineEventHandler(async (event) => {
   const service = getServiceClient(event)
   const moi = await requireRoles(event, service, ['admin', 'superviseur', 'commercial'])
   const donnees = await donneesEnCache(event)
+  const indice = donnees.commerciaux.findIndex(c => c.ids.includes(moi.id))
   return {
-    ...donnees,
-    moi: donnees.commerciaux.findIndex(c => c.ids.includes(moi.id)),
+    ...(moi.role === 'commercial' ? restreindreAuCommercial(donnees, indice) : donnees),
+    moi: indice,
   }
 })
