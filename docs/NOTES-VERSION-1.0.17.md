@@ -64,6 +64,8 @@ Les noms des menus peuvent changer un peu selon la version de One UI. L'aide est
 - **Points de vente › Doublons possibles** (admin et superviseur). Y figurent les points de vente créés par un merchandiser ou un commercial à moins de 30 m d'un point de vente existant, quelle que soit la version de l'app. Chaque ligne montre les deux devantures, la distance et la ressemblance des noms. Deux choix :
   - « Deux PDV différents » ;
   - « Doublon : désactiver le nouveau ». Ses visites restent ; les quartiers Atom sont recalculés.
+  
+  Dès l'application de la migration, l'onglet reprend aussi les paires ATOM déjà en base, au nom presque identique et à moins de 15 m. Le 29/10, cela fait 496 paires, soit 450 points de vente à revoir. Ces lignes portent la mention « Déjà en base ».
 - **Fiche d'une visite** : la ligne « Dans le rayon de visite » dit si l'agent a confirmé être devant. La ligne « Tablette » donne son modèle.
 - **Liste des points de vente** : le badge « GPS relevé sur le terrain » couvre aussi les positions prises à la création ou confirmées devant le point de vente.
 - **Paramètres terrain** :
@@ -128,7 +130,7 @@ Aucune nouvelle autorisation Android : pas de déclaration Play Console à refai
 
 - `npm test` : tous les tests passent, dont `tests/gpsVisite.spec.ts` (permission refusée, GPS coupé avec les vrais codes du plugin Android, précision insuffisante, loin du point de vente, point de vente sans GPS).
 - `npm run build` : OK.
-- La migration a été jouée deux fois de suite sur une base Postgres jetable, avec 44 contrôles :
+- La migration a été jouée deux fois de suite sur une base Postgres jetable, avec 46 contrôles :
   - repère à la première visite ;
   - confirmation « devant » ;
   - rejeu hors ligne ;
@@ -140,6 +142,7 @@ Aucune nouvelle autorisation Android : pas de déclaration Play Console à refai
   - remise de l'ancienne position ;
   - voisins à moins de 30 m (actifs seulement) ;
   - création marquée « doublon possible » ;
-  - doublon désactivé.
+  - doublon désactivé ;
+  - rattrapage des paires ATOM déjà en base.
   
   Elle n'a pas été appliquée en production.

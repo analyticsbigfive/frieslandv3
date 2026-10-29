@@ -36,6 +36,11 @@
 --      moins de doublon_rayon_m (30 m) avant de créer ; toute création par un
 --      agent terrain près d'un PDV existant est gardée dans
 --      pdv_doublon_possible (onglet Points de vente › Doublons possibles).
+--      Rattrapage (accord de Jean Luc du 29/10) : les paires de PDV ATOM déjà
+--      en base, au nom presque identique à moins de 15 m (496 paires, 450 PDV
+--      à revoir le 29/10), y sont ajoutées. Pas les autres PDV : environ 6 700 paires,
+--      surtout des imports de fichiers où des centaines de PDV partagent un
+--      même point.
 --
 -- À APPLIQUER AVANT LA DIFFUSION DE L'APK 1.0.17 : l'app envoie
 -- appareil_modele et gps_source = 'creation'. Sans risque pour les 1.0.15 et
@@ -453,6 +458,10 @@ create table if not exists public.pdv_doublon_possible (
   verifie_action text check (verifie_action is null or verifie_action in ('differents', 'doublon')),
   unique (pdv_id, voisin_pdv_id)
 );
+-- 'creation' : création terrain (déclencheur) ; 'rattrapage' : paire déjà en base.
+alter table public.pdv_doublon_possible add column if not exists origine text not null default 'creation';
+alter table public.pdv_doublon_possible drop constraint if exists pdv_doublon_possible_origine;
+alter table public.pdv_doublon_possible add constraint pdv_doublon_possible_origine check (origine in ('creation', 'rattrapage'));
 create index if not exists idx_pdv_doublon_possible_a_verifier on public.pdv_doublon_possible (cree_le desc) where verifie_le is null;
 alter table public.pdv_doublon_possible enable row level security;
 drop policy if exists pdv_doublon_possible_lecture_admin on public.pdv_doublon_possible;
@@ -515,6 +524,8 @@ returns table (
   quartier text,
   pdv_actif boolean,
   cree_le timestamptz,
+  origine text,
+  pdv_cree_le timestamptz,
   auteur_nom text,
   voisin_pdv_id text,
   voisin_nom text,
@@ -532,7 +543,7 @@ security definer
 set search_path = public
 as $$
   select d.id, d.pdv_id, n.nom_pdv, n.image_url, n.zone, n.quartier, n.is_active is not false,
-         d.cree_le, a.nom, d.voisin_pdv_id, v.nom_pdv, v.image_url, v.is_active is not false,
+         d.cree_le, d.origine, n.created_at, a.nom, d.voisin_pdv_id, v.nom_pdv, v.image_url, v.is_active is not false,
          d.distance_m, d.similarite_nom, d.verifie_le, d.verifie_action, vp.nom
   from pdv_doublon_possible d
   join pdv n on n.pdv_id = d.pdv_id
@@ -574,6 +585,32 @@ begin
   return true;
 end;
 $$;
+
+-- Rattrapage : paires de PDV ATOM déjà en base. Le plus récent des deux est
+-- le doublon possible (« Doublon : désactiver le nouveau » le désactive).
+insert into public.pdv_doublon_possible (pdv_id, voisin_pdv_id, distance_m, similarite_nom, cree_par, origine)
+select case when x.recent_a then x.a_id else x.b_id end,
+       case when x.recent_a then x.b_id else x.a_id end,
+       round(x.d)::int, round(x.s::numeric, 2),
+       case when x.recent_a then x.a_by else x.b_by end,
+       'rattrapage'
+from (
+  select a.pdv_id a_id, b.pdv_id b_id, a.created_by a_by, b.created_by b_by,
+         coalesce(a.created_at, '-infinity') >= coalesce(b.created_at, '-infinity') as recent_a,
+         distance_m(a.geolocation_lat, a.geolocation_lng, b.geolocation_lat, b.geolocation_lng) d,
+         similarity(public.nom_pdv_comparable(a.nom_pdv), public.nom_pdv_comparable(b.nom_pdv)) s
+  from public.pdv a
+  join public.pdv_atom xa on xa.pdv_id = a.pdv_id
+  join public.pdv b on b.pdv_id > a.pdv_id
+   and b.geolocation_lat between a.geolocation_lat - 0.000136 and a.geolocation_lat + 0.000136
+   and b.geolocation_lng between a.geolocation_lng - 0.000137 and a.geolocation_lng + 0.000137
+  join public.pdv_atom xb on xb.pdv_id = b.pdv_id
+  where a.is_active is not false and b.is_active is not false
+    and a.geolocation_lat is not null and a.geolocation_lng is not null
+) x
+where x.d <= coalesce(public.parametre_app_valeur('doublon_nom_rayon_m'), 15)
+  and x.s >= 0.8
+on conflict (pdv_id, voisin_pdv_id) do nothing;
 
 revoke all on function public.pdv_voisins(double precision, double precision, integer) from public, anon;
 revoke all on function public.doublons_possibles(boolean, integer) from public, anon;

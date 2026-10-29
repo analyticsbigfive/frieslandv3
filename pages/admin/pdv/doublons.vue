@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <AdminPageHeader description="Points de vente créés sur le terrain tout près d'un point de vente existant. Comparez les devantures : deux points de vente différents, ou un doublon à désactiver.">
+    <AdminPageHeader description="Points de vente créés tout près d'un point de vente existant : créations sur le terrain, et paires ATOM déjà en base au nom presque identique. Comparez les devantures : deux points de vente différents, ou un doublon à désactiver.">
       <template #actions>
         <UButton icon="i-heroicons-arrow-path" variant="outline" :loading="chargement" @click="charger">Actualiser</UButton>
       </template>
@@ -32,7 +32,7 @@
     <ChargementContenu v-else-if="chargement && !lignes.length" variante="lignes" libelle="Chargement des doublons possibles…" />
 
     <p v-else-if="!lignes.length" class="admin-surface p-6 text-sm text-slate-600 dark:text-slate-300">
-      {{ tout ? 'Aucune création près d\'un point de vente existant sur la période.' : 'Rien à vérifier : toutes les créations ont été traitées.' }}
+      {{ tout ? 'Aucun doublon possible sur la période.' : 'Rien à vérifier : tous les doublons possibles ont été traités.' }}
     </p>
 
     <section v-else class="admin-surface overflow-hidden" aria-label="Doublons possibles">
@@ -40,8 +40,8 @@
         <table class="admin-table">
           <thead>
             <tr>
-              <th scope="col">Créé sur le terrain</th>
-              <th scope="col">Point de vente déjà là</th>
+              <th scope="col">Le plus récent</th>
+              <th scope="col">Déjà là avant</th>
               <th scope="col">Écart</th>
               <th scope="col"><span class="sr-only">Actions</span></th>
             </tr>
@@ -54,9 +54,10 @@
                   <div class="min-w-0">
                     <p class="font-medium text-slate-900 dark:text-white">{{ l.nom_pdv || 'Point de vente sans nom' }}</p>
                     <p class="text-xs text-slate-500 dark:text-slate-400">
-                      {{ l.auteur_nom || '—' }}, {{ formatDateFr(l.cree_le, { day: '2-digit', month: 'short' }) }}
+                      {{ l.auteur_nom || '—' }}, {{ formatDateFr(l.pdv_cree_le || l.cree_le, { day: '2-digit', month: 'short' }) }}
                       <template v-if="l.quartier"> · {{ l.quartier }}</template>
                     </p>
+                    <p v-if="l.origine === 'rattrapage'" class="text-xs font-medium text-slate-600 dark:text-slate-300">Déjà en base</p>
                     <p v-if="!l.pdv_actif" class="text-xs font-medium text-red-700 dark:text-red-300">Désactivé</p>
                   </div>
                 </div>
@@ -98,7 +99,8 @@
 <script setup lang="ts">
 // Doublons possibles (1.0.17, demande du 29/10) : un agent a créé un PDV à
 // moins de « Rayon des doublons » d'un PDV existant (il a répondu « C'est un
-// nouveau PDV », ou son app est plus ancienne). Fonction doublons_possibles,
+// nouveau PDV », ou son app est plus ancienne), ou paire ATOM déjà en base
+// au nom presque identique (rattrapage). Fonction doublons_possibles,
 // migration 20261029170000.
 import { formatDateFr } from '~/utils/dates'
 import { messageUtilisateur } from '~/utils/supabaseErrors'
@@ -114,6 +116,9 @@ type LigneDoublon = {
   quartier: string | null
   pdv_actif: boolean
   cree_le: string
+  /** 'rattrapage' : paire ATOM trouvée dans la base à l'application de la migration. */
+  origine: 'creation' | 'rattrapage'
+  pdv_cree_le: string | null
   auteur_nom: string | null
   voisin_pdv_id: string
   voisin_nom: string | null
