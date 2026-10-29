@@ -399,8 +399,10 @@ $$;
 -- PDV actifs autour d'une position, pour le contrôle avant création. Tous les
 -- PDV, pas seulement ceux du périmètre : un doublon peut être chez un
 -- collègue. Cloisonnement : un PDV hors du périmètre de l'agent ne montre que
--- son existence (ni nom, ni quartier, ni photo, distance arrondie à 5 m), et
--- le rayon ne dépasse jamais « Rayon des doublons » (pas de balayage).
+-- son existence (ni identifiant, ni nom, ni quartier, ni photo, ni distance),
+-- et le rayon est toujours « Rayon des doublons » (p_rayon est ignoré, gardé
+-- pour la signature) : on ne peut pas situer un PDV d'un autre secteur mieux
+-- qu'à ce rayon près.
 create or replace function public.pdv_voisins(p_lat double precision, p_lng double precision, p_rayon integer default null)
 returns table (pdv_id text, nom_pdv text, quartier text, image_url text, distance_m integer, dans_perimetre boolean)
 language sql
@@ -411,7 +413,7 @@ as $$
   with param as (
     select least(greatest(coalesce(parametre_app_valeur('doublon_rayon_m'), 30), 5), 200)::double precision as max_m
   ), r as (
-    select least(coalesce(p_rayon::double precision, param.max_m), param.max_m) as m from param
+    select param.max_m as m from param
   ), proches as (
     select p.pdv_id, p.nom_pdv, p.quartier, p.image_url, p.created_by,
            distance_m(p_lat, p_lng, p.geolocation_lat, p.geolocation_lng) as d, r.m
@@ -427,14 +429,14 @@ as $$
     from proches x
     where x.d <= x.m
   )
-  select v.pdv_id,
+  select case when v.dedans then v.pdv_id end,
          case when v.dedans then v.nom_pdv end,
          case when v.dedans then v.quartier end,
          case when v.dedans then v.image_url end,
-         case when v.dedans then round(v.d)::int else (round(v.d / 5) * 5)::int end,
+         case when v.dedans then round(v.d)::int end,
          v.dedans
   from vus v
-  order by v.d
+  order by v.dedans desc, case when v.dedans then v.d end
   limit 20
 $$;
 

@@ -62,11 +62,13 @@ export function similariteNomsPdv(a: string | null | undefined, b: string | null
 }
 
 export type VoisinPdv = {
-  pdv_id: string
+  /** Null pour un PDV hors du périmètre de l'agent (cloisonnement). */
+  pdv_id: string | null
   nom_pdv?: string | null
   quartier?: string | null
   image_url?: string | null
-  distance_m: number
+  /** Null pour un PDV hors du périmètre : seulement « à moins du rayon ». */
+  distance_m: number | null
   /** Faux : le PDV existe mais n'est pas dans la liste de l'agent. */
   dans_perimetre?: boolean
 }
@@ -96,7 +98,7 @@ export function voisinsDansRayon(
 export function voisinNomProche(nom: string, voisins: VoisinPdv[], rayon_nom_m: number): VoisinPdv | null {
   let meilleur: { v: VoisinPdv, s: number } | null = null
   for (const v of voisins) {
-    if (v.distance_m > rayon_nom_m) continue
+    if (v.distance_m == null || v.distance_m > rayon_nom_m) continue
     const s = similariteNomsPdv(nom, v.nom_pdv)
     if (s >= SEUIL_NOM_PROCHE && (!meilleur || s > meilleur.s)) meilleur = { v, s }
   }

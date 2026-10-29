@@ -302,7 +302,7 @@ function handlePDVCreated(pdv: PDV) {
 
 // « C'est ce PDV » à la création (doublon évité) : on ouvre sa fiche.
 function ouvrirPdvExistant(v: VoisinPdv) {
-  if (v.dans_perimetre === false) {
+  if (v.dans_perimetre === false || !v.pdv_id) {
     toast.add({
       title: 'Ce point de vente existe déjà',
       description: `${v.nom_pdv || 'Ce PDV'} n'est pas dans votre liste : prévenez votre superviseur au lieu de le recréer.`,

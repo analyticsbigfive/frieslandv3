@@ -1170,7 +1170,7 @@ function handlePDVCreated(pdv: PDV) {
 // « C'est ce PDV » à la création (doublon évité) : on visite le PDV existant.
 async function handlePdvExistant(v: VoisinPdv) {
   let pdv = pdvList.value.find(p => p.pdv_id === v.pdv_id)
-  if (!pdv && v.dans_perimetre !== false && isOnline.value) {
+  if (!pdv && v.pdv_id && v.dans_perimetre !== false && isOnline.value) {
     const { data } = await supabase.from('pdv').select('*').eq('pdv_id', v.pdv_id).maybeSingle()
     if (data) {
       pdv = data

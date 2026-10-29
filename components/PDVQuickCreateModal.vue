@@ -22,14 +22,16 @@
           <p class="text-sm text-gray-700 dark:text-gray-200"><strong>Votre photo</strong> · {{ form.nom_pdv }}</p>
         </div>
         <ul class="space-y-2">
-          <li v-for="v in voisins" :key="v.pdv_id" class="flex gap-3 rounded-xl border border-gray-200 p-3 dark:border-gray-600">
+          <li v-for="(v, i) in voisins" :key="v.pdv_id || `autre-${i}`" class="flex gap-3 rounded-xl border border-gray-200 p-3 dark:border-gray-600">
             <img v-if="v.image_url" :src="v.image_url" :alt="`Devanture de ${v.nom_pdv || 'ce point de vente'}`" class="h-20 w-20 shrink-0 rounded-lg object-cover" loading="lazy">
             <div v-else class="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-center text-[11px] text-gray-500 dark:bg-gray-700 dark:text-gray-400">Pas de photo</div>
             <div class="min-w-0 flex-1">
               <p class="truncate font-semibold text-gray-900 dark:text-gray-100">
                 {{ v.dans_perimetre === false ? 'Point de vente d\'un autre secteur' : (v.nom_pdv || 'Point de vente sans nom') }}
               </p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">à {{ v.distance_m }} m{{ v.quartier ? ` · ${v.quartier}` : '' }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                {{ v.distance_m != null ? `à ${v.distance_m} m` : `à moins de ${parametres.doublon_rayon_m} m` }}{{ v.quartier ? ` · ${v.quartier}` : '' }}
+              </p>
               <UButton size="sm" variant="soft" class="mt-2" icon="i-heroicons-check" @click="choisirExistant(v)">C'est ce PDV</UButton>
             </div>
           </li>
@@ -406,7 +408,7 @@ async function chercherVoisins(): Promise<VoisinPdv[]> {
   const rayon = parametres.value.doublon_rayon_m
   if (isOnline.value) {
     const { data, error } = await (supabase.rpc as any)('pdv_voisins', { p_lat: position.lat, p_lng: position.lng, p_rayon: rayon })
-    if (!error) return ((data || []) as VoisinPdv[]).map(v => ({ ...v, distance_m: Math.round(Number(v.distance_m)) }))
+    if (!error) return ((data || []) as VoisinPdv[]).map(v => ({ ...v, distance_m: v.distance_m == null ? null : Math.round(Number(v.distance_m)) }))
     console.warn('[PDV] pdv_voisins', error.message)
   }
   return voisinsDansRayon(position, props.pdvConnus || [], rayon)

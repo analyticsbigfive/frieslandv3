@@ -128,7 +128,7 @@ Aucune nouvelle autorisation Android : pas de déclaration Play Console à refai
 
 - `npm test` : tous les tests passent, dont `tests/gpsVisite.spec.ts` (permission refusée, GPS coupé avec les vrais codes du plugin Android, précision insuffisante, loin du point de vente, point de vente sans GPS).
 - `npm run build` : OK.
-- La migration a été jouée deux fois de suite sur une base Postgres jetable, avec 41 contrôles :
+- La migration a été jouée deux fois de suite sur une base Postgres jetable, avec 44 contrôles :
   - repère à la première visite ;
   - confirmation « devant » ;
   - rejeu hors ligne ;
