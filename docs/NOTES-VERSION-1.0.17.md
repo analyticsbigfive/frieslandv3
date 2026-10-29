@@ -121,8 +121,13 @@ Chaque étape attend le oui de Jean Luc.
    Pour reconstruire (Jean Luc) :
    - `npm run android:release`, puis `npm run android:bundle` ;
    - `npm run android:sync` régénère la liste des plugins Android, `@capacitor/device` compris.
-2. Envoi de l'APK : `node scripts/upload-apk.mjs dist-apk/friesland-bonnet-rouge-1.0.17-release.apk --latest`.
-3. **Seulement une fois le lien vérifié** (il télécharge bien l'APK) : `version_app.version_code_min = 20`. Avant cette étape, les 1.0.15 et 1.0.16 continuent d'enregistrer des visites sans position.
+2. ✅ Envoi de l'APK le 29/10/2026 : `node scripts/upload-apk.mjs dist-apk/friesland-bonnet-rouge-1.0.17-release.apk --latest`. Les liens `friesland-bonnet-rouge-1.0.17.apk` et `friesland-bonnet-rouge-latest.apk` ont été retéléchargés et vérifiés : même empreinte que l'APK construit, versionCode 20.
+3. ✅ `version_app` mis à jour le 29/10/2026, une fois le lien vérifié (migration `20261029230000_friesland_version_app_1_0_17.sql`) :
+   - version minimale et version disponible : 20 (1.0.17) ;
+   - message de la 1.0.17 ;
+   - lien inchangé.
+   
+   Les tablettes en 1.0.15 et avant voient l'écran « mise à jour obligatoire » jusqu'à l'installation.
 4. AAB sur le Play Console.
 
 Aucune nouvelle autorisation Android : pas de déclaration Play Console à refaire. `@capacitor/device` lit le modèle sans autorisation.
