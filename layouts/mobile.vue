@@ -215,6 +215,7 @@ const pageTitle = computed(() => {
     '/mobile/map': 'Carte',
     '/mobile/contacts': 'Contacts',
     '/mobile/more': 'Plus',
+    '/mobile/aide-gps': 'Aide GPS',
     '/mobile/equipe': "Visites de l'équipe",
     '/mobile/actions': 'Actions commerciales',
     '/mobile/coaching': 'Field coaching',

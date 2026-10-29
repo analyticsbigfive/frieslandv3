@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { causeBlocageGps, codeErreurGps, decisionDistance, decisionGpsVisite, etatRecherche } from '../utils/gpsVisite'
-import { CAS_AIDE_GPS, casAideGps, ETAPES_AIDE_GPS, ETAPES_AIDE_GPS_CHROME } from '../utils/aideGpsTablette'
+import { CAS_AIDE_GPS, casAideGps, ETAPES_AIDE_GPS, ETAPES_AIDE_GPS_CHROME, typeTablette } from '../utils/aideGpsTablette'
 
 // GPS obligatoire (1.0.17) : pas de position, pas de visite ; la distance au
 // PDV ne bloque plus, l'agent confirme qu'il est devant.
@@ -141,5 +141,16 @@ describe('écran d\'aide', () => {
     expect(texte).toContain('Autoriser uniquement pendant l\'utilisation de l\'application')
     expect(texte).toContain('Utiliser la position exacte')
     expect(texte).toContain('Paramètres des sites')
+  })
+})
+
+describe('typeTablette', () => {
+  it('SM-X130 = Wi-Fi seul, SM-X135 / SM-X133 = avec GPS', () => {
+    expect(typeTablette('SM-X130')).toBe('wifi')
+    expect(typeTablette('sm-x135')).toBe('gps')
+    expect(typeTablette('SM-X133')).toBe('gps')
+    expect(typeTablette('SM-X1350')).toBeNull()
+    expect(typeTablette('Pixel 7')).toBeNull()
+    expect(typeTablette(null)).toBeNull()
   })
 })

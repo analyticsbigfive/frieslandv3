@@ -83,8 +83,10 @@ export interface PDV {
   distributor_name?: string
   objectif_perfect_store?: 'FLAGSHIP' | 'VIP' | 'CORE' | 'BASIC'
   // Traçabilité GPS (migration 20260930091000). Sans coordonnées :
-  // dms-absent / dms-depot disent pourquoi.
-  gps_source?: 'dms' | 'dms-absent' | 'dms-depot' | 'atom' | 'atom-absent' | 'atom-fichier' | 'terrain' | 'admin' | null
+  // dms-absent / dms-depot disent pourquoi. Repères (utils/repereGps.ts) :
+  // terrain, admin, et en 1.0.17 creation et visite_validee ; itinerant =
+  // pushcart, jamais repéré.
+  gps_source?: 'dms' | 'dms-absent' | 'dms-depot' | 'atom' | 'atom-absent' | 'atom-fichier' | 'terrain' | 'admin' | 'itinerant' | 'creation' | 'visite_validee' | null
   gps_precision_m?: number | null
   gps_maj_par?: string | null
   gps_maj_le?: string | null
@@ -572,6 +574,8 @@ export interface Visite {
   ssf_id?: number | null
   /** Nom du SSF saisi quand il n'est pas dans la liste (ou tel qu'importé). */
   ssf_brut?: string | null
+  /** Modèle de la tablette (1.0.17) : SM-X130 = Wi-Fi seul, sans puce GPS. */
+  appareil_modele?: string | null
   // Joined
   pdv?: PDV
   profile?: Profile

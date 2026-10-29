@@ -35,6 +35,22 @@ export const TEXTES_GPS = {
   noteMenus: 'Selon la version de la tablette, le nom des menus peut changer un peu. Cherchez le mot le plus proche.',
   menuPlus: 'Aide GPS de la tablette',
   menuPlusDescription: 'Que faire si la tablette ne trouve pas la position',
+  verifier: 'Vérifier ma position',
+  positionTrouvee: (m: number) => `Position trouvée, précision ${Math.round(m)} m : la visite peut démarrer.`,
+  modeleChemin: 'Numéro de modèle : Paramètres → À propos de la tablette → Numéro de modèle.',
+  modeleWifi: 'Cette tablette est un modèle Wi-Fi seul, sans puce GPS : la position vient du Wi-Fi. Gardez le Wi-Fi et la Recherche Wi-Fi allumés (cas C).',
+  modeleGps: 'Cette tablette a une puce GPS.',
+}
+
+/**
+ * Galaxy Tab A11 : SM-X130 = Wi-Fi seul (pas de puce GPS) ; SM-X135 et
+ * SM-X133 = cellulaire, avec GPS. Autre modèle : on ne sait pas.
+ */
+export function typeTablette(modele: string | null | undefined): 'wifi' | 'gps' | null {
+  const m = (modele || '').toUpperCase()
+  if (/SM-X130\b/.test(m)) return 'wifi'
+  if (/SM-X13[35]\b/.test(m)) return 'gps'
+  return null
 }
 
 export const CAS_AIDE_GPS: Record<CasAideGps, { titre: string, explication: string }> = {

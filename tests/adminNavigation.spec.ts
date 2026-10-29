@@ -220,6 +220,13 @@ describe('droits par rôle', () => {
     expect(ecransOuvertsA('agence')).toContain('Points de vente › PDV de l\'agence')
   })
 
+  it('Positions à vérifier : admin et superviseur seulement', () => {
+    expect(peut('admin', '/admin/pdv/positions')).toBe(true)
+    expect(peut('superviseur', '/admin/pdv/positions')).toBe(true)
+    expect(peut('commercial', '/admin/pdv/positions')).toBe(false)
+    expect(peut('agence', '/admin/pdv/positions')).toBe(false)
+  })
+
   it('merchandiser : rien', () => {
     for (const { tab } of ADMIN_TABS) expect(peut('merchandiser', tab.path, tab.query)).toBe(false)
   })

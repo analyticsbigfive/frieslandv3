@@ -144,7 +144,7 @@ export default defineNuxtConfig({
       buildNatif: isCapacitor,
       geofenceRadius: 200, // TODO confirmer client (valeur réunion : 200 m)
       // 1.0.17 : la visite attend une position à 50 m près (« Précision GPS
-      // exigée » en base, 20261029150000). Valeur utilisée tant que la base
+      // exigée » en base, 20261029170000). Valeur utilisée tant que la base
       // n'a pas répondu (premier lancement hors ligne).
       gpsMinAccuracy: 50,
       // Précision maximale acceptée pour enregistrer la position d'un PDV sans

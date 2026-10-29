@@ -113,15 +113,10 @@
               <p class="text-sm font-medium text-gray-800 dark:text-gray-100">Coordonnées GPS</p>
               <p v-if="hasCoordinates" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 {{ form.geolocation_lat?.toFixed(6) }}, {{ form.geolocation_lng?.toFixed(6) }}
+                <span v-if="form.gps_precision_m != null">· précision {{ form.gps_precision_m }} m</span>
               </p>
-              <p v-else class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Aucune position enregistrée pour ce PDV.
-              </p>
-              <p
-                v-if="currentPosition"
-                class="text-[11px] text-gray-400 mt-1"
-              >
-                Position mobile disponible, précision {{ currentPosition.accuracy }}m
+              <p v-else class="text-xs font-medium text-amber-700 dark:text-amber-300 mt-1">
+                Position obligatoire : placez-vous devant le point de vente.
               </p>
             </div>
 
@@ -132,7 +127,7 @@
               :loading="gpsLoading"
               @click.prevent="fillWithCurrentPosition"
             >
-              {{ hasCoordinates ? 'Mettre à jour' : 'Utiliser mon GPS' }}
+              {{ hasCoordinates ? 'Reprendre ma position' : 'Prendre ma position' }}
             </UButton>
           </div>
         </div>
@@ -169,7 +164,10 @@ const user = useSupabaseUser()
 const toast = useToast()
 const { parametres } = useParametresApp()
 const { isOnline, addToQueue } = useOfflineSync()
-const { currentPosition, requestPosition } = useUserGeolocation()
+// 1.0.17 : position prise sur place, à l'ouverture, avec la précision exigée
+// (plus de position gardée en mémoire) ; elle devient le repère du PDV
+// (gps_source = 'creation').
+const { exigerPosition } = useGpsVisite()
 
 const saving = ref(false)
 const gpsLoading = ref(false)
@@ -296,6 +294,7 @@ const form = reactive({
   adressage: '',
   geolocation_lat: null as number | null,
   geolocation_lng: null as number | null,
+  gps_precision_m: null as number | null,
 })
 
 const hasCoordinates = computed(() =>
@@ -311,8 +310,9 @@ function resetForm() {
   form.region = defaultRegion.value
   form.distributor_name = scopedDistributors.value[0]?.name || nationalDistributors.value[0]?.name || ''
   form.adressage = ''
-  form.geolocation_lat = currentPosition.value?.lat || null
-  form.geolocation_lng = currentPosition.value?.lng || null
+  form.geolocation_lat = null
+  form.geolocation_lng = null
+  form.gps_precision_m = null
 }
 
 watch(() => props.modelValue, async (open) => {
@@ -321,6 +321,7 @@ watch(() => props.modelValue, async (open) => {
     // sans redémarrer l'app. Hors ligne, on garde la liste déjà chargée.
     await fetchReferentiels(isOnline.value)
     resetForm()
+    void fillWithCurrentPosition()
   }
 })
 
@@ -330,24 +331,12 @@ async function fillWithCurrentPosition() {
   gpsLoading.value = true
 
   try {
-    const position = currentPosition.value || await requestPosition()
-
-    if (!position) {
-      toast.add({
-        title: 'GPS indisponible',
-        description: 'Impossible de récupérer votre position actuelle.',
-        color: 'red',
-      })
-      return
-    }
+    const position = await exigerPosition()
+    if (!position) return
 
     form.geolocation_lat = position.lat
     form.geolocation_lng = position.lng
-
-    toast.add({
-      title: 'Position GPS récupérée',
-      color: 'green',
-    })
+    form.gps_precision_m = Math.round(position.accuracy)
   }
   finally {
     gpsLoading.value = false
@@ -375,6 +364,10 @@ function buildPayload() {
     distributor_name: form.distributor_name || null,
     geolocation_lat: form.geolocation_lat,
     geolocation_lng: form.geolocation_lng,
+    gps_source: 'creation',
+    gps_precision_m: form.gps_precision_m,
+    gps_maj_par: user.value?.id || null,
+    gps_maj_le: timestamp,
     rayon_geofence: parametres.value.geofence_rayon_m,
     adressage: form.adressage.trim() || null,
     image_url: null,
@@ -403,6 +396,15 @@ async function handleSave() {
   if (!form.zone.trim() || !form.region.trim()) {
     toast.add({
       title: 'Zone et région requises',
+      color: 'red',
+    })
+    return
+  }
+
+  if (!hasCoordinates.value) {
+    toast.add({
+      title: 'Position obligatoire',
+      description: 'Appuyez sur « Prendre ma position » devant le point de vente.',
       color: 'red',
     })
     return

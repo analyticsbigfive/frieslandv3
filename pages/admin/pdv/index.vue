@@ -117,7 +117,7 @@
                     Sans GPS
                   </span>
                   <span
-                    v-else-if="gpsInfoByPdv[pdv.pdv_id]?.gps_source === 'terrain'"
+                    v-else-if="SOURCES_TERRAIN.includes(gpsInfoByPdv[pdv.pdv_id]?.gps_source || '')"
                     class="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
                     :title="libelleGpsTerrain(pdv)"
                   >
@@ -594,11 +594,17 @@ function libelleNiveau(niveau?: string | null): string {
   return court.charAt(0).toUpperCase() + court.slice(1).toLowerCase()
 }
 
+// Positions prises sur place : première visite, création du PDV (1.0.17) ou
+// visite où l'agent a confirmé être devant (1.0.17).
+const SOURCES_TERRAIN = ['terrain', 'creation', 'visite_validee']
 function libelleGpsTerrain(pdv: PDV): string {
   const info = gpsInfoByPdv.value[pdv.pdv_id]
   if (!info) return ''
   const date = info.gps_maj_le ? new Date(info.gps_maj_le).toLocaleDateString('fr-FR') : '?'
-  return `Position relevée sur le terrain${info.auteur ? ` par ${info.auteur}` : ''} le ${date}${info.gps_precision_m != null ? `, précision ${info.gps_precision_m} m` : ''}`
+  const quoi = info.gps_source === 'creation'
+    ? 'Position prise à la création du PDV'
+    : info.gps_source === 'visite_validee' ? 'Position confirmée devant le PDV' : 'Position relevée sur le terrain'
+  return `${quoi}${info.auteur ? ` par ${info.auteur}` : ''} le ${date}${info.gps_precision_m != null ? `, précision ${info.gps_precision_m} m` : ''}`
 }
 const showCreate = ref(false)
 const showImport = ref(false)
