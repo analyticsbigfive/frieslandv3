@@ -442,7 +442,9 @@
     <!-- Modals -->
     <PDVQuickCreateModal
       v-model="showCreatePDV"
+      :pdv-connus="pdvList"
       @created="handlePDVCreated"
+      @existant="handlePdvExistant"
     />
 
     <UModal v-model="showConfirmDevant" prevent-close>
@@ -531,6 +533,7 @@ import { ssfDuJour, pdvDansSousZone, libelleSousZone } from '~/utils/ssfTerrain'
 import { describeSupabaseError, estErreurReseau } from '~/utils/supabaseErrors'
 import type { WizardStep } from '~/components/FormWizard.vue'
 import type { PositionVisite } from '~/composables/useGpsVisite'
+import type { VoisinPdv } from '~/utils/doublonPdv'
 
 definePageMeta({
   middleware: ['auth', 'terrain-write'],
@@ -1162,6 +1165,29 @@ function handlePDVCreated(pdv: PDV) {
     description: `${pdv.nom_pdv} est prêt pour la visite.`,
     color: 'green',
   })
+}
+
+// « C'est ce PDV » à la création (doublon évité) : on visite le PDV existant.
+async function handlePdvExistant(v: VoisinPdv) {
+  let pdv = pdvList.value.find(p => p.pdv_id === v.pdv_id)
+  if (!pdv && v.dans_perimetre !== false && isOnline.value) {
+    const { data } = await supabase.from('pdv').select('*').eq('pdv_id', v.pdv_id).maybeSingle()
+    if (data) {
+      pdv = data
+      pdvList.value = [...pdvList.value, data]
+    }
+  }
+  if (!pdv) {
+    toast.add({
+      title: 'Ce point de vente existe déjà',
+      description: `${v.nom_pdv || 'Ce PDV'} n'est pas dans votre liste : prévenez votre superviseur au lieu de le recréer.`,
+      color: 'amber',
+      timeout: 9000,
+    })
+    return
+  }
+  form.pdv_id = pdv.pdv_id
+  toast.add({ title: 'PDV sélectionné', description: `${pdv.nom_pdv} est prêt pour la visite.`, color: 'green' })
 }
 
 function animateProgress(targetPercent: number, durationMs: number) {

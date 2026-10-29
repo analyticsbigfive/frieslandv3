@@ -16,6 +16,8 @@ describe('paramètres terrain', () => {
     const p = fusionnerParametres(defauts, { distance_alerte_m: 150, gps_deplacement_verif_m: 800 })
     expect(p.distance_alerte_m).toBe(150)
     expect(p.gps_deplacement_verif_m).toBe(800)
+    expect(defauts.doublon_rayon_m).toBe(30)
+    expect(defauts.doublon_nom_rayon_m).toBe(15)
   })
 
   it('les valeurs de la base priment, l’objectif vide reste vide (Atom)', () => {

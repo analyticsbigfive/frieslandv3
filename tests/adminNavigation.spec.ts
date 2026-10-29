@@ -225,6 +225,8 @@ describe('droits par rôle', () => {
     expect(peut('superviseur', '/admin/pdv/positions')).toBe(true)
     expect(peut('commercial', '/admin/pdv/positions')).toBe(false)
     expect(peut('agence', '/admin/pdv/positions')).toBe(false)
+    expect(peut('superviseur', '/admin/pdv/doublons')).toBe(true)
+    expect(peut('commercial', '/admin/pdv/doublons')).toBe(false)
   })
 
   it('merchandiser : rien', () => {

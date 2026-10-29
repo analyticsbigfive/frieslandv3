@@ -21,6 +21,10 @@ export interface ParametresApp {
   distance_alerte_m: number
   /** 1.0.17 : déplacement d'un PDV au-delà duquel l'admin le revoit (« Positions à vérifier »). */
   gps_deplacement_verif_m: number
+  /** 1.0.17 : à la création, PDV existants montrés dans ce rayon (doublons possibles). */
+  doublon_rayon_m: number
+  /** 1.0.17 : nom presque identique dans ce rayon → confirmation explicite. */
+  doublon_nom_rayon_m: number
 }
 
 const CLE_CACHE = 'offline:parametres'
@@ -40,6 +44,8 @@ export function parametresParDefaut(pub: Record<string, any> = {}): ParametresAp
     objectif_visites_jour: 10,
     distance_alerte_m: 100,
     gps_deplacement_verif_m: 500,
+    doublon_rayon_m: 30,
+    doublon_nom_rayon_m: 15,
   }
 }
 
