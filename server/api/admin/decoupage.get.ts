@@ -71,15 +71,16 @@ async function charger(event: H3Event): Promise<DecoupageDonnees> {
     .sort((a: any, b: any) => String(a.nom).localeCompare(String(b.nom), 'fr'))
   const idsMerch = merchAtom.map((m: any) => m.id)
 
-  const [pdv, listes, lignes, rattachements] = await Promise.all([
+  const [pdv, toutesListes, lignes, rattachements] = await Promise.all([
     fetchAllRows<any>((de, a) => service.from('pdv')
       .select('pdv_id, nom_pdv, zone, quartier, distributor_name, geolocation_lat, geolocation_lng')
       .eq('is_active', true).in('zone', libelles)
       .not('geolocation_lat', 'is', null).not('geolocation_lng', 'is', null)
       .order('pdv_id').range(de, a)),
-    // SETOF text, plafonné à 1 000 lignes comme une table : lu par pages.
-    Promise.all(merchAtom.map((m: any) => fetchAllRows<string>((de, a) => service
-      .rpc('pdv_ids_merch_atom', { p_user: m.id }).order('pdv_ids_merch_atom').range(de, a)))),
+    // Listes pdv_ids_merch_atom de tous les merchandisers Atom, par pages de 1 000
+    // (deux listes dépassent 1 000 boutiques) : migration 20261029120000.
+    fetchAllRows<{ merchandiser_id: string, pdv_id: string }>((de, a) => service
+      .rpc('listes_merch_atom').order('merchandiser_id').order('pdv_id').range(de, a)),
     idsMerch.length
       ? service.from('routing_mensuel').select('merchandiser_id, point_visite, latitude, longitude')
         .eq('actif', true).in('merchandiser_id', idsMerch).not('latitude', 'is', null)
@@ -89,6 +90,12 @@ async function charger(event: H3Event): Promise<DecoupageDonnees> {
   ])
   if (lignes.error) throw apiError(500, lignes.error.message)
 
+  const listes: string[][] = merchAtom.map(() => [])
+  const indiceMerch = new Map(idsMerch.map((id: string, i: number) => [id, i]))
+  for (const r of toutesListes) {
+    const mi = indiceMerch.get(r.merchandiser_id)
+    if (mi !== undefined) listes[mi]!.push(r.pdv_id)
+  }
   const estAtom = new Set(atom.map(x => x.pdv_id))
   const merchDuPdv = new Map<string, number>()
   listes.forEach((ids, mi) => {
@@ -153,7 +160,6 @@ async function charger(event: H3Event): Promise<DecoupageDonnees> {
   })
 
   // Points de visite : un par position (plusieurs lignes du mois au même point).
-  const indiceMerch = new Map(idsMerch.map((id: string, i: number) => [id, i]))
   const points = new Map<string, { lat: number, lng: number, noms: string[], merch: number, ids: string[] }>()
   for (const l of lignes.data || []) {
     const k = `${l.merchandiser_id}|${clePoint(l.latitude, l.longitude)}`

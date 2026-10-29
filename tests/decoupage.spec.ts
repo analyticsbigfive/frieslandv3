@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  PARTAGE, SANS_COMMERCIAL, commercialDeBoutique, commerciauxParTerritoire, estACheval, grilleEmprise,
+  PARTAGE, SANS_COMMERCIAL, cadreRobuste, commercialDeBoutique, commerciauxParTerritoire, estACheval, grilleEmprise,
   nomAffiche, personnesCommerciales, resolveurTerritoire, restreindreAuCommercial, type DecoupageDonnees,
 } from '../utils/decoupage'
 
@@ -170,5 +170,22 @@ describe('ce qu’un commercial reçoit', () => {
     expect(r.boutiques.id).toEqual([])
     expect(r.merchs).toEqual([])
     expect(r.points).toEqual([])
+  })
+})
+
+describe('cadrage de la carte', () => {
+  it('ignore un GPS aberrant à partir de 50 points', () => {
+    const lat = [...Array.from({ length: 99 }, (_, i) => 5.3 + i / 10000), 7.9]
+    const lng = [...Array.from({ length: 99 }, (_, i) => -4 + i / 10000), -6.4]
+    const [[s, o], [n, e]] = cadreRobuste(lat, lng)!
+    expect(n).toBeLessThan(5.32)
+    expect(o).toBeGreaterThan(-4.01)
+    expect(s).toBeCloseTo(5.3, 2)
+    expect(e).toBeCloseTo(-3.99, 2)
+  })
+
+  it('peu de points : les extrêmes ; aucun : null', () => {
+    expect(cadreRobuste([5, 6], [-4, -3])).toEqual([[5, -4], [6, -3]])
+    expect(cadreRobuste([], [])).toBeNull()
   })
 })

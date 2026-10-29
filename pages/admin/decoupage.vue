@@ -142,7 +142,7 @@
         </div>
       </aside>
 
-      <section class="admin-surface relative h-[60dvh] min-h-[360px] min-w-0 flex-1 overflow-hidden lg:h-auto" aria-label="Carte du découpage">
+      <section class="admin-surface relative h-[60dvh] min-h-[360px] min-w-0 overflow-hidden lg:h-auto lg:flex-1" aria-label="Carte du découpage">
         <div v-if="selection" class="absolute left-12 top-2.5 z-[500] flex max-w-[calc(100%-4rem)] items-center gap-2 rounded-full bg-brand-600 py-1 pl-3 pr-1 text-sm text-white">
           <span class="truncate">{{ selection }}</span>
           <button type="button" class="shrink-0 rounded-full bg-white/20 px-2.5 py-0.5 text-xs hover:bg-white/30" @click="toutVoir">Tout voir</button>

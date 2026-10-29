@@ -10,7 +10,7 @@
 // visite (tirets rouges quand ils sont à cheval), nom des territoires.
 // Tuiles OSM claires, comme les autres cartes du back-office.
 import { AUTRE, STATUT } from '~/utils/chartPalette'
-import type { CouchesDecoupage, DecoupageDonnees } from '~/utils/decoupage'
+import { cadreRobuste, type CouchesDecoupage, type DecoupageDonnees } from '~/utils/decoupage'
 
 const props = defineProps<{
   donnees: DecoupageDonnees
@@ -30,6 +30,7 @@ let cases: { lyr: any, t: number }[] = []
 let points: any[] = []
 let noms: { lyr: any, t: number }[] = []
 let groupes: Record<string, any> = {}
+let rendus: Record<string, any> = {}
 
 const PAS_EMPRISE = 0.004
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;' }[c]!))
@@ -80,20 +81,20 @@ function dessiner() {
   // Emprise : une case par 0,004° (≈ 450 m), territoire majoritaire de ses boutiques
   // (calculée sur toutes les boutiques, côté serveur).
   cases = D.emprise.map((c) => {
-    const lyr = L.rectangle([[c.lat, c.lng], [c.lat + PAS_EMPRISE, c.lng + PAS_EMPRISE]], { renderer: groupes.rendEmprise, stroke: false, fillOpacity: 0.18, interactive: true })
+    const lyr = L.rectangle([[c.lat, c.lng], [c.lat + PAS_EMPRISE, c.lng + PAS_EMPRISE]], { renderer: rendus.emprise, stroke: false, fillOpacity: 0.18, interactive: true })
     lyr.on('click', () => emit('choisir-territoire', c.t))
     lyr.bindTooltip(() => `<b>${esc(D.territoires[c.t]?.nom)}</b> · ${esc((D.territoires[c.t]?.coms || []).map(nomCommercial).join(' / ') || 'sans commercial')}`, { sticky: true })
     return { lyr, t: c.t }
   })
 
   boutiques = B.lat.map((lat, i) => {
-    const lyr = L.circleMarker([lat, B.lng[i]], { renderer: groupes.rendBoutiques, radius: B.a[i] ? 4 : 3.2, weight: B.a[i] ? 1.4 : 0, color: '#0f172a', fillOpacity: 0.85 })
+    const lyr = L.circleMarker([lat, B.lng[i]], { renderer: rendus.boutiques, radius: B.a[i] ? 4 : 3.2, weight: B.a[i] ? 1.4 : 0, color: '#0f172a', fillOpacity: 0.85 })
     lyr.bindPopup(() => popupBoutique(i), { maxWidth: 320 })
     return lyr
   })
 
   points = D.points.map((p) => {
-    const lyr = L.circleMarker([p.lat, p.lng], { renderer: groupes.rendPoints, radius: 8, fill: true, fillOpacity: 0.05, weight: p.cheval ? 2.4 : 1.8, color: p.cheval ? STATUT.critique : '#334155', dashArray: p.cheval ? '4 3' : null })
+    const lyr = L.circleMarker([p.lat, p.lng], { renderer: rendus.points, radius: 8, fill: true, fillOpacity: 0.05, weight: p.cheval ? 2.4 : 1.8, color: p.cheval ? STATUT.critique : '#334155', dashArray: p.cheval ? '4 3' : null })
     lyr.bindPopup(() => popupPoint(p), { maxWidth: 320 })
     return lyr
   })
@@ -158,21 +159,22 @@ function cadrer() {
   const garder = props.merch >= 0
     ? (i: number) => B.m[i] === props.merch
     : props.territoire >= 0 ? (i: number) => B.t[i] === props.territoire : (i: number) => !props.masques.has(B.t[i]!)
-  let s = 90, n = -90, o = 180, e = -180, k = 0
+  const lat: number[] = [], lng: number[] = []
   for (let i = 0; i < B.lat.length; i++) {
-    if (!garder(i)) continue
-    k++
-    s = Math.min(s, B.lat[i]!); n = Math.max(n, B.lat[i]!); o = Math.min(o, B.lng[i]!); e = Math.max(e, B.lng[i]!)
+    if (garder(i)) { lat.push(B.lat[i]!); lng.push(B.lng[i]!) }
   }
-  if (!k) {
+  if (!lat.length) {
     // Rien à montrer en boutiques (territoire vide, ou hors du périmètre d'un
     // commercial) : l'emprise du territoire ou du découpage.
-    const cellules = props.donnees.emprise.filter(c => props.territoire >= 0 ? c.t === props.territoire : !props.masques.has(c.t))
-    if (!cellules.length) return
-    for (const c of cellules) { s = Math.min(s, c.lat); n = Math.max(n, c.lat + PAS_EMPRISE); o = Math.min(o, c.lng); e = Math.max(e, c.lng + PAS_EMPRISE) }
+    for (const c of props.donnees.emprise) {
+      if (props.territoire >= 0 ? c.t !== props.territoire : props.masques.has(c.t)) continue
+      lat.push(c.lat, c.lat + PAS_EMPRISE); lng.push(c.lng, c.lng + PAS_EMPRISE)
+    }
   }
+  const cadre = cadreRobuste(lat, lng)
+  if (!cadre) return
   map.invalidateSize()
-  map.fitBounds([[s, o], [n, e]], { padding: [30, 30], maxZoom: 15 })
+  map.fitBounds(cadre, { padding: [30, 30], maxZoom: 15 })
 }
 
 async function initialiser() {
@@ -186,10 +188,12 @@ async function initialiser() {
   }).addTo(map)
   map.createPane('emprises').style.zIndex = '350'
   map.createPane('noms').style.zIndex = '640'
+  rendus = {
+    emprise: L.canvas({ pane: 'emprises', padding: 0.3 }),
+    boutiques: L.canvas({ padding: 0.3 }),
+    points: L.canvas({ padding: 0.3 }),
+  }
   groupes = {
-    rendEmprise: L.canvas({ pane: 'emprises', padding: 0.3 }),
-    rendBoutiques: L.canvas({ padding: 0.3 }),
-    rendPoints: L.canvas({ padding: 0.3 }),
     emprises: L.layerGroup().addTo(map),
     boutiques: L.layerGroup().addTo(map),
     points: L.layerGroup().addTo(map),

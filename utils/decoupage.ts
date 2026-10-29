@@ -130,6 +130,21 @@ export function grilleEmprise(lat: ArrayLike<number>, lng: ArrayLike<number>, t:
   return out
 }
 
+/**
+ * Cadre [[sud, ouest], [nord, est]] d'un nuage de points, sans les GPS aberrants :
+ * à partir de 50 points, du 1er au 99e centile ; en dessous, les extrêmes.
+ * null sans point.
+ */
+export function cadreRobuste(lat: number[], lng: number[]): [[number, number], [number, number]] | null {
+  if (!lat.length) return null
+  const centile = (v: number[], p: number) => {
+    const t = [...v].sort((x, y) => x - y)
+    return t[Math.min(t.length - 1, Math.max(0, Math.round(p * (t.length - 1))))]!
+  }
+  const p = lat.length >= 50 ? 0.01 : 0
+  return [[centile(lat, p), centile(lng, p)], [centile(lat, 1 - p), centile(lng, 1 - p)]]
+}
+
 /** Nom affiché d'un profil : « GAI KAMI » → « Gai Kami ». */
 export function nomAffiche(nom: string | null | undefined): string {
   return String(nom || '').trim().toLowerCase()
