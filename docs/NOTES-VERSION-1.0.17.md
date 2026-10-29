@@ -112,10 +112,11 @@ Chaque étape attend le oui de Jean Luc.
      - précision portée à 50 m ;
      - une position tapée à la main est gardée dans l'historique ;
      - une visite rejouée hors ligne peut fixer la position d'un point de vente.
-1. AAB construit et signé le 29/10/2026 : `dist-apk/friesland-bonnet-rouge-1.0.17-release.aab` (versionCode 20, 5,6 Mo).
-   - Signature vérifiée (`pnpm run android:verify`) : clé d'upload Friesland Bonnet Rouge, SHA-256 BD:2E:F3:68…:9E:51.
+1. AAB et APK construits et signés le 29/10/2026, avec le compteur du jour :
+   - `dist-apk/friesland-bonnet-rouge-1.0.17-release.aab` (versionCode 20, 5,6 Mo), pour le Play Store ;
+   - `dist-apk/friesland-bonnet-rouge-1.0.17-release.apk` (versionCode 20, 5,9 Mo), pour le lien de téléchargement.
+   - Signature vérifiée sur les deux : clé d'upload Friesland Bonnet Rouge, SHA-256 BD:2E:F3:68…:9E:51, la même que la 1.0.14 (l'APK s'installe par-dessus). `pnpm run android:verify` répond « non signé » sur l'APK : il ne lit que la signature v1, alors que l'APK est signé en v2 (`apksigner verify` le confirme).
    - Mêmes autorisations Android que la 1.0.14 (12).
-   - L'APK (pour le lien de téléchargement) n'est pas encore construit : `pnpm run android:release`.
    
    Pour reconstruire (Jean Luc) :
    - `npm run android:release`, puis `npm run android:bundle` ;
