@@ -20,19 +20,8 @@
 
         <!-- Progress bar -->
         <template v-if="routingStore.todayRouting">
-          <div class="flex items-center justify-between text-sm mb-1">
-            <span class="text-gray-500 dark:text-gray-400">Progression</span>
-            <span class="font-bold" :class="routingStore.progressPercent >= 100 ? 'text-emerald-600' : 'text-fc-red'">
-              {{ routingStore.completedCount }}/{{ routingStore.totalCount }}
-            </span>
-          </div>
-          <div class="w-full bg-gray-100 rounded-full h-2.5">
-            <div
-              class="h-2.5 rounded-full transition-all duration-500"
-              :class="routingStore.progressPercent >= 100 ? 'bg-emerald-500' : 'bg-fc-red'"
-              :style="{ width: `${routingStore.progressPercent}%` }"
-            />
-          </div>
+          <!-- 1.0.17 : objectif du jour (visite libre 3/20, pushcarts x/20), pas les seules étapes. -->
+          <ProgressionJour :progression="routingStore.progressionJour" />
           <UBadge :color="routingStatusColor" variant="soft" size="xs" class="mt-2">
             {{ routingStatusLabel }}
           </UBadge>
@@ -97,6 +86,8 @@
                 {{ rp.pdv?.zone || '' }}{{ rp.pdv?.quartier ? ` — ${rp.pdv.quartier}` : '' }}
               </p>
               <p v-if="rp.pdv?.adressage" class="text-xs text-gray-400">{{ rp.pdv.adressage }}</p>
+              <!-- Visite ajoutée (visite libre, pushcart trouvé) qui ne compte pas : on dit pourquoi. -->
+              <p v-for="r in remarquesVisiteLibre(rp.objectifs)" :key="r" class="mt-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">{{ r }}</p>
               <span
                 v-if="!pdvAGps(rp)"
                 class="mt-1 inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300"
@@ -218,6 +209,7 @@
 
 <script setup lang="ts">
 import { libellePdv } from '~/utils/libellePdv'
+import { remarquesVisiteLibre } from '~/utils/visiteLibre'
 import type { RoutingPDV } from '~/types'
 
 // La tournée est un geste d'écriture (démarrage de mission, saut de PDV,

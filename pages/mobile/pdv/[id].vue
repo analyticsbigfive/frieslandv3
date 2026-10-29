@@ -182,7 +182,7 @@
             </UFormGroup>
           </div>
 
-          <div class="mobile-card p-4 space-y-4">
+          <div v-if="peutModifierPosition" class="mobile-card p-4 space-y-4">
             <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Coordonnées GPS</h3>
 
             <UFormGroup label="Latitude">
@@ -192,6 +192,12 @@
             <UFormGroup label="Longitude">
               <UInput v-model="form.geolocation_lng" type="number" step="any" />
             </UFormGroup>
+          </div>
+          <div v-else class="mobile-card p-4">
+            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Coordonnées GPS</h3>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              La position du point de vente se met à jour pendant une visite, quand vous confirmez être devant.
+            </p>
           </div>
 
           <div class="flex gap-3">
@@ -288,6 +294,10 @@ async function chargerActions() {
   }
 }
 
+// 1.0.17 : la position ne se tape plus à la main sur le terrain (l'ancienne
+// était perdue). Superviseur et admin : pdv_gps_admin garde l'historique.
+const peutModifierPosition = computed(() => authStore.isSuperviseur)
+
 const loading = ref(true)
 const editing = ref(false)
 const saving = ref(false)
@@ -370,7 +380,12 @@ async function handleSave() {
   requestAnimationFrame(tick)
 
   try {
-    await pdvStore.updatePDV(pdv.value.pdv_id, { ...form.value, canal: derivedCanal.value } as any)
+    const { geolocation_lat, geolocation_lng, ...champs } = form.value
+    await pdvStore.updatePDV(pdv.value.pdv_id, {
+      ...champs,
+      ...(peutModifierPosition.value ? { geolocation_lat, geolocation_lng } : {}),
+      canal: derivedCanal.value,
+    } as any)
     const updated = await pdvStore.fetchPDVById(pdv.value.pdv_id)
     pdv.value = updated as PDV
     editing.value = false

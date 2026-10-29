@@ -1,9 +1,11 @@
 // composables/useRouting.ts
 import type { RoutingPDV } from '~/types'
+import { haversine } from '~/utils/trajets'
 
 export function useRouting() {
   const routingStore = useRoutingStore()
   const { validateGeofence, grabPosition } = useGeofencing()
+  const { exigerPosition } = useGpsVisite()
   const toast = useToast()
   const supabase = useSupabaseClient()
   const { parametres } = useParametresApp()
@@ -52,57 +54,41 @@ export function useRouting() {
 
   /**
    * Démarre l'étape d'un PDV de la tournée. Retourne false si bloqué.
-   * Règle du 22/10/2026 : tant que le PDV n'a pas de repère (première visite),
-   * pas de contrôle de distance ; la visite fixera sa position. Ensuite la
-   * tablette doit être dans le rayon du repère, sans « démarrer quand même ».
+   * 1.0.17 (29/10/2026) : pas de position, pas de visite. Sans position assez
+   * précise, l'écran d'aide GPS (useGpsVisite) dit pourquoi et propose
+   * « Réessayer » ; validationError reste vide, il n'y a rien à ajouter. La
+   * distance au repère ne bloque plus : « Êtes-vous bien devant… ? » est
+   * demandé à l'enregistrement de la visite.
    */
   async function startMission(routingPdv: RoutingPDV): Promise<boolean> {
-    const repere = repereDuPdv(routingPdv.pdv)
-    if (!repere) {
-      // Première visite : on relève la position du merchandiser. Un PDV sans
-      // GPS la prend tout de suite ; sinon la visite enregistrée la fixera.
-      isValidating.value = true
-      validationError.value = null
-      try {
-        const position = await grabPosition()
-        if (routingPdv.pdv && !routingPdv.pdv.geolocation_lat
-          && await geolocaliserPdv(routingPdv.pdv_id, position) && position) {
-          routingPdv.pdv.geolocation_lat = position.lat
-          routingPdv.pdv.geolocation_lng = position.lng
-        }
-        await routingStore.updateRoutingPDVStatus(routingPdv.id, 'in_progress', position
-          ? { geolocation_lat: position.lat, geolocation_lng: position.lng, precision_gps: position.accuracy }
-          : undefined)
-      }
-      finally {
-        isValidating.value = false
-      }
-      return true
-    }
-
     isValidating.value = true
     validationError.value = null
-
     try {
-      const pdv = routingPdv.pdv!
-      const radius = pdv.rayon_geofence || parametres.value.geofence_rayon_m
-      const result = await validateGeofence(pdv.geolocation_lat, pdv.geolocation_lng, radius)
+      const position = await exigerPosition()
+      if (!position) return false
 
-      if (result.isWithinRange) {
-        await routingStore.updateRoutingPDVStatus(routingPdv.id, 'in_progress', {
-          geofence_validated: true,
-          geolocation_lat: result.userPosition.lat,
-          geolocation_lng: result.userPosition.lng,
-          precision_gps: result.accuracy,
-        })
-        return true
+      // PDV sans GPS : la position prise devient la sienne.
+      if (routingPdv.pdv && !routingPdv.pdv.geolocation_lat
+        && await geolocaliserPdv(routingPdv.pdv_id, position)) {
+        routingPdv.pdv.geolocation_lat = position.lat
+        routingPdv.pdv.geolocation_lng = position.lng
       }
-      validationError.value
-        = `Vous êtes à ${result.distance} m de ce PDV, ${texteRepere(pdv)} (maximum ${radius} m). Rapprochez-vous puis réessayez.`
-      return false
+
+      const pdv = routingPdv.pdv
+      const repere = repereDuPdv(pdv)
+      const rayon = pdv?.rayon_geofence || parametres.value.geofence_rayon_m
+      await routingStore.updateRoutingPDVStatus(routingPdv.id, 'in_progress', {
+        geolocation_lat: position.lat,
+        geolocation_lng: position.lng,
+        precision_gps: Math.round(position.accuracy),
+        ...(repere && pdv
+          ? { geofence_validated: haversine(position.lat, position.lng, pdv.geolocation_lat, pdv.geolocation_lng) <= rayon }
+          : {}),
+      })
+      return true
     }
     catch (err: any) {
-      validationError.value = err.message || 'Erreur de géolocalisation'
+      validationError.value = err.message || 'Impossible de démarrer ce PDV.'
       return false
     }
     finally {

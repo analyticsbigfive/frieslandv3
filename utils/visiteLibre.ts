@@ -96,6 +96,42 @@ export function objectifAtteint(o: ObjectifsDuJour): boolean {
   return bilanVisiteLibre(o).every(l => l.fait >= l.quota)
 }
 
+export interface ProgressionJour {
+  fait: number
+  total: number
+  /** Jour de visite libre : aucun PDV imposé, objectif par type de boutique. */
+  libre: boolean
+  /** Objectif du jour (visite libre ou pushcarts à trouver), pour le détail par type. */
+  objectifs: ObjectifsDuJour | null
+}
+
+/**
+ * Compteur « Progression x/y » de l'app (1.0.17, plan du 29/10) : l'objectif
+ * du jour tenu par la base (bilan_visite_libre), pas les seules étapes.
+ * - Visite libre : PDV qui comptent / objectif du jour (20, 15 ou 10).
+ * - Pushcarts à trouver : PDV imposés + pushcarts. Les étapes ajoutées par
+ *   une visite (nb_visites) sont retirées des compteurs, les pushcarts comptés
+ *   et leur objectif ajoutés : 0/20 au lieu de 0/18.
+ * - Autre tournée (Friesland, agent sans objectif) : les compteurs tels quels.
+ * `compteurs` : étapes de toute la tournée (base), pas des pages chargées.
+ */
+export function progressionDuJour(objectifs: unknown, compteurs: { total: number, faits: number }): ProgressionJour {
+  const libre = visiteLibre(objectifs)
+  if (libre) {
+    const t = totalVisiteLibre(libre)
+    return { fait: t.fait, total: t.total, libre: true, objectifs: libre }
+  }
+  const trouver = aTrouver(objectifs)
+  if (trouver) {
+    const ajoutees = Math.max(0, Number(trouver.nb_visites) || 0)
+    const t = totalVisiteLibre(trouver)
+    const imposes = Math.max(0, compteurs.total - ajoutees)
+    const imposesFaits = Math.min(Math.max(0, compteurs.faits - ajoutees), imposes)
+    return { fait: imposesFaits + t.fait, total: imposes + t.total, libre: false, objectifs: trouver }
+  }
+  return { fait: compteurs.faits, total: compteurs.total, libre: false, objectifs: null }
+}
+
 /** Étape ajoutée par une visite (visite libre ou pushcart trouvé), pas imposée. */
 export function etapeAjoutee(objectifs: unknown): boolean {
   const o = objectifs as Record<string, unknown> | null | undefined

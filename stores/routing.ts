@@ -5,6 +5,7 @@ import { markRaw } from 'vue'
 import { fetchAllRows } from '~/utils/fetchAll'
 import { regrouperLignesTournees } from '~/utils/routingImport'
 import { estErreurReseau } from '~/utils/supabaseErrors'
+import { progressionDuJour } from '~/utils/visiteLibre'
 import type { Routing, RoutingPDV, RoutingObjectives, RoutingTemplate, RoutingTemplatePDV, RoutingTemplateException, Profile, RoutingTemplateMode } from '~/types'
 
 export const useRoutingStore = defineStore('routing', () => {
@@ -692,6 +693,11 @@ export const useRoutingStore = defineStore('routing', () => {
     totalCount.value > 0 ? Math.round((completedCount.value / totalCount.value) * 100) : 0
   )
 
+  // Compteur affiché (1.0.17) : l'objectif du jour tenu par la base — visite
+  // libre 3/20, pushcarts à trouver x/20 — au lieu des seules étapes (1/1,
+  // x/18). completedCount / totalCount restent pour les autres écrans.
+  const progressionJour = computed(() => progressionDuJour(todayRouting.value?.objectifs, compteurs.value))
+
   const nextPendingPDV = computed(() =>
     routingPDVList.value.find(rp => rp.status === 'pending')
   )
@@ -1107,6 +1113,7 @@ export const useRoutingStore = defineStore('routing', () => {
     completedCount,
     totalCount,
     progressPercent,
+    progressionJour,
     nextPendingPDV,
     currentInProgressPDV,
     fetchTodayRouting,

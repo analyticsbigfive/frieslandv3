@@ -17,6 +17,14 @@ export interface ParametresApp {
   tracking_lot_max: number
   /** null : objectif = nombre de PDV de la tournée du jour (merchandisers Atom). */
   objectif_visites_jour: number | null
+  /** 1.0.17 : au-delà, l'agent confirme être devant le PDV (la visite n'est jamais bloquée). */
+  distance_alerte_m: number
+  /** 1.0.17 : déplacement d'un PDV au-delà duquel l'admin le revoit (« Positions à vérifier »). */
+  gps_deplacement_verif_m: number
+  /** 1.0.17 : à la création, PDV existants montrés dans ce rayon (doublons possibles). */
+  doublon_rayon_m: number
+  /** 1.0.17 : nom presque identique dans ce rayon → confirmation explicite. */
+  doublon_nom_rayon_m: number
 }
 
 const CLE_CACHE = 'offline:parametres'
@@ -34,6 +42,10 @@ export function parametresParDefaut(pub: Record<string, any> = {}): ParametresAp
     tracking_envoi_s: nombre(pub.trackingFlushMs, 300_000) / 1000,
     tracking_lot_max: nombre(pub.trackingBatchMax, 200),
     objectif_visites_jour: 10,
+    distance_alerte_m: 100,
+    gps_deplacement_verif_m: 500,
+    doublon_rayon_m: 30,
+    doublon_nom_rayon_m: 15,
   }
 }
 

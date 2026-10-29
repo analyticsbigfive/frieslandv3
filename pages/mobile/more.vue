@@ -28,6 +28,7 @@
 <script setup lang="ts">
 import { analysePathForRole } from '~/utils/roles'
 import { estMerchandiserProgramme } from '~/utils/agences'
+import { TEXTES_GPS } from '~/utils/aideGpsTablette'
 
 definePageMeta({ middleware: ['auth'], layout: 'mobile' })
 
@@ -67,6 +68,7 @@ const roleItems = computed(() => {
 })
 
 const secondaryItems = [
+  { label: TEXTES_GPS.menuPlus, description: TEXTES_GPS.menuPlusDescription, to: '/mobile/aide-gps', icon: 'i-heroicons-map-pin' },
   { label: 'Calendrier', description: 'Visites récentes et navigation par mois', to: '/mobile/calendar', icon: 'i-heroicons-calendar-days' },
   { label: 'Contacts', description: 'Annuaire, téléphone et email', to: '/mobile/contacts', icon: 'i-heroicons-users' },
   { label: 'Carte', description: 'Routing, PDV proches et rayon', to: '/mobile/map', icon: 'i-heroicons-map' },

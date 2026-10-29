@@ -134,6 +134,8 @@ export const ADMIN_DOMAINS: AdminDomain[] = [
       { id: 'pdv.repartition', label: 'Répartition', title: 'Répartition des points de vente', path: '/admin/pdv/repartition', access: 'pdv' },
       { id: 'pdv.evolution', label: 'Évolution', title: 'Évolution des points de vente', path: '/admin/pdv/evolution', access: 'pdv' },
       { id: 'pdv.historique', label: 'Historique', title: 'Historique d\'un point de vente', path: '/admin/pdv/historique', access: 'pdv' },
+      { id: 'pdv.positions', label: 'Positions à vérifier', title: 'Positions de PDV à vérifier', path: '/admin/pdv/positions', access: 'pdv', roles: ['admin', 'superviseur'], aide: 'Les points de vente déplacés de loin par une visite (« je suis devant ») ou par une saisie sur le terrain : garder la nouvelle position ou remettre l\'ancienne.' },
+      { id: 'pdv.doublons', label: 'Doublons possibles', title: 'Points de vente en double possible', path: '/admin/pdv/doublons', access: 'pdv', roles: ['admin', 'superviseur'], aide: 'Les points de vente créés sur le terrain tout près d\'un point de vente existant : deux points de vente différents, ou un doublon à désactiver.' },
       { id: 'pdv.agence', label: 'PDV de l\'agence', title: 'Points de vente de l\'agence', path: '/admin/pdv/agence', access: 'pdv', roles: ['admin', 'superviseur', 'agence'], ouvertA: ['agence'], aide: 'Les points de vente visités ou recensés par les merchandisers de l\'agence : à compléter, à revoir.' },
       { id: 'pdv.distributeurs', label: 'Distributeurs', path: '/admin/distributeurs', access: 'parametres' },
     ],

@@ -199,7 +199,9 @@
     </div>
     <PDVQuickCreateModal
       v-model="showCreatePDV"
+      :pdv-connus="allPDV"
       @created="handlePDVCreated"
+      @existant="ouvrirPdvExistant"
     />
   </div>
 </template>
@@ -210,11 +212,13 @@ import { ETATS_FRAICHEUR, etatFraicheurColor, libelleFraicheur, type EtatFraiche
 import type { PdvFraicheur } from '~/composables/usePerfectStore'
 import { profileTerritories } from '~/composables/useUserScope'
 import { haversine } from '~/utils/trajets'
+import type { VoisinPdv } from '~/utils/doublonPdv'
 
 definePageMeta({ middleware: ['auth'], layout: 'mobile' })
 
 const pdvStore = usePDVStore()
 const authStore = useAuthStore()
+const toast = useToast()
 const { categoriePdvLabel, fetchTypePdvLabels } = useTypePdvLabels()
 const { currentPosition, isLocating, requestPosition } = useUserGeolocation()
 
@@ -294,6 +298,20 @@ function handlePDVCreated(pdv: PDV) {
 
   selectedZone.value = pdv.zone || ''
   search.value = pdv.nom_pdv || ''
+}
+
+// « C'est ce PDV » à la création (doublon évité) : on ouvre sa fiche.
+function ouvrirPdvExistant(v: VoisinPdv) {
+  if (v.dans_perimetre === false || !v.pdv_id) {
+    toast.add({
+      title: 'Ce point de vente existe déjà',
+      description: `${v.nom_pdv || 'Ce PDV'} n'est pas dans votre liste : prévenez votre superviseur au lieu de le recréer.`,
+      color: 'amber',
+      timeout: 9000,
+    })
+    return
+  }
+  void navigateTo(`/mobile/pdv/${v.pdv_id}`)
 }
 
 function getFilteredPDV() {

@@ -468,10 +468,12 @@ const generalInfo = computed<InfoVisite[]>(() => [
     value: texteRayon.value,
     statut: props.visite?.geofence_validated ? 'ok' : 'alerte',
   },
+  ...(props.visite?.appareil_modele ? [{ label: 'Tablette', value: props.visite.appareil_modele }] : []),
 ])
 
 // 1.0.12 : précision insuffisante (non bloquant). 1.0.15 : repère du PDV
 // (première visite ou position admin) et distance de la tablette à ce repère.
+// 1.0.17 : confirmation « je suis devant » au-delà de la distance d'alerte.
 const texteRayon = computed(() => {
   const gps = props.visite?.data?.gps
   const ok = !!props.visite?.geofence_validated
@@ -483,7 +485,9 @@ const texteRayon = computed(() => {
   }
   if (gps?.repere) {
     const repere = gps.repere === 'admin' ? 'de la position admin' : 'du repère'
-    return `${ok ? 'Oui' : 'Non'}, à ${gps.distance_m ?? '?'} m ${repere} (précision ${gps.precision_m ?? '?'} m)`
+    const base = `${ok ? 'Oui' : 'Non'}, à ${gps.distance_m ?? '?'} m ${repere} (précision ${gps.precision_m ?? '?'} m)`
+    // 1.0.17 : loin du repère, l'agent a confirmé être devant ; le PDV a été déplacé ici.
+    return gps.confirmation === 'devant' ? `${base} : l'agent a confirmé être devant, position du PDV remplacée` : base
   }
   if (ok) return 'Oui'
   return gps?.motif === 'precision' ? `Non, position GPS imprécise (${gps.precision_m ?? '?'} m)` : 'Non'

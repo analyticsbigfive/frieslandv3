@@ -179,6 +179,13 @@ export function useOfflineSync() {
             throw error
           }
 
+          // Photo de la devanture d'un PDV créé hors ligne (1.0.17) : son
+          // adresse est déjà dans pdv.image_url, rien à rattacher.
+          if (item.data.pdvId) {
+            queue.value = queue.value.filter(queuedItem => queuedItem.id !== item.id)
+            continue
+          }
+
           const { data: urlData } = supabase.storage
             .from('visite-images')
             .getPublicUrl(item.data.path)

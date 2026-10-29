@@ -1,6 +1,7 @@
 // composables/useGeoProvider.ts
 import { Capacitor } from '@capacitor/core'
 import { Geolocation } from '@capacitor/geolocation'
+import { codeErreurGps, type PermissionGps } from '~/utils/gpsVisite'
 
 // Adapter de plateforme : @capacitor/geolocation en natif (Android),
 // navigator.geolocation sur le web. Les formes de retour sont alignées
@@ -25,27 +26,23 @@ export interface GeoOptions {
   maximumAge?: number
 }
 
-export type GeoError = Error & { code?: number }
+export type GeoError = Error & { code?: number, nativeCode?: string }
 
 // Aligne les erreurs natives sur les codes GeolocationPositionError web
 // (1 = refusé, 2 = indisponible, 3 = timeout) pour préserver les messages
-// utilisateur existants.
+// utilisateur existants. Le plugin envoie un code texte (« OS-PLUG-GLOC-0007 »,
+// localisation coupée), gardé dans nativeCode (utils/gpsVisite.ts).
 function toCodedError(err: unknown): GeoError {
   const source = err as { message?: string, code?: number | string } | undefined
   const message = source?.message || String(err)
   const error = new Error(message) as GeoError
 
-  if (typeof source?.code === 'number') {
-    error.code = source.code
+  const code = codeErreurGps(source)
+  if (code) {
+    error.code = code
   }
-  else if (/denied|refus/i.test(message)) {
-    error.code = 1
-  }
-  else if (/unavailable|disabled|indisponible/i.test(message)) {
-    error.code = 2
-  }
-  else if (/timed? ?out|expir/i.test(message)) {
-    error.code = 3
+  if (typeof source?.code === 'string') {
+    error.nativeCode = source.code
   }
 
   return error
@@ -170,6 +167,28 @@ export function useGeoProvider() {
     }
   }
 
+  /**
+   * Autorisations détaillées (natif) : position exacte (`location`) et
+   * approximative (`coarseLocation`). Localisation coupée : le plugin refuse
+   * de répondre, l'erreur est rendue (cas A de l'aide GPS). Web : l'état du
+   * navigateur, sans notion d'approximative.
+   */
+  async function etatPermission(demander = false): Promise<{ permission: PermissionGps, erreur?: GeoError }> {
+    if (isNative) {
+      if (demander && !(await disclosureBeforePrompt())) {
+        return { permission: { location: 'denied' }, erreur: toCodedError(new Error('Localisation refusée')) }
+      }
+      try {
+        const status = demander ? await Geolocation.requestPermissions() : await Geolocation.checkPermissions()
+        return { permission: { location: status.location, coarseLocation: status.coarseLocation } }
+      }
+      catch (err) {
+        return { permission: null, erreur: toCodedError(err) }
+      }
+    }
+    return { permission: { location: await checkPermission() } }
+  }
+
   async function requestPermission(): Promise<PermissionState | null> {
     if (isNative) {
       if (!(await disclosureBeforePrompt())) {
@@ -194,5 +213,6 @@ export function useGeoProvider() {
     watchPosition,
     checkPermission,
     requestPermission,
+    etatPermission,
   }
 }
