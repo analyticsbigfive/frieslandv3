@@ -258,8 +258,11 @@ const startY = ref(0)
 // centaines de PDV), objectif irréaliste.
 const { parametres } = useParametresApp()
 const routingStore = useRoutingStore()
+// Atom : l'objectif du jour de la tournée (1.0.17) — 20, 15 ou 10 un jour de
+// visite libre, PDV imposés + pushcarts à trouver sinon — au lieu des seules
+// étapes (« 1 / 1, objectif atteint » dès la 1re visite libre).
 const dailyTarget = computed(() => parametres.value.objectif_visites_jour
-  ?? (estMerchandiserProgramme(authStore.profile?.employeur) && routingStore.totalCount ? routingStore.totalCount : 10))
+  ?? (estMerchandiserProgramme(authStore.profile?.employeur) && routingStore.progressionJour.total ? routingStore.progressionJour.total : 10))
 
 const todayCount = computed(() => {
   const today = new Date().toISOString().slice(0, 10)

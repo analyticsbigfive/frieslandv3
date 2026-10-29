@@ -1,24 +1,25 @@
 # Notes de version — 29 octobre 2026
 
-Application mobile **1.0.17** (versionCode 20). La 1.0.16 (versionCode 19) est le compteur des visites libres, diffusé à part.
+Application mobile **1.0.17** (versionCode 20). Elle contient aussi le compteur des visites libres, prévu d'abord en 1.0.16 : le numéro 1.0.16 (versionCode 19) n'est jamais sorti.
 
 ## Texte court pour la publication de l'application
 
 À coller dans Paramètres › Versions de l'app › Publier une version (champ « Message ») :
 
-> Version 1.0.17 : la position de la tablette est obligatoire pour faire une visite. Si elle ne vient pas, l'application explique quoi régler. Loin du point de vente, elle demande « Êtes-vous bien devant ? » au lieu de bloquer.
+> Version 1.0.17 : la position de la tablette est obligatoire pour faire une visite. Si elle ne vient pas, l'application explique quoi régler. Loin du point de vente, elle demande « Êtes-vous bien devant ? » au lieu de bloquer. Le compteur du jour suit l'objectif (3/20 en visite libre).
 
 ## Notes de version Google Play
 
-À coller dans Play Console › Version › Notes de version (fr-FR), 451 caractères sur 500 :
+À coller dans Play Console › Version › Notes de version (fr-FR), 482 caractères sur 500 :
 
 ```
 <fr-FR>
 Version 1.0.17
-• La position de la tablette est obligatoire pour démarrer et enregistrer une visite, et pour créer un point de vente.
-• Si la position ne vient pas, l'application explique quoi régler (localisation, autorisation, précision), étape par étape, avec « Réessayer ».
+• Position de la tablette obligatoire pour démarrer et enregistrer une visite, et pour créer un point de vente.
+• Si la position ne vient pas, l'application explique quoi régler, étape par étape.
 • Loin du point de vente, elle demande « Êtes-vous bien devant ? » au lieu de bloquer.
 • Nouveau point de vente : photo de la devanture obligatoire et contrôle des doublons.
+• Mon routing et l'accueil comptent l'objectif du jour (3/20 en visite libre, pushcarts compris).
 </fr-FR>
 ```
 
@@ -67,6 +68,20 @@ Les noms des menus peuvent changer un peu selon la version de One UI. L'aide est
 
 **Modèle de la tablette** : envoyé avec chaque visite. On saura quelles tablettes n'ont pas de puce GPS.
 
+**Compteur du jour (merchandisers Atom)**, prévu d'abord en 1.0.16
+
+Avant, l'app comptait les seules étapes de la tournée, sans regarder l'objectif du jour :
+- un jour de visite libre, « Mon routing » affichait 0/0, puis 1/1, 2/2… toujours 100 %, et l'accueil « Objectif atteint » dès la première visite. Le 29/10, un merchandiser avait 14/14 alors que 5 visites seulement comptaient ;
+- un jour normal, les 2 pushcarts à trouver manquaient : x/18 au lieu de x/20.
+
+Désormais, l'app lit l'objectif que la base tient déjà à jour :
+- **visite libre** : titre « Visite libre », « Progression 3/20 », le détail par type (« Boutiques 3/13 · Superettes 0/2 · … ») et la phrase « Pas de point de visite aujourd'hui : visitez les PDV de votre liste. Un PDV déjà visité ce mois-ci ne compte pas. » ;
+- **jour normal** : « Progression x/20 » et « Pushcarts 1/2 trouvés » ;
+- sur chaque PDV visité qui ne compte pas, la raison : « Déjà vu ce mois-ci, ne compte pas », « Quota du type déjà atteint, ne compte pas »… ;
+- **accueil** : l'objectif est celui du jour (20, 15 ou 10). Le paramètre admin « Objectif de visites par jour », s'il est rempli, reste prioritaire.
+
+Les tournées Friesland ne changent pas. Le nombre de PDV qui comptent s'actualise une fois la visite envoyée au serveur.
+
 ## Administration
 
 - **Points de vente › Positions à vérifier** (admin et superviseur). Y figurent les points de vente déplacés de plus de 500 m depuis le terrain :
@@ -113,7 +128,7 @@ Aucune nouvelle autorisation Android : pas de déclaration Play Console à refai
 
 **Poste de build** : `android/local.properties` du dépôt principal pointe encore vers `/Users/bfaproductionia/…`, un ancien compte. Sur ce Mac, le SDK est dans `/Users/bfa/Library/Android/sdk`. Mettre `sdk.dir=/Users/bfa/Library/Android/sdk`, sinon Gradle répond « SDK location not found ».
 
-**Attention, compteur des visites libres** : cette 1.0.17 (versionCode 20) est construite sans le compteur prévu en 1.0.16 (versionCode 19), dont le code n'était pas encore dans le dépôt le 29/10. Au 29/10, aucune tablette n'avait la 1.0.16 : rien n'est perdu. Mais une fois le versionCode 20 sur le Play Store, une 1.0.16 (versionCode 19) ne pourra plus y être publiée : le compteur devra sortir en 1.0.18 (versionCode 21) ou plus.
+**Compteur des visites libres** : il est dans cette 1.0.17 (décision de Jean Luc du 29/10). La 1.0.16 n'est jamais sortie et ne sortira pas ; aucune tablette ne l'avait.
 
 ## Fiche de test sur une vraie Galaxy Tab
 
@@ -145,7 +160,11 @@ Aucune nouvelle autorisation Android : pas de déclaration Play Console à refai
    - Attendu : « Vous êtes à X m… Êtes-vous bien devant [nom] ? ».
    - « Non, annuler » : rien n'est enregistré. « Oui, je suis devant » : la visite s'enregistre.
    - Dans l'admin, la fiche de la visite dit que l'agent a confirmé être devant.
-8. **Hors ligne** :
+8. **Compteur du jour** (merchandiser Atom) :
+   - un jour de visite libre, ouvrir Mon routing. Attendu : « Visite libre », « Progression 0/20 » et le détail par type ;
+   - visiter un PDV déjà vu ce mois-ci. Attendu : le compteur ne bouge pas, et le PDV porte « Déjà vu ce mois-ci, ne compte pas » ;
+   - un jour normal : « Progression x/20 » et « Pushcarts 0/2 trouvés ».
+9. **Hors ligne** :
    - mode avion, localisation allumée, enregistrer une visite.
    - Attendu : la position est exigée, la visite part dans la file et s'envoie au retour du réseau.
 

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   visiteLibre, aTrouver, etapeAjoutee, bilanVisiteLibre, totalVisiteLibre, texteBilanVisiteLibre, texteObjectifVisiteLibre,
-  objectifAtteint, remarquesVisiteLibre, type ObjectifsVisiteLibre,
+  objectifAtteint, remarquesVisiteLibre, progressionDuJour, type ObjectifsVisiteLibre,
 } from '../utils/visiteLibre'
 
 // Samedi (grille client) : Boutique 6, Porridge 1, Pushcart 1, Superette 1, Aboki & Kiosque 1.
@@ -81,5 +81,46 @@ describe('pushcarts à trouver', () => {
     expect(etapeAjoutee({ releve_stock: true })).toBe(false)
     expect(remarquesVisiteLibre({ a_trouver: true, canal: 'Pushcart', hors_quota: true, hors_liste: true }))
       .toEqual(['Quota du type déjà atteint, ne compte pas', 'Hors de sa liste'])
+  })
+})
+
+// Compteur « Progression x/y » de l'app (1.0.17) : l'objectif du jour, pas
+// les seules étapes (avant : 0/0 puis 1/1, 2/2… un jour de visite libre).
+describe('progressionDuJour', () => {
+  const GRILLE = { 'Aboki & Kiosque': 2, Boutique: 13, Porridge: 1, Pushcart: 2, Superette: 2 }
+
+  it('jour libre vide : 0/20, pas 0/0', () => {
+    const o = { type: 'visite_libre', quotas: GRILLE, total: 20, realise: {}, nb_realise: 0, nb_visites: 0 }
+    expect(progressionDuJour(o, { total: 0, faits: 0 })).toMatchObject({ fait: 0, total: 20, libre: true })
+  })
+
+  it('après une visite qui compte : 1/20, pas 1/1', () => {
+    const o = { type: 'visite_libre', quotas: GRILLE, total: 20, realise: { Boutique: 1 }, nb_realise: 1, nb_visites: 1 }
+    expect(progressionDuJour(o, { total: 1, faits: 1 })).toMatchObject({ fait: 1, total: 20 })
+  })
+
+  it('PDV déjà vu ce mois-ci ou type au-delà du quota : la visite ne compte pas (cas du 29/10 : 14 visites, 5 comptent)', () => {
+    const o = { type: 'visite_libre', quotas: GRILLE, total: 20, realise: { Boutique: 5 }, nb_realise: 5, nb_visites: 14 }
+    expect(progressionDuJour(o, { total: 14, faits: 14 })).toMatchObject({ fait: 5, total: 20 })
+  })
+
+  it('quota d\'un type dépassé : plafonné au quota', () => {
+    const o = { type: 'visite_libre', quotas: GRILLE, total: 20, realise: { Superette: 4 }, nb_realise: 4, nb_visites: 4 }
+    expect(progressionDuJour(o, { total: 4, faits: 4 })).toMatchObject({ fait: 2, total: 20 })
+  })
+
+  it('jour normal avec 2 pushcarts à trouver : 0/20 au lieu de 0/18', () => {
+    const debut = { type: 'a_trouver', quotas: { Pushcart: 2 }, total: 2, realise: {}, nb_realise: 0, nb_visites: 0 }
+    expect(progressionDuJour(debut, { total: 18, faits: 0 })).toMatchObject({ fait: 0, total: 20, libre: false })
+    // 10 PDV imposés faits, un pushcart trouvé (ajouté à la tournée).
+    const milieu = { type: 'a_trouver', quotas: { Pushcart: 2 }, total: 2, realise: { Pushcart: 1 }, nb_realise: 1, nb_visites: 1 }
+    expect(progressionDuJour(milieu, { total: 19, faits: 11 })).toMatchObject({ fait: 11, total: 20 })
+    // Pas d'« objectif atteint » à 18 sans pushcart.
+    expect(progressionDuJour(debut, { total: 18, faits: 18 })).toMatchObject({ fait: 18, total: 20 })
+  })
+
+  it('tournée Friesland ou agent sans objectif : les compteurs tels quels', () => {
+    expect(progressionDuJour(null, { total: 42, faits: 7 })).toEqual({ fait: 7, total: 42, libre: false, objectifs: null })
+    expect(progressionDuJour({ releve_stock: true }, { total: 3, faits: 1 })).toMatchObject({ fait: 1, total: 3 })
   })
 })
