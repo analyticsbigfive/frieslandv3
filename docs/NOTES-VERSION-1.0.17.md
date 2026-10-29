@@ -8,6 +8,20 @@ Application mobile **1.0.17** (versionCode 20). La 1.0.16 (versionCode 19) est l
 
 > Version 1.0.17 : la position de la tablette est obligatoire pour faire une visite. Si elle ne vient pas, l'application explique quoi régler. Loin du point de vente, elle demande « Êtes-vous bien devant ? » au lieu de bloquer.
 
+## Notes de version Google Play
+
+À coller dans Play Console › Version › Notes de version (fr-FR), 451 caractères sur 500 :
+
+```
+<fr-FR>
+Version 1.0.17
+• La position de la tablette est obligatoire pour démarrer et enregistrer une visite, et pour créer un point de vente.
+• Si la position ne vient pas, l'application explique quoi régler (localisation, autorisation, précision), étape par étape, avec « Réessayer ».
+• Loin du point de vente, elle demande « Êtes-vous bien devant ? » au lieu de bloquer.
+• Nouveau point de vente : photo de la devanture obligatoire et contrôle des doublons.
+</fr-FR>
+```
+
 ## Application mobile (tablettes)
 
 **Pas de position, pas de visite**
@@ -76,14 +90,19 @@ Les noms des menus peuvent changer un peu selon la version de One UI. L'aide est
 
 Chaque étape attend le oui de Jean Luc.
 
-0. **Appliquer la migration** `supabase/nouveau/20261029170000_friesland_gps_obligatoire.sql`, **avant tout le reste**.
+0. **Appliquer la migration** `supabase/nouveau/20261029170000_friesland_gps_obligatoire.sql`, **avant tout le reste**. ✅ Appliquée en production le 29/10/2026 (migration `friesland_gps_obligatoire`, version 20261029214321), à la demande de Jean Luc. Vérifié juste après : paramètres 50/50/100/500/30/15 m, déclencheurs, fonctions, 496 paires dans Doublons possibles, 196 lignes dans Positions à vérifier.
    - La 1.0.17 envoie le modèle de la tablette et la source « création ». Sans la migration, ses visites et ses créations de points de vente sont refusées.
    - Aucun risque pour les 1.0.15 et 1.0.16, qui n'envoient ni l'un ni l'autre.
    - Effets dès l'application, toutes versions confondues :
      - précision portée à 50 m ;
      - une position tapée à la main est gardée dans l'historique ;
      - une visite rejouée hors ligne peut fixer la position d'un point de vente.
-1. Jean Luc construit l'APK signé et l'AAB :
+1. AAB construit et signé le 29/10/2026 : `dist-apk/friesland-bonnet-rouge-1.0.17-release.aab` (versionCode 20, 5,6 Mo).
+   - Signature vérifiée (`pnpm run android:verify`) : clé d'upload Friesland Bonnet Rouge, SHA-256 BD:2E:F3:68…:9E:51.
+   - Mêmes autorisations Android que la 1.0.14 (12).
+   - L'APK (pour le lien de téléchargement) n'est pas encore construit : `pnpm run android:release`.
+   
+   Pour reconstruire (Jean Luc) :
    - `npm run android:release`, puis `npm run android:bundle` ;
    - `npm run android:sync` régénère la liste des plugins Android, `@capacitor/device` compris.
 2. Envoi de l'APK : `node scripts/upload-apk.mjs dist-apk/friesland-bonnet-rouge-1.0.17-release.apk --latest`.
@@ -91,6 +110,10 @@ Chaque étape attend le oui de Jean Luc.
 4. AAB sur le Play Console.
 
 Aucune nouvelle autorisation Android : pas de déclaration Play Console à refaire. `@capacitor/device` lit le modèle sans autorisation.
+
+**Poste de build** : `android/local.properties` du dépôt principal pointe encore vers `/Users/bfaproductionia/…`, un ancien compte. Sur ce Mac, le SDK est dans `/Users/bfa/Library/Android/sdk`. Mettre `sdk.dir=/Users/bfa/Library/Android/sdk`, sinon Gradle répond « SDK location not found ».
+
+**Attention, compteur des visites libres** : cette 1.0.17 (versionCode 20) est construite sans le compteur prévu en 1.0.16 (versionCode 19), dont le code n'était pas encore dans le dépôt le 29/10. Au 29/10, aucune tablette n'avait la 1.0.16 : rien n'est perdu. Mais une fois le versionCode 20 sur le Play Store, une 1.0.16 (versionCode 19) ne pourra plus y être publiée : le compteur devra sortir en 1.0.18 (versionCode 21) ou plus.
 
 ## Fiche de test sur une vraie Galaxy Tab
 
