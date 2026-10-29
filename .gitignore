@@ -85,3 +85,11 @@ docs/guides/utilisateurs/
 # bouton Aide en production.
 docs/guides/*.pdf
 docs/GUIDE-ADMINISTRATION.pdf
+
+# Pipeline ATOM → découpage (données terrain : téléphones, adresses)
+data/in/
+data/cache/
+data/out/
+scripts/.venv/
+__pycache__/
+.pytest_cache/

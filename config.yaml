@@ -1,0 +1,83 @@
+# Pipeline PDV ATOM → découpage Friesland → routing de novembre 2026.
+# Les scripts sont dans scripts/ (lancer : uv run --project scripts python scripts/NN_xxx.py).
+
+SOURCES:
+  decoupage_definitif:
+    url: "https://docs.google.com/spreadsheets/d/1u1uxVr9dwse2PzocmeW508D4Y-4OAFkD3KZt6xGeF74/export?format=csv&gid=1265936964"
+    fichier: data/in/decoupage_definitif.csv
+    entetes: [Zone, Territoire, Secteur, Commerciaux, SSF]
+  pdv_atom:
+    url: "https://docs.google.com/spreadsheets/d/17HSHqPsCZ-U_qBB-KFjSdWjT5mEEqq-dsYLBHWGP14E/export?format=csv&gid=916406469"
+    fichier: data/in/pdv_atom.csv
+    entetes: [ID_PDV, Nom_PDV, Type_PDV, Contact_Telephone, Commune, Quartier, Localisation, Zone, GPS_Lat, GPS_Lng, Créé_par]
+  atom_xlsx:
+    url: "https://docs.google.com/spreadsheets/d/17HSHqPsCZ-U_qBB-KFjSdWjT5mEEqq-dsYLBHWGP14E/export?format=xlsx"
+    fichier: data/in/atom.xlsx
+    onglets: [PDV, Merchandiseurs, Rapports_BR]
+  routing_treichville:
+    url: "https://docs.google.com/spreadsheets/d/18kw5SUa7E3sFriq10UVqKi4epDaGbsAyaZu4Qid4ZMw/export?format=csv&gid=1002642588"
+    fichier: data/in/routing_treichville.csv
+  routing_treichville_xlsx:
+    url: "https://docs.google.com/spreadsheets/d/18kw5SUa7E3sFriq10UVqKi4epDaGbsAyaZu4Qid4ZMw/export?format=xlsx"
+    fichier: data/in/routing_treichville.xlsx
+  historique_visites:
+    url: "https://docs.google.com/spreadsheets/d/1dvvpG1RQ5TmritEbuPKHLvF3waQNlJ_hUR0tl3NNHNQ/export?format=csv&gid=145361293"
+    fichier: data/in/historique_visites.csv
+    entetes: [Date, Merchandiseur, "Routing (N° tournée)", PDV, Type PDV, Contact PDV, Zone / Quartier, Localisation, GPS visite]
+  # L'export public du routing mensuel renvoie 401 : on lit la copie Drive fournie par Jean Luc.
+  routing_mensuel:
+    local: "~/Downloads/Routing Mensuel.xlsx"
+    fichier: data/in/routing_mensuel.csv
+    entetes: [Zone, Merchandiser, Distributeur, Sales rep, Jour, Occurrence, Point de visite, SSF, Type SSF]
+  rattachement_407:
+    local: "~/Downloads/Rattachement_407_PDV_vers_ORDRE_FrieslandCampina_A_VALIDER.xlsx"
+    fichier: data/in/rattachement_407_pdv.xlsx
+  note_agence:
+    local: "~/Downloads/Note_responsable_agence_anomalies_localisation_PDV.docx"
+    fichier: data/in/note_agence_anomalies.docx
+
+# Copies Drive posées dans ~/Downloads le 29/10 : comparées aux exports, ligne à ligne.
+COPIES_A_CONTROLER:
+  - {local: "~/Downloads/ORDRE.xlsx", onglet: "Decoupage Definitif", contre: decoupage_definitif}
+  - {local: "~/Downloads/BONNET ROUGE MAI 2026 (1).xlsx", onglet: PDV, contre: atom_xlsx}
+  - {local: "~/Downloads/BONNET ROUGE MAI 2026 (1).xlsx", onglet: Rapports_BR, contre: atom_xlsx}
+  - {local: "~/Downloads/BonnetRouge_Routing_2026-06-01_2026-09-30 (1) (1).xlsx", onglet: "Routing détaillé", contre: historique_visites}
+
+# Côte d'Ivoire
+BORNES_CI: {lat_min: 4.9, lat_max: 6.5, lng_min: -6.5, lng_max: -2.5}
+
+# Phase 1
+DOUBLON_DISTANCE_M: 15
+GPS_VISITE_RAYON_M: 100          # regroupement des GPS de visite
+GPS_VISITE_PART_MOYENNE: 0.6667  # un groupe d'au moins 2/3 des visites → confiance moyenne
+GPS_ECART_CONTROLE_M: 300        # GPS du PDV comparé à la médiane de ses visites
+ANCRAGE_MIN_PDV: 3
+ANCRAGE_SEUIL_NOM: 90            # rapidfuzz, 0-100
+ANCRAGE_ABERRANT_M: 2000
+CONFIANCE_BASSE_DISTANCE_M: 3000
+CONTROLE_REPERE_M: 1000
+NOMINATIM_DELAI_S: 1.1
+
+# Statuts des 407 PDV sans GPS admis dans le routing du 2 novembre (décision du 29/10).
+ROUTER_STATUTS:
+  - "validé (2 sources)"
+  - "provisoire"
+
+# Phase 2 — quota : règle Atom actuelle (routing_quota_canal), choisie le 29/10.
+QUOTAS_JOUR:
+  lundi:    {Superette: 2, Boutique: 13, "Aboki & Kiosque": 2, Pushcart: 2, Porridge: 1}
+  mardi:    {Superette: 2, Boutique: 13, "Aboki & Kiosque": 2, Pushcart: 2, Porridge: 1}
+  mercredi: {Superette: 2, Boutique: 13, "Aboki & Kiosque": 2, Pushcart: 2, Porridge: 1}
+  jeudi:    {Superette: 2, Boutique: 13, "Aboki & Kiosque": 2, Pushcart: 2, Porridge: 1}
+  vendredi: {Superette: 1, Boutique: 11, "Aboki & Kiosque": 1, Pushcart: 1, Porridge: 1}
+  samedi:   {Superette: 1, Boutique: 6, "Aboki & Kiosque": 1, Pushcart: 1, Porridge: 1}
+JOURS_SEMAINE: 6
+SEMAINES_MOIS: 4
+CAPACITE_DEPASSEE: "priorite_voisins"   # décidé le 29/10
+
+# Calendrier
+DATE_DEBUT: 2026-11-02
+# 1er et 15 novembre : dimanches. Lundi 2/11 travaillé (ministère de l'Emploi, Koaci 27/10).
+# N'ajouter une date qu'une fois confirmée.
+JOURS_FERIES: []
+JOUR_30_NOVEMBRE: "rattrapage"          # décidé le 29/10 : visite libre dans l'app

@@ -1,0 +1,23 @@
+[project]
+name = "atom-routing"
+version = "0.1.0"
+description = "PDV ATOM → découpage Friesland, routing mensuel des merchandisers"
+requires-python = ">=3.11"
+dependencies = [
+  "pandas>=2.2",
+  "geopandas>=1.0",
+  "shapely>=2.0",
+  "pyproj>=3.6",
+  "rapidfuzz>=3.9",
+  "requests>=2.32",
+  "pyyaml>=6.0",
+  "openpyxl>=3.1",
+  "numpy>=1.26",
+]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
