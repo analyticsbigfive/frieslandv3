@@ -122,13 +122,13 @@ Chaque étape attend le oui de Jean Luc.
    - `npm run android:release`, puis `npm run android:bundle` ;
    - `npm run android:sync` régénère la liste des plugins Android, `@capacitor/device` compris.
 2. ✅ Envoi de l'APK le 29/10/2026 : `node scripts/upload-apk.mjs dist-apk/friesland-bonnet-rouge-1.0.17-release.apk --latest`. Les liens `friesland-bonnet-rouge-1.0.17.apk` et `friesland-bonnet-rouge-latest.apk` ont été retéléchargés et vérifiés : même empreinte que l'APK construit, versionCode 20.
-3. ✅ `version_app` mis à jour le 29/10/2026, une fois le lien vérifié (migration `20261029230000_friesland_version_app_1_0_17.sql`) :
-   - version minimale et version disponible : 20 (1.0.17) ;
-   - message de la 1.0.17 ;
-   - lien inchangé.
-   
-   Les tablettes en 1.0.15 et avant voient l'écran « mise à jour obligatoire » jusqu'à l'installation.
-4. AAB sur le Play Console.
+3. ⚠️ `version_app` passé à 20 le 29/10 au soir, **puis remis à 17 le 30/10 à 8 h 54** (migration `20261030090000_friesland_version_app_retour_1_0_14.sql`).
+   - Les tablettes en 1.0.15 viennent du **Play Store** : elles sont signées par Google (signature d'application Play), et ne peuvent pas installer l'APK du lien, signé avec la clé d'envoi (« Impossible d'installer »).
+   - Avec la version minimale à 20, elles restaient bloquées sur l'écran de mise à jour obligatoire. Pour les débloquer, le merchandiser quitte l'app et y revient : elle relit le réglage au retour au premier plan.
+   - **Règle** : une tablette installée depuis le Play Store se met à jour par le Play Store, jamais par l'APK du lien. Avant de relever la version minimale, vérifier d'où viennent les installations.
+4. **AAB sur la Play Console**, puis attendre que la 1.0.17 soit en ligne sur le Play Store.
+5. Seulement ensuite : version minimale à 20, avec `url_telechargement` = fiche Play Store (`https://play.google.com/store/apps/details?id=com.bdco.bonnetrouge`), pour que le bouton de l'écran de mise à jour ouvre le Play Store.
+   - Les quelques tablettes installées depuis le lien (1.0.14) installent l'APK 1.0.17 directement depuis le lien.
 
 Aucune nouvelle autorisation Android : pas de déclaration Play Console à refaire. `@capacitor/device` lit le modèle sans autorisation.
 
