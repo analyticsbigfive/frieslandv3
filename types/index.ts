@@ -85,8 +85,9 @@ export interface PDV {
   // Traçabilité GPS (migration 20260930091000). Sans coordonnées :
   // dms-absent / dms-depot disent pourquoi. Repères (utils/repereGps.ts) :
   // terrain, admin, et en 1.0.17 creation et visite_validee ; itinerant =
-  // pushcart, jamais repéré.
-  gps_source?: 'dms' | 'dms-absent' | 'dms-depot' | 'atom' | 'atom-absent' | 'atom-fichier' | 'terrain' | 'admin' | 'itinerant' | 'creation' | 'visite_validee' | null
+  // pushcart, jamais repéré ; centre-ville = GPS aberrant ramené au centre de
+  // sa ville le 02/11/2026, la première visite fixe la vraie position.
+  gps_source?: 'dms' | 'dms-absent' | 'dms-depot' | 'atom' | 'atom-absent' | 'atom-fichier' | 'terrain' | 'admin' | 'itinerant' | 'creation' | 'visite_validee' | 'centre-ville' | null
   gps_precision_m?: number | null
   gps_maj_par?: string | null
   gps_maj_le?: string | null
