@@ -62,7 +62,19 @@
         <USelect v-model="filtreEmployeur" :options="optionsEmployeur" size="sm" aria-label="Filtrer par employeur" />
         <USelect v-model="filtreRole" :options="optionsRole" size="sm" aria-label="Filtrer par rôle" />
         <span class="text-xs tabular-nums text-slate-600 dark:text-slate-300" aria-live="polite">{{ lignesFiltrees.length }} compte{{ lignesFiltrees.length > 1 ? 's' : '' }}</span>
+        <UButton
+          v-if="authStore.isAdmin"
+          icon="i-heroicons-bell-alert"
+          size="sm"
+          variant="outline"
+          class="sm:ml-auto"
+          :disabled="!lignesFiltrees.length"
+          @click="modaleNotification = true"
+        >
+          Prévenir par notification
+        </UButton>
       </div>
+      <AdminEnvoiNotification v-model="modaleNotification" :destinataires="lignesFiltrees" />
 
       <!-- Comptes -->
       <div class="admin-surface overflow-x-auto">
@@ -260,6 +272,9 @@ const versionApp = ref<{ version_code_min: number, version_nom_min: string | nul
 const lignes = ref<Ligne[]>([])
 const loading = ref(true)
 const erreur = ref('')
+
+// Notification push aux comptes affichés (AdminEnvoiNotification, admin seulement).
+const modaleNotification = ref(false)
 
 const recherche = ref('')
 const filtreStatut = ref('tous')
