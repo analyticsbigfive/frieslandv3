@@ -16,10 +16,10 @@
 -- position validée. Les quartiers utilisés sont ceux déjà saisis dans la base,
 -- donc ceux des listes des merchandisers.
 --
--- Limite : le quartier proposé reste dans le territoire saisi. Les 27 points de
--- vente des groupes T1 à T3 (Daloa saisi MAN, Noé et Maféré saisis ATTÉCOUBÉ,
--- Grand-Bassam saisi ZONE 3) changeraient de territoire : leur proposition
--- sera fausse ici, ils se tranchent avec Friesland.
+-- Limite : le quartier proposé reste dans le territoire de la fiche. Depuis la
+-- migration 20261102160000 (accord de Friesland), 119 de ces points de vente
+-- ont déjà leur quartier corrigé, territoire compris pour Daloa, Noé, Maféré
+-- et Grand-Bassam : pour eux, la requête sert de contrôle.
 --
 -- Ne modifie rien. À relancer pour mettre à jour l'onglet « Suivi des visites ».
 -- ============================================================================
