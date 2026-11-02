@@ -112,13 +112,14 @@ const mapPhotoModal = ref<any>(null)
 let map: any = null
 let markerGroup: any = null
 
-// Coordonnées plausibles pour la Côte d'Ivoire (marge comprise). Un seul point
-// aberrant (virgule décimale perdue, point de démonstration) faisait cadrer la
-// carte sur le monde entier et empêchait le dessin des points.
+// Coordonnées dans les limites de la Côte d'Ivoire. Un seul point aberrant
+// (virgule décimale perdue, point de démonstration) faisait cadrer la carte
+// sur le monde entier ; l'ancienne marge (lng jusqu'à 0) dessinait encore une
+// boutique d'Abengourou au nord du Ghana (02/11/2026).
 function coordonneesPlausibles(p: PDV) {
   const lat = Number(p.geolocation_lat)
   const lng = Number(p.geolocation_lng)
-  return lat >= 3 && lat <= 12 && lng >= -10 && lng <= 0
+  return lat >= 4.3 && lat <= 10.75 && lng >= -8.65 && lng <= -2.45
 }
 
 const avecCoordonnees = computed(() => allPDV.value.filter(p => p.geolocation_lat && p.geolocation_lng))
@@ -219,7 +220,8 @@ function popupPdv(pdv: PDV) {
   nameP.textContent = nom
   el.appendChild(nameP)
 
-  const lieu = [pdv.zone, pdv.quartier].filter(Boolean).join(' · ')
+  // Sans quartier (fichier DMS), l'adresse dit la ville : « FERKE · Tengréla ».
+  const lieu = [pdv.zone, pdv.quartier || pdv.adressage].filter(Boolean).join(' · ')
   if (lieu) {
     const zoneP = document.createElement('p')
     zoneP.className = 'text-slate-600'
@@ -303,7 +305,7 @@ async function initMap() {
     // ce que la RLS lui ouvre (territoires des fiches, dont l'intérieur).
     const visitesAgence = authStore.isAgence ? await pdvStore.fetchPdvVisitesAgence() : null
     allPDV.value = visitesAgence
-      ?? await pdvStore.fetchAllPDV(false, 'pdv_id,nom_pdv,zone,quartier,canal,sous_categorie_pdv,geolocation_lat,geolocation_lng,image_url')
+      ?? await pdvStore.fetchAllPDV(false, 'pdv_id,nom_pdv,zone,quartier,adressage,canal,sous_categorie_pdv,geolocation_lat,geolocation_lng,image_url')
   }
   catch (err) {
     erreur.value = messageUtilisateur(err, 'Les points de vente n\'ont pas pu être chargés. Rechargez la page dans quelques instants.')
