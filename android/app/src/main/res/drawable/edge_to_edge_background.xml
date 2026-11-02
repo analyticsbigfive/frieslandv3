@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fond de la fenêtre en mode bord à bord (targetSdk 36). Capacitor décale la
+     WebView sous la barre de statut et au-dessus de la barre de navigation : seule
+     la bande derrière chaque barre système reste visible. En haut, le rouge de
+     l'en-tête de l'app (bg-fc-red) ; la WebView cache le reste de la bande, plus
+     haute que n'importe quelle barre de statut. En bas, gray-50 / gray-900. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/edgeToEdgeBackground" />
+    <item
+        android:gravity="top"
+        android:height="120dp"
+        android:drawable="@color/statusBarBackground" />
+</layer-list>
