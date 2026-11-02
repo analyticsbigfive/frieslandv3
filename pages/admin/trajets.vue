@@ -153,7 +153,7 @@
             class="w-32"
             aria-label="Rayon de recherche des points de vente"
           />
-          <UButton size="xs" icon="i-heroicons-map-pin" :disabled="!searchUser || !searchTime" @click="locateAtTime">
+          <UButton size="xs" icon="i-heroicons-map-pin" :disabled="!searchUser || !searchTime || searching" :loading="searching" @click="locateAtTime">
             Localiser
           </UButton>
           <UButton v-if="searchInfo" size="xs" color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="clearSearch">Effacer</UButton>
@@ -305,6 +305,7 @@
 <script setup lang="ts">
 import { haversine, lisserTrajet, libelleDuree } from '~/utils/trajets'
 import { SERIES, STATUT } from '~/utils/chartPalette'
+import { fetchAllRows } from '~/utils/fetchAll'
 definePageMeta({
   middleware: ['auth', 'admin'],
   layout: 'admin',
@@ -336,7 +337,6 @@ interface RepSummary {
 
 const supabase = useSupabaseClient()
 const authStore = useAuthStore()
-const pdvStore = usePDVStore()
 
 const mapContainer = ref<HTMLElement | null>(null)
 interface VisitMarker {
@@ -370,14 +370,17 @@ const searchTime = ref('')
 const searchRadius = ref(500)
 const searchInfo = ref('')
 const searchFound = ref(false)
+const searching = ref(false)
+// Numéro de la recherche en cours : une réponse arrivée après un changement de
+// jour ou de personne ne doit pas se dessiner sur la carte.
+let rechercheNo = 0
 const radiusOptions = [
   { label: '200 m', value: 200 },
   { label: '500 m', value: 500 },
   { label: '1 km', value: 1000 },
   { label: '2 km', value: 2000 },
 ]
-interface PdvGeo { pdv_id: string, nom_pdv: string, lat: number, lng: number }
-const allPdv = ref<PdvGeo[]>([])
+interface PdvGeo { pdv_id: string, nom_pdv: string, geolocation_lat: number, geolocation_lng: number }
 
 // Jours ayant au moins un point sur les 30 derniers jours, par commercial.
 const activityByUser = ref<Record<string, string[]>>({})
@@ -681,19 +684,28 @@ function statusColorForUser(userId: string): string {
 
 // Jours ayant au moins un point sur 30 jours : alimente les raccourcis et
 // permet de dire « ce jour est vide » plutôt que de laisser la carte muette.
+// Paginé : ~3 300 positions sur 30 jours au 02/11, la requête seule s'arrêtait
+// aux 1 000 premières (plafond PostgREST) et des jours manquaient.
 async function loadActivityDates() {
   const since = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10)
-  const { data, error } = await supabase
-    .from('position_tournee')
-    .select('user_id, captured_at')
-    .gte('captured_at', `${since}T00:00:00Z`)
-    .limit(50000)
-
-  if (error) return
+  let rows: { user_id: string, captured_at: string }[]
+  try {
+    rows = await fetchAllRows((from, to) => supabase
+      .from('position_tournee')
+      .select('user_id, captured_at')
+      .gte('captured_at', `${since}T00:00:00Z`)
+      .order('captured_at', { ascending: true })
+      .order('id')
+      .range(from, to) as any)
+  }
+  catch (err) {
+    console.error('Trajets : jours avec des positions non chargés', err)
+    return
+  }
 
   const perUser: Record<string, Set<string>> = {}
   const all = new Set<string>()
-  for (const row of (data ?? []) as { user_id: string, captured_at: string }[]) {
+  for (const row of rows) {
     const day = row.captured_at.slice(0, 10)
     all.add(day)
     ;(perUser[row.user_id] ??= new Set()).add(day)
@@ -712,34 +724,43 @@ async function loadPositions() {
   const dayStart = `${selectedDate.value}T00:00:00Z`
   const dayEnd = `${selectedDate.value}T23:59:59.999Z`
   try {
-    const [posRes, visitRes] = await Promise.all([
-      supabase
+    // Paginé comme le reste : le plafond de 1 000 lignes par réponse s'applique
+    // aussi à une journée de positions ou de visites quand l'équipe grandit.
+    const [points, visitRows] = await Promise.all([
+      fetchAllRows<TrajetPoint>((from, to) => supabase
         .from('position_tournee')
         .select('id, user_id, tournee_id, lat, lng, accuracy, captured_at, profiles(nom, email)')
         .gte('captured_at', dayStart).lt('captured_at', dayEnd)
         .order('captured_at', { ascending: true })
-        .limit(10000),
-      supabase
+        .order('id')
+        .range(from, to) as any),
+      // Sans visites, les trajets restent affichés.
+      fetchAllRows<any>((from, to) => supabase
         .from('visites')
-        .select('visite_id, user_id, pdv_id, date_visite, geolocation_lat, geolocation_lng, geofence_validated')
+        .select('visite_id, user_id, pdv_id, date_visite, geolocation_lat, geolocation_lng, geofence_validated, pdv:pdv_id(nom_pdv)')
         .gte('date_visite', dayStart).lt('date_visite', dayEnd)
-        .limit(10000),
+        .order('date_visite', { ascending: true })
+        .order('visite_id')
+        .range(from, to) as any)
+        .catch((err) => {
+          console.error('Trajets : visites du jour non chargées', err)
+          return []
+        }),
     ])
 
-    if (posRes.error) throw posRes.error
-    allPoints.value = (posRes.data ?? []) as unknown as TrajetPoint[]
+    allPoints.value = points
 
-    const pdvNameById = new Map(allPdv.value.map(p => [p.pdv_id, p.nom_pdv]))
+    // Nom lu avec la visite, comme la page Visites.
     const counts: Record<string, number> = {}
     const visits: VisitMarker[] = []
-    for (const row of (visitRes.data ?? []) as any[]) {
+    for (const row of visitRows) {
       if (row.user_id) counts[row.user_id] = (counts[row.user_id] ?? 0) + 1
       if (row.geolocation_lat && row.geolocation_lng) {
         visits.push({
           visite_id: row.visite_id,
           user_id: row.user_id,
           pdv_id: row.pdv_id,
-          nom_pdv: pdvNameById.get(row.pdv_id) || 'Point de vente sans nom',
+          nom_pdv: row.pdv?.nom_pdv || 'Point de vente sans nom',
           lat: row.geolocation_lat,
           lng: row.geolocation_lng,
           date_visite: row.date_visite,
@@ -780,38 +801,44 @@ async function loadCommerciaux() {
   }
 }
 
-async function loadPdv() {
-  // Compte agence : les PDV visités ou recensés par ses merchandisers (une requête rapide
-  // au lieu de la RLS sur `pdv`, ~6 s, coupée à 1 000 lignes).
-  const visitesAgence = authStore.isAgence ? await pdvStore.fetchPdvVisitesAgence().catch(() => null) : null
-  if (visitesAgence) {
-    allPdv.value = visitesAgence
-      .filter(p => p.geolocation_lat && p.geolocation_lng)
-      .map(p => ({ pdv_id: p.pdv_id, nom_pdv: p.nom_pdv, lat: p.geolocation_lat as number, lng: p.geolocation_lng as number }))
-    return
-  }
-  const { data, error } = await supabase
-    .from('pdv')
+// PDV dans un cadre autour de la position, lus au moment de la recherche :
+// charger d'avance les ~48 000 PDV avec GPS ne ramenait que les 1 000 premiers
+// (plafond PostgREST). Paginé aussi : un cadre de 4 km de côté à Adjamé ou
+// Treichville contient jusqu'à 2 000 PDV.
+async function pdvAutour(lat: number, lng: number, rayonM: number): Promise<PdvGeo[]> {
+  // Même rayon terrestre que haversine, plus 5 % de marge pour ne pas perdre
+  // un PDV au bord du cercle ; les coins du cadre sont écartés ensuite.
+  const dLat = (rayonM * 1.05 / 6_371_000) * (180 / Math.PI)
+  const dLng = dLat / Math.cos(lat * Math.PI / 180)
+  const dansLeCadre = (q: any) => q
     .select('pdv_id, nom_pdv, geolocation_lat, geolocation_lng')
-    .not('geolocation_lat', 'is', null)
-    .not('geolocation_lng', 'is', null)
-    .limit(20000)
+    .gte('geolocation_lat', lat - dLat).lte('geolocation_lat', lat + dLat)
+    .gte('geolocation_lng', lng - dLng).lte('geolocation_lng', lng + dLng)
+    .order('pdv_id')
 
-  if (!error) {
-    allPdv.value = (data ?? [])
-      .filter((p: any) => p.geolocation_lat && p.geolocation_lng)
-      .map((p: any) => ({ pdv_id: p.pdv_id, nom_pdv: p.nom_pdv, lat: p.geolocation_lat, lng: p.geolocation_lng }))
+  // Compte agence : les PDV visités ou recensés par ses merchandisers (la RLS
+  // sur `pdv` est lente pour lui, ~6 s). Sans la fonction, la table `pdv`.
+  if (authStore.isAgence) {
+    try {
+      return await fetchAllRows<PdvGeo>((from, to) => dansLeCadre((supabase.rpc as any)('carte_pdv_agence')).range(from, to))
+    }
+    catch (err: any) {
+      if (!(err?.code === 'PGRST202' || /carte_pdv_agence/.test(err?.message || ''))) throw err
+    }
   }
+  return fetchAllRows<PdvGeo>((from, to) => dansLeCadre(supabase.from('pdv')).range(from, to))
 }
 
 // Position du commercial à l'heure demandée (point le plus proche dans le
 // temps sur la date sélectionnée) + PDV dans le rayon autour.
-function locateAtTime() {
+async function locateAtTime() {
   if (!map || !searchGroup || !searchUser.value || !searchTime.value) return
   // @ts-ignore
   const L = window.L
   if (!L) return
 
+  const no = ++rechercheNo
+  const rayon = searchRadius.value
   searchGroup.clearLayers()
 
   // UTC comme la fenêtre de chargement : sinon le fuseau du navigateur admin
@@ -840,32 +867,52 @@ function locateAtTime() {
   )
   searchGroup.addLayer(posMarker)
   searchGroup.addLayer(L.circle([nearest.lat, nearest.lng], {
-    radius: searchRadius.value, color: SERIES[0], weight: 1, fillOpacity: 0.06,
+    radius: rayon, color: SERIES[0], weight: 1, fillOpacity: 0.06,
   }))
+  map.setView([nearest.lat, nearest.lng], rayon <= 500 ? 16 : 15)
+
+  const position = `Position à ${formatTime(nearest.captured_at)} (à ${gapMin} min près)`
+  searchFound.value = true
+  searchInfo.value = `${position} · recherche des points de vente…`
+  searching.value = true
+
+  let candidats: PdvGeo[]
+  try {
+    candidats = await pdvAutour(nearest.lat, nearest.lng, rayon)
+  }
+  catch (err) {
+    if (no !== rechercheNo) return
+    console.error('Trajets : points de vente autour de la position non chargés', err)
+    searching.value = false
+    searchFound.value = false
+    searchInfo.value = `${position} · les points de vente autour n'ont pas pu être chargés, réessayez.`
+    return
+  }
+  if (no !== rechercheNo) return
+  searching.value = false
 
   // PDV dans le rayon.
   let nearby = 0
-  for (const pdv of allPdv.value) {
-    const d = haversine(nearest.lat, nearest.lng, pdv.lat, pdv.lng)
-    if (d <= searchRadius.value) {
+  for (const pdv of candidats) {
+    const d = haversine(nearest.lat, nearest.lng, pdv.geolocation_lat, pdv.geolocation_lng)
+    if (d <= rayon) {
       nearby++
       searchGroup.addLayer(
-        L.circleMarker([pdv.lat, pdv.lng], {
+        L.circleMarker([pdv.geolocation_lat, pdv.geolocation_lng], {
           radius: 5, fillColor: COULEURS_CARTE.visite, color: '#fff', weight: 1, fillOpacity: 0.9,
         }).bindTooltip(`${echapperHtml(pdv.nom_pdv || 'Point de vente sans nom')} · ${Math.round(d)} m`, { direction: 'top' }),
       )
     }
   }
 
-  searchFound.value = true
-  searchInfo.value = `Position à ${formatTime(nearest.captured_at)} (à ${gapMin} min près) · ${nearby} point(s) de vente à moins de ${searchRadius.value >= 1000 ? searchRadius.value / 1000 + ' km' : searchRadius.value + ' m'}`
-
-  map.setView([nearest.lat, nearest.lng], searchRadius.value <= 500 ? 16 : 15)
+  searchInfo.value = `${position} · ${nearby} point(s) de vente à moins de ${rayon >= 1000 ? rayon / 1000 + ' km' : rayon + ' m'}`
 }
 
 // Les repères d'une recherche précédente survivaient à un changement de date
 // ou de commercial et se lisaient comme la position du jour affiché.
 function resetSearchLayer() {
+  rechercheNo++
+  searching.value = false
   searchGroup?.clearLayers()
   searchInfo.value = ''
   searchFound.value = false
@@ -1059,7 +1106,7 @@ async function initMap() {
   searchGroup = L.layerGroup().addTo(map)
 
   try {
-    await Promise.all([loadCommerciaux(), loadPdv(), loadActivityDates()])
+    await Promise.all([loadCommerciaux(), loadActivityDates()])
   }
   catch (err) {
     console.error('Trajets : chargement initial incomplet', err)

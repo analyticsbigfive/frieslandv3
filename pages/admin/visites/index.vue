@@ -30,8 +30,35 @@
             option-attribute="label"
           />
         </UFormGroup>
+        <!-- Agence employeur (Atom BTL, Hello Event…) et direction (South, North,
+             MT) de l'auteur. Un compte agence ne voit déjà que les siens. -->
+        <template v-if="!authStore.isAgence">
+          <UFormGroup label="Agence" class="w-full sm:w-56">
+            <USelectMenu
+              v-model="filters.agence"
+              :options="agenceOptions"
+              placeholder="Toutes"
+              size="sm"
+              class="w-full"
+              value-attribute="value"
+              option-attribute="label"
+            />
+          </UFormGroup>
+          <UFormGroup label="Direction" class="w-full sm:w-48">
+            <USelectMenu
+              v-model="filters.direction"
+              :options="directionOptions"
+              placeholder="Toutes"
+              size="sm"
+              class="w-full"
+              value-attribute="value"
+              option-attribute="label"
+            />
+          </UFormGroup>
+        </template>
       </template>
       <template #actions>
+        <UButton v-if="peutGererAgences" size="sm" color="gray" variant="ghost" icon="i-heroicons-building-office-2" :to="{ path: '/admin/referentiels', query: { liste: 'agence' } }">Gérer les agences</UButton>
         <UButton size="sm" color="gray" variant="ghost" icon="i-heroicons-arrow-path" :loading="visitesStore.loading" @click="filterVisites">Actualiser</UButton>
         <UButton size="sm" variant="outline" icon="i-heroicons-arrow-down-tray" @click="handleExport">Exporter</UButton>
       </template>
@@ -68,7 +95,10 @@
               @keydown.enter="viewVisite(visite)"
             >
               <td class="whitespace-nowrap tabular-nums">{{ formatDate(visite.date_visite) }}</td>
-              <td class="font-medium text-slate-900 dark:text-white">{{ visite.commercial || '—' }}</td>
+              <td class="font-medium text-slate-900 dark:text-white">
+                {{ visite.commercial || '—' }}
+                <p v-if="agenceDe(visite)" class="mt-0.5 text-xs font-normal text-slate-500 dark:text-slate-400">{{ agenceDe(visite) }}</p>
+              </td>
               <td>
                 <div class="min-w-40">
                   <p class="font-medium text-slate-900 dark:text-white">{{ nomPdv(visite) }}</p>
@@ -212,7 +242,7 @@
 
 <script setup lang="ts">
 import type { PeriodeValue } from '~/components/PeriodFilter.vue'
-import type { Visite } from '~/types'
+import type { Profile, Visite } from '~/types'
 import type { PerfectStoreResultB } from '~/utils/perfectStore'
 import { plageDePeriode } from '~/utils/periode'
 import { photosAffichables } from '~/utils/visitePhotos'
@@ -221,6 +251,7 @@ import { isModernTrade } from '~/utils/canal'
 import { messageUtilisateur } from '~/utils/supabaseErrors'
 import { statutNiveauVisite } from '~/utils/perfectStore'
 import { compte, pluriel } from '~/utils/pluriel'
+import { DIRECTIONS, libelleDirection } from '~/utils/agences'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
 
@@ -233,9 +264,19 @@ const peutSupprimer = computed(() => authStore.isAdmin)
 const toast = useToast()
 const { confirmation, demanderConfirmation, confirmer, annuler } = useConfirmation()
 const { exportVisitesToExcel } = useCsvExport()
-const { users: cachedUsers, fetchUsers: fetchCachedUsers, loading: usersLoading } = useUsersCache()
+const { fetchUsers: fetchCachedUsers, loading: usersLoading } = useUsersCache()
+// Le cache des comptes n'est pas réactif : `users` lu avant son chargement
+// restait vide. Copie locale, remplie quand le chargement aboutit.
+const comptes = shallowRef<Profile[]>([])
+async function chargerComptes() {
+  comptes.value = [...await fetchCachedUsers()]
+  return comptes.value
+}
 const { refs, fetchRefs, scoreVisite } = usePerfectStore()
 const { typePdvLabel, fetchTypePdvLabels } = useTypePdvLabels()
+const { options: optionsAgences, nom: nomAgence, charger: chargerAgences } = useAgences()
+const { peutOuvrir } = useAdminNavigation()
+const peutGererAgences = computed(() => peutOuvrir('/admin/referentiels', { liste: 'agence' }))
 
 const visites = computed(() => visitesStore.visites)
 const total = computed(() => visitesStore.total)
@@ -272,12 +313,32 @@ const showZoomedPhoto = computed({
 // Une colonne par catégorie active du catalogue (Paramètres › Produits du formulaire).
 const tableProductCategories = computed(() => categoriesProduitsActives().map(c => ({ key: c.key, label: c.label })))
 
+// Comptes de l'agence et de la direction choisies, inactifs compris : leurs
+// visites passées restent dans la liste.
+function comptesChoisis() {
+  return comptes.value.filter(u =>
+    (!filters.agence || u.employeur === filters.agence)
+    && (!filters.direction || u.direction === filters.direction))
+}
+
 const commercialOptions = computed(() => [
   { value: '', label: 'Tous' },
-  ...cachedUsers.value
+  ...(filters.agence || filters.direction ? comptesChoisis() : comptes.value)
     .filter(user => user.is_active !== false)
     .map(user => ({ value: user.nom || user.email || '', label: `${user.nom || '—'} (${user.email})` })),
 ])
+
+const agenceOptions = computed(() => [{ value: '', label: 'Toutes' }, ...optionsAgences.value])
+const directionOptions = [{ value: '', label: 'Toutes' }, ...DIRECTIONS.map(d => ({ value: d.value, label: d.label }))]
+
+// Agence et direction de l'auteur, sous son nom (« Atom BTL · South »).
+const comptesParId = computed(() => new Map(comptes.value.map(u => [u.id, u])))
+const comptesParEmail = computed(() => new Map(comptes.value.map(u => [u.email, u])))
+function agenceDe(visite: Visite): string {
+  const u = (visite.user_id && comptesParId.value.get(visite.user_id)) || comptesParEmail.value.get(visite.email)
+  if (!u?.employeur) return ''
+  return [nomAgence(u.employeur), u.direction ? libelleDirection(u.direction, true) : ''].filter(Boolean).join(' · ')
+}
 
 const perfectStoreScores = computed(() => {
   const scores = new Map<string, PerfectStoreResultB | null>()
@@ -422,6 +483,8 @@ function resetFilters() {
   periode.value = { preset: '30j', ...plageDePeriode('30j') }
   filters.commercial = ''
   filters.email = ''
+  filters.agence = ''
+  filters.direction = ''
   filters.page = 1
   loadVisites()
 }
@@ -435,6 +498,8 @@ const filterChips = computed(() => {
     const opt = commercialOptions.value.find(o => o.value === filters.commercial)
     chips.push({ key: 'commercial', label: `Merchandiser : ${opt?.label || filters.commercial}` })
   }
+  if (filters.agence) chips.push({ key: 'agence', label: `Agence : ${nomAgence(filters.agence)}` })
+  if (filters.direction) chips.push({ key: 'direction', label: `Direction : ${libelleDirection(filters.direction, true)}` })
   return chips
 })
 function removeFilterChip(key: string) {
@@ -444,6 +509,14 @@ function removeFilterChip(key: string) {
 }
 
 async function loadVisites() {
+  if (filters.agence || filters.direction) {
+    await chargerComptes()
+    const choisis = comptesChoisis()
+    filters.auteurs = { ids: choisis.map(u => u.id), emails: choisis.map(u => u.email).filter(Boolean) }
+  }
+  else {
+    filters.auteurs = null
+  }
   await visitesStore.fetchVisites()
 }
 
@@ -455,7 +528,7 @@ function filterVisites() {
 // Filtrage dynamique : les changements de filtres relancent la liste sans
 // passer par le bouton « Filtrer » (debounce court).
 let autoFilterTimer: ReturnType<typeof setTimeout> | null = null
-watch(() => [filters.dateFrom, filters.dateTo, filters.commercial], () => {
+watch(() => [filters.dateFrom, filters.dateTo, filters.commercial, filters.agence, filters.direction], () => {
   if (autoFilterTimer) clearTimeout(autoFilterTimer)
   autoFilterTimer = setTimeout(() => { filters.page = 1; loadVisites() }, 400)
 })
@@ -467,10 +540,20 @@ onMounted(() => {
   const route = useRoute()
   const qCommercial = route.query.commercial
   if (typeof qCommercial === 'string' && qCommercial) filters.commercial = qCommercial
+  // /admin/visites?agence=atom&direction=south
+  if (!authStore.isAgence) {
+    if (typeof route.query.agence === 'string') filters.agence = route.query.agence
+    if (typeof route.query.direction === 'string') filters.direction = route.query.direction
+  }
+  else {
+    filters.agence = ''
+    filters.direction = ''
+  }
   // Lien direct vers une visite (Activité › Dernières visites) : /admin/visites?visite=<id>
   const qVisite = route.query.visite
   if (typeof qVisite === 'string' && qVisite) void ouvrirVisiteParId(qVisite)
-  fetchCachedUsers()
+  chargerComptes()
+  chargerAgences()
   fetchRefs()
   fetchTypePdvLabels()
   loadVisites()
