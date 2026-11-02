@@ -37,6 +37,11 @@ export const useVisitesStore = defineStore('visites', () => {
     pdv_id: '',
     zone: '',
     region: '',
+    // Agence (profiles.employeur) et direction de l'auteur de la visite. La
+    // page traduit ces choix en `auteurs` (comptes concernés) avant chaque chargement.
+    agence: '',
+    direction: '',
+    auteurs: null as { ids: string[]; emails: string[] } | null,
     page: 1,
     perPage: 50,
   })
@@ -67,6 +72,17 @@ export const useVisitesStore = defineStore('visites', () => {
     }
     if (filters.value.pdv_id) {
       query = query.eq('pdv_id', filters.value.pdv_id)
+    }
+    if (filters.value.auteurs) {
+      // Beaucoup de visites jusqu'au 31/08/2026 n'ont pas de user_id : on les
+      // rattache à leur auteur par l'e-mail (même casse que profiles.email).
+      const { ids, emails } = filters.value.auteurs
+      const conditions = [
+        ids.length ? `user_id.in.(${ids.join(',')})` : '',
+        emails.length ? `and(user_id.is.null,email.in.(${emails.map(e => `"${e.replace(/["\\]/g, '\\$&')}"`).join(',')}))` : '',
+      ].filter(Boolean)
+      // Aucun compte dans cette agence : aucune visite, plutôt que toutes.
+      query = conditions.length ? query.or(conditions.join(',')) : query.is('id', null)
     }
     return query
   }

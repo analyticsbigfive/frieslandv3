@@ -721,7 +721,7 @@ async function loadPositions() {
         .limit(10000),
       supabase
         .from('visites')
-        .select('visite_id, user_id, pdv_id, date_visite, geolocation_lat, geolocation_lng, geofence_validated')
+        .select('visite_id, user_id, pdv_id, date_visite, geolocation_lat, geolocation_lng, geofence_validated, pdv:pdv_id(nom_pdv)')
         .gte('date_visite', dayStart).lt('date_visite', dayEnd)
         .limit(10000),
     ])
@@ -729,6 +729,8 @@ async function loadPositions() {
     if (posRes.error) throw posRes.error
     allPoints.value = (posRes.data ?? []) as unknown as TrajetPoint[]
 
+    // Nom lu avec la visite, comme la page Visites : allPdv ne contient que les
+    // 1 000 premiers PDV (plafond PostgREST), toutes les visites tombaient « sans nom ».
     const pdvNameById = new Map(allPdv.value.map(p => [p.pdv_id, p.nom_pdv]))
     const counts: Record<string, number> = {}
     const visits: VisitMarker[] = []
@@ -739,7 +741,7 @@ async function loadPositions() {
           visite_id: row.visite_id,
           user_id: row.user_id,
           pdv_id: row.pdv_id,
-          nom_pdv: pdvNameById.get(row.pdv_id) || 'Point de vente sans nom',
+          nom_pdv: row.pdv?.nom_pdv || pdvNameById.get(row.pdv_id) || 'Point de vente sans nom',
           lat: row.geolocation_lat,
           lng: row.geolocation_lng,
           date_visite: row.date_visite,
