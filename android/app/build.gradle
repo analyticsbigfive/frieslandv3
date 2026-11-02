@@ -27,6 +27,15 @@ if (!keystorePropertiesFile.exists()) {
 }
 def signingReady = (signingProblem == null)
 
+// --- Firebase ------------------------------------------------------------
+// google-services.json (non versionné) : sans lui, le bloc `try` en fin de fichier
+// saute le plugin google-services SANS erreur, et l'app plante au démarrage dès que
+// les notifications sont autorisées (PushNotifications.register → FirebaseApp non
+// initialisé, relancé par le Bridge Capacitor). C'est la 1.0.17 du 29 oct. 2026,
+// construite dans une copie de travail où ce fichier manquait.
+def googleServicesFile = file('google-services.json')
+def firebaseReady = googleServicesFile.exists() && googleServicesFile.text.trim()
+
 android {
     namespace "com.bdco.bonnetrouge"
     compileSdk rootProject.ext.compileSdkVersion
@@ -34,8 +43,8 @@ android {
         applicationId "com.bdco.bonnetrouge"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 20
-        versionName "1.0.17"
+        versionCode 21
+        versionName "1.0.18"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -66,7 +75,8 @@ android {
     }
 }
 
-// Garde-fou : interdit de produire un artefact release sans le keystore d'upload.
+// Garde-fou : interdit de produire un artefact release sans le keystore d'upload
+// ni sans google-services.json.
 // `whenReady` s'exécute après la configuration et AVANT la première tâche → échec en
 // quelques secondes, pas après 4 minutes de packaging. Les builds debug, `./gradlew
 // tasks` et la synchro Android Studio ne matchent aucune tâche de la liste : intacts.
@@ -79,9 +89,18 @@ def releaseArtifactTasks = [
 ] as Set
 
 gradle.taskGraph.whenReady { graph ->
-    if (signingReady) return
+    if (signingReady && firebaseReady) return
     def requested = graph.allTasks.findAll { releaseArtifactTasks.contains(it.path) }
     if (requested.isEmpty()) return
+    if (signingReady) throw new GradleException(
+        "\n\n*** BUILD RELEASE REFUSÉ : google-services.json absent ou vide ***\n" +
+        "  Fichier : " + googleServicesFile.absolutePath + "\n" +
+        "  Tâches  : " + requested.collect { it.path }.join(', ') + "\n" +
+        "  Sans lui l'app plante au démarrage dès que les notifications sont\n" +
+        "  autorisées (1.0.17, 2 nov. 2026).\n" +
+        "  Corriger: copier android/app/google-services.json du dépôt principal\n" +
+        "            (non versionné), voir docs/BUILD-ANDROID.md.\n"
+    )
     throw new GradleException(
         "\n\n*** BUILD RELEASE REFUSÉ : keystore d'upload absent ou invalide ***\n" +
         "  Cause   : " + signingProblem + "\n" +

@@ -25,6 +25,22 @@ Exportez pour Gradle — **obligatoire** avant tout `gradlew`, sinon `Cannot fin
 export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
 ```
 
+## Fichiers non versionnés à copier avant un build release
+
+Une copie de travail (`git worktree`) ne reçoit **aucun** fichier gitignoré.
+Avant un build release ailleurs que dans le dépôt principal, copier depuis
+celui-ci :
+
+| Fichier | Sans lui |
+|---|---|
+| `.env` | l'app ne joint pas Supabase (voir ci-dessous) |
+| `android/local.properties` | Gradle ne trouve pas le SDK |
+| `android/keystore.properties` | build release refusé (voir « Signature release ») |
+| `android/app/google-services.json` | build release refusé ; avant ce garde-fou, l'app plantait au démarrage dès que les notifications étaient autorisées (1.0.17, 2 nov. 2026) |
+
+Contrôle sur l'artefact : `unzip -p <apk> resources.arsc | strings | grep -c google_app_id`
+doit afficher 1 (AAB : `base/resources.pb`).
+
 ## Variables d'environnement gelées au build
 
 `SUPABASE_URL` et `SUPABASE_KEY` sont lues depuis `.env` **au moment du

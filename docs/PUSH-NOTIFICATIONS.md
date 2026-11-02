@@ -28,10 +28,14 @@ les suppressions.
 ## Historique : ce qu'il fallait du client
 
 **Le code est en place, l'envoi est inerte tant que Firebase n'est pas fourni.**
-Rien ne casse entre-temps : sans `google-services.json`, le plugin Android n'est
-pas activé (`android/app/build.gradle`, bloc `try` en fin de fichier),
-l'enregistrement du téléphone échoue en silence, et l'app se comporte exactement
-comme aujourd'hui.
+**Faux, corrigé le 2 novembre 2026 :** sans `google-services.json`, le plugin
+google-services n'est pas appliqué (`android/app/build.gradle`, bloc `try` en
+fin de fichier) et l'enregistrement n'échoue **pas** en silence :
+`PushNotifications.register()` appelle `FirebaseMessaging.getInstance()`, qui
+lève une erreur ; le Bridge Capacitor la relance et **l'app plante au
+démarrage** dès que les notifications sont autorisées. C'est arrivé avec la
+1.0.17, construite sans ce fichier. Depuis la 1.0.18, un build release sans
+`google-services.json` est refusé.
 
 ### Ce que le client doit fournir
 
