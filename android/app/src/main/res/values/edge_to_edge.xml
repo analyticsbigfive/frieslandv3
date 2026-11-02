@@ -2,4 +2,6 @@
 <resources>
     <!-- Fond derrière les barres système en mode bord à bord (gray-50 / gray-900 de l'app). -->
     <color name="edgeToEdgeBackground">#F9FAFB</color>
+    <!-- Derrière la barre de statut, jour et nuit : le rouge de l'en-tête (fc-red). -->
+    <color name="statusBarBackground">#C8102E</color>
 </resources>
