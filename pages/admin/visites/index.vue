@@ -242,7 +242,7 @@
 
 <script setup lang="ts">
 import type { PeriodeValue } from '~/components/PeriodFilter.vue'
-import type { Visite } from '~/types'
+import type { Profile, Visite } from '~/types'
 import type { PerfectStoreResultB } from '~/utils/perfectStore'
 import { plageDePeriode } from '~/utils/periode'
 import { photosAffichables } from '~/utils/visitePhotos'
@@ -264,7 +264,14 @@ const peutSupprimer = computed(() => authStore.isAdmin)
 const toast = useToast()
 const { confirmation, demanderConfirmation, confirmer, annuler } = useConfirmation()
 const { exportVisitesToExcel } = useCsvExport()
-const { users: cachedUsers, fetchUsers: fetchCachedUsers, loading: usersLoading } = useUsersCache()
+const { fetchUsers: fetchCachedUsers, loading: usersLoading } = useUsersCache()
+// Le cache des comptes n'est pas réactif : `users` lu avant son chargement
+// restait vide. Copie locale, remplie quand le chargement aboutit.
+const comptes = shallowRef<Profile[]>([])
+async function chargerComptes() {
+  comptes.value = [...await fetchCachedUsers()]
+  return comptes.value
+}
 const { refs, fetchRefs, scoreVisite } = usePerfectStore()
 const { typePdvLabel, fetchTypePdvLabels } = useTypePdvLabels()
 const { options: optionsAgences, nom: nomAgence, charger: chargerAgences } = useAgences()
@@ -309,14 +316,14 @@ const tableProductCategories = computed(() => categoriesProduitsActives().map(c 
 // Comptes de l'agence et de la direction choisies, inactifs compris : leurs
 // visites passées restent dans la liste.
 function comptesChoisis() {
-  return cachedUsers.value.filter(u =>
+  return comptes.value.filter(u =>
     (!filters.agence || u.employeur === filters.agence)
     && (!filters.direction || u.direction === filters.direction))
 }
 
 const commercialOptions = computed(() => [
   { value: '', label: 'Tous' },
-  ...(filters.agence || filters.direction ? comptesChoisis() : cachedUsers.value)
+  ...(filters.agence || filters.direction ? comptesChoisis() : comptes.value)
     .filter(user => user.is_active !== false)
     .map(user => ({ value: user.nom || user.email || '', label: `${user.nom || '—'} (${user.email})` })),
 ])
@@ -325,8 +332,8 @@ const agenceOptions = computed(() => [{ value: '', label: 'Toutes' }, ...options
 const directionOptions = [{ value: '', label: 'Toutes' }, ...DIRECTIONS.map(d => ({ value: d.value, label: d.label }))]
 
 // Agence et direction de l'auteur, sous son nom (« Atom BTL · South »).
-const comptesParId = computed(() => new Map(cachedUsers.value.map(u => [u.id, u])))
-const comptesParEmail = computed(() => new Map(cachedUsers.value.map(u => [u.email, u])))
+const comptesParId = computed(() => new Map(comptes.value.map(u => [u.id, u])))
+const comptesParEmail = computed(() => new Map(comptes.value.map(u => [u.email, u])))
 function agenceDe(visite: Visite): string {
   const u = (visite.user_id && comptesParId.value.get(visite.user_id)) || comptesParEmail.value.get(visite.email)
   if (!u?.employeur) return ''
@@ -503,9 +510,9 @@ function removeFilterChip(key: string) {
 
 async function loadVisites() {
   if (filters.agence || filters.direction) {
-    await fetchCachedUsers()
-    const comptes = comptesChoisis()
-    filters.auteurs = { ids: comptes.map(u => u.id), emails: comptes.map(u => u.email).filter(Boolean) }
+    await chargerComptes()
+    const choisis = comptesChoisis()
+    filters.auteurs = { ids: choisis.map(u => u.id), emails: choisis.map(u => u.email).filter(Boolean) }
   }
   else {
     filters.auteurs = null
@@ -545,7 +552,7 @@ onMounted(() => {
   // Lien direct vers une visite (Activité › Dernières visites) : /admin/visites?visite=<id>
   const qVisite = route.query.visite
   if (typeof qVisite === 'string' && qVisite) void ouvrirVisiteParId(qVisite)
-  fetchCachedUsers()
+  chargerComptes()
   chargerAgences()
   fetchRefs()
   fetchTypePdvLabels()
