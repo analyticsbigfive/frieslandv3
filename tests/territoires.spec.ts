@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { codeTerritoireDuNom, etendreTerritoires, grouperQuartiersParTerritoire, normaliserNomTerritoire, resoudreTerritoirePdv } from '../utils/territoires'
+import { codeTerritoireDuNom, etendreTerritoires, grouperQuartiersParTerritoire, normaliserNomTerritoire, quartiersDuTerritoire, resoudreTerritoirePdv, zonesCreationPdv } from '../utils/territoires'
 
 const territoires = [{ code: 'MAR', name: 'Marcory' }, { code: 'YOP 1', name: 'Yopougon 1' }, { code: 'TRE', name: 'Treichville' }]
 const aliases = [{ alias: 'MARCORY TREICHVILLE', territoire_code: 'MAR' }, { alias: 'YOPOUGON', territoire_code: 'YOP 1' }]
@@ -74,5 +74,40 @@ describe('resoudreTerritoirePdv', () => {
   })
   it('quartier inconnu : territoire de la zone du profil', () => {
     expect(resoudreTerritoirePdv({ ...base, zone: 'KOUMASSI', quartier: 'Inconnu', territoiresProfil: [] })).toBe('KOU')
+  })
+})
+
+describe('zonesCreationPdv', () => {
+  it('compte Atom sans zone principale : ses territoires, dans l’ordre', () => {
+    expect(zonesCreationPdv(null, ['ABOBO 1', 'KOUMASSI', 'MARCORY', 'PORT-BOUËT 2']))
+      .toEqual(['ABOBO 1', 'KOUMASSI', 'MARCORY', 'PORT-BOUËT 2'])
+  })
+  it('zone principale en tête, sans doublon de casse ni d’accent', () => {
+    expect(zonesCreationPdv('Marcory', ['MARCORY', 'KOUMASSI', 'koumassi', ' ', null]))
+      .toEqual(['Marcory', 'KOUMASSI'])
+  })
+  it('aucun territoire : liste vide (le champ reste libre)', () => {
+    expect(zonesCreationPdv('', undefined)).toEqual([])
+  })
+})
+
+describe('quartiersDuTerritoire', () => {
+  const areas = [
+    { id: 1, name: 'Koumassi Nord', territory_code: 'KOU' },
+    { id: 2, name: 'Koumassi Sud', territory_code: 'KOU' },
+    { id: 3, name: 'Marcory', territory_code: 'MAR' },
+  ]
+  const quartiers = [
+    { id: 10, zone_id: 1, nom: 'Prodomo' },
+    { id: 11, zone_id: 2, nom: 'Abia Sud' },
+    { id: 12, zone_id: 2, nom: 'Prodomo' },
+    { id: 13, zone_id: 3, nom: 'Zone 4' },
+  ]
+  it('quartiers des areas du territoire, triés et sans doublon', () => {
+    expect(quartiersDuTerritoire('KOU', quartiers, areas)).toEqual(['Abia Sud', 'Prodomo'])
+  })
+  it('territoire inconnu ou vide : aucun quartier', () => {
+    expect(quartiersDuTerritoire('', quartiers, areas)).toEqual([])
+    expect(quartiersDuTerritoire('XXX', quartiers, areas)).toEqual([])
   })
 })

@@ -1,5 +1,7 @@
 <template>
-  <UModal v-model="isOpen" :ui="{ width: 'max-w-lg' }">
+  <UModal v-model="isOpen" :ui="{ width: 'max-w-lg' }" :prevent-close="gpsLoading">
+    <!-- prevent-close pendant la recherche de position : « Fermer » sur l'aide GPS
+         (plein écran, hors du formulaire) fermait aussi le formulaire. -->
     <div class="p-6">
       <div class="mb-5">
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Nouveau PDV</h3>
@@ -76,7 +78,7 @@
             />
           </UFormGroup>
 
-          <UFormGroup label="Sous-catégorie">
+          <UFormGroup label="Sous-catégorie" required>
             <USelectMenu
               v-model="form.sous_categorie_pdv"
               :options="sousCategorieOptions"
@@ -88,7 +90,7 @@
             />
           </UFormGroup>
 
-          <UFormGroup label="Quartier" :required="quartierOptions.length > 0">
+          <UFormGroup label="Quartier" :required="quartierRequis">
             <USelectMenu
               v-if="quartierOptions.length > 0"
               v-model="form.quartier"
@@ -106,6 +108,16 @@
                 </span>
               </template>
             </USelectMenu>
+            <!-- Profil sans quartiers assignés (merchandisers Atom) : les
+                 quartiers du référentiel pour la zone choisie, plus de saisie libre. -->
+            <USelectMenu
+              v-else-if="quartiersReferentiel.length > 0"
+              v-model="form.quartier"
+              :options="quartiersReferentiel"
+              searchable
+              searchable-placeholder="Rechercher un quartier…"
+              placeholder="Choisir un quartier"
+            />
             <UInput
               v-else
               v-model="form.quartier"
@@ -114,9 +126,15 @@
           </UFormGroup>
 
           <UFormGroup label="Zone" required>
-            <UInput
+            <USelectMenu
+              v-if="zoneOptions.length > 0"
               v-model="form.zone"
-              :disabled="isMerchandiser && !!defaultZone"
+              :options="zoneOptions"
+              placeholder="Choisir la zone"
+            />
+            <UInput
+              v-else
+              v-model="form.zone"
               placeholder="Zone"
             />
           </UFormGroup>
@@ -187,6 +205,16 @@
           <img v-if="photoApercu" :src="photoApercu" alt="Devanture du nouveau point de vente" class="h-40 w-full rounded-lg object-cover">
         </div>
 
+        <!-- Motif du refus, aussi affiché ici : le message en haut de l'écran
+             disparaît au bout de quelques secondes. -->
+        <p
+          v-if="erreurSaisie"
+          role="alert"
+          class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
+        >
+          <strong>{{ erreurSaisie.titre }}</strong><span v-if="erreurSaisie.description"> — {{ erreurSaisie.description }}</span>
+        </p>
+
         <div class="flex justify-end gap-2 pt-2">
           <UButton type="button" variant="ghost" @click="isOpen = false">
             Annuler
@@ -201,7 +229,7 @@
 </template>
 
 <script setup lang="ts">
-import { grouperQuartiersParTerritoire, resoudreTerritoirePdv } from '~/utils/territoires'
+import { codeTerritoireDuNom, grouperQuartiersParTerritoire, quartiersDuTerritoire, resoudreTerritoirePdv, zonesCreationPdv } from '~/utils/territoires'
 import type { PDV } from '~/types'
 import { voisinNomProche, voisinsDansRayon, type VoisinPdv } from '~/utils/doublonPdv'
 import { estErreurReseau } from '~/utils/supabaseErrors'
@@ -250,7 +278,10 @@ const isOpen = computed({
 })
 
 const isMerchandiser = computed(() => authStore.profile?.role === 'merchandiser')
-const defaultZone = computed(() => authStore.profile?.zone_assignee || '')
+// Zones proposées : zone principale puis territoires du profil (utils/territoires.ts).
+// Les comptes Atom n'ont plus de zone principale : une seule zone = choisie d'office.
+const zoneOptions = computed(() => zonesCreationPdv(authStore.profile?.zone_assignee, authStore.profile?.territoires_assignes))
+const defaultZone = computed(() => authStore.profile?.zone_assignee || (zoneOptions.value.length === 1 ? zoneOptions.value[0] : ''))
 const defaultRegion = computed(() => authStore.profile?.region || '')
 const quartierOptions = computed(() => authStore.profile?.quartiers_assignes?.filter(Boolean) || [])
 // Groupés par territoire (utils/territoires.ts) : un merchandiser multi-
@@ -278,6 +309,11 @@ const territoryCode = computed(() => resoudreTerritoirePdv({
   territoires: territories.value,
   aliases: territoireAliases.value,
 }))
+// Sans quartiers assignés : les quartiers du référentiel pour la zone choisie.
+const quartiersReferentiel = computed(() => quartierOptions.value.length
+  ? []
+  : quartiersDuTerritoire(codeTerritoireDuNom(form.zone, territories.value, territoireAliases.value), quartiers.value, areas.value))
+const quartierRequis = computed(() => quartierOptions.value.length > 0 || quartiersReferentiel.value.length > 0)
 const scopedAreas = computed(() => areas.value.filter(a => !territoryCode.value || a.territory_code === territoryCode.value))
 const selectedQuartier = computed(() => {
   const zoneIds = new Set(scopedAreas.value.map(a => a.id))
@@ -373,7 +409,27 @@ const hasCoordinates = computed(() =>
   form.geolocation_lat !== null && form.geolocation_lng !== null
 )
 
+// Changement de zone : un quartier d'une autre zone n'a plus de sens.
+watch(quartiersReferentiel, (liste) => {
+  if (liste.length && form.quartier && !liste.includes(form.quartier)) form.quartier = ''
+})
+
+// Zone ou quartier choisi : le distributeur proposé suit (area, sinon territoire).
+// Sans zone, seul le premier distributeur national était proposé d'office
+// (ADIALEA), et les PDV créés sur place y restaient.
+watch(scopedDistributors, (liste) => {
+  if (liste.length && !liste.some(d => d.name === form.distributor_name)) form.distributor_name = liste[0].name
+})
+
+// Motif du dernier refus, affiché sous le bouton en plus du message.
+const erreurSaisie = ref<{ titre: string, description?: string } | null>(null)
+function refuser(titre: string, description?: string) {
+  erreurSaisie.value = { titre, description }
+  toast.add({ title: titre, description, color: 'red' })
+}
+
 function resetForm() {
+  erreurSaisie.value = null
   form.nom_pdv = ''
   form.categorie_pdv = ''
   form.sous_categorie_pdv = ''
@@ -489,46 +545,36 @@ function buildPayload() {
 }
 
 async function handleSave() {
+  erreurSaisie.value = null
+
   if (!form.nom_pdv.trim()) {
-    toast.add({
-      title: 'Nom du PDV requis',
-      color: 'red',
-    })
+    refuser('Nom du PDV requis')
+    return
+  }
+
+  // Le type de PDV pilote le Perfect Store : sans lui, la visite n'est jamais évaluée.
+  if (!form.sous_categorie_pdv) {
+    refuser('Type de PDV requis', 'Choisissez la catégorie puis la sous-catégorie.')
     return
   }
 
   if (!form.zone.trim() || !form.region.trim()) {
-    toast.add({
-      title: 'Zone et région requises',
-      color: 'red',
-    })
+    refuser('Zone et région requises', zoneOptions.value.length ? 'Choisissez la zone dans la liste.' : undefined)
+    return
+  }
+
+  if (quartierRequis.value && !form.quartier.trim()) {
+    refuser('Quartier requis', 'Choisissez un quartier pour que le PDV soit rattaché à votre zone.')
     return
   }
 
   if (!hasCoordinates.value) {
-    toast.add({
-      title: 'Position obligatoire',
-      description: 'Appuyez sur « Prendre ma position » devant le point de vente.',
-      color: 'red',
-    })
-    return
-  }
-
-  if (quartierOptions.value.length > 0 && !form.quartier.trim()) {
-    toast.add({
-      title: 'Quartier requis',
-      description: 'Choisissez un quartier pour que le PDV soit rattaché à votre zone.',
-      color: 'red',
-    })
+    refuser('Position obligatoire', 'Appuyez sur « Prendre ma position » devant le point de vente.')
     return
   }
 
   if (!photo.value) {
-    toast.add({
-      title: 'Photo de la devanture obligatoire',
-      description: 'Appuyez sur « Prendre la photo » face au point de vente.',
-      color: 'red',
-    })
+    refuser('Photo de la devanture obligatoire', 'Appuyez sur « Prendre la photo » face au point de vente.')
     return
   }
 
@@ -595,11 +641,9 @@ async function creer() {
     })
   }
   catch (err: any) {
-    toast.add({
-      title: 'Erreur de création',
-      description: err.message || 'Impossible de créer le PDV.',
-      color: 'red',
-    })
+    // Étape « doublons » : revenir au formulaire pour que le motif soit lisible.
+    etape.value = 'saisie'
+    refuser('Erreur de création', err.message || 'Impossible de créer le PDV.')
   }
   finally {
     saving.value = false

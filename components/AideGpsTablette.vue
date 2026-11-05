@@ -28,11 +28,13 @@
 
     <p class="text-sm text-gray-500 dark:text-gray-400">{{ TEXTES_GPS.noteMenus }}</p>
 
+    <!-- sm:flex-1 : deux boutons pleine largeur côte à côte (tablette) poussaient
+         « Fermer » hors de l'écran, à gauche. -->
     <div v-if="avecBoutons" class="flex flex-col gap-3 sm:flex-row-reverse">
-      <UButton size="xl" color="red" block icon="i-heroicons-arrow-path" class="justify-center" @click="emit('reessayer')">
+      <UButton size="xl" color="red" block icon="i-heroicons-arrow-path" class="justify-center sm:flex-1" @click="emit('reessayer')">
         {{ TEXTES_GPS.reessayer }}
       </UButton>
-      <UButton size="xl" color="gray" variant="ghost" block class="justify-center" @click="emit('fermer')">
+      <UButton size="xl" color="gray" variant="ghost" block class="justify-center sm:flex-1" @click="emit('fermer')">
         {{ TEXTES_GPS.fermer }}
       </UButton>
     </div>

@@ -124,3 +124,35 @@ export function resoudreTerritoirePdv(opts: {
   if (codeZone && codesQuartier.includes(codeZone)) return codeZone
   return codesQuartier.find(c => codesProfil.has(c)) || codeZone || codesQuartier[0] || ''
 }
+
+// Création d'un PDV sur le terrain (PDVQuickCreateModal) : la zone se choisit
+// dans une liste, plus en texte libre. Les comptes Atom n'ont plus de zone
+// principale (la synchronisation de chaque nuit la vide) : on propose la zone
+// principale si elle existe, puis les territoires du profil, sans doublon de
+// casse ni d'accent. Sans cette liste, les agents tapaient « Carrefour L8 » ou
+// « Petit marche », et le territoire (donc le distributeur) n'était pas trouvé.
+export function zonesCreationPdv(
+  zoneAssignee: string | null | undefined,
+  territoiresProfil: (string | null | undefined)[] | null | undefined,
+): string[] {
+  const vus = new Set<string>()
+  const out: string[] = []
+  for (const brut of [zoneAssignee, ...(territoiresProfil || [])]) {
+    const nom = (brut || '').trim()
+    const cle = normaliserNomTerritoire(nom)
+    if (!nom || vus.has(cle)) continue
+    vus.add(cle)
+    out.push(nom)
+  }
+  return out
+}
+
+// Quartiers du référentiel d'un territoire (quartier → area → territoire),
+// triés et sans doublon : la liste proposée quand le profil n'a pas de
+// quartiers assignés (cas des merchandisers Atom).
+export function quartiersDuTerritoire(code: string, quartiers: QuartierRef[], areas: AreaRef[]): string[] {
+  if (!code) return []
+  const areasDuTerritoire = new Set(areas.filter(a => a.territory_code === code).map(a => a.id))
+  const noms = new Set(quartiers.filter(q => areasDuTerritoire.has(q.zone_id)).map(q => q.nom.trim()).filter(Boolean))
+  return [...noms].sort((a, b) => a.localeCompare(b, 'fr'))
+}

@@ -9,6 +9,8 @@
 //   - les 179 AREA du fichier sont stockées dans `zone` et exposées via `areas`.
 //   - poids : pas de `basis` en B -> exposé en dur 'taux_vente'.
 //   - type PDV : pas de `tier` en B (le grade vit dans segment_grade_type_pdv).
+import { fetchAllRows } from '~/utils/fetchAll'
+
 export interface Distributeur { name: string; national: boolean }
 export interface GeoRegion { code: string; name: string; nom_affichage: string | null }
 export interface GeoSubRegion { code: string; name: string; nom_affichage: string | null; region_code: string | null }
@@ -65,7 +67,11 @@ export function useReferentiels() {
         // Territoires et zones archivés (découpage d'avant le 28/10) : masqués.
         supabase.from('territoire').select('code, nom, sous_region_code').eq('actif', true).order('nom'),
         supabase.from('zone').select('id, code, nom, territoire_code').eq('actif', true).order('territoire_code').order('nom'),
-        supabase.from('quartier').select('id, zone_id, nom, ordre').order('zone_id').order('ordre'),
+        // 1 332 quartiers : au-delà du plafond de 1 000 lignes par réponse.
+        // Sans pagination, les quartiers des zones récentes (Koumassi 1 et 2,
+        // ids 211-212…) n'arrivaient jamais dans l'app.
+        fetchAllRows<any>((from, to) => supabase.from('quartier').select('id, zone_id, nom, ordre').order('zone_id').order('ordre').order('id').range(from, to))
+          .then(data => ({ data, error: null }), (error: any) => ({ data: null, error })),
         // select('*') : tolère l'absence de la colonne nom_fr tant que la
         // migration 20260717130000 n'est pas appliquée.
         supabase.from('type_pdv').select('*, categorie_pdv(*)').order('nom'),
