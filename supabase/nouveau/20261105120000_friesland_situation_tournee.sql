@@ -33,7 +33,8 @@
 -- 4. recap_situation_tournee(début, fin) : une ligne par merchandiser.
 --
 -- Droits : la colonne calculée est security definer (coût par ligne, voir
--- plus bas) et relit la visite par son id. get_visites_filtered et le récap
+-- plus bas), relit la visite par son id et vérifie les droits de lecture de
+-- l'appelant sur cette visite. get_visites_filtered et le récap
 -- restent sans security definer (une seule requête, règles d'accès évaluées
 -- une fois) : chacun n'y voit que ses visites, tournées et PDV. Un compte
 -- agence qui ne lit pas un PDV créé sur place y verra « hors tournée ». Les
@@ -79,10 +80,12 @@ comment on function public.situation_tournee_de(boolean, boolean, jsonb, uuid, u
 -- une fois par ligne, et chaque appel rejoue les règles d'accès de pdv,
 -- routings et routing_pdv. Pour un compte agence, pdv_ids_agence() rend
 -- 22 824 PDV en 1,3 s : en invoker, une page de 50 visites aurait pris ~65 s.
--- Garde-fou : la visite est relue par son id, les autres champs reçus sont
--- ignorés. Appelée par /rpc/situation_tournee avec une ligne inventée, elle
--- ne répond que pour une visite dont on connaît l'id (uuid), c'est-à-dire
--- une visite déjà lue à travers les règles d'accès de visites.
+-- Garde-fous : la visite est relue par son id (les autres champs reçus sont
+-- ignorés), puis les droits de lecture de visites sont vérifiés pour
+-- l'appelant (fin de la fonction). Appelée par /rpc/situation_tournee pour
+-- la visite d'un autre, elle rend null. Coût mesuré : contrôle admin et
+-- agence = une lecture de profiles ; commercial = pdv_ids_perimetre(),
+-- ~12 ms par visite (périmètre de 3 148 PDV).
 create or replace function public.situation_tournee(v public.visites)
 returns text
 language sql
@@ -105,6 +108,20 @@ as $$
    and r.status is distinct from 'cancelled'
   left join routing_pdv rp on rp.routing_id = r.id and rp.pdv_id = x.pdv_id
   where x.id = v.id
+    -- Mêmes droits que la lecture de visites (visites_select,
+    -- visites_select_agence, visites_select_commercial), du moins coûteux au
+    -- plus coûteux : sans eux, un appel direct répondrait pour la visite d'un
+    -- autre dont on connaîtrait l'id. Visite non lisible : null.
+    and (
+      x.user_id = auth.uid()
+      or role_actif_courant() in ('admin', 'superviseur')
+      or (x.user_id is not null and exists (
+            select 1 from profiles m
+            where m.id = x.user_id and m.role = 'merchandiser'
+              and m.employeur = agence_courante()))
+      or (role_actif_courant() = 'commercial'
+          and x.pdv_id in (select pdv_ids_perimetre()))
+    )
 $$;
 
 comment on function public.situation_tournee(public.visites) is
