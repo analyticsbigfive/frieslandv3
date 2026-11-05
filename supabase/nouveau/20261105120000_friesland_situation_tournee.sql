@@ -6,10 +6,10 @@
 --
 -- Réunion du 05/11 : Friesland voit des merchandisers « enregistrer des PDV qui
 -- ne figurent pas dans les tournées ». Mesure du 21/10 au 05/11 : presque tous
--- sont des PDV créés sur place, puis visités (Abbé Frédéric : 53 visites hors
--- tournée sur 220, dont 49 sur un PDV qu'il a créé ; Guihi Bernadin : 4 sur
--- 134, toutes sur un PDV créé). Décision de Jean Luc : on l'indique dans
--- l'admin, la visite compte toujours (comme décidé le 22/10).
+-- sont des PDV créés sur place, puis visités (91 visites hors tournée sur
+-- 1 339, dont 79 sur un PDV créé par le merchandiser lui-même). Décision de
+-- Jean Luc : on l'indique dans l'admin, la visite compte toujours (comme
+-- décidé le 22/10).
 --
 -- Situation d'une visite dans la tournée de son auteur, le jour de la visite
 -- (heure d'Abidjan) :
@@ -32,11 +32,13 @@
 --    Le type de retour change : drop puis create.
 -- 4. recap_situation_tournee(début, fin) : une ligne par merchandiser.
 --
--- Pas de security definer : chacun ne voit que les visites, tournées et PDV
--- que ses règles d'accès lui ouvrent. Un compte agence qui ne lit pas un PDV
--- créé sur place verra sa visite « hors tournée » plutôt que « PDV créé sur
--- place ». Les doublons possibles ne sont lisibles que par l'admin et le
--- superviseur : pour les autres, la colonne vaut null (pas 0).
+-- Droits : la colonne calculée est security definer (coût par ligne, voir
+-- plus bas) et relit la visite par son id. get_visites_filtered et le récap
+-- restent sans security definer (une seule requête, règles d'accès évaluées
+-- une fois) : chacun n'y voit que ses visites, tournées et PDV. Un compte
+-- agence qui ne lit pas un PDV créé sur place y verra « hors tournée ». Les
+-- doublons possibles ne sont lisibles que par l'admin et le superviseur :
+-- pour les autres, la colonne vaut null (pas 0).
 -- ============================================================================
 begin;
 
@@ -73,24 +75,40 @@ comment on function public.situation_tournee_de(boolean, boolean, jsonb, uuid, u
 -- ---------------------------------------------------------------------------
 -- 2. Colonne calculée pour PostgREST
 -- ---------------------------------------------------------------------------
+-- SECURITY DEFINER, mesuré le 05/11 en rôle simulé : la fonction est appelée
+-- une fois par ligne, et chaque appel rejoue les règles d'accès de pdv,
+-- routings et routing_pdv. Pour un compte agence, pdv_ids_agence() rend
+-- 22 824 PDV en 1,3 s : en invoker, une page de 50 visites aurait pris ~65 s.
+-- Garde-fou : la visite est relue par son id, les autres champs reçus sont
+-- ignorés. Appelée par /rpc/situation_tournee avec une ligne inventée, elle
+-- ne répond que pour une visite dont on connaît l'id (uuid), c'est-à-dire
+-- une visite déjà lue à travers les règles d'accès de visites.
 create or replace function public.situation_tournee(v public.visites)
 returns text
 language sql
 stable
+security definer
 set search_path = public
 as $$
-  select public.situation_tournee_de(r.id is not null, rp.id is not null, rp.objectifs, p.created_by, v.user_id)
-  from (select 1) as une_ligne
+  select situation_tournee_de(
+    r.id is not null,
+    rp.id is not null,
+    rp.objectifs,
+    -- Le PDV n'est lu que pour une visite hors des étapes du jour.
+    case when r.id is not null and rp.id is null
+      then (select p.created_by from pdv p where p.pdv_id = x.pdv_id) end,
+    x.user_id)
+  from visites x
   left join routings r
-    on r.user_id = v.user_id
-   and r.date_routing = (v.date_visite at time zone 'Africa/Abidjan')::date
+    on r.user_id = x.user_id
+   and r.date_routing = (x.date_visite at time zone 'Africa/Abidjan')::date
    and r.status is distinct from 'cancelled'
-  left join routing_pdv rp on rp.routing_id = r.id and rp.pdv_id = v.pdv_id
-  left join pdv p on r.id is not null and rp.id is null and p.pdv_id = v.pdv_id
+  left join routing_pdv rp on rp.routing_id = r.id and rp.pdv_id = x.pdv_id
+  where x.id = v.id
 $$;
 
 comment on function public.situation_tournee(public.visites) is
-  'Colonne calculée (PostgREST) : situation de la visite dans la tournée de son auteur ce jour-là. Indication seulement, la visite compte toujours (20261105120000).';
+  'Colonne calculée (PostgREST) : situation de la visite dans la tournée de son auteur ce jour-là. Indication seulement, la visite compte toujours. Security definer, relit la visite par son id (20261105120000).';
 
 -- ---------------------------------------------------------------------------
 -- 3. get_visites_filtered : même corps, plus situation_tournee
@@ -283,9 +301,12 @@ notify pgrst, 'reload schema';
 --   select merchandiser, visites, prevues, ajoutees_visite_libre,
 --          pushcarts_a_trouver, hors_tournee, dont_pdv_cree, pdv_doublons_a_verifier
 --   from recap_situation_tournee('2026-10-21', '2026-11-05');
--- Attendu à peu près : ABBE FREDERIC 220 / 122 / 45 / 0 / 53 / 49 ;
--- GUIHI BERNADIN 134 / 120 / 8 / 2 / 4 / 4.
---   select visite_id, situation_tournee from get_visites_filtered(
---     '2026-11-04', '2026-11-05', 'GUIHI') where situation_tournee <> 'prevue';
--- doit montrer les visites de « Push amidou » et « Push ali » (pdv_cree_sur_place).
+-- Attendu à peu près : 1 339 visites, 91 hors tournée dont 79 sur un PDV
+-- créé sur place ; le plus touché : 220 visites / 53 hors tournée / 49 créés.
+--   select count(*) filter (where situation_tournee = 'pdv_cree_sur_place')
+--   from get_visites_filtered('2026-11-04', '2026-11-05');
+-- doit compter les deux pushcarts créés sur place le 04/11.
+--   select v.visite_id, v.situation_tournee from visites v
+--   where v.date_visite >= now() - interval '1 day' limit 5;
+-- (v.situation_tournee = situation_tournee(v), comme le lit PostgREST).
 -- ---------------------------------------------------------------------------
