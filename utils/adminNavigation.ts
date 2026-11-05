@@ -87,6 +87,7 @@ export const ADMIN_DOMAINS: AdminDomain[] = [
       { id: 'perfect-store.ensemble', label: 'Vue d\'ensemble', title: 'Perfect Store', path: '/admin', access: 'principal', aide: 'Où en sont les points de vente par rapport au standard, sur la période choisie.' },
       { id: 'perfect-store.liste', label: 'Liste par niveau', path: '/admin/perfect-store/liste', access: 'perfect-store', aide: 'Chaque point de vente visité, son niveau et son score.' },
       { id: 'perfect-store.zones', label: 'Synthèse par zone', path: '/admin/perfect-store/zones', access: 'perfect-store', aide: 'Les niveaux par territoire et par quartier.' },
+      { id: 'perfect-store.agences', label: 'Par agence', path: '/admin/perfect-store/agences', access: 'perfect-store', aide: 'L\'atteinte du Perfect Store par agence de merchandising, sur la période choisie.' },
       { id: 'perfect-store.ecarts', label: 'Écarts au standard', path: '/admin/perfect-store/gaps', access: 'perfect-store', aide: 'Ce qui manque le plus souvent pour atteindre le niveau visé.' },
     ],
   },

@@ -85,6 +85,27 @@ export interface SyntheseZone {
   perfect_store_pct: number | null
 }
 
+/** Perfect Store › Agences : une ligne par agence (RPC perfect_store_par_agence_filtre). */
+export interface PerfectStoreAgence {
+  agence_code: string
+  agence_nom: string
+  merchandisers: number
+  visites: number
+  pdv_visites: number
+  /** PDV dont la dernière visite de la période (par cette agence) a un résultat. */
+  pdv_evalues: number
+  pdv_perfect_store: number
+  perfect_store_pct: number | null
+  par_niveau: { niveau: string, nb_pdv: number }[]
+  dispo_moyenne_pct: number | null
+  visibilite_moyenne_pct: number | null
+  score_moyen_pct: number | null
+  /** Dernière visite sans disponibilité calculable : type de PDV sans seuil. */
+  pdv_sans_seuil: number
+  /** Visites sans résultat : ni produits ni visibilité saisis. */
+  visites_sans_releve: number
+}
+
 export interface PdvHistoriquePoint {
   visite_id: string
   date_visite: string
@@ -601,6 +622,22 @@ export function usePerfectStore() {
     return (data || []) as SyntheseZone[]
   }
 
+  /** Récap Perfect Store par agence (employeur de l'auteur de la visite). */
+  async function fetchPerfectStoreParAgence(f: DashFilters = {}): Promise<PerfectStoreAgence[]> {
+    const { data, error } = await (supabase.rpc as any)('perfect_store_par_agence_filtre', dashFilterParams(f))
+    if (error) {
+      console.warn('perfect_store_par_agence_filtre indisponible (migration 20261105120000 ?)', error.message)
+      return []
+    }
+    return ((data || []) as PerfectStoreAgence[]).map(a => ({
+      ...a,
+      perfect_store_pct: a.perfect_store_pct == null ? null : Number(a.perfect_store_pct),
+      dispo_moyenne_pct: a.dispo_moyenne_pct == null ? null : Number(a.dispo_moyenne_pct),
+      visibilite_moyenne_pct: a.visibilite_moyenne_pct == null ? null : Number(a.visibilite_moyenne_pct),
+      score_moyen_pct: a.score_moyen_pct == null ? null : Number(a.score_moyen_pct),
+    }))
+  }
+
   /** Historique Perfect Store d'un PDV, visite par visite (lot 5). */
   async function fetchPdvHistorique(pdvId: string): Promise<PdvHistoriquePoint[]> {
     const { data, error } = await (supabase.rpc as any)('pdv_historique_perfect_store', { p_pdv_id: pdvId })
@@ -687,6 +724,7 @@ export function usePerfectStore() {
     fetchCouvertureParCommercial,
     fetchPdvFraicheur,
     fetchSyntheseZones,
+    fetchPerfectStoreParAgence,
     fetchPdvHistorique,
     fetchPdvComparaison,
     fetchPresenceSkus,
