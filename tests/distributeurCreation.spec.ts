@@ -27,12 +27,16 @@ describe('regleDistributeur', () => {
     expect(r.obligatoire).toBe(true)
   })
 
-  it('compte sans routing : locaux + nationaux, le premier local d\'office, jamais un national', () => {
+  it('compte sans routing : locaux + nationaux, choisi d\'office seulement s\'il est seul, jamais un national', () => {
     const r = regleDistributeur({ routing: [], locaux, nationaux })
     expect(r.origine).toBe('referentiel')
     expect(r.options.map(o => o.label)).toEqual(['SIDECOM', 'PRODISMA', 'ADIALEA RCI · national', 'DISTRI NATIONAL · national'])
-    expect(r.choixOffice).toBe('SIDECOM')
+    // Deux distributeurs dans la zone : l'agent choisit.
+    expect(r.choixOffice).toBe('')
     expect(r.obligatoire).toBe(true)
+
+    const seul = regleDistributeur({ routing: [], locaux: [locaux[0]!], nationaux })
+    expect(seul.choixOffice).toBe('SIDECOM')
 
     const sansLocal = regleDistributeur({ routing: [], locaux: [], nationaux })
     expect(sansLocal.choixOffice).toBe('')
@@ -49,7 +53,7 @@ describe('regleDistributeur', () => {
   })
 
   it('routing sans distributeur renseigné : traité comme un compte sans routing', () => {
-    const r = regleDistributeur({ routing: [ligne(null), ligne('  ')], locaux, nationaux })
+    const r = regleDistributeur({ routing: [ligne(null), ligne('  ')], locaux: [locaux[0]!], nationaux })
     expect(r.origine).toBe('referentiel')
     expect(r.choixOffice).toBe('SIDECOM')
   })

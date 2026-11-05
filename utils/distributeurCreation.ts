@@ -8,8 +8,9 @@
 // distributeur. Règle (05/11) :
 //   - compte avec routing : seulement ses distributeurs du routing, champ
 //     obligatoire ; un seul → choisi d'office ; plusieurs → aucun par défaut ;
-//   - compte sans routing : distributeurs du territoire + nationaux, le premier
-//     distributeur du territoire choisi d'office, jamais un national ;
+//   - compte sans routing : distributeurs du territoire + nationaux ; choisi
+//     d'office seulement s'il est le seul de la zone (Cocody : PLAISIR BACHUSS
+//     et PRODISMA → l'agent choisit), jamais un national ;
 //   - hors ligne, routing pas encore chargé : rien de choisi d'office.
 import { codeTerritoireDuNom, resoudreTerritoirePdv, type AreaRef, type QuartierRef, type TerritoireAlias, type TerritoireRef } from './territoires'
 
@@ -79,11 +80,14 @@ export function regleDistributeur(opts: {
     vus.add(d.name)
     options.push({ value: d.name, label: d.national ? `${d.name} · national` : d.name })
   }
-  const premierLocal = opts.locaux.find(d => d.name && !d.national)?.name || ''
+  // Choisi d'office seulement s'il est le seul de la zone (règle de la 1.0.20) :
+  // avec plusieurs, prendre le premier mettait la boutique chez le mauvais.
+  const locauxUniques = [...new Set(opts.locaux.filter(d => d.name && !d.national).map(d => d.name))]
+  const seulLocal = locauxUniques.length === 1 ? locauxUniques[0]! : ''
   return {
     origine: 'referentiel',
     options,
-    choixOffice: opts.routing === null ? '' : premierLocal,
+    choixOffice: opts.routing === null ? '' : seulLocal,
     impose: false,
     obligatoire: options.length > 0,
   }
