@@ -100,11 +100,11 @@
               <th>Merchandiser</th>
               <th class="text-right">Visites</th>
               <th class="text-right" title="Le PDV était une étape de la tournée du jour">Prévues</th>
-              <th class="text-right" title="PDV ajouté à la tournée un jour de visite libre">Jour de visite libre</th>
+              <th class="text-right" title="PDV ajouté à la tournée un jour de visite libre">Visite libre</th>
               <th class="text-right" title="Pushcart ajouté à la tournée un jour avec point de visite">Pushcarts à trouver</th>
               <th class="text-right" title="PDV absent de la tournée du jour, PDV créés sur place compris">Hors tournée</th>
-              <th class="text-right" title="Visites hors tournée sur un PDV créé par le merchandiser lui-même">dont PDV créé sur place</th>
-              <th class="text-right" title="PDV créés sur place, visités sur la période, encore à vérifier dans Points de vente › Doublons possibles">Doublons possibles à vérifier</th>
+              <th class="text-right" title="Visites hors tournée sur un PDV créé par le merchandiser lui-même">dont PDV créé</th>
+              <th class="text-right" title="PDV créés sur place, visités sur la période, encore à vérifier dans Points de vente › Doublons possibles">Doublons à vérifier</th>
               <th v-if="recapAvecSansTournee" class="text-right" title="Visites un jour sans tournée">Jour sans tournée</th>
             </tr>
           </thead>
