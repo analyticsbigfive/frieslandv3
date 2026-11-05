@@ -1,7 +1,9 @@
 <template>
   <div class="space-y-5">
-    <!-- Actions de page dans l'en-tête : la barre de filtres garde la place
-         pour la recherche et les filtres (territoire, GPS, création). -->
+    <!-- Actions de page dans l'en-tête. Barre de filtres sur deux lignes :
+         1) recherche, territoire, sous-région, GPS et l'alerte « sans GPS » ;
+         2) création : compte qui a créé le PDV et date (menu compact, champs
+            Du / Au seulement pour « Période… »). -->
     <AdminPageHeader>
       <template #actions>
         <UButton variant="outline" icon="i-heroicons-arrow-down-tray" title="Exporte les points de vente de la liste, filtres compris" @click="handleExport">
@@ -28,45 +30,53 @@
       @remove-chip="removeFilterChip"
     >
       <template #filters>
-        <UFormGroup label="Territoire" size="sm" class="w-full min-w-40 sm:w-44">
-          <USelectMenu
-            v-model="selectedZone"
-            :options="zoneOptions"
-            placeholder="Tous"
-            size="sm"
-            class="w-full"
-            searchable
-            searchable-placeholder="Rechercher un territoire…"
-            :loading="!refsLoaded"
-            @update:model-value="applyListScope"
-          />
-        </UFormGroup>
-        <UFormGroup label="Sous-région" size="sm" class="w-full min-w-40 sm:w-44">
-          <USelectMenu
-            v-model="selectedRegion"
-            :options="regionOptions"
-            placeholder="Toutes"
-            size="sm"
-            class="w-full"
-            searchable
-            searchable-placeholder="Rechercher une sous-région…"
-            :loading="!refsLoaded"
-            @update:model-value="applyListScope"
-          />
-        </UFormGroup>
-        <UFormGroup label="Position GPS" size="sm" class="w-full min-w-40 sm:w-32 sm:min-w-32">
-          <USelect
-            v-model="selectedGps"
-            :options="gpsOptions"
-            size="sm"
-            class="w-full"
-            @update:model-value="applyListScope"
-          />
-        </UFormGroup>
-        <!-- Création : retrouver les PDV créés un jour donné et le compte qui
-             les a créés (demande du 05/11/2026). Liste triée du plus récent
-             au plus ancien dès qu'un de ces deux filtres est posé. -->
-        <UFormGroup label="Créé par" size="sm" class="w-full min-w-48 sm:w-56">
+        <!-- Bloc d'un seul tenant : il passe à la ligne entier au lieu de
+             s'empiler en colonne à côté de la recherche. Plus étroit sous
+             1280 px pour que recherche et filtres tiennent sur une ligne. -->
+        <div class="flex w-full flex-wrap items-end gap-2 sm:w-auto sm:flex-nowrap">
+          <UFormGroup label="Territoire" size="sm" class="w-full sm:w-36 xl:w-44">
+            <USelectMenu
+              v-model="selectedZone"
+              :options="zoneOptions"
+              placeholder="Tous"
+              size="sm"
+              class="w-full"
+              searchable
+              searchable-placeholder="Rechercher un territoire…"
+              :loading="!refsLoaded"
+              @update:model-value="applyListScope"
+            />
+          </UFormGroup>
+          <UFormGroup label="Sous-région" size="sm" class="w-full sm:w-36 xl:w-44">
+            <USelectMenu
+              v-model="selectedRegion"
+              :options="regionOptions"
+              placeholder="Toutes"
+              size="sm"
+              class="w-full"
+              searchable
+              searchable-placeholder="Rechercher une sous-région…"
+              :loading="!refsLoaded"
+              @update:model-value="applyListScope"
+            />
+          </UFormGroup>
+          <UFormGroup label="Position GPS" size="sm" class="w-full min-w-40 sm:w-32 sm:min-w-32">
+            <USelect
+              v-model="selectedGps"
+              :options="gpsOptions"
+              size="sm"
+              class="w-full"
+              @update:model-value="applyListScope"
+            />
+          </UFormGroup>
+        </div>
+      </template>
+
+      <!-- Création : retrouver les PDV créés un jour donné et le compte qui
+           les a créés (demande du 05/11/2026). Liste triée du plus récent au
+           plus ancien dès qu'un de ces filtres est posé. -->
+      <template #filters-secondaires>
+        <UFormGroup label="Créé par" size="sm" class="w-full sm:w-48 xl:w-64">
           <USelectMenu
             v-model="selectedAuteur"
             :options="auteurOptions"
@@ -80,17 +90,46 @@
             @update:model-value="applyListScope"
           />
         </UFormGroup>
-        <PeriodFilter :model-value="periodeCreation" label="Date de création" :show-resume="false" @update:model-value="majPeriodeCreation" />
-      </template>
-
-      <template #actions>
-        <!-- Raccourci vers le filtre « Sans GPS ». Rouge 700 sur voile rouge :
-             contraste 5,6:1 (le rouge 500 du variant soft restait à 3,4:1). -->
+        <UFormGroup label="Date de création" size="sm" class="w-full sm:w-40 xl:w-44">
+          <USelect
+            :model-value="presetCreation"
+            :options="OPTIONS_CREATION"
+            option-attribute="label"
+            value-attribute="value"
+            size="sm"
+            class="w-full"
+            @update:model-value="choisirPresetCreation"
+          />
+        </UFormGroup>
+        <!-- Du / Au ensemble, jamais séparés par un retour à la ligne. -->
+        <div v-if="presetCreation === 'periode'" class="flex w-full items-end gap-2 sm:w-auto">
+          <UFormGroup label="Du" size="sm" class="flex-1 sm:w-36 sm:flex-none">
+            <UInput v-model="creationDu" type="date" size="sm" :max="creationAu || undefined" @update:model-value="applyListScope" />
+          </UFormGroup>
+          <UFormGroup label="Au" size="sm" class="flex-1 sm:w-36 sm:flex-none">
+            <UInput v-model="creationAu" type="date" size="sm" :min="creationDu || undefined" @update:model-value="applyListScope" />
+          </UFormGroup>
+        </div>
         <button
           v-if="pdvStore.nbSansGps && selectedGps !== 'sans'"
           type="button"
-          class="inline-flex h-8 items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-2.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200 dark:hover:bg-red-950/60"
-          :title="`${pdvStore.nbSansGps.toLocaleString('fr-FR')} points de vente actifs sans coordonnées : pas de rayon de visite ni d'ordre de tournée. Cliquez pour les afficher.`"
+          :class="[CLASSE_ALERTE_GPS, 'ml-auto inline-flex xl:hidden']"
+          :title="titreAlerteGps"
+          @click="voirSansGps"
+        >
+          <UIcon name="i-heroicons-exclamation-triangle" class="h-4 w-4" aria-hidden="true" />
+          {{ pdvStore.nbSansGps.toLocaleString('fr-FR') }} PDV sans GPS
+        </button>
+      </template>
+
+      <template #actions>
+        <!-- Raccourci vers le filtre « Sans GPS ». Sous 1280 px, la même
+             alerte passe au bout de la seconde ligne (plus de place ici). -->
+        <button
+          v-if="pdvStore.nbSansGps && selectedGps !== 'sans'"
+          type="button"
+          :class="[CLASSE_ALERTE_GPS, 'hidden xl:inline-flex']"
+          :title="titreAlerteGps"
           @click="voirSansGps"
         >
           <UIcon name="i-heroicons-exclamation-triangle" class="h-4 w-4" aria-hidden="true" />
@@ -507,9 +546,8 @@
 <script setup lang="ts">
 import type { PDV } from '~/types'
 import { SANS_ZONE, type FiltreGps } from '~/stores/pdv'
-import type { PeriodeValue } from '~/components/PeriodFilter.vue'
-import { libellePlage } from '~/utils/periode'
 import { formatDateFr } from '~/utils/dates'
+import { OPTIONS_CREATION, aujourdhuiAbidjan, libelleCreation, plageCreation, type PresetCreation } from '~/utils/filtreCreationPdv'
 import { estImport, libelleAuteur, origineAjout } from '~/utils/libellePdv'
 import { canWriteTerrain } from '~/utils/roles'
 import { isModernTrade } from '~/utils/canal'
@@ -549,7 +587,32 @@ const selectedZone = ref('')
 const selectedRegion = ref('')
 const selectedGps = ref<FiltreGps>('')
 const selectedAuteur = ref('')
-const periodeCreation = ref<PeriodeValue>({ preset: 'tout', debut: '', fin: '' })
+// Date de création : raccourci du menu, ou bornes saisies pour « Période… ».
+const presetCreation = ref<PresetCreation>('tout')
+const creationDu = ref('')
+const creationAu = ref('')
+// Bornes effectives, recalculées à chaque appel (le jour peut changer si la
+// page reste ouverte après minuit).
+function plageCreationActive(): { debut: string; fin: string } {
+  if (presetCreation.value === 'periode') return { debut: creationDu.value, fin: creationAu.value }
+  return plageCreation(presetCreation.value, aujourdhuiAbidjan())
+}
+// « Période… » part des bornes du raccourci précédent (ex. hier → du 04/11
+// au 04/11), à corriger dans les champs Du / Au.
+function choisirPresetCreation(preset: PresetCreation) {
+  if (preset === 'periode' && presetCreation.value !== 'periode') {
+    const plage = plageCreationActive()
+    creationDu.value = plage.debut
+    creationAu.value = plage.fin
+  }
+  presetCreation.value = preset
+  applyListScope()
+}
+function effacerDateCreation() {
+  presetCreation.value = 'tout'
+  creationDu.value = ''
+  creationAu.value = ''
+}
 
 // Comptes app d'abord (les plus récents en tête), puis e-mails du recensement,
 // imports à la fin : le compte d'un merchandiser se trouve sans chercher.
@@ -561,11 +624,6 @@ const auteurOptions = computed(() => {
     ...comptes.map(a => ({ value: a.ajoute_par, label: `${libelleAuteur(a.ajoute_par)} (${a.nb_pdv.toLocaleString('fr-FR')})` })),
   ]
 })
-
-function majPeriodeCreation(valeur: PeriodeValue) {
-  periodeCreation.value = valeur
-  applyListScope()
-}
 
 // Jour à l'heure d'Abidjan, comme le filtre ; « JJ/MM/AAAA » pour que le tri
 // par en-tête (AdminTableEnhancer) range les dates dans l'ordre.
@@ -580,6 +638,12 @@ function heureCreation(createdAt?: string | null): string {
   return `Ajouté le ${d.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Abidjan' })}`
 }
 
+// Alerte « PDV sans GPS » (affichée en ligne 1 ou 2 selon la largeur).
+// Rouge 700 sur voile rouge : contraste 5,6:1 (le rouge 500 du variant soft
+// restait à 3,4:1).
+const CLASSE_ALERTE_GPS = 'h-8 items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-2.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200 dark:hover:bg-red-950/60'
+const titreAlerteGps = computed(() => `${pdvStore.nbSansGps.toLocaleString('fr-FR')} points de vente actifs sans coordonnées : pas de rayon de visite ni d'ordre de tournée. Cliquez pour les afficher.`)
+
 const gpsOptions = [
   { label: 'GPS : tous', value: '' },
   { label: 'Sans GPS', value: 'sans' },
@@ -593,9 +657,8 @@ const filterChips = computed(() => {
   if (selectedRegion.value) chips.push({ key: 'region', label: `Sous-région : ${selectedRegion.value}` })
   if (selectedGps.value) chips.push({ key: 'gps', label: selectedGps.value === 'sans' ? 'Sans GPS' : 'Avec GPS' })
   if (selectedAuteur.value) chips.push({ key: 'auteur', label: `Créé par : ${libelleAuteur(selectedAuteur.value)}` })
-  if (periodeCreation.value.debut || periodeCreation.value.fin) {
-    chips.push({ key: 'creation', label: `Créé : ${libellePlage({ debut: periodeCreation.value.debut, fin: periodeCreation.value.fin })}` })
-  }
+  const libelleDate = libelleCreation(presetCreation.value, plageCreationActive())
+  if (libelleDate) chips.push({ key: 'creation', label: `Créé : ${libelleDate}` })
   return chips
 })
 function removeFilterChip(key: string) {
@@ -603,7 +666,7 @@ function removeFilterChip(key: string) {
   if (key === 'region') selectedRegion.value = ''
   if (key === 'gps') selectedGps.value = ''
   if (key === 'auteur') selectedAuteur.value = ''
-  if (key === 'creation') periodeCreation.value = { preset: 'tout', debut: '', fin: '' }
+  if (key === 'creation') effacerDateCreation()
   applyListScope()
 }
 
@@ -859,7 +922,7 @@ function resetListFilters() {
   selectedRegion.value = ''
   selectedGps.value = ''
   selectedAuteur.value = ''
-  periodeCreation.value = { preset: 'tout', debut: '', fin: '' }
+  effacerDateCreation()
   pdvStore.filters.search = ''
   pdvStore.filters.zone = ''
   pdvStore.filters.region = ''
@@ -1100,8 +1163,9 @@ async function loadPDV() {
   pdvStore.filters.region = selectedRegion.value
   pdvStore.filters.gps = selectedGps.value
   pdvStore.filters.auteur = selectedAuteur.value
-  pdvStore.filters.creeDu = periodeCreation.value.debut
-  pdvStore.filters.creeAu = periodeCreation.value.fin
+  const plage = plageCreationActive()
+  pdvStore.filters.creeDu = plage.debut
+  pdvStore.filters.creeAu = plage.fin
   await pdvStore.fetchPDV()
   await Promise.all([loadPerfectStoreForList(), loadGpsInfoForList()])
 }

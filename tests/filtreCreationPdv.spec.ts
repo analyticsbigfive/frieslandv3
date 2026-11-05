@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { filtrerAuteur, filtrerDateCreation, filtreCreationActif, lendemain } from '../utils/filtreCreationPdv'
+import { aujourdhuiAbidjan, filtrerAuteur, filtrerDateCreation, filtreCreationActif, lendemain, libelleCreation, plageCreation } from '../utils/filtreCreationPdv'
 
 // Requête factice : enregistre les appels comme le ferait le client Supabase.
 function requete() {
@@ -37,5 +37,59 @@ describe('filtre de création des PDV', () => {
     expect(filtreCreationActif({ creeDu: '', creeAu: '', auteur: '' })).toBe(false)
     expect(filtreCreationActif({ creeDu: '2026-11-04' })).toBe(true)
     expect(filtreCreationActif({ auteur: 'GUI STEPHANE' })).toBe(true)
+  })
+})
+
+describe('raccourcis « Date de création »', () => {
+  it('aujourd\'hui et hier : un seul jour', () => {
+    expect(plageCreation('aujourdhui', '2026-11-05')).toEqual({ debut: '2026-11-05', fin: '2026-11-05' })
+    expect(plageCreation('hier', '2026-11-05')).toEqual({ debut: '2026-11-04', fin: '2026-11-04' })
+  })
+  it('hier au 1er du mois : dernier jour du mois précédent', () => {
+    expect(plageCreation('hier', '2026-11-01')).toEqual({ debut: '2026-10-31', fin: '2026-10-31' })
+    expect(plageCreation('hier', '2027-01-01')).toEqual({ debut: '2026-12-31', fin: '2026-12-31' })
+    expect(plageCreation('hier', '2028-03-01')).toEqual({ debut: '2028-02-29', fin: '2028-02-29' })
+  })
+  it('7 derniers jours : aujourd\'hui compris, à cheval sur deux mois', () => {
+    expect(plageCreation('7j', '2026-11-05')).toEqual({ debut: '2026-10-30', fin: '2026-11-05' })
+  })
+  it('ce mois : du 1er à aujourd\'hui', () => {
+    expect(plageCreation('mois', '2026-11-05')).toEqual({ debut: '2026-11-01', fin: '2026-11-05' })
+    expect(plageCreation('mois', '2026-11-01')).toEqual({ debut: '2026-11-01', fin: '2026-11-01' })
+  })
+  it('mois dernier : mois complet, y compris en janvier et en mars', () => {
+    expect(plageCreation('mois_dernier', '2026-11-05')).toEqual({ debut: '2026-10-01', fin: '2026-10-31' })
+    expect(plageCreation('mois_dernier', '2027-01-15')).toEqual({ debut: '2026-12-01', fin: '2026-12-31' })
+    expect(plageCreation('mois_dernier', '2027-03-31')).toEqual({ debut: '2027-02-01', fin: '2027-02-28' })
+  })
+  it('toutes les dates et période : aucune borne imposée', () => {
+    expect(plageCreation('tout', '2026-11-05')).toEqual({ debut: '', fin: '' })
+    expect(plageCreation('periode', '2026-11-05')).toEqual({ debut: '', fin: '' })
+  })
+  it('jour d\'Abidjan = jour UTC, même tard le soir', () => {
+    expect(aujourdhuiAbidjan(new Date('2026-11-05T23:59:00Z'))).toBe('2026-11-05')
+    expect(aujourdhuiAbidjan(new Date('2026-11-06T00:01:00Z'))).toBe('2026-11-06')
+  })
+})
+
+describe('pastille « Créé : … »', () => {
+  it('rappelle la date pour aujourd\'hui et hier', () => {
+    expect(libelleCreation('hier', plageCreation('hier', '2026-11-05'))).toBe('hier (04/11/2026)')
+    expect(libelleCreation('aujourdhui', plageCreation('aujourdhui', '2026-11-05'))).toBe('aujourd\'hui (05/11/2026)')
+  })
+  it('nomme les autres raccourcis', () => {
+    expect(libelleCreation('7j', plageCreation('7j', '2026-11-05'))).toBe('7 derniers jours')
+    expect(libelleCreation('mois', plageCreation('mois', '2026-11-05'))).toBe('ce mois')
+    expect(libelleCreation('mois_dernier', plageCreation('mois_dernier', '2026-11-05'))).toBe('mois dernier')
+  })
+  it('période : bornes saisies, une seule ou aucune', () => {
+    expect(libelleCreation('periode', { debut: '2026-11-01', fin: '2026-11-04' })).toBe('du 01/11/2026 au 04/11/2026')
+    expect(libelleCreation('periode', { debut: '2026-11-04', fin: '2026-11-04' })).toBe('le 04/11/2026')
+    expect(libelleCreation('periode', { debut: '2026-11-01', fin: '' })).toBe('depuis le 01/11/2026')
+    expect(libelleCreation('periode', { debut: '', fin: '2026-11-04' })).toBe('jusqu\'au 04/11/2026')
+    expect(libelleCreation('periode', { debut: '', fin: '' })).toBe('')
+  })
+  it('toutes les dates : pas de pastille', () => {
+    expect(libelleCreation('tout', { debut: '', fin: '' })).toBe('')
   })
 })
