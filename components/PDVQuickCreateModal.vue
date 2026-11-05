@@ -96,8 +96,8 @@
               value-attribute="value"
               option-attribute="label"
               searchable
-              searchable-placeholder="Rechercher un quartier…"
-              placeholder="Choisir un quartier"
+              :searchable-placeholder="pointsRouting.length ? 'Rechercher un point de visite…' : 'Rechercher un quartier…'"
+              :placeholder="pointsRouting.length ? 'Choisir un point de visite' : 'Choisir un quartier'"
             >
               <template #option="{ option }">
                 <span class="flex min-w-0 items-center gap-2">
@@ -116,8 +116,8 @@
           <UFormGroup label="Zone" required>
             <UInput
               v-model="form.zone"
-              :disabled="isMerchandiser && !!defaultZone"
-              placeholder="Zone"
+              :disabled="isMerchandiser && (!!defaultZone || zoneDepuisRouting)"
+              :placeholder="pointsRouting.length ? 'Choisissez d’abord le quartier' : 'Zone'"
             />
           </UFormGroup>
 
@@ -129,13 +129,25 @@
             />
           </UFormGroup>
 
-          <UFormGroup label="Distributeur" hint="Nationaux + liés au territoire" class="sm:col-span-2">
+          <UFormGroup
+            label="Distributeur"
+            :required="choixDistributeur.obligatoire"
+            :hint="choixDistributeur.impose ? undefined : choixDistributeur.origine === 'routing' ? 'Distributeurs de votre routing' : 'Liés au territoire + nationaux'"
+            class="sm:col-span-2"
+          >
+            <p
+              v-if="choixDistributeur.impose"
+              class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 dark:border-gray-600 dark:bg-gray-700/50 dark:text-gray-200"
+            >
+              Votre distributeur : <strong>{{ choixDistributeur.choixOffice }}</strong>
+            </p>
             <USelectMenu
+              v-else
               v-model="form.distributor_name"
               :options="distributorOptions"
               option-attribute="label"
               value-attribute="value"
-              placeholder="Distributeur..."
+              placeholder="Choisir le distributeur"
               searchable
               searchable-placeholder="Rechercher..."
             />
@@ -187,11 +199,14 @@
           <img v-if="photoApercu" :src="photoApercu" alt="Devanture du nouveau point de vente" class="h-40 w-full rounded-lg object-cover">
         </div>
 
+        <p v-if="distributeurManquant" class="text-right text-sm font-medium text-amber-700 dark:text-amber-300">
+          Choisissez le distributeur pour pouvoir créer le PDV.
+        </p>
         <div class="flex justify-end gap-2 pt-2">
           <UButton type="button" variant="ghost" @click="isOpen = false">
             Annuler
           </UButton>
-          <UButton type="submit" class="bg-fc-blue" :loading="saving">
+          <UButton type="submit" class="bg-fc-blue" :loading="saving" :disabled="distributeurManquant">
             Créer le PDV
           </UButton>
         </div>
@@ -202,6 +217,7 @@
 
 <script setup lang="ts">
 import { grouperQuartiersParTerritoire, resoudreTerritoirePdv } from '~/utils/territoires'
+import { pointsDeVisite, regleDistributeur, zoneDuPointVisite } from '~/utils/distributeurCreation'
 import type { PDV } from '~/types'
 import { voisinNomProche, voisinsDansRayon, type VoisinPdv } from '~/utils/doublonPdv'
 import { estErreurReseau } from '~/utils/supabaseErrors'
@@ -252,13 +268,27 @@ const isOpen = computed({
 const isMerchandiser = computed(() => authStore.profile?.role === 'merchandiser')
 const defaultZone = computed(() => authStore.profile?.zone_assignee || '')
 const defaultRegion = computed(() => authStore.profile?.region || '')
-const quartierOptions = computed(() => authStore.profile?.quartiers_assignes?.filter(Boolean) || [])
+const quartiersProfil = computed(() => authStore.profile?.quartiers_assignes?.filter(Boolean) || [])
+
+// Routing mensuel du compte : distributeur(s) imposé(s) et, quand le profil n'a
+// plus de quartiers (comptes Atom depuis la synchronisation « vos PDV » du
+// 23/10), ses points de visite proposés comme quartiers.
+const { routing, fetchRoutingMerch } = useRoutingMerch()
+const pointsRouting = computed(() => (quartiersProfil.value.length ? [] : pointsDeVisite(routing.value)))
+const quartierOptions = computed(() =>
+  quartiersProfil.value.length ? quartiersProfil.value : pointsRouting.value.map(p => p.value),
+)
 // Groupés par territoire (utils/territoires.ts) : un merchandiser multi-
 // territoires retrouve ses quartiers rangés, pas une liste plate de 50 noms.
-const quartierOptionsGroupees = computed(() =>
-  grouperQuartiersParTerritoire(quartierOptions.value, quartiers.value, areas.value, territories.value)
+// Points de visite : « Petit marché · Marcory », la commune en repère.
+const quartierOptionsGroupees = computed(() => pointsRouting.value.length
+  ? pointsRouting.value.map(p => ({ value: p.value, label: p.label, territoire: p.commune }))
+  : grouperQuartiersParTerritoire(quartierOptions.value, quartiers.value, areas.value, territories.value)
     .flatMap(g => g.quartiers.map(q => ({ value: q, label: `${q} · ${g.territoire}`, territoire: g.territoire }))),
 )
+// Zone remplie d'après le point de visite choisi : verrouillée, pour ne plus
+// voir quartier et zone saisis à l'envers.
+const zoneDepuisRouting = ref(false)
 
 // Géo Système B : zone = territoire (name), quartier = quartier.nom. L'area est
 // résolue depuis le quartier choisi (quartier -> zone_id -> zone.code) ; le
@@ -315,19 +345,23 @@ const areaDistributors = computed(() => {
 const scopedDistributors = computed(() =>
   areaDistributors.value.length ? areaDistributors.value : territoryDistributors.value
 )
+// Règle du distributeur (utils/distributeurCreation.ts) : ceux du routing du
+// compte, sinon ceux du territoire + nationaux — jamais un national d'office
+// (ADIALEA RCI pré-rempli : 138 boutiques chez le mauvais distributeur).
+const choixDistributeur = computed(() => regleDistributeur({
+  routing: routing.value,
+  locaux: scopedDistributors.value,
+  nationaux: nationalDistributors.value,
+}))
 const distributorOptions = computed(() => {
-  const out: { value: string, label: string }[] = []
-  const seen = new Set<string>()
-  for (const d of [...scopedDistributors.value, ...nationalDistributors.value]) {
-    if (seen.has(d.name)) continue
-    seen.add(d.name)
-    out.push({ value: d.name, label: d.national ? `${d.name} · national` : d.name })
+  const { origine, options } = choixDistributeur.value
+  // Hors routing, un distributeur déjà choisi reste affiché si le territoire change.
+  if (origine === 'referentiel' && form.distributor_name && !options.some(o => o.value === form.distributor_name)) {
+    return [...options, { value: form.distributor_name, label: form.distributor_name }]
   }
-  if (form.distributor_name && !seen.has(form.distributor_name)) {
-    out.push({ value: form.distributor_name, label: form.distributor_name })
-  }
-  return out
+  return options
 })
+const distributeurManquant = computed(() => choixDistributeur.value.obligatoire && !form.distributor_name)
 
 // Cascade Catégorie (level3 / groupe) → Sous-catégorie (level4 / type de PDV),
 // lues depuis posTypes (référentiel type_pdv) → uniquement des valeurs valides.
@@ -378,9 +412,11 @@ function resetForm() {
   form.categorie_pdv = ''
   form.sous_categorie_pdv = ''
   form.zone = defaultZone.value
-  form.quartier = quartierOptions.value[0] || ''
+  zoneDepuisRouting.value = false
+  // Pas de point de visite pré-choisi : il fixerait la zone à l'insu du merchandiser.
+  form.quartier = quartiersProfil.value[0] || ''
   form.region = defaultRegion.value
-  form.distributor_name = scopedDistributors.value[0]?.name || nationalDistributors.value[0]?.name || ''
+  form.distributor_name = choixDistributeur.value.choixOffice
   form.adressage = ''
   form.geolocation_lat = null
   form.geolocation_lng = null
@@ -423,13 +459,38 @@ watch(() => props.modelValue, async (open) => {
   if (open) {
     // Rechargé à chaque ouverture : un distributeur ajouté entre-temps apparaît
     // sans redémarrer l'app. Hors ligne, on garde la liste déjà chargée.
-    await fetchReferentiels(isOnline.value)
+    await Promise.all([fetchReferentiels(isOnline.value), fetchRoutingMerch(isOnline.value)])
     resetForm()
     void fillWithCurrentPosition()
   }
 })
 
-onMounted(() => { fetchReferentiels() })
+// Routing chargé ou changé après coup : le distributeur doit rester l'un des siens.
+watch(choixDistributeur, (c) => {
+  if (c.origine === 'routing' && !c.options.some(o => o.value === form.distributor_name)) {
+    form.distributor_name = c.choixOffice
+  }
+})
+
+// Point de visite choisi : la zone devient sa commune, résolue en territoire
+// quand c'est possible (« Marcory » → MARCORY).
+watch(() => form.quartier, (quartier) => {
+  const point = pointsRouting.value.find(p => p.value === quartier)
+  if (!point) return
+  form.zone = zoneDuPointVisite(point.ligne, {
+    territoiresProfil: authStore.profile?.territoires_assignes || [],
+    quartiers: quartiers.value,
+    areas: areas.value,
+    territoires: territories.value,
+    aliases: territoireAliases.value,
+  })
+  zoneDepuisRouting.value = !!form.zone
+})
+
+onMounted(() => {
+  fetchReferentiels()
+  fetchRoutingMerch()
+})
 
 async function fillWithCurrentPosition() {
   gpsLoading.value = true
@@ -527,6 +588,18 @@ async function handleSave() {
     toast.add({
       title: 'Photo de la devanture obligatoire',
       description: 'Appuyez sur « Prendre la photo » face au point de vente.',
+      color: 'red',
+    })
+    return
+  }
+
+  const { origine, options } = choixDistributeur.value
+  if (distributeurManquant.value || (origine === 'routing' && !options.some(o => o.value === form.distributor_name))) {
+    toast.add({
+      title: 'Distributeur requis',
+      description: origine === 'routing'
+        ? 'Choisissez l\'un des distributeurs de votre routing.'
+        : 'Choisissez le distributeur du point de vente.',
       color: 'red',
     })
     return
