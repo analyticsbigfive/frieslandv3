@@ -147,7 +147,7 @@
             />
           </UFormGroup>
 
-          <UFormGroup label="Distributeur" hint="Nationaux + liés au territoire" class="sm:col-span-2">
+          <UFormGroup label="Distributeur" hint="Nationaux + liés au territoire" class="sm:col-span-2" :required="distributorOptions.length > 0">
             <USelectMenu
               v-model="form.distributor_name"
               :options="distributorOptions"
@@ -414,11 +414,13 @@ watch(quartiersReferentiel, (liste) => {
   if (liste.length && form.quartier && !liste.includes(form.quartier)) form.quartier = ''
 })
 
-// Zone ou quartier choisi : le distributeur proposé suit (area, sinon territoire).
-// Sans zone, seul le premier distributeur national était proposé d'office
-// (ADIALEA), et les PDV créés sur place y restaient.
+// Distributeur : choisi d'office seulement s'il est le seul de la zone (area,
+// sinon territoire). Plusieurs (Cocody : Plaisir Bachuss et Prodisma) : l'agent
+// choisit, le champ est obligatoire. Avant, le premier distributeur national
+// (ADIALEA) était pris d'office et les PDV créés sur place y restaient.
 watch(scopedDistributors, (liste) => {
-  if (liste.length && !liste.some(d => d.name === form.distributor_name)) form.distributor_name = liste[0].name
+  if (liste.some(d => d.name === form.distributor_name)) return
+  form.distributor_name = liste.length === 1 ? liste[0].name : ''
 })
 
 // Motif du dernier refus, affiché sous le bouton en plus du message.
@@ -436,7 +438,7 @@ function resetForm() {
   form.zone = defaultZone.value
   form.quartier = quartierOptions.value[0] || ''
   form.region = defaultRegion.value
-  form.distributor_name = scopedDistributors.value[0]?.name || nationalDistributors.value[0]?.name || ''
+  form.distributor_name = scopedDistributors.value.length === 1 ? scopedDistributors.value[0].name : ''
   form.adressage = ''
   form.geolocation_lat = null
   form.geolocation_lng = null
@@ -560,6 +562,11 @@ async function handleSave() {
 
   if (!form.zone.trim() || !form.region.trim()) {
     refuser('Zone et région requises', zoneOptions.value.length ? 'Choisissez la zone dans la liste.' : undefined)
+    return
+  }
+
+  if (distributorOptions.value.length && !form.distributor_name) {
+    refuser('Distributeur requis', 'Choisissez le distributeur qui livre ce point de vente.')
     return
   }
 

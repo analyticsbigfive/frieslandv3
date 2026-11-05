@@ -9,7 +9,7 @@ Application mobile **1.0.20** (versionCode 23), pour le Play Store.
   - l'aide GPS qui s'ouvre par-dessus le formulaire répond de nouveau (« Réessayer », « Fermer ») ; avant, les appuis passaient au formulaire caché dessous ;
   - le bouton « Fermer » de cette aide était hors de l'écran sur tablette ;
   - la zone se choisit dans une liste (les territoires du merchandiser), le quartier aussi (quartiers de la zone) : plus de zone tapée à la main ;
-  - le distributeur proposé est celui de la zone (il restait sur ADIALEA) ;
+  - le distributeur n'est plus pris d'office (c'était ADIALEA) : s'il est seul dans la zone il est choisi, sinon l'agent le choisit (obligatoire) ;
   - le type de point de vente est obligatoire ;
   - le motif d'un refus s'affiche aussi sous le bouton « Créer le PDV ».
 
