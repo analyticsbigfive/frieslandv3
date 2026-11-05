@@ -3,6 +3,7 @@ import { defineStore, skipHydrate } from 'pinia'
 import { markRaw } from 'vue'
 import type { Visite, DashboardStats } from '~/types'
 import { isTimeoutError } from '~/utils/supabaseErrors'
+import { conditionFiltreSituation, estSituationIndisponible, type FiltreSituation, type RecapSituationTournee } from '~/utils/situationTournee'
 
 export const useVisitesStore = defineStore('visites', () => {
   const supabase = skipHydrate(markRaw(useSupabaseClient()))
@@ -42,11 +43,19 @@ export const useVisitesStore = defineStore('visites', () => {
     agence: '',
     direction: '',
     auteurs: null as { ids: string[]; emails: string[] } | null,
+    // Situation dans la tournée du jour (migration 20261105120000).
+    situation: '' as FiltreSituation,
     page: 1,
     perPage: 50,
   })
 
   const SELECT_VISITE = '*, pdv:pdv_id(pdv_id, nom_pdv, zone, quartier, region, canal, sous_categorie_pdv, image_url, distributor_name)'
+  // situation_tournee : colonne calculée (migration 20261105120000). Tant
+  // qu'elle n'est pas appliquée, la lecture la demande une fois, essuie le
+  // refus (42703) et repasse sans : la liste ne doit pas casser pour un badge.
+  const SELECT_VISITE_SITUATION = `${SELECT_VISITE}, situation_tournee`
+  const situationDisponible = ref(true)
+  const selectVisite = () => (situationDisponible.value ? SELECT_VISITE_SITUATION : SELECT_VISITE)
 
   /** Applique les filtres courants à une requête, sans pagination. */
   function appliquerFiltres(query: any) {
@@ -84,23 +93,35 @@ export const useVisitesStore = defineStore('visites', () => {
       // Aucun compte dans cette agence : aucune visite, plutôt que toutes.
       query = conditions.length ? query.or(conditions.join(',')) : query.is('id', null)
     }
+    const situation = situationDisponible.value ? conditionFiltreSituation(filters.value.situation) : null
+    if (situation === 'null') query = query.is('situation_tournee', null)
+    else if (situation) query = query.in('situation_tournee', situation)
     return query
+  }
+
+  /** Lance `lire`, et le relance sans situation_tournee si la base ne la connaît pas encore. */
+  async function avecRepliSituation<T extends { error: unknown }>(lire: () => PromiseLike<T>): Promise<T> {
+    // Lu avant l'appel : le récap, lancé en même temps, peut avoir déjà
+    // baissé le drapeau quand cette réponse arrive.
+    const avecSituation = situationDisponible.value
+    const r = await lire()
+    if (!r.error || !avecSituation || !estSituationIndisponible(r.error)) return r
+    console.warn('visites.situation_tournee indisponible (migration 20261105120000 non appliquée) : liste sans la situation dans la tournée.')
+    situationDisponible.value = false
+    return lire()
   }
 
   async function fetchVisites() {
     loading.value = true
 
     try {
-      let query = appliquerFiltres(supabase
-        .from('visites')
-        .select(SELECT_VISITE, { count: 'exact' })
-        .order('date_visite', { ascending: false }))
-
       const from = (filters.value.page - 1) * filters.value.perPage
       const to = from + filters.value.perPage - 1
-      query = query.range(from, to)
-
-      const { data, count, error } = await query
+      const { data, count, error } = await avecRepliSituation(() => appliquerFiltres(supabase
+        .from('visites')
+        .select(selectVisite(), { count: 'exact' })
+        .order('date_visite', { ascending: false }))
+        .range(from, to))
 
       if (error) throw error
       visites.value = (data || []) as Visite[]
@@ -129,17 +150,47 @@ export const useVisitesStore = defineStore('visites', () => {
     const PAGE = 1000
     const rows: Visite[] = []
     for (let from = 0; from <= limite; from += PAGE) {
-      const { data, error } = await appliquerFiltres(supabase
+      const { data, error } = await avecRepliSituation(() => appliquerFiltres(supabase
         .from('visites')
-        .select(SELECT_VISITE)
+        .select(selectVisite())
         .order('date_visite', { ascending: false })
         .order('id', { ascending: true }))
-        .range(from, Math.min(from + PAGE - 1, limite))
+        .range(from, Math.min(from + PAGE - 1, limite)))
       if (error) throw error
       rows.push(...((data || []) as Visite[]))
       if (!data || data.length < PAGE) break
     }
     return { rows: rows.slice(0, limite), tronque: rows.length > limite }
+  }
+
+  /**
+   * Récap par merchandiser sur la période (recap_situation_tournee) : visites
+   * prévues, ajoutées le jour même, hors tournée dont PDV créé sur place.
+   * Null tant que la migration 20261105120000 n'est pas appliquée.
+   */
+  const recapSituation = ref<RecapSituationTournee[] | null>(null)
+  const recapSituationChargement = ref(false)
+  async function fetchRecapSituation(debut: string, fin: string) {
+    if (!situationDisponible.value) {
+      recapSituation.value = null
+      return
+    }
+    recapSituationChargement.value = true
+    try {
+      const { data, error } = await supabase.rpc('recap_situation_tournee', { p_debut: debut || null, p_fin: fin || null })
+      if (error) {
+        if (estSituationIndisponible(error)) {
+          situationDisponible.value = false
+          recapSituation.value = null
+          return
+        }
+        throw error
+      }
+      recapSituation.value = (data || []) as RecapSituationTournee[]
+    }
+    finally {
+      recapSituationChargement.value = false
+    }
   }
 
   async function fetchVisiteById(id: string) {
@@ -387,6 +438,10 @@ export const useVisitesStore = defineStore('visites', () => {
     stats,
     statsErreurs,
     filters,
+    situationDisponible,
+    recapSituation,
+    recapSituationChargement,
+    fetchRecapSituation,
     fetchVisites,
     fetchVisitesForExport,
     fetchVisiteById,

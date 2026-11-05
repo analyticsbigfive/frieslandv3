@@ -143,7 +143,8 @@
                   <span class="mt-1 block text-xs text-slate-600 dark:text-slate-300">vise {{ niveauCourt(m.niveau_cible) }}</span>
                 </td>
                 <td class="whitespace-nowrap text-right tabular-nums">
-                  <span v-if="m.dispo_rayon == null" class="text-slate-600 dark:text-slate-300">Non relevée</span>
+                  <!-- Disponibilité nulle = pas de seuil pour ce type de PDV (jamais un relevé manquant : il vaut 0 %). -->
+                  <span v-if="m.dispo_rayon == null" class="ml-auto block max-w-48 whitespace-normal text-xs text-slate-600 dark:text-slate-300">{{ libelleSansSeuil(m.type_pdv) }}</span>
                   <template v-else>
                     <span
                       class="inline-flex items-center justify-end gap-1"
@@ -157,8 +158,8 @@
                   </template>
                 </td>
                 <td class="whitespace-nowrap">
-                  <!-- Sans relevé produit (disponibilité inconnue), « complet » serait trompeur. -->
-                  <span v-if="m.dispo_rayon == null && !m.assortiment_manque" class="text-slate-600 dark:text-slate-300">Non relevé</span>
+                  <!-- Sans seuil de disponibilité pour ce type, « complet » serait trompeur. -->
+                  <span v-if="m.dispo_rayon == null && !m.assortiment_manque" class="text-slate-600 dark:text-slate-300" :title="libelleSansSeuil(m.type_pdv)">Non évaluable</span>
                   <span
                     v-else
                     class="inline-flex items-center gap-1.5"
@@ -223,6 +224,7 @@ import { NIVEAUX_PS as NIVEAUX, COULEUR_NON_CONFORME, niveauPerfectStore as nive
 // serveur mais un décompte de ce qui est affiché — d'où les sous-titres qui le
 // disent explicitement.
 import { plageDePeriode, type PeriodePreset } from '~/utils/periode'
+import { libelleSansSeuil } from '~/utils/perfectStore'
 import type { PerfectStoreManqueItem } from '~/composables/usePerfectStore'
 
 definePageMeta({ middleware: ['auth', 'admin'], layout: 'admin' })
