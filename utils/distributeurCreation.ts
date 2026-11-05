@@ -36,8 +36,8 @@ export interface ChoixDistributeur {
   impose: boolean
   /** Bloque la création tant qu'aucun distributeur n'est choisi. Faux quand il
    *  n'y a rien à choisir (hors ligne, référentiels pas chargés) : la création
-   *  hors ligne reste possible, le trigger trg_pdv_creation_terrain corrige à
-   *  l'insertion. */
+   *  hors ligne reste possible ; le distributeur est alors à corriger côté base
+   *  (trigger trg_pdv_creation_terrain, ajouté à part). */
   obligatoire: boolean
 }
 
