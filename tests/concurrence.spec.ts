@@ -218,3 +218,51 @@ describe('visibiliteConcurrencePresente', () => {
     expect(visibiliteConcurrencePresente(undefined, 'exterieure', 'nido')).toBe(false)
   })
 })
+
+import { agregerSignalementsConcurrents, separerNomsConcurrents } from '../utils/concurrence'
+
+describe('separerNomsConcurrents', () => {
+  it('sépare les noms cités ensemble', () => {
+    expect(separerNomsConcurrents('oki,milko')).toEqual(['oki', 'milko'])
+    expect(separerNomsConcurrents('Milko / Soleil; Oki')).toEqual(['Milko', 'Soleil', 'Oki'])
+  })
+  it('ignore les morceaux vides', () => {
+    expect(separerNomsConcurrents('milko, , ')).toEqual(['milko'])
+  })
+})
+
+describe('agregerSignalementsConcurrents', () => {
+  const marques = [
+    { famille: 'evap', code: 'cowmilk', nom: 'Cowmilk' },
+    { famille: 'imp', code: 'top_lait', nom: 'Top Lait' },
+  ]
+  const s = (nom: string, pdv: string, date: string, famille: string | null = null) => ({ nom, pdv_id: pdv, date_visite: date, famille })
+
+  it('regroupe les graphies et garde la plus fréquente', () => {
+    const r = agregerSignalementsConcurrents([
+      s('milko', 'A', '2026-11-01'),
+      s('Milko', 'B', '2026-11-03'),
+      s('milko', 'A', '2026-11-02'),
+      s('oki,milko', 'C', '2026-11-04', 'evap'),
+    ], marques)
+    expect(r[0]).toMatchObject({ cle: 'milko', nom: 'milko', signalements: 4, nb_pdv: 3, derniere_date: '2026-11-04', familles: ['evap'], dans_la_liste: [] })
+    expect(r.find(x => x.cle === 'oki')).toMatchObject({ signalements: 1, familles: ['evap'] })
+  })
+
+  it('reconnaît une marque déjà dans la liste, par son nom ou son code', () => {
+    const r = agregerSignalementsConcurrents([s('Cow Milk', 'A', '2026-11-01'), s('Top-Lait', 'B', '2026-11-01')], marques)
+    expect(r.find(x => x.cle === 'cowmilk')?.dans_la_liste).toEqual(['evap'])
+    expect(r.find(x => x.cle === 'toplait')?.dans_la_liste).toEqual(['imp'])
+  })
+})
+
+describe('agregerSignalementsConcurrents — famille proposée', () => {
+  it('met en tête la famille la plus souvent signalée', () => {
+    const r = agregerSignalementsConcurrents([
+      { nom: 'Milko', pdv_id: 'A', date_visite: '2026-11-01', famille: 'scm' },
+      { nom: 'Milko', pdv_id: 'B', date_visite: '2026-11-01', famille: 'evap' },
+      { nom: 'Milko', pdv_id: 'C', date_visite: '2026-11-01', famille: 'evap' },
+    ], [])
+    expect(r[0].familles).toEqual(['evap', 'scm'])
+  })
+})

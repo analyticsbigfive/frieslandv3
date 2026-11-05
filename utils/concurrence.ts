@@ -260,3 +260,90 @@ export function agregerConcurrents(
 
   return [...parCle.values()].sort((a, b) => b.signalements - a.signalements || a.nom.localeCompare(b.nom, 'fr'))
 }
+
+// ---------------------------------------------------------------------------
+// Concurrence › Concurrents signalés (05/11/2026) : promouvoir un nom saisi en
+// texte libre dans la liste officielle (marque_concurrente).
+// ---------------------------------------------------------------------------
+
+/** Un signalement brut (RPC concurrents_signales_bruts). */
+export interface SignalementConcurrent {
+  pdv_id: string | null
+  date_visite: string | null
+  famille: string | null
+  nom: string
+}
+
+export interface ConcurrentSignaleAgrege {
+  cle: string
+  /** Graphie la plus fréquente (à égalité, la plus récente rencontrée). */
+  nom: string
+  signalements: number
+  nb_pdv: number
+  derniere_date: string | null
+  /** Familles où il a été signalé (ancien format du relevé), la plus fréquente d'abord. */
+  familles: string[]
+  /** Familles où il est déjà dans la liste officielle. */
+  dans_la_liste: string[]
+}
+
+/**
+ * Sépare un champ qui en cite plusieurs : « oki,milko », « milko / soleil »,
+ * « Milko; Oki ». La virgule est le cas fréquent sur le terrain (27 « oki,milko »
+ * au 05/11) ; sans cette séparation, « okimilko » formerait une marque à part.
+ */
+export function separerNomsConcurrents(nom: string): string[] {
+  return String(nom || '')
+    .split(/[,;/+]/)
+    .map(n => n.trim())
+    .filter(n => normaliserNomConcurrent(n).length > 0)
+}
+
+/** Regroupe les signalements par nom normalisé et marque ceux déjà dans la liste. */
+export function agregerSignalementsConcurrents(
+  signalements: SignalementConcurrent[],
+  marques: Pick<MarqueConcurrente, 'famille' | 'nom' | 'code'>[],
+): ConcurrentSignaleAgrege[] {
+  const familleParCle = new Map<string, Set<string>>()
+  for (const m of marques) {
+    for (const cle of [normaliserNomConcurrent(m.nom), normaliserNomConcurrent(m.code)]) {
+      if (!cle) continue
+      if (!familleParCle.has(cle)) familleParCle.set(cle, new Set())
+      familleParCle.get(cle)!.add(m.famille)
+    }
+  }
+
+  const parCle = new Map<string, { graphies: Map<string, number>, total: number, pdv: Set<string>, derniere: string | null, familles: Map<string, number> }>()
+  for (const s of signalements) {
+    for (const nom of separerNomsConcurrents(s.nom)) {
+      const cle = normaliserNomConcurrent(nom)
+      let e = parCle.get(cle)
+      if (!e) {
+        e = { graphies: new Map(), total: 0, pdv: new Set(), derniere: null, familles: new Map() }
+        parCle.set(cle, e)
+      }
+      e.total++
+      e.graphies.set(nom, (e.graphies.get(nom) || 0) + 1)
+      if (s.pdv_id) e.pdv.add(s.pdv_id)
+      if (s.date_visite && (!e.derniere || s.date_visite > e.derniere)) e.derniere = s.date_visite
+      if (s.famille && (CATEGORIES_CONNUES as readonly string[]).includes(s.famille)) e.familles.set(s.famille, (e.familles.get(s.famille) || 0) + 1)
+    }
+  }
+
+  return [...parCle.entries()].map(([cle, e]) => {
+    let nom = ''
+    let max = 0
+    for (const [graphie, n] of e.graphies) {
+      if (n > max) { nom = graphie; max = n }
+    }
+    return {
+      cle,
+      nom,
+      signalements: e.total,
+      nb_pdv: e.pdv.size,
+      derniere_date: e.derniere,
+      familles: [...e.familles.entries()].sort((a, b) => b[1] - a[1]).map(([f]) => f),
+      dans_la_liste: [...(familleParCle.get(cle) || [])],
+    }
+  }).sort((a, b) => b.signalements - a.signalements || a.nom.localeCompare(b.nom, 'fr'))
+}
