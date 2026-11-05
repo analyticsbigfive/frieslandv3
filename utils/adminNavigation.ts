@@ -198,6 +198,7 @@ export const ADMIN_DOMAINS: AdminDomain[] = [
       { id: 'concurrence.evolution', label: 'Évolution', title: 'Concurrence', path: '/admin/concurrence', access: 'concurrence' },
       { id: 'concurrence.detail', label: 'Détail par point de vente', title: 'Concurrence, détail par point de vente', path: '/admin/concurrence/visibilite-recap', access: 'concurrence' },
       { id: 'concurrence.visibilite', label: 'Visibilité', title: 'Visibilité de la concurrence', path: '/admin/concurrence/visibilite-evolution', access: 'concurrence' },
+      { id: 'concurrence.signales', label: 'Concurrents signalés', title: 'Concurrents signalés', path: '/admin/concurrence/signales', access: 'concurrence', aide: 'Les concurrents saisis librement pendant les visites, à ajouter à la liste du formulaire.' },
     ],
   },
   {
