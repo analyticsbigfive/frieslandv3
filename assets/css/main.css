@@ -169,6 +169,10 @@
     @apply flex flex-wrap items-center gap-2;
   }
 
+  .admin-list-toolbar__secondaires {
+    @apply mt-3 flex flex-wrap items-end gap-2 border-t border-slate-100 pt-3 dark:border-slate-700;
+  }
+
   .admin-list-toolbar__chips {
     @apply mt-2 flex flex-wrap items-center gap-1.5;
   }
