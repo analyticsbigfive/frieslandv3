@@ -166,7 +166,7 @@
                   <td class="whitespace-nowrap">
                     <span class="inline-flex items-center gap-1.5">
                       <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="{ backgroundColor: couleurNiveau(m.niveau_actuel) }" aria-hidden="true" />
-                      <!-- Sans disponibilité relevée, le niveau n'a pas pu être calculé. -->
+                      <!-- Disponibilité nulle : pas de seuil pour ce type de PDV, le niveau ne peut pas être calculé. -->
                       {{ m.dispo_rayon == null && estNonConforme(m.niveau_actuel) ? 'Non évalué' : niveauCourt(m.niveau_actuel) }}
                     </span>
                   </td>
@@ -182,10 +182,10 @@
                     <span
                       v-else-if="m.dispo_rayon == null"
                       class="inline-flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300"
-                      title="Aucune quantité relevée en rayon à la dernière visite : le niveau ne peut pas être calculé."
+                      title="Le référentiel n'a pas de seuil de disponibilité pour ce type de PDV : le niveau ne peut pas être calculé, quoi que le merchandiser relève."
                     >
                       <UIcon name="i-heroicons-information-circle" class="h-4 w-4 shrink-0" aria-hidden="true" />
-                      Disponibilité non relevée
+                      {{ libelleSansSeuil(typePdvLabel(m.type_pdv) || m.type_pdv) }}
                     </span>
                     <span v-else class="inline-flex items-center gap-1.5 text-sm text-emerald-700 dark:text-emerald-300">
                       <UIcon name="i-heroicons-check-circle" class="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -713,7 +713,7 @@ import type {
 } from '~/composables/usePerfectStore'
 import type { PeriodeValue } from '~/components/PeriodFilter.vue'
 import type { Visite } from '~/types'
-import type { PerfectStoreResultB } from '~/utils/perfectStore'
+import { libelleSansSeuil, type PerfectStoreResultB } from '~/utils/perfectStore'
 import { plageDePeriode, libellePlage } from '~/utils/periode'
 import { isTimeoutError, messageUtilisateur } from '~/utils/supabaseErrors'
 import { compte, pluriel } from '~/utils/pluriel'

@@ -5,11 +5,12 @@ import { profileTerritoriesEtendus } from '~/composables/useUserScope'
 import { markRaw } from 'vue'
 import { fetchAllRows } from '~/utils/fetchAll'
 import type { PDV, Profile, ZoneSecteur } from '~/types'
+import { filtrerAuteur, filtrerDateCreation, filtreCreationActif } from '~/utils/filtreCreationPdv'
 
 // Colonnes nécessaires aux listes (admin table + mobile).
 // Évite select('*') qui tire 24 colonnes inutiles (routing, dates…).
 // mdm = code client DMS, ajoute_par = origine (import DMS) : lus par l'admin.
-export const LIST_COLUMNS = 'id,pdv_id,nom_pdv,canal,categorie_pdv,sous_categorie_pdv,autre_sous_categorie,zone,quartier,region,territory_code,area_code,distributor_name,adressage,image_url,geolocation_lat,geolocation_lng,rayon_geofence,gps_source,gps_maj_le,mdm,ajoute_par'
+export const LIST_COLUMNS = 'id,pdv_id,nom_pdv,canal,categorie_pdv,sous_categorie_pdv,autre_sous_categorie,zone,quartier,region,territory_code,area_code,distributor_name,adressage,image_url,geolocation_lat,geolocation_lng,rayon_geofence,gps_source,gps_maj_le,mdm,ajoute_par,created_at'
 
 // Valeur sentinelle du filtre zone : PDV dont la zone n'est pas renseignée.
 export const SANS_ZONE = '__SANS_ZONE__'
@@ -43,6 +44,11 @@ export const usePDVStore = defineStore('pdv', () => {
     canal: '',
     categorie: '',
     gps: '' as FiltreGps,
+    // Date d'entrée dans la base, « AAAA-MM-JJ », bornes comprises.
+    creeDu: '',
+    creeAu: '',
+    // Compte qui a ajouté le PDV : valeur exacte de ajoute_par.
+    auteur: '',
     page: 1,
     perPage: 50,
   })
@@ -72,6 +78,20 @@ export const usePDVStore = defineStore('pdv', () => {
     const rows = (data || []) as { zone: string | null; region: string | null }[]
     facetZones.value = [...new Set(rows.map(r => r.zone).filter((z): z is string => !!z))].sort((a, b) => a.localeCompare(b, 'fr'))
     facetRegions.value = [...new Set(rows.map(r => r.region).filter((r): r is string => !!r))].sort((a, b) => a.localeCompare(b, 'fr'))
+  }
+
+  // Comptes qui ont ajouté des PDV (vue v_pdv_auteurs, une ligne par compte) :
+  // options du filtre « Créé par ». Liste vide si la vue n'existe pas encore.
+  const facetAuteurs = ref<{ ajoute_par: string; nb_pdv: number; dernier_ajout: string | null }[]>([])
+  async function fetchAuteurs() {
+    const { data, error } = await (supabase.from('v_pdv_auteurs') as any)
+      .select('ajoute_par, nb_pdv, dernier_ajout')
+      .order('dernier_ajout', { ascending: false, nullsFirst: false })
+    if (error) {
+      console.warn('v_pdv_auteurs indisponible', error.message)
+      return
+    }
+    facetAuteurs.value = data || []
   }
 
   // Filtre quartier serveur : quartier ∈ liste OU quartier non renseigné (NULL).
@@ -133,7 +153,7 @@ export const usePDVStore = defineStore('pdv', () => {
   }
 
   // Filtres de la liste admin, partagés par la page et l'export.
-  function appliquerFiltres<Q extends { or: (f: string) => Q; eq: (c: string, v: string) => Q; not: (c: string, op: string, v: null) => Q }>(query: Q): Q {
+  function appliquerFiltres<Q extends { or: (f: string) => Q; eq: (c: string, v: string) => Q; not: (c: string, op: string, v: null) => Q; gte: (c: string, v: string) => Q; lt: (c: string, v: string) => Q }>(query: Q): Q {
     const f = filters.value
     if (f.search) {
       query = query.or(`nom_pdv.ilike.%${f.search}%,pdv_id.ilike.%${f.search}%,adressage.ilike.%${f.search}%,mdm.ilike.%${f.search}%`)
@@ -152,6 +172,7 @@ export const usePDVStore = defineStore('pdv', () => {
     if (f.canal) {
       query = query.eq('canal', f.canal)
     }
+    query = filtrerAuteur(filtrerDateCreation(query, f.creeDu, f.creeAu), f.auteur)
     return filtrerGps(query, f.gps)
   }
 
@@ -170,14 +191,16 @@ export const usePDVStore = defineStore('pdv', () => {
     loading.value = true
 
     try {
-      const query = appliquerFiltres(supabase
+      const base = supabase
         .from('pdv')
         // 'exact' obligatoire : 'estimated' repose sur les stats du planificateur,
         // fausses après un import massif → total et pagination erronés.
         .select(LIST_COLUMNS, { count: 'exact' })
         .eq('is_active', true)
-        .order('nom_pdv', { ascending: true })
-        .order('pdv_id'))
+      // Filtre de création posé : les PDV les plus récents d'abord.
+      const query = appliquerFiltres(filtreCreationActif(filters.value)
+        ? base.order('created_at', { ascending: false }).order('pdv_id')
+        : base.order('nom_pdv', { ascending: true }).order('pdv_id'))
 
       const from = (filters.value.page - 1) * filters.value.perPage
       const to = from + filters.value.perPage - 1
@@ -406,6 +429,8 @@ export const usePDVStore = defineStore('pdv', () => {
     facetZones,
     facetRegions,
     fetchFilterFacets,
+    facetAuteurs,
+    fetchAuteurs,
     fetchPDV,
     fetchAllPDV,
     fetchPdvVisitesAgence,

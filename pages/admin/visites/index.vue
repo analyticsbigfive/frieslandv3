@@ -56,6 +56,18 @@
             />
           </UFormGroup>
         </template>
+        <!-- Situation dans la tournée du jour : indication seulement, la visite compte toujours. -->
+        <UFormGroup v-if="visitesStore.situationDisponible" label="Tournée" class="w-full sm:w-64">
+          <USelectMenu
+            v-model="filters.situation"
+            :options="OPTIONS_FILTRE_SITUATION"
+            placeholder="Toutes"
+            size="sm"
+            class="w-full"
+            value-attribute="value"
+            option-attribute="label"
+          />
+        </UFormGroup>
       </template>
       <template #actions>
         <UButton v-if="peutGererAgences" size="sm" color="gray" variant="ghost" icon="i-heroicons-building-office-2" :to="{ path: '/admin/referentiels', query: { liste: 'agence' } }">Gérer les agences</UButton>
@@ -63,6 +75,81 @@
         <UButton size="sm" variant="outline" icon="i-heroicons-arrow-down-tray" @click="handleExport">Exporter</UButton>
       </template>
     </AdminListToolbar>
+
+    <!-- Récap par merchandiser sur la période (recap_situation_tournee). -->
+    <details
+      v-if="visitesStore.situationDisponible && recapLignes.length"
+      class="admin-surface group overflow-hidden"
+      :open="recapOuvert"
+      @toggle="recapOuvert = ($event.target as HTMLDetailsElement).open"
+    >
+      <summary class="flex cursor-pointer list-none items-start justify-between gap-4 px-5 py-4 [&::-webkit-details-marker]:hidden">
+        <div>
+          <h2 class="text-base font-semibold text-slate-900 dark:text-white">Visites hors tournée, par merchandiser</h2>
+          <p class="mt-0.5 text-xs text-slate-600 dark:text-slate-300">
+            Indication seulement : toutes ces visites comptent. Le jour de la visite est compté à l’heure d’Abidjan.
+            <template v-if="totalHorsTournee"> {{ compte(totalHorsTournee, 'visite') }} hors tournée sur la période, dont {{ totalPdvCrees }} sur un PDV créé sur place.</template>
+          </p>
+        </div>
+        <UIcon name="i-heroicons-chevron-down" class="mt-1 h-5 w-5 shrink-0 text-slate-500 transition-transform group-open:rotate-180" aria-hidden="true" />
+      </summary>
+      <div class="overflow-x-auto border-t border-slate-200 dark:border-slate-700">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Merchandiser</th>
+              <th class="text-right">Visites</th>
+              <th class="text-right" title="Le PDV était une étape de la tournée du jour">Prévues</th>
+              <th class="text-right" title="PDV ajouté à la tournée un jour de visite libre">Visite libre</th>
+              <th class="text-right" title="Pushcart ajouté à la tournée un jour avec point de visite">Pushcarts à trouver</th>
+              <th class="text-right" title="PDV absent de la tournée du jour, PDV créés sur place compris">Hors tournée</th>
+              <th class="text-right" title="Visites hors tournée sur un PDV créé par le merchandiser lui-même">dont PDV créé</th>
+              <th class="text-right" title="PDV créés sur place, visités sur la période, encore à vérifier dans Points de vente › Doublons possibles">Doublons à vérifier</th>
+              <th v-if="recapAvecSansTournee" class="text-right" title="Visites un jour sans tournée">Jour sans tournée</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="r in recapLignes" :key="r.user_id">
+              <td class="font-medium text-slate-900 dark:text-white">
+                {{ r.merchandiser || r.email || '—' }}
+                <p v-if="r.employeur" class="mt-0.5 text-xs font-normal text-slate-500 dark:text-slate-400">{{ nomAgence(r.employeur) }}</p>
+              </td>
+              <td class="text-right tabular-nums">{{ r.visites }}</td>
+              <td class="text-right tabular-nums">{{ r.prevues }}</td>
+              <td class="text-right tabular-nums">{{ r.ajoutees_visite_libre }}</td>
+              <td class="text-right tabular-nums">{{ r.pushcarts_a_trouver }}</td>
+              <td class="text-right tabular-nums">
+                <UButton
+                  v-if="r.hors_tournee"
+                  size="xs"
+                  color="amber"
+                  variant="soft"
+                  :aria-label="`Voir les ${compte(r.hors_tournee, 'visite')} hors tournée de ${r.merchandiser || r.email}`"
+                  @click="voirHorsTournee(r)"
+                >
+                  <span class="tabular-nums">{{ r.hors_tournee }}</span>
+                </UButton>
+                <span v-else class="text-slate-500">0</span>
+              </td>
+              <td class="text-right tabular-nums">{{ r.dont_pdv_cree }}</td>
+              <td class="text-right tabular-nums">
+                <span v-if="r.pdv_doublons_a_verifier == null" class="text-slate-500" title="Réservé à l’administrateur et au superviseur">—</span>
+                <span v-else :class="r.pdv_doublons_a_verifier ? 'font-semibold text-amber-700 dark:text-amber-300' : ''">{{ r.pdv_doublons_a_verifier }}</span>
+              </td>
+              <td v-if="recapAvecSansTournee" class="text-right tabular-nums">{{ r.sans_tournee }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div v-if="peutVoirDoublons && totalDoublons" class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-5 py-3 text-sm dark:border-slate-700">
+        <p class="text-slate-600 dark:text-slate-300">
+          {{ totalDoublons }} {{ pluriel(totalDoublons, 'PDV créé sur place', 'PDV créés sur place') }} {{ pluriel(totalDoublons, 'ressemble', 'ressemblent') }} à un PDV existant tout proche, encore à vérifier.
+        </p>
+        <UButton size="xs" variant="outline" icon="i-heroicons-document-duplicate" to="/admin/pdv/doublons">
+          Points de vente › Doublons possibles
+        </UButton>
+      </div>
+    </details>
 
     <div class="admin-surface overflow-hidden">
       <div class="border-b border-slate-200 px-5 py-4 dark:border-slate-700">
@@ -105,6 +192,11 @@
                   <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                     {{ [typePdvLabel(visite.pdv?.sous_categorie_pdv) || 'Type non renseigné', libelleCanal(visite.pdv?.canal)].filter(Boolean).join(' · ') }}
                   </p>
+                  <span v-if="badgeSituation(visite.situation_tournee)" class="mt-1 inline-flex" :title="badgeSituation(visite.situation_tournee)?.aide">
+                    <UBadge :color="badgeSituation(visite.situation_tournee)?.couleur" variant="soft" size="xs">
+                      {{ badgeSituation(visite.situation_tournee)?.libelle }}
+                    </UBadge>
+                  </span>
                 </div>
               </td>
               <td>{{ visite.pdv?.distributor_name || '—' }}</td>
@@ -114,11 +206,13 @@
                   <UBadge v-else-if="statutNiveauVisite(scoreFor(visite)) === 'atteint'" color="green" variant="soft" size="xs">
                     {{ libelleNiveau(scoreFor(visite)?.tierAtteint) }}
                   </UBadge>
+                  <!-- Disponibilité nulle = pas de seuil pour ce type de PDV dans le
+                       référentiel (une visite sans relevé vaut 0 %, pas null). -->
                   <span
                     v-else-if="statutNiveauVisite(scoreFor(visite)) === 'non_evalue'"
-                    class="text-slate-600 dark:text-slate-300"
-                    title="Disponibilité en rayon non relevée : la visite n’a pas pu être évaluée."
-                  >Non évalué</span>
+                    class="block max-w-52 whitespace-normal text-xs text-slate-600 dark:text-slate-300"
+                    title="Le niveau ne peut pas être calculé, quoi que le merchandiser relève : le seuil manque dans le référentiel."
+                  >{{ libelleSansSeuil(typePdvLabel(visite.pdv?.sous_categorie_pdv) || visite.pdv?.sous_categorie_pdv) }}</span>
                   <span v-else class="text-slate-600 dark:text-slate-300">Non conforme</span>
                   <span class="font-semibold tabular-nums text-slate-900 dark:text-white">{{ ratio(scoreFor(visite)?.scoreGlobal) }}</span>
                 </div>
@@ -249,7 +343,8 @@ import { photosAffichables } from '~/utils/visitePhotos'
 import { catalogueProduits, categoriesProduitsActives, getCategoryDef } from '~/utils/products'
 import { isModernTrade } from '~/utils/canal'
 import { messageUtilisateur } from '~/utils/supabaseErrors'
-import { statutNiveauVisite } from '~/utils/perfectStore'
+import { libelleSansSeuil, statutNiveauVisite } from '~/utils/perfectStore'
+import { OPTIONS_FILTRE_SITUATION, badgeSituation, type RecapSituationTournee } from '~/utils/situationTournee'
 import { compte, pluriel } from '~/utils/pluriel'
 import { DIRECTIONS, libelleDirection } from '~/utils/agences'
 
@@ -277,6 +372,7 @@ const { typePdvLabel, fetchTypePdvLabels } = useTypePdvLabels()
 const { options: optionsAgences, nom: nomAgence, charger: chargerAgences } = useAgences()
 const { peutOuvrir } = useAdminNavigation()
 const peutGererAgences = computed(() => peutOuvrir('/admin/referentiels', { liste: 'agence' }))
+const peutVoirDoublons = computed(() => peutOuvrir('/admin/pdv/doublons'))
 
 const visites = computed(() => visitesStore.visites)
 const total = computed(() => visitesStore.total)
@@ -338,6 +434,47 @@ function agenceDe(visite: Visite): string {
   const u = (visite.user_id && comptesParId.value.get(visite.user_id)) || comptesParEmail.value.get(visite.email)
   if (!u?.employeur) return ''
   return [nomAgence(u.employeur), u.direction ? libelleDirection(u.direction, true) : ''].filter(Boolean).join(' · ')
+}
+
+// Récap par merchandiser : la fonction rend toute la période visible ; les
+// filtres Agence, Direction et Merchandiser s'appliquent ici.
+const recapOuvert = ref(true)
+const recapLignes = computed<RecapSituationTournee[]>(() => {
+  let lignes = visitesStore.recapSituation || []
+  if (filters.agence || filters.direction) {
+    const ids = new Set(comptesChoisis().map(u => u.id))
+    lignes = lignes.filter(r => ids.has(r.user_id))
+  }
+  if (filters.commercial) {
+    const q = filters.commercial.toLowerCase()
+    lignes = lignes.filter(r => `${r.merchandiser || ''} ${r.email || ''}`.toLowerCase().includes(q))
+  }
+  return lignes
+})
+const somme = (cle: 'hors_tournee' | 'dont_pdv_cree' | 'pdv_doublons_a_verifier') =>
+  recapLignes.value.reduce((t, r) => t + (Number(r[cle]) || 0), 0)
+const totalHorsTournee = computed(() => somme('hors_tournee'))
+const totalPdvCrees = computed(() => somme('dont_pdv_cree'))
+const totalDoublons = computed(() => somme('pdv_doublons_a_verifier'))
+const recapAvecSansTournee = computed(() => recapLignes.value.some(r => r.sans_tournee > 0))
+
+function voirHorsTournee(r: RecapSituationTournee) {
+  filters.commercial = r.merchandiser || r.email || ''
+  filters.situation = 'hors'
+}
+
+let periodeRecap = ''
+async function chargerRecap() {
+  const cle = `${filters.dateFrom}|${filters.dateTo}`
+  if (cle === periodeRecap) return
+  periodeRecap = cle
+  try {
+    await visitesStore.fetchRecapSituation(filters.dateFrom, filters.dateTo)
+  }
+  catch (err) {
+    periodeRecap = ''
+    console.error('Récap des visites hors tournée indisponible', err)
+  }
 }
 
 const perfectStoreScores = computed(() => {
@@ -485,6 +622,7 @@ function resetFilters() {
   filters.email = ''
   filters.agence = ''
   filters.direction = ''
+  filters.situation = ''
   filters.page = 1
   loadVisites()
 }
@@ -500,6 +638,10 @@ const filterChips = computed(() => {
   }
   if (filters.agence) chips.push({ key: 'agence', label: `Agence : ${nomAgence(filters.agence)}` })
   if (filters.direction) chips.push({ key: 'direction', label: `Direction : ${libelleDirection(filters.direction, true)}` })
+  if (filters.situation) {
+    const opt = OPTIONS_FILTRE_SITUATION.find(o => o.value === filters.situation)
+    chips.push({ key: 'situation', label: `Tournée : ${opt?.label || filters.situation}` })
+  }
   return chips
 })
 function removeFilterChip(key: string) {
@@ -517,18 +659,19 @@ async function loadVisites() {
   else {
     filters.auteurs = null
   }
-  await visitesStore.fetchVisites()
+  await Promise.all([visitesStore.fetchVisites(), chargerRecap()])
 }
 
 function filterVisites() {
   filters.page = 1
+  periodeRecap = ''
   loadVisites()
 }
 
 // Filtrage dynamique : les changements de filtres relancent la liste sans
 // passer par le bouton « Filtrer » (debounce court).
 let autoFilterTimer: ReturnType<typeof setTimeout> | null = null
-watch(() => [filters.dateFrom, filters.dateTo, filters.commercial, filters.agence, filters.direction], () => {
+watch(() => [filters.dateFrom, filters.dateTo, filters.commercial, filters.agence, filters.direction, filters.situation], () => {
   if (autoFilterTimer) clearTimeout(autoFilterTimer)
   autoFilterTimer = setTimeout(() => { filters.page = 1; loadVisites() }, 400)
 })
@@ -540,6 +683,11 @@ onMounted(() => {
   const route = useRoute()
   const qCommercial = route.query.commercial
   if (typeof qCommercial === 'string' && qCommercial) filters.commercial = qCommercial
+  // /admin/visites?situation=hors : visites hors tournée (récap, liens).
+  const qSituation = route.query.situation
+  filters.situation = typeof qSituation === 'string' && OPTIONS_FILTRE_SITUATION.some(o => o.value === qSituation)
+    ? qSituation as typeof filters.situation
+    : ''
   // /admin/visites?agence=atom&direction=south
   if (!authStore.isAgence) {
     if (typeof route.query.agence === 'string') filters.agence = route.query.agence

@@ -291,7 +291,7 @@ const LIBELLES_PRIX: Record<Exclude<PrixReleve, null>, string> = {
   contradictoire: 'Contradictoire',
 }
 import type { Visite } from '~/types'
-import { statutNiveauVisite, tradeTypeForCanal, type PerfectStoreResultB } from '~/utils/perfectStore'
+import { libelleSansSeuil, statutNiveauVisite, tradeTypeForCanal, trouverParTypePdv, type PerfectStoreResultB } from '~/utils/perfectStore'
 import { visibilityElementObserved, visibilitySegmentForPdv, FALLBACK_VISIBILITY_ELEMENTS } from '~/utils/visibilityStandards'
 import { photosAffichables } from '~/utils/visitePhotos'
 import { catalogueProduits, categoriesProduitsActives, getCategoryDef, releveSku, type DisponibiliteReleve, type PrixReleve } from '~/utils/products'
@@ -349,8 +349,8 @@ const categoriesNotees = computed(() => {
 })
 
 const dispoSegmentGrade = computed(() => {
-  const sousCategorie = props.visite?.pdv?.sous_categorie_pdv || ''
-  return refs.value?.segmentGrade.find(s => s.type_pdv_nom === sousCategorie) || null
+  // Même recherche que le score (scoreVisiteB) et la base : aux espaces près.
+  return trouverParTypePdv(refs.value?.segmentGrade, props.visite?.pdv?.sous_categorie_pdv) || null
 })
 
 // Visites sans aucun relevé produit (ex. visites reprises de l'export Atom).
@@ -390,7 +390,7 @@ const promotionApplicable = computed(() => (props.visite?.data as any)?.visibili
 
 const visibilitySegment = computed(() => {
   const sousCategorie = props.visite?.pdv?.sous_categorie_pdv || ''
-  return refs.value?.visibilitySegmentMap.find(m => m.type_pdv_nom === sousCategorie)?.segment
+  return trouverParTypePdv(refs.value?.visibilitySegmentMap, sousCategorie)?.segment
     ?? visibilitySegmentForPdv(sousCategorie)
 })
 
@@ -498,10 +498,13 @@ const niveau = computed(() => {
   const code = props.perfectStore?.tierAtteint
   const connu = niveauPerfectStore(code)
   if (connu) return { libelle: connu.long, couleur: connu.couleur }
-  // Sans disponibilité relevée, la visite n'a pas pu être évaluée : ce n'est
-  // pas un échec du point de vente.
+  // Disponibilité nulle : pas de seuil pour ce type de PDV dans le référentiel.
+  // Ni un échec du point de vente, ni un oubli du merchandiser.
   const statut = statutNiveauVisite(props.perfectStore)
-  if (statut === 'non_evalue') return { libelle: 'Non évalué (relevé incomplet)', couleur: COULEUR_NON_CONFORME }
+  if (statut === 'non_evalue') {
+    const type = props.visite?.pdv?.sous_categorie_pdv
+    return { libelle: `Non évalué, ${libelleSansSeuil(typePdvLabel(type) || type).replace(/^P/, 'p')}`, couleur: COULEUR_NON_CONFORME }
+  }
   if (statut === 'non_conforme') return { libelle: 'Non conforme', couleur: COULEUR_NON_CONFORME }
   const court = String(code).trim()
   return { libelle: court.charAt(0).toUpperCase() + court.slice(1).toLowerCase(), couleur: COULEUR_NON_CONFORME }

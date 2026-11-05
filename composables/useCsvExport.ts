@@ -131,6 +131,9 @@ export function useCsvExport() {
       { header: 'Objectif Perfect Store', key: 'objectif_perfect_store', width: 20 },
       { header: 'Date', key: 'date_creation', width: 15 },
       { header: 'Ajouté par', key: 'ajoute_par', width: 30 },
+      // Date d'entrée dans la base (filtre « Date de création » de la liste) ;
+      // « Date » ci-dessus reste celle du fichier d'origine (relue à l'import).
+      { header: 'Créé le', key: 'cree_le', width: 18 },
     ]
 
     ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
@@ -138,7 +141,10 @@ export function useCsvExport() {
 
     for (const p of pdvList) {
       const aGps = p.geolocation_lat != null && p.geolocation_lng != null
-      ws.addRow({ ...p, gps: aGps ? 'Oui' : 'Non' })
+      const creeLe = p.created_at
+        ? new Date(p.created_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Abidjan' })
+        : ''
+      ws.addRow({ ...p, gps: aGps ? 'Oui' : 'Non', cree_le: creeLe })
     }
 
     const buffer = await wb.xlsx.writeBuffer()

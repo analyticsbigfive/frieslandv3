@@ -22,6 +22,12 @@
       </div>
     </div>
 
+    <!-- Seconde ligne facultative (ex. filtres de création des PDV) : rendue
+         seulement si l'écran la remplit, les autres listes ne bougent pas. -->
+    <div v-if="$slots['filters-secondaires']" class="admin-list-toolbar__secondaires">
+      <slot name="filters-secondaires" />
+    </div>
+
     <div v-if="chips?.length" class="admin-list-toolbar__chips">
       <button
         v-for="chip in chips"
