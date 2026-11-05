@@ -304,6 +304,44 @@ export interface PerfectStoreResultB {
 interface ScorePdvB { sous_categorie_pdv?: string | null; canal?: string | null }
 
 /**
+ * Type de PDV comparé comme en base (calculer_perfect_store_complet,
+ * perfect_store_manques_filtre) : `regexp_replace(trim(nom), '\s+', ' ', 'g')`.
+ * trim() de Postgres ne retire que les espaces ; \s couvre aussi tabulations
+ * et retours à la ligne. La casse est gardée, comme en base.
+ */
+export function normaliserTypePdv(nom: string | null | undefined): string {
+  return String(nom ?? '').replace(/^ +| +$/g, '').replace(/[ \t\n\r\f\v]+/g, ' ')
+}
+
+/**
+ * Ligne du référentiel pour ce type de PDV : le nom exact d'abord, puis le
+ * nom aux espaces près (même ordre que `order by (nom = sous_categorie_pdv) desc`
+ * en base). Sans ce repli, « Boutique  A » avait un score en base et aucun ici.
+ */
+export function trouverParTypePdv<T extends { type_pdv_nom: string }>(
+  lignes: readonly T[] | null | undefined,
+  type: string | null | undefined,
+): T | undefined {
+  if (!lignes?.length || type == null) return undefined
+  const exact = lignes.find(l => l.type_pdv_nom === type)
+  if (exact) return exact
+  const cle = normaliserTypePdv(type)
+  if (!cle) return undefined
+  return lignes.find(l => normaliserTypePdv(l.type_pdv_nom) === cle)
+}
+
+/**
+ * Disponibilité nulle = aucun seuil ni poids pour le segment et le grade de ce
+ * type de PDV (calculer_dispo_categorie) : le score ne peut pas être calculé,
+ * quoi que le merchandiser saisisse. Une visite sans relevé vaut 0 %, pas null.
+ * `type` : libellé affiché du type (useTypePdvLabels), vide s'il manque.
+ */
+export function libelleSansSeuil(type: string | null | undefined): string {
+  const t = String(type ?? '').trim()
+  return `Pas de seuil de disponibilité pour ce type de PDV (${t || 'type non renseigné'})`
+}
+
+/**
  * Aperçu Perfect Store (Système B) pour une visite. Réplique exacte de la
  * fonction SQL calculer_perfect_store : moyenne des catégories EVAP/IMP/SCM
  * évaluables, gating conjonctif par dispo_rayon_min.
@@ -315,7 +353,7 @@ export function scoreVisiteB(
   basis: PerfectBasis = 'taux_vente',
 ): PerfectStoreResultB {
   const produits: any = (data as any)?.produits || {}
-  const sg = refs.segmentGrade.find(s => s.type_pdv_nom === (pdv.sous_categorie_pdv || ''))
+  const sg = trouverParTypePdv(refs.segmentGrade, pdv.sous_categorie_pdv)
   // Canal : segment_grade > canal du pdv (modern/MT) > GT par défaut (cf. SQL).
   const canal: TradeType = sg?.canal ?? tradeTypeForCanal(pdv.canal)
   const dispoSegment = sg?.segment
@@ -373,8 +411,7 @@ export function scoreVisiteB(
       || heroes.every(present)
   }
 
-  const segment = refs.visibilitySegmentMap
-    .find(item => item.type_pdv_nom === (pdv.sous_categorie_pdv || ''))?.segment
+  const segment = trouverParTypePdv(refs.visibilitySegmentMap, pdv.sous_categorie_pdv)?.segment
     ?? visibilitySegmentForPdv(pdv.sous_categorie_pdv)
   const promotionApplicable = (data as any)?.visibilite?.promotion_applicable === true
   const tierKey = (code: string) => {

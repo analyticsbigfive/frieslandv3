@@ -577,6 +577,8 @@ export interface Visite {
   ssf_brut?: string | null
   /** Modèle de la tablette (1.0.17) : SM-X130 = Wi-Fi seul, sans puce GPS. */
   appareil_modele?: string | null
+  /** Colonne calculée (migration 20261105120000) : situation dans la tournée du jour, null sans tournée. */
+  situation_tournee?: 'prevue' | 'ajoutee_jour' | 'pdv_cree_sur_place' | 'hors_tournee' | null
   // Joined
   pdv?: PDV
   profile?: Profile

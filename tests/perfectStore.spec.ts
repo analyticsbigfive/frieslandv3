@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { calculerDisponibiliteRayon, estDisponible, scoreVisiteB, type PerfectStoreRefsB } from '../utils/perfectStore'
+import { calculerDisponibiliteRayon, estDisponible, libelleSansSeuil, normaliserTypePdv, scoreVisiteB, trouverParTypePdv, type PerfectStoreRefsB } from '../utils/perfectStore'
 
 // Poids EVAP · commerce traditionnel (GT) — référentiel client.
 // Identiques au seed supabase/nouveau/20260630120300_friesland_produits_disponibilite.sql (l.65-70).
@@ -153,5 +153,51 @@ describe('scoreVisiteB — EVAP GT Boutique A (Système B, bout en bout)', () =>
     const withPromo = scoreVisiteB(mkData(q, { affiche: true, standard: false }, true), pdvBoutiqueA, REFS_B)
     expect(withPromo.promotionTaux).toBe(0)
     expect(withPromo.tierAtteint).toBe(null)
+  })
+})
+
+// ---- Type de PDV comparé comme en base (regexp_replace(trim(nom), '\s+', ' ', 'g')) ----
+describe('type de PDV aux espaces près, comme calculer_perfect_store_complet', () => {
+  const q = { br_160g: 48, brb_160g: 24, br_400g: 24, brb_400g: 12, br_gold: 24, pearl_400g: 24 }
+  it('normaliserTypePdv : espaces de bord retirés, suites d’espaces ramenées à une, casse gardée', () => {
+    expect(normaliserTypePdv('  Boutique   A ')).toBe('Boutique A')
+    expect(normaliserTypePdv('Boutique\tA')).toBe('Boutique A')
+    expect(normaliserTypePdv('boutique a')).toBe('boutique a')
+    expect(normaliserTypePdv(null)).toBe('')
+  })
+  it('« Boutique  A » (deux espaces) a le même score que « Boutique A »', () => {
+    const attendu = scoreVisiteB(mkData(q), pdvBoutiqueA, REFS_B)
+    const r = scoreVisiteB(mkData(q), { sous_categorie_pdv: ' Boutique  A ' }, REFS_B)
+    expect(attendu.tierAtteint).toBe('FLAGSHIP STORE')
+    expect(r.osaPondere).toBe(attendu.osaPondere)
+    expect(r.visibiliteTaux).toBe(attendu.visibiliteTaux)
+    expect(r.tierAtteint).toBe(attendu.tierAtteint)
+  })
+  it('la casse compte, comme en base : « boutique a » n’a pas de seuil', () => {
+    const r = scoreVisiteB(mkData(q), { sous_categorie_pdv: 'boutique a' }, REFS_B)
+    expect(r.osaPondere).toBeNull()
+    expect(r.tierAtteint).toBeNull()
+  })
+  it('trouverParTypePdv préfère le nom exact au nom normalisé', () => {
+    const lignes = [{ type_pdv_nom: 'Boutique  A', id: 1 }, { type_pdv_nom: 'Boutique A', id: 2 }]
+    expect(trouverParTypePdv(lignes, 'Boutique  A')?.id).toBe(1)
+    expect(trouverParTypePdv(lignes, 'Boutique A')?.id).toBe(2)
+    expect(trouverParTypePdv(lignes, 'Boutique   A')?.id).toBe(1)
+    expect(trouverParTypePdv(lignes, '')).toBeUndefined()
+    expect(trouverParTypePdv(lignes, null)).toBeUndefined()
+  })
+})
+
+describe('libelleSansSeuil — la disponibilité nulle vient du référentiel, pas du merchandiser', () => {
+  it('nomme le type de PDV', () => {
+    expect(libelleSansSeuil('Minimarket C')).toBe('Pas de seuil de disponibilité pour ce type de PDV (Minimarket C)')
+  })
+  it('type vide', () => {
+    expect(libelleSansSeuil('')).toBe('Pas de seuil de disponibilité pour ce type de PDV (type non renseigné)')
+    expect(libelleSansSeuil(null)).toBe('Pas de seuil de disponibilité pour ce type de PDV (type non renseigné)')
+  })
+  it('une visite sans aucun relevé vaut 0 %, pas « sans seuil »', () => {
+    const r = scoreVisiteB({ produits: {} } as any, pdvBoutiqueA, REFS_B)
+    expect(r.osaPondere).toBe(0)
   })
 })
