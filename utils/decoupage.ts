@@ -130,6 +130,30 @@ export function grilleEmprise(lat: ArrayLike<number>, lng: ArrayLike<number>, t:
   return out
 }
 
+/** Emprise d'une seule personne : coins sud-ouest des cases qui contiennent au moins une de ses boutiques. */
+export function casesEmprise(lat: ArrayLike<number>, lng: ArrayLike<number>, pas = 0.004): [number, number][] {
+  return grilleEmprise(lat, lng, new Array(lat.length).fill(0), pas).map(c => [c.lat, c.lng])
+}
+
+/** Clés des cases d'une emprise, pour dansEmprise. Arrondi : lat = indice × pas n'est pas exact en flottant. */
+export function clesEmprise(cases: [number, number][], pas = 0.004): Set<string> {
+  return new Set(cases.map(([la, lo]) => `${Math.round(la / pas)},${Math.round(lo / pas)}`))
+}
+
+/**
+ * Le point tombe-t-il dans l'emprise ? Sa case ou l'une des 8 voisines : une
+ * visite se fait jusqu'au rayon de visite de la boutique, parfois dans la case d'à côté.
+ */
+export function dansEmprise(cles: Set<string>, lat: number, lng: number, pas = 0.004): boolean {
+  const i = Math.floor(lat / pas), j = Math.floor(lng / pas)
+  for (let di = -1; di <= 1; di++) {
+    for (let dj = -1; dj <= 1; dj++) {
+      if (cles.has(`${i + di},${j + dj}`)) return true
+    }
+  }
+  return false
+}
+
 /**
  * Cadre [[sud, ouest], [nord, est]] d'un nuage de points, sans les GPS aberrants :
  * à partir de 50 points, du 1er au 99e centile ; en dessous, les extrêmes.
