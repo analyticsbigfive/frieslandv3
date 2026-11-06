@@ -120,8 +120,20 @@
             >
               {{ showRaw ? 'Masquer les points reçus' : 'Afficher tous les points reçus' }}
             </UButton>
+            <UButton
+              size="xs"
+              color="gray"
+              :variant="showRoute ? 'solid' : 'ghost'"
+              icon="i-heroicons-map"
+              :loading="routeLoading"
+              :aria-pressed="showRoute"
+              @click="basculerItineraire"
+            >
+              {{ showRoute ? 'Masquer l\'itinéraire' : 'Itinéraire probable' }}
+            </UButton>
             <UButton v-if="selectedUser" size="xs" color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="selectRep('')">Toute l'équipe</UButton>
           </div>
+          <p v-if="routeErreur" class="w-full text-xs font-medium text-amber-800 dark:text-amber-200" aria-live="polite">{{ routeErreur }}</p>
         </div>
 
         <!-- Recherche position à une heure donnée -->
@@ -205,10 +217,14 @@
           >
             <p class="mb-1 font-semibold text-slate-900 dark:text-white">Légende</p>
             <div class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="{ background: COULEURS_CARTE.depart }" aria-hidden="true" />Départ</div>
-            <div class="mt-1 flex items-center gap-1.5"><span class="h-0.5 w-3.5 shrink-0" :style="{ background: SERIES[0] }" aria-hidden="true" />Trajet (une couleur par personne)</div>
+            <div class="mt-1 flex items-center gap-1.5"><span class="h-3 w-3.5 shrink-0 opacity-40" :style="{ background: SERIES[0] }" aria-hidden="true" />Territoire (une couleur par personne)</div>
+            <div class="mt-1 flex items-center gap-1.5"><span class="h-2.5 w-2.5 shrink-0 rounded-full border-2 border-slate-900 bg-white dark:border-white dark:bg-slate-800" aria-hidden="true" />Point de visite</div>
+            <div v-if="showRoute" class="mt-1 flex items-center gap-1.5"><span class="h-1 w-3.5 shrink-0" :style="{ background: SERIES[0] }" aria-hidden="true" />Itinéraire probable (sur les routes)</div>
+            <div v-if="showRoute" class="mt-1 flex items-center gap-1.5"><span class="w-3.5 shrink-0 border-t-2 border-dashed" :style="{ borderColor: SERIES[0] }" aria-hidden="true" />Route non reconnue (ligne droite)</div>
             <div class="mt-1 flex items-center gap-1.5"><span class="h-3 w-3 shrink-0 rounded-full border-2 border-white" :style="{ background: SERIES[0], boxShadow: `0 0 0 2px ${SERIES[0]}` }" aria-hidden="true" />Arrêt de 5 min ou plus</div>
             <div class="mt-1 flex items-center gap-1.5"><span class="h-2.5 w-2.5 shrink-0 rotate-45" :style="{ background: COULEURS_CARTE.visite }" aria-hidden="true" />Visite</div>
             <div class="mt-1 flex items-center gap-1.5"><span class="h-2.5 w-2.5 shrink-0 rotate-45" :style="{ background: COULEURS_CARTE.horsRayon }" aria-hidden="true" />Visite hors du rayon de visite</div>
+            <div class="mt-1 flex items-center gap-1.5"><span class="h-2.5 w-2.5 shrink-0 rotate-45" :style="{ background: COULEURS_CARTE.visite, boxShadow: `0 0 0 2px ${COULEURS_CARTE.horsTerritoire}` }" aria-hidden="true" />Visite hors de son territoire</div>
           </div>
 
           <!-- Navigation jour précédent / suivant parmi les jours tracés. -->
@@ -306,6 +322,8 @@
 import { haversine, lisserTrajet, libelleDuree } from '~/utils/trajets'
 import { SERIES, STATUT } from '~/utils/chartPalette'
 import { fetchAllRows } from '~/utils/fetchAll'
+import { clesEmprise, dansEmprise } from '~/utils/decoupage'
+import { itineraireProbable, type PointItineraire, type TronconItineraire } from '~/utils/itineraire'
 definePageMeta({
   middleware: ['auth', 'admin'],
   layout: 'admin',
@@ -389,13 +407,34 @@ const activityAll = ref<string[]>([])
 let map: any = null
 let trailGroup: any = null
 let searchGroup: any = null
+let empriseGroup: any = null
+let empriseRendu: any = null
 
-// Couleurs de la carte : palette commune (utils/chartPalette). Un trajet par
+// Territoire de chaque personne (décision de Jean Luc, 02/11/2026) : à la place
+// des lignes droites entre points GPS, l'emprise de sa liste de boutiques en
+// cases d'environ 450 m (GET /api/admin/territoires-equipe), visites et arrêts
+// par-dessus. L'itinéraire probable sur les routes reste à la demande.
+const PAS_EMPRISE = 0.004
+interface EmprisePersonne { cases: [number, number][], points_visite: { nom: string, lat: number, lng: number }[], nb_pdv: number, sans_territoire: boolean }
+const emprises = ref<Record<string, EmprisePersonne>>({})
+const clesParPersonne = computed(() => new Map(Object.entries(emprises.value).map(([id, e]) => [id, clesEmprise(e.cases, PAS_EMPRISE)])))
+
+// Itinéraire probable (utils/itineraire) : calculé à la demande, gardé par
+// tournée et nombre de points jusqu'au curseur ; 'erreur' = service muet.
+const showRoute = ref(false)
+const routeLoading = ref(false)
+const routeErreur = ref('')
+const itineraires = new Map<string, TronconItineraire[] | 'erreur'>()
+let itineraireTimer: ReturnType<typeof setTimeout> | null = null
+let itineraireNo = 0
+
+// Couleurs de la carte : palette commune (utils/chartPalette). Une couleur par
 // personne en SERIES ; départ et visites en couleurs de statut.
 const COULEURS_CARTE = {
   depart: STATUT.bon,
   visite: SERIES[1],
   horsRayon: STATUT.serieux,
+  horsTerritoire: '#0f172a',
 } as const
 const LIVE_WINDOW_MS = 15 * 60_000
 const STALE_MS = 30 * 60_000
@@ -779,9 +818,94 @@ async function loadPositions() {
   }
   finally {
     loading.value = false
+    itineraires.clear()
+    routeErreur.value = ''
     resetCursor()
     drawTrails()
+    void chargerEmprises()
   }
+}
+
+// Emprises des personnes du jour (positions ou visites), gardées d'un jour à
+// l'autre : la route les garde déjà 5 minutes côté serveur.
+async function chargerEmprises() {
+  const ids = [...new Set([...allPoints.value.map(p => p.user_id), ...allVisits.value.map(v => v.user_id)])]
+    .filter(id => id && !emprises.value[id])
+  for (let i = 0; i < ids.length; i += 60) {
+    try {
+      const recues = await $fetch<Record<string, EmprisePersonne>>('/api/admin/territoires-equipe', { query: { ids: ids.slice(i, i + 60).join(',') } })
+      emprises.value = { ...emprises.value, ...recues }
+    }
+    catch (err) {
+      console.error('Trajets : territoires non chargés', err)
+    }
+  }
+  drawEmprises()
+  drawTrails()
+}
+
+function drawEmprises() {
+  if (!map || !empriseGroup) return
+  // @ts-ignore
+  const L = window.L
+  if (!L) return
+  empriseGroup.clearLayers()
+  const personnes = new Set([...allPoints.value.map(p => p.user_id), ...allVisits.value.map(v => v.user_id)])
+  for (const id of personnes) {
+    if (selectedUser.value && id !== selectedUser.value) continue
+    const e = emprises.value[id]
+    if (!e) continue
+    const color = statusColorForUser(id)
+    for (const [la, lo] of e.cases) {
+      empriseGroup.addLayer(L.rectangle([[la, lo], [la + PAS_EMPRISE, lo + PAS_EMPRISE]], {
+        renderer: empriseRendu, stroke: false, fillColor: color, fillOpacity: 0.3, interactive: false,
+      }))
+    }
+    for (const pv of e.points_visite) {
+      empriseGroup.addLayer(L.circleMarker([pv.lat, pv.lng], {
+        renderer: empriseRendu, radius: 4, color: COULEURS_CARTE.horsTerritoire, weight: 2, fillColor: '#fff', fillOpacity: 1,
+      }).bindTooltip(`<b>Point de visite</b><br>${echapperHtml(pv.nom)}`, { direction: 'top', offset: [0, -4] }))
+    }
+  }
+}
+
+function basculerItineraire() {
+  showRoute.value = !showRoute.value
+  routeErreur.value = ''
+  // Nouvel essai après un échec du service.
+  for (const [cle, v] of itineraires) if (v === 'erreur') itineraires.delete(cle)
+  drawTrails()
+}
+
+function planifierItineraires(manquants: { cle: string, points: PointItineraire[] }[]) {
+  if (itineraireTimer) clearTimeout(itineraireTimer)
+  itineraireTimer = null
+  if (!manquants.length) return
+  // Attente courte : le curseur qu'on fait glisser ne lance pas une requête par position.
+  itineraireTimer = setTimeout(() => void calculerItineraires(manquants), 400)
+}
+
+async function calculerItineraires(manquants: { cle: string, points: PointItineraire[] }[]) {
+  const no = ++itineraireNo
+  routeLoading.value = true
+  let echecs = 0
+  for (const m of manquants) {
+    if (itineraires.has(m.cle)) continue
+    try {
+      itineraires.set(m.cle, await itineraireProbable(m.points))
+    }
+    catch (err) {
+      console.error('Trajets : itinéraire non calculé', err)
+      itineraires.set(m.cle, 'erreur')
+      echecs++
+    }
+    if (no !== itineraireNo) return
+  }
+  routeLoading.value = false
+  routeErreur.value = echecs
+    ? `L'itinéraire de ${echecs} tournée(s) n'a pas pu être calculé : le service d'itinéraires ne répond pas. Les points restent reliés en ligne droite ; réessayez dans un moment.`
+    : ''
+  if (showRoute.value) drawTrails()
 }
 
 async function loadCommerciaux() {
@@ -942,8 +1066,9 @@ function drawTrails() {
 
   trailGroup.clearLayers()
   const cursor = cursorTime.value ?? Infinity
+  const manquants: { cle: string, points: PointItineraire[] }[] = []
 
-  tournees.value.forEach(({ points: allPts }) => {
+  tournees.value.forEach(({ tourneeId, points: allPts }) => {
     const points = allPts.filter(p => new Date(p.captured_at).getTime() <= cursor)
     if (points.length === 0) return
 
@@ -966,10 +1091,25 @@ function drawTrails() {
     infoP.textContent = `${formatTime(first.captured_at)} – ${formatTime(last.captured_at)} · ${(distance / 1000).toFixed(1)} km · ${lisse.arrets.length} arrêt(s) · ${retenus.length} points GPS gardés sur ${points.length} reçus`
     el.appendChild(infoP)
 
-    if (retenus.length > 1) {
-      const line = L.polyline(latlngs, { color, weight: 3, opacity: 0.85 })
-      line.bindPopup(el)
-      trailGroup.addLayer(line)
+    // Plus de ligne droite par défaut : le territoire et les visites suffisent.
+    // Itinéraire probable à la demande, ligne droite en pointillés en attendant
+    // le calcul ou quand la route n'est pas reconnue.
+    if (showRoute.value && retenus.length > 1) {
+      const cle = `${tourneeId}:${retenus.length}`
+      const calcule = itineraires.get(cle)
+      const troncons: TronconItineraire[] = Array.isArray(calcule)
+        ? calcule
+        : [{ surRoute: false, latlngs: latlngs as [number, number][] }]
+      if (calcule === undefined && !playing.value) {
+        manquants.push({ cle, points: retenus.map(p => ({ lat: p.lat, lng: p.lng, t: new Date(p.captured_at).getTime(), precision: p.accuracy })) })
+      }
+      for (const t of troncons) {
+        const line = t.surRoute
+          ? L.polyline(t.latlngs, { color, weight: 4, opacity: 0.85 })
+          : L.polyline(t.latlngs, { color, weight: 2, opacity: 0.6, dashArray: '6 6' })
+        line.bindPopup(el)
+        trailGroup.addLayer(line)
+      }
     }
 
     // Points bruts (optionnel) : petits, translucides, pour audit du lissage.
@@ -1014,21 +1154,29 @@ function drawTrails() {
     .forEach((visit) => {
       const validated = visit.geofence_validated !== false
       const color = validated ? COULEURS_CARTE.visite : COULEURS_CARTE.horsRayon
+      // Hors territoire seulement quand l'emprise est connue et non vide.
+      const cles = clesParPersonne.value.get(visit.user_id)
+      const horsTerritoire = !!cles?.size && !dansEmprise(cles, visit.lat, visit.lng, PAS_EMPRISE)
+      const contour = horsTerritoire ? `;box-shadow:0 0 0 2px ${COULEURS_CARTE.horsTerritoire}` : ''
       const icon = L.divIcon({
         className: 'trajet-visit-marker',
-        html: `<div style="width:16px;height:16px;transform:rotate(45deg);background:${color};border:2px solid #fff"></div>`,
+        html: `<div style="width:16px;height:16px;transform:rotate(45deg);background:${color};border:2px solid #fff${contour}"></div>`,
         iconSize: [16, 16],
         iconAnchor: [8, 8],
       })
       const dateLabel = new Date(visit.date_visite).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+      const alertes = [
+        validated ? '' : 'hors du rayon de visite',
+        horsTerritoire ? 'hors de son territoire' : '',
+      ].filter(Boolean)
       const marker = L.marker([visit.lat, visit.lng], { icon })
         .bindTooltip(
-          `<b>${echapperHtml(visit.nom_pdv)}</b><br>Visite le ${dateLabel} à ${formatTime(visit.date_visite)}${validated ? '' : '<br><span class="font-semibold text-amber-800">Hors du rayon de visite</span>'}`,
+          `<b>${echapperHtml(visit.nom_pdv)}</b><br>Visite le ${dateLabel} à ${formatTime(visit.date_visite)}${alertes.map(a => `<br><span class="font-semibold text-amber-800">${a[0]!.toUpperCase()}${a.slice(1)}</span>`).join('')}`,
           { direction: 'top', offset: [0, -6] },
         )
       const pop = document.createElement('div')
       pop.className = 'text-sm'
-      pop.innerHTML = `<p class="font-semibold text-slate-900">${echapperHtml(visit.nom_pdv)}</p><p class="text-xs text-slate-600">${dateLabel} · ${formatTime(visit.date_visite)}${validated ? '' : ' · <span class="font-semibold text-amber-800">hors du rayon de visite</span>'}</p>`
+      pop.innerHTML = `<p class="font-semibold text-slate-900">${echapperHtml(visit.nom_pdv)}</p><p class="text-xs text-slate-600">${dateLabel} · ${formatTime(visit.date_visite)}${alertes.map(a => ` · <span class="font-semibold text-amber-800">${a}</span>`).join('')}</p>`
       const btn = document.createElement('button')
       btn.type = 'button'
       btn.className = 'mt-2 rounded-md bg-fc-red px-2.5 py-1 text-xs font-semibold text-white'
@@ -1043,12 +1191,14 @@ function drawTrails() {
   if (bounds?.isValid?.()) {
     map.fitBounds(bounds, { padding: [30, 30] })
   }
+  if (showRoute.value) planifierItineraires(manquants)
 }
 
 function selectRep(userId: string) {
   selectedUser.value = userId
   resetSearchLayer()
   resetCursor()
+  drawEmprises()
   drawTrails()
 }
 
@@ -1079,11 +1229,14 @@ function startPlay() {
 }
 
 function stopPlay() {
+  const enLecture = playing.value
   playing.value = false
   if (playTimer) {
     clearInterval(playTimer)
     playTimer = null
   }
+  // Pendant le rejeu, l'itinéraire reste en ligne droite : on le calcule à l'arrêt.
+  if (enLecture && showRoute.value) drawTrails()
 }
 
 async function initMap() {
@@ -1102,6 +1255,11 @@ async function initMap() {
     attribution: '&copy; <a href="https://openstreetmap.org">OpenStreetMap</a>',
     maxZoom: 19,
   }).addTo(map)
+  // Territoires sous les trajets et les visites : volet dédié sous les tracés.
+  map.createPane('emprise')
+  map.getPane('emprise').style.zIndex = '350'
+  empriseRendu = L.canvas({ pane: 'emprise', padding: 0.5 })
+  empriseGroup = L.layerGroup().addTo(map)
   trailGroup = L.featureGroup().addTo(map)
   searchGroup = L.layerGroup().addTo(map)
 
@@ -1120,5 +1278,9 @@ onMounted(async () => {
   setTimeout(initMap, 100)
 })
 
-onUnmounted(() => stopPlay())
+onUnmounted(() => {
+  stopPlay()
+  if (itineraireTimer) clearTimeout(itineraireTimer)
+  itineraireNo++
+})
 </script>
