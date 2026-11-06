@@ -97,6 +97,30 @@
           @created="chargerActions"
         />
 
+        <!-- PDV fermé : signalement avec photos de la devanture (terrain) -->
+        <div v-if="peutSignalerFermeture" class="mobile-card p-4 space-y-2">
+          <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Boutique fermée ?</h3>
+          <p v-if="fermetureEnAttente" class="text-sm font-medium text-red-700 dark:text-red-300">
+            Signalée fermée le {{ formatDateFr(fermetureEnAttente.declare_le, { day: '2-digit', month: 'short' }) }} :
+            en attente de vérification.
+          </p>
+          <template v-else>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              Deux photos de la devanture, prises maintenant, sont obligatoires.
+            </p>
+            <UButton variant="outline" color="red" size="sm" icon="i-heroicons-lock-closed" block @click="showFermeture = true">
+              Signaler le PDV fermé
+            </UButton>
+          </template>
+        </div>
+        <PdvFermetureModal
+          v-if="peutSignalerFermeture"
+          v-model="showFermeture"
+          :pdv-id="pdv.pdv_id"
+          :pdv-nom="pdv.nom_pdv"
+          @signale="onFermetureSignalee"
+        />
+
         <!-- GPS -->
         <div class="mobile-card p-4 space-y-3">
           <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Coordonnées GPS</h3>
@@ -241,6 +265,8 @@
 import type { ActionCommerciale } from '~/types'
 import { estOuverte } from '~/utils/actionsCommerciales'
 import type { PDV } from '~/types'
+import { canWriteTerrain } from '~/utils/roles'
+import { formatDateFr } from '~/utils/dates'
 
 definePageMeta({ middleware: ['auth'], layout: 'mobile' })
 
@@ -294,6 +320,22 @@ async function chargerActions() {
   }
 }
 
+// « PDV fermé » (migration 20261106120000) : rôles terrain seulement, deux
+// photos de la devanture obligatoires. L'admin ou le superviseur décide.
+const peutSignalerFermeture = computed(() => canWriteTerrain(authStore.profile?.role))
+const showFermeture = ref(false)
+const fermetureEnAttente = ref<{ id: string, declare_le: string } | null>(null)
+const { enAttentePourPdv } = useFermeturePdv()
+async function chargerFermeture() {
+  if (!pdv.value?.pdv_id || !peutSignalerFermeture.value) return
+  fermetureEnAttente.value = await enAttentePourPdv(pdv.value.pdv_id)
+}
+function onFermetureSignalee(resultat: 'envoye' | 'en_file') {
+  // En file (hors ligne) : pas encore en base, l'écran le dit quand même.
+  if (resultat === 'en_file') fermetureEnAttente.value = { id: '', declare_le: new Date().toISOString() }
+  else void chargerFermeture()
+}
+
 // 1.0.17 : la position ne se tape plus à la main sur le terrain (l'ancienne
 // était perdue). Superviseur et admin : pdv_gps_admin garde l'historique.
 const peutModifierPosition = computed(() => authStore.isSuperviseur)
@@ -331,7 +373,10 @@ onMounted(async () => {
 
     const data = await pdvStore.fetchPDVById(route.params.id as string)
     pdv.value = matchesPDVScope(data as PDV) ? data as PDV : null
-    if (pdv.value) void chargerActions()
+    if (pdv.value) {
+      void chargerActions()
+      void chargerFermeture()
+    }
   }
   catch {
     pdv.value = null
