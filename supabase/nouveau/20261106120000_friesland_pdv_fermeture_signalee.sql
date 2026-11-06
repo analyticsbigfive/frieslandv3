@@ -250,7 +250,9 @@ as $$
   join pdv p on p.pdv_id = f.pdv_id
   left join profiles d on d.id = f.declare_par
   left join profiles x on x.id = f.decide_par
-  where public.est_admin_ou_superviseur()
+  -- role_actif_courant (et non est_admin_ou_superviseur) : un compte
+  -- désactivé dont le jeton est encore valide n'a plus accès.
+  where coalesce(public.role_actif_courant(), '') in ('admin', 'superviseur')
     and (p_tout or f.decision is null)
   order by f.decision nulls first, f.declare_le desc
   limit 1000
@@ -275,7 +277,8 @@ as $$
 declare
   f public.pdv_fermeture%rowtype;
 begin
-  if not public.est_admin_ou_superviseur() then
+  -- Compte actif exigé (role_actif_courant), comme pour la liste.
+  if coalesce(public.role_actif_courant(), '') not in ('admin', 'superviseur') then
     raise exception 'Réservé à l''administrateur et au superviseur.';
   end if;
   select * into f from public.pdv_fermeture where id = p_id for update;
