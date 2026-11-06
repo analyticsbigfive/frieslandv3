@@ -112,6 +112,10 @@
                 <span v-if="rp.completed_at">Terminé {{ formatTime(rp.completed_at) }}</span>
               </div>
 
+              <p v-if="rp.status === 'skipped' && etapeFermee(rp.result_notes)" class="mt-1 text-xs font-medium text-red-700 dark:text-red-300">
+                Signalé fermé, photos envoyées : en attente de vérification.
+              </p>
+
               <!-- Geofence validated -->
               <div v-if="rp.geofence_validated" class="mt-1">
                 <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">GPS validé</span>
@@ -119,7 +123,10 @@
             </div>
 
             <!-- Status badge -->
-            <UBadge :color="pdvStatusColor(rp.status)" variant="soft" size="xs">
+            <UBadge v-if="rp.status === 'skipped' && etapeFermee(rp.result_notes)" color="red" variant="soft" size="xs">
+              Fermé
+            </UBadge>
+            <UBadge v-else :color="pdvStatusColor(rp.status)" variant="soft" size="xs">
               {{ pdvStatusLabel(rp.status) }}
             </UBadge>
           </div>
@@ -191,13 +198,25 @@
       </div>
     </UModal>
 
+    <!-- PDV fermé : photos de la devanture obligatoires -->
+    <PdvFermetureModal
+      v-if="fermetureRp"
+      v-model="showFermeture"
+      :pdv-id="fermetureRp.pdv_id"
+      :pdv-nom="libellePdv(fermetureRp)"
+      :routing-pdv-id="fermetureRp.id"
+    />
+
     <!-- Skip reason modal -->
     <UModal v-model="showSkipModal">
       <div class="p-6 space-y-4">
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Passer ce PDV</h3>
         <UFormGroup label="Raison du passage" hint="Optionnel">
-          <UTextarea v-model="skipReason" placeholder="PDV fermé, inaccessible..." :rows="2" />
+          <UTextarea v-model="skipReason" placeholder="Inaccessible, gérant absent..." :rows="2" />
         </UFormGroup>
+        <p class="text-xs text-gray-500 dark:text-gray-400">
+          Boutique fermée ? Utilisez plutôt « PDV fermé (photos) » dans le menu du PDV : photos de la devanture obligatoires.
+        </p>
         <div class="flex justify-end gap-3">
           <UButton variant="ghost" @click="showSkipModal = false">Annuler</UButton>
           <UButton color="amber" @click="confirmSkip">Confirmer</UButton>
@@ -210,6 +229,7 @@
 <script setup lang="ts">
 import { libellePdv } from '~/utils/libellePdv'
 import { remarquesVisiteLibre } from '~/utils/visiteLibre'
+import { etapeFermee } from '~/utils/fermeturePdv'
 import type { RoutingPDV } from '~/types'
 
 // La tournée est un geste d'écriture (démarrage de mission, saut de PDV,
@@ -275,19 +295,33 @@ function hasObjectifs(rp: RoutingPDV) {
 }
 
 function missionMenuItems(rp: RoutingPDV) {
+  // « PDV fermé » : seule voie pour déclarer la boutique fermée, photos de la
+  // devanture obligatoires (PdvFermetureModal).
+  const fermee = {
+    label: 'PDV fermé (photos)',
+    icon: 'i-heroicons-lock-closed',
+    click: () => ouvrirFermeture(rp),
+  }
   if (rp.status === 'pending') {
     return [[{
       label: 'Passer ce PDV',
       icon: 'i-heroicons-forward',
       click: () => handleSkip(rp),
-    }]]
+    }, fermee]]
   }
 
   return [[{
     label: 'Terminer directement',
     icon: 'i-heroicons-check',
     click: () => handleCompleteDirect(rp),
-  }]]
+  }, fermee]]
+}
+
+const fermetureRp = ref<RoutingPDV | null>(null)
+const showFermeture = ref(false)
+function ouvrirFermeture(rp: RoutingPDV) {
+  fermetureRp.value = rp
+  showFermeture.value = true
 }
 
 function formatTime(ts: string) {

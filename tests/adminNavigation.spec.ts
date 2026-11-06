@@ -229,6 +229,13 @@ describe('droits par rôle', () => {
     expect(peut('commercial', '/admin/pdv/doublons')).toBe(false)
   })
 
+  it('Fermetures signalées : admin et superviseur seulement', () => {
+    expect(peut('admin', '/admin/pdv/fermetures')).toBe(true)
+    expect(peut('superviseur', '/admin/pdv/fermetures')).toBe(true)
+    expect(peut('commercial', '/admin/pdv/fermetures')).toBe(false)
+    expect(peut('agence', '/admin/pdv/fermetures')).toBe(false)
+  })
+
   it('merchandiser : rien', () => {
     for (const { tab } of ADMIN_TABS) expect(peut('merchandiser', tab.path, tab.query)).toBe(false)
   })
