@@ -15,6 +15,7 @@
 import type ExcelJS from 'exceljs'
 import { chargerExcelJS } from '~/utils/chargerExcel'
 import { fetchAllRows } from '~/utils/fetchAll'
+import { COLONNES_ROUTING_MOIS, dateFr, grouperParMerchandiser, nomsFeuilles, resumeMerchandiser, valeurCellule, type LigneRoutingMois } from '~/utils/routingMois'
 import { COLONNES_EXPORT, ROUTING_ACTIONS, SEP_MERCH, SEP_PDV, lignesExportTournees, normaliserLigneTournee, type EtapeExport, type TourneeExport } from '~/utils/routingImport'
 
 const FEUILLE_SAISIE = 'Tournées'
@@ -264,5 +265,67 @@ export function useRoutingExcel() {
     URL.revokeObjectURL(url)
   }
 
-  return { downloadRoutingExcelTemplate, readRoutingFile, exporterTournees }
+  /**
+   * Routing du mois des merchandisers d'agence, à envoyer à l'agence et à
+   * Friesland : « Résumé » (une ligne par merchandiser), « Tout le mois »
+   * (toutes les lignes, filtrables), puis une feuille par merchandiser
+   * (utils/routingMois.ts, fonction export_routing_mois).
+   */
+  async function exporterRoutingMois(lignes: LigneRoutingMois[], opts: { debut: string, fin: string, titre: string, nomFichier: string }) {
+    const Excel = await chargerExcelJS()
+    const wb = new Excel.Workbook()
+    const enTete = (ws: ExcelJS.Worksheet) => {
+      ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
+      ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC8102E' } }
+      ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: ws.columnCount } }
+    }
+    const groupes = grouperParMerchandiser(lignes)
+
+    // Résumé
+    const resume = wb.addWorksheet('Résumé', { views: [{ state: 'frozen', ySplit: 1 }] })
+    resume.columns = [
+      { header: 'Merchandiser', key: 'merchandiser', width: 34 },
+      { header: 'Agence', key: 'agence', width: 14 },
+      { header: 'Distributeur(s) du routing', key: 'distributeurs', width: 30 },
+      { header: 'Jours de tournée', key: 'jours', width: 16 },
+      { header: 'dont visite libre', key: 'joursVisiteLibre', width: 16 },
+      { header: 'Points de vente prévus', key: 'pdvPrevus', width: 22 },
+      { header: 'Visites prévues', key: 'etapes', width: 15 },
+      { header: 'Faites', key: 'faites', width: 9 },
+    ]
+    for (const g of groupes) resume.addRow(resumeMerchandiser(g))
+    enTete(resume)
+    resume.addRow([])
+    resume.addRow([`${opts.titre} — du ${dateFr(opts.debut)} au ${dateFr(opts.fin)}`]).font = { italic: true }
+    resume.addRow([`Fichier produit le ${new Date().toLocaleString('fr-FR', { timeZone: 'Africa/Abidjan' })}`]).font = { italic: true }
+
+    // Tout le mois, puis une feuille par merchandiser.
+    const feuille = (nom: string, avecMerch: boolean, contenu: LigneRoutingMois[]) => {
+      const ws = wb.addWorksheet(nom, { views: [{ state: 'frozen', ySplit: 1 }] })
+      const colonnes = avecMerch
+        ? [{ header: 'Merchandiser', key: 'merchandiser' as const, width: 30 }, ...COLONNES_ROUTING_MOIS]
+        : COLONNES_ROUTING_MOIS
+      ws.columns = colonnes.map(c => ({ header: c.header, key: c.key, width: c.width }))
+      for (const l of contenu) {
+        ws.addRow(Object.fromEntries(colonnes.map(c => [c.key, valeurCellule(l, c.key)])))
+      }
+      // Dates en texte jj/mm/aaaa : Excel ne les convertit pas au réenregistrement.
+      ws.getColumn('date').numFmt = '@'
+      enTete(ws)
+    }
+    feuille('Tout le mois', true, lignes)
+    const noms = nomsFeuilles(groupes.map(g => g.nom))
+    groupes.forEach((g, i) => feuille(noms[i]!, false, g.lignes))
+
+    const buffer = await wb.xlsx.writeBuffer()
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = opts.nomFichier
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  return { downloadRoutingExcelTemplate, readRoutingFile, exporterTournees, exporterRoutingMois }
 }

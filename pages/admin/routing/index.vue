@@ -19,6 +19,11 @@
           <UButton variant="outline" icon="i-heroicons-document-arrow-down" :loading="exportEnCours" :disabled="!routings.length" @click="handleExportTournees">
             Exporter
           </UButton>
+          <!-- Fichier à envoyer à l'agence et à Friesland (05/11/2026). Pas
+               « Routing du mois » : c'est déjà le lien du menu vers l'import. -->
+          <UButton variant="outline" icon="i-heroicons-calendar-days" @click="ouvrirRoutingMois">
+            Exporter le mois
+          </UButton>
           <UButton v-if="!lectureSeule" icon="i-heroicons-plus" @click="openCreateRouting">
             Nouvelle tournée
           </UButton>
@@ -1319,6 +1324,47 @@
       </div>
     </UModal>
 
+    <!-- Routing du mois : fichier Excel à envoyer à l'agence et à Friesland.
+         Les tournées sont d'abord générées jusqu'à la fin du mois (décision de
+         Jean Luc du 05/11) : la liste d'un jour exclut les PDV déjà prévus les
+         autres jours du mois, elle n'existe qu'une fois la tournée générée. -->
+    <UModal v-model="routingMois.ouvert" :ui="{ width: 'max-w-lg' }" :prevent-close="routingMois.enCours">
+      <div class="space-y-4 p-6">
+        <div>
+          <h2 class="text-base font-semibold text-slate-900 dark:text-white">Exporter le routing du mois</h2>
+          <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            Fichier Excel à envoyer à l'agence et à Friesland : pour chaque merchandiser d'agence, chaque jour du mois avec son point de visite, son SSF, son distributeur et les points de vente prévus (code, type, quartier, GPS).
+          </p>
+        </div>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <UFormGroup label="Mois">
+            <UInput v-model="routingMois.mois" type="month" :disabled="routingMois.enCours" />
+          </UFormGroup>
+          <UFormGroup label="Agence">
+            <USelect v-model="routingMois.employeur" :options="agenceOptions" :disabled="routingMois.enCours" />
+          </UFormGroup>
+        </div>
+        <div v-if="authStore.isSuperviseur" class="space-y-1">
+          <UCheckbox v-model="routingMois.generer" :disabled="routingMois.enCours" label="Générer d'abord les tournées jusqu'à la fin du mois" />
+          <p v-if="routingMois.generer" class="pl-6 text-xs text-slate-600 dark:text-slate-300">
+            Les tournées générées sont figées : une boutique créée ou corrigée ensuite n'entre pas dans les jours déjà générés.
+          </p>
+        </div>
+        <p class="text-xs text-slate-600 dark:text-slate-300">
+          Seuls les merchandisers qui ont un routing mensuel sont dans le fichier
+          <template v-if="chargementMerchs">(chargement…)</template>
+          <template v-else>({{ compte(merchsAgenceFiltres.length, 'merchandiser') }} pour ce choix).</template>
+        </p>
+        <p v-if="routingMois.etape" class="text-sm text-slate-700 dark:text-slate-200" aria-live="polite">{{ routingMois.etape }}</p>
+        <div class="flex justify-end gap-2">
+          <UButton variant="ghost" :disabled="routingMois.enCours" @click="routingMois.ouvert = false">Annuler</UButton>
+          <UButton icon="i-heroicons-document-arrow-down" :loading="routingMois.enCours" :disabled="chargementMerchs || !routingMois.mois || !merchsAgenceFiltres.length" @click="handleRoutingMois">
+            Télécharger le fichier
+          </UButton>
+        </div>
+      </div>
+    </UModal>
+
     <AdminConfirmation v-bind="confirmation" @confirmer="confirmer" @annuler="annuler" />
   </div>
 </template>
@@ -1329,6 +1375,7 @@ import { toIsoJour, debutDeSemaine } from '~/utils/periode'
 import { fetchAllRows } from '~/utils/fetchAll'
 import { JOURS_SEMAINE, joursDeRegle, libelleJours, datesDeRegle } from '~/utils/routingRecurrence'
 import { messageUtilisateur } from '~/utils/supabaseErrors'
+import { bornesMois, libelleEmployeur, nomFichierRoutingMois, tranchesGeneration, type LigneRoutingMois } from '~/utils/routingMois'
 import { compte, pluriel } from '~/utils/pluriel'
 import { visiteLibre, aTrouver, etapeAjoutee, totalVisiteLibre, texteBilanVisiteLibre, texteObjectifVisiteLibre, objectifAtteint, remarquesVisiteLibre } from '~/utils/visiteLibre'
 
@@ -1356,7 +1403,7 @@ const routingStore = useRoutingStore()
 const toast = useToast()
 const { confirmation, demanderConfirmation, confirmer, annuler } = useConfirmation()
 const { parseCsv } = useCsvExport()
-const { downloadRoutingExcelTemplate, readRoutingFile, exporterTournees } = useRoutingExcel()
+const { downloadRoutingExcelTemplate, readRoutingFile, exporterTournees, exporterRoutingMois } = useRoutingExcel()
 
 // ---- Import CSV routings ----
 const showImportModal = ref(false)
@@ -1390,6 +1437,118 @@ function closeImportModal() {
   importFile.value = null
   importSummary.value = null
   importMode.value = 'fusion'
+}
+
+// ---- Routing du mois (fichier à envoyer à l'agence et à Friesland) ----
+const routingMois = reactive({
+  ouvert: false,
+  mois: toIsoJour(new Date()).slice(0, 7),
+  employeur: '',
+  generer: true,
+  enCours: false,
+  etape: '',
+})
+// Merchandisers d'agence : ceux qui ont un routing mensuel actif. Les agents
+// Friesland (règles « périmètre », tout le portefeuille chaque jour) n'y sont pas.
+const merchsAgence = ref<{ id: string, nom: string, employeur: string | null }[]>([])
+const chargementMerchs = ref(false)
+const merchsAgenceFiltres = computed(() =>
+  merchsAgence.value.filter(m => !routingMois.employeur || m.employeur === routingMois.employeur))
+const agenceOptions = computed(() => [
+  { label: 'Toutes les agences', value: '' },
+  ...[...new Set(merchsAgence.value.map(m => m.employeur).filter((e): e is string => !!e))]
+    .sort((a, b) => a.localeCompare(b, 'fr'))
+    .map(e => ({ label: libelleEmployeur(e), value: e })),
+])
+
+async function chargerMerchsAgence() {
+  const { data: lignes, error } = await (supabase.from('routing_mensuel') as any)
+    .select('merchandiser_id')
+    .eq('actif', true)
+  if (error) throw error
+  const ids = [...new Set((lignes || []).map((l: any) => l.merchandiser_id).filter(Boolean))] as string[]
+  if (!ids.length) {
+    merchsAgence.value = []
+    return
+  }
+  const { data: profils, error: e2 } = await (supabase.from('profiles') as any)
+    .select('id, nom, employeur')
+    .in('id', ids)
+  if (e2) throw e2
+  merchsAgence.value = ((profils || []) as any[])
+    .map(p => ({ id: p.id, nom: p.nom || 'Sans nom', employeur: p.employeur || null }))
+    .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
+}
+
+async function ouvrirRoutingMois() {
+  routingMois.etape = ''
+  routingMois.ouvert = true
+  if (merchsAgence.value.length) return
+  chargementMerchs.value = true
+  try {
+    await chargerMerchsAgence()
+  }
+  catch (err) {
+    toast.add({ title: 'Merchandisers indisponibles', description: messageUtilisateur(err), color: 'red' })
+  }
+  finally {
+    chargementMerchs.value = false
+  }
+}
+
+async function handleRoutingMois() {
+  if (!routingMois.mois) return
+  const { debut, fin } = bornesMois(routingMois.mois)
+  const cibles = merchsAgenceFiltres.value
+  routingMois.enCours = true
+  let generees = 0
+  try {
+    // 1. Tournées jusqu'à la fin du mois, merchandiser par merchandiser, par
+    //    tranches de 7 jours (chaque appel reste sous la limite de durée).
+    if (routingMois.generer && authStore.isSuperviseur) {
+      const tranches = tranchesGeneration(debut, fin, toIsoJour(new Date()))
+      for (const [i, m] of cibles.entries()) {
+        routingMois.etape = `Génération des tournées : ${m.nom} (${i + 1} sur ${cibles.length})…`
+        for (const t of tranches) generees += await routingStore.materialiserPeriode(m.id, t.du, t.au)
+      }
+    }
+    // 2. Lignes du mois (une par étape), puis le fichier.
+    routingMois.etape = 'Lecture du routing du mois…'
+    const lignes = await fetchAllRows<LigneRoutingMois>((from, to) => (supabase.rpc as any)('export_routing_mois', {
+      p_debut: debut,
+      p_fin: fin,
+      p_employeur: routingMois.employeur || null,
+    }).range(from, to))
+    if (!lignes.length) {
+      toast.add({ title: 'Aucune tournée ce mois-ci', description: 'Aucun merchandiser d\'agence n\'a de tournée sur ce mois.', color: 'amber' })
+      return
+    }
+    routingMois.etape = 'Préparation du fichier…'
+    const libelleMois = new Date(`${debut}T00:00:00`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+    const agence = routingMois.employeur ? ` — ${libelleEmployeur(routingMois.employeur)}` : ''
+    await exporterRoutingMois(lignes, {
+      debut,
+      fin,
+      titre: `Routing de ${libelleMois}${agence}`,
+      nomFichier: nomFichierRoutingMois(routingMois.mois, routingMois.employeur || null),
+    })
+    const merchs = new Set(lignes.map(l => l.user_id)).size
+    const visites = lignes.filter(l => l.pdv_id).length
+    toast.add({
+      title: 'Routing du mois téléchargé',
+      description: `${compte(merchs, 'merchandiser')}, ${compte(visites, 'visite prévue', 'visites prévues')}${generees ? `, ${compte(generees, 'tournée générée', 'tournées générées')}` : ''}.`,
+      color: 'green',
+    })
+    routingMois.ouvert = false
+    if (generees) await loadRoutings()
+  }
+  catch (err) {
+    toast.add({ title: 'Routing du mois impossible', description: messageUtilisateur(err), color: 'red' })
+  }
+  finally {
+    routingMois.enCours = false
+    routingMois.etape = ''
+  }
 }
 
 // ---- Export des tournées affichées (format du modèle, réimportable) ----
