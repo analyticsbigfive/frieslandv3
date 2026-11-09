@@ -286,6 +286,26 @@ export const useRoutingStore = defineStore('routing', () => {
     if (!enFile) await syncRoutingStatus()
   }
 
+  // « PDV fermé » (migration 20261106120000) : declarer_pdv_ferme close déjà
+  // l'étape en base (ou le fera au rejeu de la file). Ici, seulement l'écran
+  // et les compteurs ; pas d'écriture de routing_pdv depuis l'app.
+  function marquerEtapeFermeeLocalement(routingPdvId: string, notes: string) {
+    const idx = routingPDVList.value.findIndex(rp => rp.id === routingPdvId)
+    if (idx === -1) return
+    const avant = routingPDVList.value[idx].status
+    if (avant === 'completed') return
+    routingPDVList.value[idx] = {
+      ...routingPDVList.value[idx],
+      status: 'skipped',
+      result_notes: notes,
+      updated_at: new Date().toISOString(),
+    }
+    ajusterCompteurs(avant, 'skipped')
+    if (isOnline.value) {
+      syncRoutingStatus().catch(err => console.warn('[Routing] statut de tournée non mis à jour', err))
+    }
+  }
+
   // ---- Auto-update routing status based on PDV progress ----
   // D'après les compteurs de toute la tournée, pas des seules pages chargées.
   async function syncRoutingStatus() {
@@ -1123,6 +1143,7 @@ export const useRoutingStore = defineStore('routing', () => {
     toutCharge,
     getRoutingPDV,
     updateRoutingPDVStatus,
+    marquerEtapeFermeeLocalement,
     syncRoutingStatus,
     fetchRoutings,
     chargerEtapesRouting,

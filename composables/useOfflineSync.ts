@@ -180,8 +180,10 @@ export function useOfflineSync() {
           }
 
           // Photo de la devanture d'un PDV créé hors ligne (1.0.17) : son
-          // adresse est déjà dans pdv.image_url, rien à rattacher.
-          if (item.data.pdvId) {
+          // adresse est déjà dans pdv.image_url, rien à rattacher. Photo d'un
+          // « PDV fermé » : le signalement, en file juste après, la réclame
+          // par son chemin.
+          if (item.data.pdvId || item.data.fermetureId) {
             queue.value = queue.value.filter(queuedItem => queuedItem.id !== item.id)
             continue
           }
@@ -219,6 +221,16 @@ export function useOfflineSync() {
           const { error } = await (supabase.from('routing_pdv') as any)
             .update(item.data.update)
             .eq('id', item.data.id)
+
+          if (error) {
+            throw error
+          }
+        }
+        else if (item.type === 'fermeture_pdv') {
+          // « PDV fermé » signalé hors ligne. Mis en file APRÈS ses photos :
+          // declarer_pdv_ferme refuse tant qu'elles ne sont pas reçues, l'essai
+          // suivant passera. Id fixé dans l'app : un rejeu ne crée pas de doublon.
+          const { error } = await (supabase.rpc as any)('declarer_pdv_ferme', item.data)
 
           if (error) {
             throw error
