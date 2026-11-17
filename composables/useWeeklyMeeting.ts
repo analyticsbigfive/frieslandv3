@@ -5,6 +5,7 @@
 //
 // Tout se lit avec les droits du compte connecté (écran réservé aux admins) :
 // pas de fonction SQL dédiée, donc pas de migration à appliquer.
+import { estCompteTest } from '~/utils/adoptionApp'
 import type { Agence } from '~/utils/agences'
 import { libelleDirection } from '~/utils/agences'
 import { chargerPptxGenJS } from '~/utils/chargerPptx'
@@ -46,12 +47,14 @@ export function useWeeklyMeeting() {
   // demandée une fois, abandonnée si la base ne la connaît pas.
   const situationDisponible = useState('weekly-situation-disponible', () => true)
 
+  /** Comptes de l'agence, hors comptes de test (QA Atom…) : ni leurs visites ni leurs tournées ne comptent. */
   async function lireMembres(agence: string): Promise<MembreAgence[]> {
-    return fetchAllRows<MembreAgence>((from, to) => supabase.from('profiles')
+    const comptes = await fetchAllRows<MembreAgence>((from, to) => supabase.from('profiles')
       .select('id, nom, email, role, is_active')
       .eq('employeur', agence)
       .order('id')
       .range(from, to))
+    return comptes.filter(m => !estCompteTest(m.email))
   }
 
   /** Visites des comptes de l'agence sur la semaine : par user_id, sinon par e-mail (visites sans user_id). */
