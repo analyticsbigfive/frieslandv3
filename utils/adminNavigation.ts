@@ -98,6 +98,7 @@ export const ADMIN_DOMAINS: AdminDomain[] = [
     group: 'piloter',
     tabs: [
       { id: 'activite.vue', label: 'Activité', title: 'Activité du terrain', path: '/admin/activite', access: 'principal', aide: 'Visites, performance des équipes et points à traiter.' },
+      { id: 'activite.weekly', label: 'Weekly Meeting', title: 'Weekly Meeting Merchandising Agency', path: '/admin/weekly-meeting', access: 'principal', roles: ['admin'], aide: 'La semaine d\'une agence, du lundi au samedi, et sa présentation PowerPoint pour la réunion hebdomadaire.' },
     ],
   },
   {
