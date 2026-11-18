@@ -218,7 +218,7 @@
 
 <script setup lang="ts">
 import { libellePdv } from '~/utils/libellePdv'
-import { categoriesProduitsActives } from '~/utils/products'
+import { categoriesFormulaire } from '~/utils/products'
 import { estMerchandiserProgramme } from '~/utils/agences'
 import type { Visite } from '~/types'
 
@@ -245,7 +245,7 @@ const isOfflineData = ref(false)
 
 // Pull-to-refresh state
 // Pastilles des catégories actives du catalogue (Produits du formulaire).
-const categoriesBadges = computed(() => categoriesProduitsActives())
+const categoriesBadges = computed(() => categoriesFormulaire())
 
 const pullDistance = ref(0)
 const pulling = ref(false)

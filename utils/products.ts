@@ -121,6 +121,17 @@ export function categoriesProduitsActives(): ProductCategoryDef[] {
     .sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0) || a.label.localeCompare(b.label, 'fr'))
 }
 
+/**
+ * Catégories proposées à la saisie mobile : actives ET portant au moins un
+ * produit actif. Une catégorie dont tous les produits ont été désactivés dans
+ * l'admin (UHT en novembre 2026) n'a plus rien à relever : son étape,
+ * obligatoire, serait impossible à valider. Elle revient d'elle-même dès qu'un
+ * produit est réactivé. Les écrans admin gardent categoriesProduitsActives().
+ */
+export function categoriesFormulaire(): ProductCategoryDef[] {
+  return categoriesProduitsActives().filter(c => c.skus.length > 0)
+}
+
 export function getCategoryDef(key: string): ProductCategoryDef | undefined {
   return catalogueCourant.value.find(c => c.key === key) || PRODUCT_CATALOG.find(c => c.key === key)
 }
