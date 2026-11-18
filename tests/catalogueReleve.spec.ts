@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { construireCatalogue } from '../composables/useCatalogueReleve'
-import { PRODUCT_CATALOG, definirCatalogue, getSkus, categoriesProduitsActives, categoryPresent } from '../utils/products'
+import { PRODUCT_CATALOG, definirCatalogue, getSkus, categoriesProduitsActives, categoriesFormulaire, categoryPresent } from '../utils/products'
 
 // Lignes telles que posées par la migration 20261007130000.
 const categories = [
@@ -33,6 +33,21 @@ describe('catalogue du formulaire', () => {
     // Une ancienne visite avec le SKU retiré reste « présente ».
     expect(categoryPresent({ quantites: { brique_1l: 4 } }, 'uht')).toBe(true)
     expect(getSkus('lait')[0]).toMatchObject({ key: 'lait_1l', seuilBasDefaut: 2 })
+  })
+
+  it('catégorie dont tous les produits sont désactivés : hors du formulaire mobile', () => {
+    const { catalogue, tous } = construireCatalogue(categories, skus.map(s => (s.category === 'uht' ? { ...s, actif: false } : s)))
+    definirCatalogue(catalogue, tous)
+    // Toujours active côté admin, mais plus d'étape à la saisie.
+    expect(categoriesProduitsActives().map(c => c.key)).toEqual(['evap', 'imp', 'scm', 'uht'])
+    expect(categoriesFormulaire().map(c => c.key)).toEqual(['evap', 'imp', 'scm'])
+    // L'historique reste lisible.
+    expect(categoryPresent({ quantites: { brique_1l: 4 } }, 'uht')).toBe(true)
+
+    // Un produit réactivé : la catégorie revient.
+    const retour = construireCatalogue(categories, skus.map(s => (s.category === 'uht' && s.sku !== 'brique_1l' ? { ...s, actif: false } : s)))
+    definirCatalogue(retour.catalogue, retour.tous)
+    expect(categoriesFormulaire().map(c => c.key)).toEqual(['evap', 'imp', 'scm', 'uht'])
   })
 
   it('sans ligne SKU pour une catégorie : repli sur le catalogue codé', () => {

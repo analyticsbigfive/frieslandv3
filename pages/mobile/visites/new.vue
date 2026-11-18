@@ -525,7 +525,7 @@
 <script setup lang="ts">
 import { getDefaultVisiteData } from '~/types'
 import type { PDV, VisiteData, VisiteConcurrence, VisiteActions } from '~/types'
-import { getSkus, quantityToLegacyStatus, categoryPresent, categoriesProduitsActives, type ProductCategoryDef } from '~/utils/products'
+import { getSkus, quantityToLegacyStatus, categoryPresent, categoriesFormulaire, type ProductCategoryDef } from '~/utils/products'
 import { statutMarqueDerive } from '~/utils/concurrence'
 import { estMerchandiserProgramme } from '~/utils/agences'
 import { CATEGORIES_RELEVE, categorieRenseignee } from '~/utils/visiteCompletude'
@@ -594,7 +594,8 @@ const saveProgress = ref(0)
 // Catégories de produits du catalogue (base, cache hors ligne, sinon repli) :
 // actives, dans l'ordre fixé dans l'admin.
 const { charger: chargerCatalogue } = useCatalogueReleve()
-const categoriesProduits = computed<ProductCategoryDef[]>(() => categoriesProduitsActives())
+// Sans produit actif, une catégorie n'a pas d'étape (voir categoriesFormulaire).
+const categoriesProduits = computed<ProductCategoryDef[]>(() => categoriesFormulaire())
 const ALL_WIZARD_STEPS = computed(() => [
   { key: 'general', label: 'Général', phase: 'Général' },
   ...categoriesProduits.value.map(c => ({ key: c.key, label: c.label, phase: 'Produits' })),

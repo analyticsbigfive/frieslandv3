@@ -250,9 +250,15 @@ const productCategories = computed(() =>
 
 // Ne réclamer que les catégories encore actives : sinon une visite récente ne
 // pourrait jamais atteindre 100 % à cause de yaourt et céréales, fermés au lot 6.
-const completude = computed(() =>
-  completudeReleve(visite.value?.data, categoriesReleveActives.value.map(c => c.code)),
-)
+// Ni une catégorie dont tous les produits ont été désactivés : elle n'a plus
+// d'étape dans le formulaire (categoriesFormulaire).
+const completude = computed(() => {
+  const sansProduit = new Set(catalogueProduits().filter(c => !c.skus.length).map(c => c.key))
+  return completudeReleve(
+    visite.value?.data,
+    categoriesReleveActives.value.map(c => c.code).filter(code => !sansProduit.has(code)),
+  )
+})
 
 // Quantités par SKU, lues dans `data.produits.<cat>.quantites`.
 // On ne lit JAMAIS le miroir `data.produits.<cat>.present` ni les statuts par
