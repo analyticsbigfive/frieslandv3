@@ -90,6 +90,11 @@ docs/GUIDE-ADMINISTRATION.pdf
 data/in/
 data/cache/
 data/out/
+
+# Fichiers Atom et listes de boutiques (lourds, téléphones)
+docs/routings/*.xlsx
+docs/routings/boutiques-*.csv
+docs/IMG-*.jpg
 scripts/.venv/
 __pycache__/
 .pytest_cache/
